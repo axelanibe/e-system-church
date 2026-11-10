@@ -7,6 +7,7 @@ import '../models/contribution.dart';
 import '../models/member.dart';
 import '../models/rapport.dart';
 import '../models/rattachement.dart';
+import '../models/transfert.dart';
 import 'api_service.dart';
 import 'mock_data.dart';
 
@@ -21,6 +22,7 @@ class MockApiService implements ApiService {
   late final Map<String, List<Map<String, dynamic>>> _contributions;
   late final List<Map<String, dynamic>> _annonces;
   late final List<Map<String, dynamic>> _rattachements;
+  late final List<Map<String, dynamic>> _transferts;
 
   String? _token;
   AppUser? _user;
@@ -42,6 +44,9 @@ class MockApiService implements ApiService {
         .cast<Map<String, dynamic>>();
     _rattachements =
         (jsonDecode(jsonEncode(demoRattachements)) as List<dynamic>)
+            .cast<Map<String, dynamic>>();
+    _transferts =
+        (jsonDecode(jsonEncode(demoTransferts)) as List<dynamic>)
             .cast<Map<String, dynamic>>();
   }
 
@@ -424,6 +429,181 @@ class MockApiService implements ApiService {
     } else {
       record['status'] = 'refusee';
     }
+  }
+
+  // -- Transferts de membre entre branches ----------------------------------
+  // Mêmes règles que l'API réelle : demande par matricule, validation par
+  // les deux pasteurs (départ puis arrivée), historique gardé. À la double
+  // acceptation, le membre change d'église et reçoit un nouveau matricule.
+  @override
+  Future<TransfertsResult> getTransferts() async {
+    await _delay();
+    _requireRole(['admin_eglise', 'responsable_culte']);
+    final rows =
+        _transferts.where((t) =>
+            t['eglise_depart_id'] == _churchId ||
+            t['eglise_arrivee_id'] == _churchId).toList();
+    rows.sort((a, b) => (b['created_at'] as String)
+        .compareTo(a['created_at'] as String));
+    final list = rows.map((t) => TransfertMembre.fromJson(t)).toList();
+    return TransfertsResult(
+      aTraiter: list.where((t) => t.aTraiterPour(_churchId!)).toList(),
+      emises: list.where((t) => t.egliseDepartId == _churchId).toList(),
+      recues: list.where((t) => t.egliseArriveeId == _churchId).toList(),
+      historique:
+          list.where((t) => t.status != 'en_attente').toList(),
+    );
+  }
+
+  @override
+  Future<TransfertMembre> requestTransfert({
+    required String matricule,
+    required String destinationCode,
+    String? motif,
+  }) async {
+    await _delay();
+    _requireRole(['admin_eglise']);
+    final member = (_members[_churchId] ?? [])
+        .where((m) => m['matricule'] == matricule)
+        .firstOrNull;
+    if (member == null) {
+      throw const ApiException(
+          'Aucun membre de votre église ne porte ce matricule.', 404);
+    }
+    if (member['status'] == 'inactif') {
+      throw const ApiException(
+          'Un membre inactif ne peut pas être transféré.');
+    }
+    final dest = _churchByCode(destinationCode);
+    if (dest == null || dest['status'] != 'active') {
+      throw const ApiException(
+          'Église d’arrivée introuvable ou inactive.');
+    }
+    if (dest['id'] == _churchId) {
+      throw const ApiException('Le membre est déjà dans cette église.');
+    }
+    final exists = _transferts.any((t) =>
+        t['membre_id'] == member['id'] && t['status'] == 'en_attente');
+    if (exists) {
+      throw const ApiException(
+          'Une demande de transfert est déjà en attente pour ce membre.',
+          409);
+    }
+    final source = _churchById(_churchId!)!;
+    final now = DateTime.now().toIso8601String();
+    final record = <String, dynamic>{
+      'id': _nextId('transfert'),
+      'membre_id': member['id'],
+      'membre_nom': member['full_name'],
+      'ancien_matricule': member['matricule'],
+      'nouveau_matricule': null,
+      'eglise_depart_id': _churchId,
+      'eglise_arrivee_id': dest['id'],
+      'motif': motif,
+      'status': 'en_attente',
+      'decision_depart': 'en_attente',
+      'decision_arrivee': 'en_attente',
+      'decide_depart_at': null,
+      'decide_arrivee_at': null,
+      'created_at': now,
+      'updated_at': now,
+      'depart_code': source['code'],
+      'depart_nom': source['name'],
+      'depart_ville': source['city'],
+      'arrivee_code': dest['code'],
+      'arrivee_nom': dest['name'],
+      'arrivee_ville': dest['city'],
+    };
+    _transferts.add(record);
+    return TransfertMembre.fromJson(record);
+  }
+
+  @override
+  Future<void> decideTransfert(String id, {required bool accept}) async {
+    await _delay();
+    _requireRole(['admin_eglise']);
+    final record = _transferts.where((t) => t['id'] == id).firstOrNull;
+    if (record == null) {
+      throw const ApiException('Transfert introuvable.', 404);
+    }
+    final cote = record['eglise_depart_id'] == _churchId
+        ? 'depart'
+        : record['eglise_arrivee_id'] == _churchId
+            ? 'arrivee'
+            : null;
+    if (cote == null) {
+      throw const ApiException(
+          'Seules les deux églises concernées peuvent décider.', 403);
+    }
+    if (record['status'] != 'en_attente') {
+      throw const ApiException('Ce transfert a déjà été traité.', 409);
+    }
+    if (cote == 'depart' && record['decision_depart'] != 'en_attente') {
+      throw const ApiException('Votre église a déjà décidé.', 409);
+    }
+    if (cote == 'arrivee') {
+      if (record['decision_depart'] != 'accepte') {
+        throw const ApiException(
+            'En attente de la décision de l’église de départ.', 409);
+      }
+      if (record['decision_arrivee'] != 'en_attente') {
+        throw const ApiException('Votre église a déjà décidé.', 409);
+      }
+    }
+    final now = DateTime.now().toIso8601String();
+    if (cote == 'depart') {
+      record['decision_depart'] = accept ? 'accepte' : 'refuse';
+      record['decide_depart_at'] = now;
+    } else {
+      record['decision_arrivee'] = accept ? 'accepte' : 'refuse';
+      record['decide_arrivee_at'] = now;
+    }
+    record['updated_at'] = now;
+    if (!accept) {
+      record['status'] = 'refuse';
+      return;
+    }
+    if (cote != 'arrivee') return;
+    // Double acceptation : le membre déménage avec un nouveau matricule.
+    final destMembers = _members[record['eglise_arrivee_id'] as String] ??= [];
+    var n = destMembers.length + 1;
+    var matricule = 'M-${n.toString().padLeft(4, '0')}';
+    while (destMembers.any((m) => m['matricule'] == matricule)) {
+      n++;
+      matricule = 'M-${n.toString().padLeft(4, '0')}';
+    }
+    final sourceMembers = _members[record['eglise_depart_id'] as String] ?? [];
+    final memberIndex =
+        sourceMembers.indexWhere((m) => m['id'] == record['membre_id']);
+    if (memberIndex < 0) {
+      throw const ApiException(
+          'Le membre n’est plus dans l’église de départ.');
+    }
+    final moved = sourceMembers.removeAt(memberIndex);
+    moved['matricule'] = matricule;
+    destMembers.add(moved);
+    record['nouveau_matricule'] = matricule;
+    record['status'] = 'accepte';
+  }
+
+  @override
+  Future<void> annulerTransfert(String id) async {
+    await _delay();
+    _requireRole(['admin_eglise']);
+    final record = _transferts.where((t) => t['id'] == id).firstOrNull;
+    if (record == null) {
+      throw const ApiException('Transfert introuvable.', 404);
+    }
+    if (record['eglise_depart_id'] != _churchId) {
+      throw const ApiException(
+          'Seule l’église de départ peut annuler la demande.', 403);
+    }
+    if (record['status'] != 'en_attente') {
+      throw const ApiException(
+          'Seule une demande en attente peut être annulée.', 409);
+    }
+    record['status'] = 'annule';
+    record['updated_at'] = DateTime.now().toIso8601String();
   }
 
   // -- Membres ---------------------------------------------------------------

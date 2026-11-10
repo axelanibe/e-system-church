@@ -471,3 +471,33 @@ final List<Map<String, dynamic>> demoRattachements = [
     'eglise_ville': 'Abidjan',
   },
 ];
+
+/// Transferts de membre entre branches (données de démonstration).
+/// Un transfert en attente : Aminata Traoré (M-0003, Plateau) vers Yopougon,
+/// décision du départ en attente. Les champs suivent la réponse de
+/// `GET /transferts` (noms et codes des deux églises).
+final List<Map<String, dynamic>> demoTransferts = [
+  {
+    'id': 'demo-tr-1',
+    'membre_id': 'demo-m-p3',
+    'membre_nom': 'Aminata Traoré',
+    'ancien_matricule': 'M-0003',
+    'nouveau_matricule': null,
+    'eglise_depart_id': 'demo-plateau',
+    'eglise_arrivee_id': 'demo-yopougon',
+    'motif': 'Déménagement à Yopougon',
+    'status': 'en_attente',
+    'decision_depart': 'en_attente',
+    'decision_arrivee': 'en_attente',
+    'decide_depart_at': null,
+    'decide_arrivee_at': null,
+    'created_at': '2026-11-10T08:00:00.000Z',
+    'updated_at': '2026-11-10T08:00:00.000Z',
+    'depart_code': 'ESC-GD2026',
+    'depart_nom': 'Grâce Divine — Plateau',
+    'depart_ville': 'Abidjan',
+    'arrivee_code': 'ESC-YOP001',
+    'arrivee_nom': 'Grâce Divine — Yopougon',
+    'arrivee_ville': 'Abidjan',
+  },
+];

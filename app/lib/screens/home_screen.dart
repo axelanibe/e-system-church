@@ -8,6 +8,7 @@ import 'finances_screen.dart';
 import 'membres_screen.dart';
 import 'rattachements_screen.dart';
 import 'settings_screen.dart';
+import 'transferts_screen.dart';
 import 'tree_screen.dart';
 
 /// Coquille principale après connexion : navigation entre les 5 écrans du MVP.
@@ -129,6 +130,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
+            if (state.canManageMembers)
+              ListTile(
+                leading: const Icon(Icons.swap_horiz_outlined),
+                title: const Text('Transferts de membres'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const TransfertsScreen()),
+                  );
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.settings_outlined),
               title: const Text('Réglages'),

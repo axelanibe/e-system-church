@@ -5,6 +5,7 @@ import '../models/contribution.dart';
 import '../models/member.dart';
 import '../models/rapport.dart';
 import '../models/rattachement.dart';
+import '../models/transfert.dart';
 
 /// Erreur renvoyée par l'API (ou par le service en mode démo).
 class ApiException implements Exception {
@@ -53,6 +54,22 @@ abstract class ApiService {
   Future<Rattachement> requestRattachement({required String parentCode});
 
   Future<void> decideRattachement(String id, {required bool accept});
+
+  // -- Transferts de membre entre branches ----------------------------------
+  // Demande par matricule, validation par les deux pasteurs (départ puis
+  // arrivée), historique gardé. À la double acceptation, le membre change
+  // d'église et reçoit un nouveau matricule dans l'église d'arrivée.
+  Future<TransfertsResult> getTransferts();
+
+  Future<TransfertMembre> requestTransfert({
+    required String matricule,
+    required String destinationCode,
+    String? motif,
+  });
+
+  Future<void> decideTransfert(String id, {required bool accept});
+
+  Future<void> annulerTransfert(String id);
 
   // -- Membres ---------------------------------------------------------------
   Future<MemberPage> getMembers({String? q, String? department, String? status});
