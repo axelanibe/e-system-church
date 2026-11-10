@@ -1,0 +1,119 @@
+import type { FastifyInstance } from "fastify";
+import type { Pool } from "pg";
+import { login, registerChurch } from "../auth.js";
+import { dbError, requireAuth } from "../middleware.js";
+
+/**
+ * Authentification + « moi ».
+ * POST /auth/register — crée l'église + son admin (inscription libre : église ACTIVE).
+ * POST /auth/login    — JWT bearer (église + rôle dans le jeton).
+ * GET  /moi/eglise    — mon église active, mon rôle, mes autres églises.
+ */
+export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
+  app.post("/auth/register", async (req, reply) => {
+    try {
+      const result = await registerChurch(db, req.body);
+      if (!result.ok) {
+        const status =
+          result.reason === "invalid_input"
+            ? 400
+            : result.reason === "email_taken"
+              ? 409
+              : 400;
+        const message =
+          result.reason === "invalid_input"
+            ? "Données d'inscription invalides."
+            : result.reason === "email_taken"
+              ? "Cet e-mail est déjà utilisé."
+              : "Code d'invitation de l'église mère invalide.";
+        return reply.code(status).send({ error: result.reason, message });
+      }
+      return reply.code(201).send({
+        token: result.token,
+        user: result.user,
+        church: result.church,
+        rattachement: result.rattachement,
+      });
+    } catch (e) {
+      return dbError(reply, e);
+    }
+  });
+
+  app.post("/auth/login", async (req, reply) => {
+    try {
+      const result = await login(db, req.body);
+      if (!result.ok) {
+        const status =
+          result.reason === "invalid_input"
+            ? 400
+            : result.reason === "locked"
+              ? 423
+              : result.reason === "invalid_church"
+                ? 400
+                : 401;
+        const message =
+          result.reason === "invalid_input"
+            ? "Données de connexion invalides."
+            : result.reason === "locked"
+              ? "Compte verrouillé 15 minutes après 5 échecs de connexion."
+              : result.reason === "invalid_church"
+                ? "Cette église ne fait pas partie de vos églises."
+                : "E-mail ou mot de passe incorrect.";
+        return reply.code(status).send({ error: result.reason, message });
+      }
+      return reply.send({
+        token: result.token,
+        user: result.user,
+        church: result.church,
+        eglises: result.eglises,
+      });
+    } catch (e) {
+      return dbError(reply, e);
+    }
+  });
+
+  app.get("/moi/eglise", { preHandler: [requireAuth(db)] }, async (req, reply) => {
+    try {
+      const { rows: churchRows } = await db.query(
+        `SELECT id, code, name, parent_church_id, city, country, phone, email, status
+           FROM churches WHERE id = $1`,
+        [req.session.churchId],
+      );
+      const church = churchRows[0];
+      if (!church) return reply.code(404).send({ error: "not_found", message: "Église introuvable." });
+
+      const { rows: userRows } = await db.query(
+        `SELECT id, full_name, email, phone FROM users WHERE id = $1`,
+        [req.session.userId],
+      );
+
+      // Toutes les églises de l'utilisateur (pour changer d'église active).
+      const { rows: memberships } = await db.query(
+        `SELECT cu.role, c.id, c.code, c.name, c.parent_church_id, c.status
+           FROM church_users cu
+           JOIN churches c ON c.id = cu.church_id
+          WHERE cu.user_id = $1
+          ORDER BY cu.created_at ASC`,
+        [req.session.userId],
+      );
+
+      return reply.send({
+        user: userRows[0],
+        church,
+        role: req.session.role,
+        eglises: memberships.map((m) => ({
+          role: m.role,
+          church: {
+            id: m.id,
+            code: m.code,
+            name: m.name,
+            parent_church_id: m.parent_church_id,
+            status: m.status,
+          },
+        })),
+      });
+    } catch (e) {
+      return dbError(reply, e);
+    }
+  });
+}
