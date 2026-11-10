@@ -6,6 +6,7 @@ import '../models/rapport.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import 'finances_mere_screen.dart';
 
 class _DashboardData {
   final int membresTotal;
@@ -220,6 +221,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   if (data.rapport!.sousEglises.isEmpty)
                                     const Text(
                                         'Aucune sous-église pour l’instant. Créez-en une depuis l’arborescence.'),
+                                  const SizedBox(height: 12),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: FilledButton.icon(
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const FinancesMereScreen(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(
+                                          Icons.account_balance_outlined),
+                                      label: const Text(
+                                          'Voir les finances en détail'),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),

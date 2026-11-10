@@ -336,6 +336,20 @@ class HttpApiService implements ApiService {
       RapportConsolide.fromJson(await _call('GET', '/rapports/consolide'));
 
   @override
+  Future<RapportDetailConsolide> getRapportDetail({
+    required String periode,
+    String? mois,
+  }) async =>
+      RapportDetailConsolide.fromJson(await _call(
+        'GET',
+        '/rapports/consolide/detail',
+        query: {
+          'periode': periode,
+          if (mois != null) 'mois': mois,
+        },
+      ));
+
+  @override
   Future<List<Announcement>> getAnnonces() async {
     final data = await _call('GET', '/annonces');
     return (data['annonces'] as List<dynamic>)
