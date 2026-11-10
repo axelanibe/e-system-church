@@ -199,3 +199,46 @@ SELECT
         AND co.status = 'confirme') AS total_fcfa
 FROM churches c
 WHERE c.parent_church_id IS NOT NULL;
+
+-- ---------------------------------------------------------------------------
+-- Transferts de membre entre branches (tranche symbiose, 10 novembre 2026)
+-- Un membre change de branche : demande par matricule, validation par les
+-- deux pasteurs (admin de l'église de départ, puis admin de l'église
+-- d'arrivée), historique gardé. Règle d'or : chaque requête est filtrée
+-- par la church_id de la session ; un transfert n'est visible que par les
+-- deux églises concernées. À l'acceptation finale, le membre change de
+-- church_id (nouveau matricule dans l'église d'arrivée) : l'ancienne
+-- branche ne le voit plus comme actif. Modèle inspiré de liens_parent_enfant
+-- (PR #13 de Connexion Prophétique) : demande, validation par un
+-- responsable, seule la liaison validée donne effet.
+-- ---------------------------------------------------------------------------
+CREATE TYPE transfert_status AS ENUM ('en_attente', 'accepte', 'refuse', 'annule');
+CREATE TYPE transfert_decision AS ENUM ('en_attente', 'accepte', 'refuse');
+
+CREATE TABLE transferts_membre (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    membre_id           UUID NOT NULL REFERENCES members (id) ON DELETE RESTRICT,
+    membre_nom          TEXT NOT NULL,               -- photo du nom au moment de la demande
+    ancien_matricule    TEXT NOT NULL,               -- matricule dans l'église de départ
+    nouveau_matricule   TEXT,                        -- matricule dans l'église d'arrivée (à l'acceptation)
+    eglise_depart_id    UUID NOT NULL REFERENCES churches (id) ON DELETE RESTRICT,
+    eglise_arrivee_id   UUID NOT NULL REFERENCES churches (id) ON DELETE RESTRICT,
+    demande_par         UUID REFERENCES users (id) ON DELETE SET NULL,
+    motif               TEXT,
+    status              transfert_status NOT NULL DEFAULT 'en_attente',
+    decision_depart     transfert_decision NOT NULL DEFAULT 'en_attente',
+    decision_arrivee    transfert_decision NOT NULL DEFAULT 'en_attente',
+    decide_depart_par   UUID REFERENCES users (id) ON DELETE SET NULL,
+    decide_depart_at    TIMESTAMPTZ,
+    decide_arrivee_par  UUID REFERENCES users (id) ON DELETE SET NULL,
+    decide_arrivee_at   TIMESTAMPTZ,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT no_self_transfert CHECK (eglise_depart_id <> eglise_arrivee_id)
+);
+CREATE INDEX idx_transferts_depart ON transferts_membre (eglise_depart_id, created_at);
+CREATE INDEX idx_transferts_arrivee ON transferts_membre (eglise_arrivee_id, created_at);
+CREATE INDEX idx_transferts_membre ON transferts_membre (membre_id, created_at);
+-- Un seul transfert en attente par membre : pas de double demande.
+CREATE UNIQUE INDEX idx_transferts_membre_unique_en_attente
+    ON transferts_membre (membre_id) WHERE status = 'en_attente';

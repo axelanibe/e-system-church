@@ -11,6 +11,7 @@ import { getDb } from "./db.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerEglisesRoutes } from "./routes/eglises.js";
 import { registerRattachementsRoutes } from "./routes/rattachements.js";
+import { registerTransfertsRoutes } from "./routes/transferts.js";
 import { registerMembresRoutes } from "./routes/membres.js";
 import { registerContributionsRoutes } from "./routes/contributions.js";
 import { registerRapportsRoutes } from "./routes/rapports.js";
@@ -28,6 +29,7 @@ export function buildApp(db: Pool) {
   registerAuthRoutes(app, db);
   registerEglisesRoutes(app, db);
   registerRattachementsRoutes(app, db);
+  registerTransfertsRoutes(app, db);
   registerMembresRoutes(app, db);
   registerContributionsRoutes(app, db);
   registerRapportsRoutes(app, db);

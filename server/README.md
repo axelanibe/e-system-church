@@ -173,21 +173,54 @@ curl http://localhost:3000/annonces -H "Authorization: Bearer TOKEN"
 # → mes annonces + celles diffusées par mes églises mères.
 ```
 
+### 15. Transférer un membre vers une autre branche (double validation)
+
+Règle : demande par matricule, validation par les deux pasteurs, historique
+gardé. L'admin de l'église de départ demande, puis accepte ; l'admin de
+l'église d'arrivée accepte ensuite. À la double acceptation, le membre
+change d'église et reçoit un nouveau matricule dans l'église d'arrivée ;
+l'ancienne branche ne le voit plus. Un refus d'un côté clôt la demande.
+
+```bash
+# Depuis l'église de départ (admin), avec le jeton du pasteur de départ :
+curl -X POST http://localhost:3000/transferts \
+  -H "Authorization: Bearer TOKEN" -H 'Content-Type: application/json' \
+  -d '{ "matricule": "M-0001", "eglise_arrivee_code": "ESC-YOP001", "motif": "Déménagement à Yopougon" }'
+# → { "id": "...", "status": "en_attente", ... }
+
+# Lister : à traiter par mon église, émises, reçues, historique
+curl http://localhost:3000/transferts -H "Authorization: Bearer TOKEN"
+
+# Décider (avec le jeton de l'église concernée) : d'abord le départ, puis l'arrivée
+curl -X POST http://localhost:3000/transferts/<id>/accepter -H "Authorization: Bearer TOKEN_DEPART"
+curl -X POST http://localhost:3000/transferts/<id>/accepter -H "Authorization: Bearer TOKEN_ARRIVEE"
+# → { "id": "...", "status": "accepte", "nouveau_matricule": "M-0004" }
+
+# Refuser (n'importe quel côté, avant la double acceptation) ou annuler (départ seulement, tant que en attente)
+curl -X POST http://localhost:3000/transferts/<id>/refuser -H "Authorization: Bearer TOKEN"
+curl -X POST http://localhost:3000/transferts/<id>/annuler -H "Authorization: Bearer TOKEN_DEPART"
+```
+
 ## Rôles
 
 | Rôle | Droits dans son église |
 | --- | --- |
-| `admin_eglise` | Tout (églises, rattachements, membres, finances, rapports, annonces) |
-| `tresorier` | Finances (lecture + saisie + confirmation), lecture des membres — **pas de création de membre** |
-| `responsable_culte` | Membres (lecture + création), lecture des finances |
-| `membre` | Lecture des membres, de l'arbre et des annonces — **pas de finances** |
+| `admin_eglise` | Tout (églises, rattachements, transferts, membres, finances, rapports, annonces) |
+| `tresorier` | Finances (lecture + saisie + confirmation), lecture des membres — **pas de création de membre**, **pas de transfert** |
+| `responsable_culte` | Membres (lecture + création), lecture des finances, lecture des transferts — **pas de décision de transfert** |
+| `membre` | Lecture des membres, de l'arbre et des annonces — **pas de finances**, **pas de transferts** |
 | `super_admin` | Plateforme (hors périmètre MVP) |
 
 ## Limites connues du MVP
 
 - Schéma PostgreSQL non encore exécuté contre une base réelle sur cette
   machine (pas de PostgreSQL ici) : lancer `npm run migrate` contre une vraie
-  base avant le premier test HTTP.
+  base avant le premier test HTTP. La migration `db/migrations/001_transferts_membre.sql`
+  crée la table `transferts_membre` ; le schéma `db/schema.sql` la contient
+  aussi pour les nouvelles bases.
+- Les routes de transfert n'ont pas été testées contre une vraie base
+  PostgreSQL (pas de base sur cette machine) : lancer PostgreSQL,
+  `npm run migrate`, puis jouer les exemples curl de la section 15.
 - Enregistrement manuel des paiements Mobile Money (référence) ; pas de
   webhook Wave / Orange / MTN (V2).
 - JWT sans table de révocation : un jeton reste valide jusqu'à expiration
