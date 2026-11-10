@@ -1,0 +1,36 @@
+# e-System Church — CI Flutter
+# Analyse et build web, sur GitHub Actions. Aucun secret n'y est écrit.
+# Restauration du workflow prévu par Phoenix, absent du dépôt sur main
+# malgré les messages des lots 2/3 et 3/3. Le fichier n'était pas non plus
+# dans le zip de l'application, il est recréé ici, fidèle à sa description :
+# analyse + build web, Flutter 3.47.9 stable, comme Phoenix.
+name: Flutter
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/flutter.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/flutter.yml'
+  workflow_dispatch:
+
+jobs:
+  analyze-and-build-web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.9"
+          channel: stable
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter build web
