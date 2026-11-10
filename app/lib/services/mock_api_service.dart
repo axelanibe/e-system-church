@@ -823,6 +823,137 @@ class MockApiService implements ApiService {
     );
   }
 
+  /// Bornes [début, fin[ d'une période, ancrée sur le mois AAAA-MM.
+  /// Même règle que l'API réelle (`bornesPeriode` côté serveur).
+  static ({DateTime debut, DateTime fin, String label})
+      _bornesDetail(String periode, String moisAncre) {
+    const nomsMois = [
+      'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+    ];
+    final annee = int.parse(moisAncre.substring(0, 4));
+    final mois = int.parse(moisAncre.substring(5, 7));
+    if (periode == 'annee') {
+      return (
+        debut: DateTime.utc(annee, 1, 1),
+        fin: DateTime.utc(annee + 1, 1, 1),
+        label: 'Année $annee',
+      );
+    }
+    if (periode == 'trimestre') {
+      final trimestre = (mois - 1) ~/ 3 + 1;
+      final debutMois = (trimestre - 1) * 3 + 1;
+      return (
+        debut: DateTime.utc(annee, debutMois, 1),
+        fin: DateTime.utc(annee, debutMois + 3, 1),
+        label: '${trimestre == 1 ? '1er' : '${trimestre}e'} trimestre $annee',
+      );
+    }
+    return (
+      debut: DateTime.utc(annee, mois, 1),
+      fin: DateTime.utc(annee, mois + 1, 1),
+      label:
+          '${nomsMois[mois - 1][0].toUpperCase()}${nomsMois[mois - 1].substring(1)} $annee',
+    );
+  }
+
+  @override
+  Future<RapportDetailConsolide> getRapportDetail({
+    required String periode,
+    String? mois,
+  }) async {
+    await _delay();
+    _requireRole(['admin_eglise']);
+    if (periode != 'mois' && periode != 'trimestre' && periode != 'annee') {
+      throw const ApiException('Période invalide (mois, trimestre ou année).');
+    }
+    final ancre = mois ??
+        '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}';
+    final bornes = _bornesDetail(periode, ancre);
+    // Périmètre strict : mon église + ses sous-églises directes, comme
+    // pour getRapport. Les petites-filles ne sont pas listées ici.
+    final ids = [_churchId!, ..._childrenIds(_churchId!)];
+    final totaux = <String, ContributionTotals>{};
+    for (final t in ['dime', 'offrande', 'don', 'depense']) {
+      totaux[t] = const ContributionTotals(totalFcfa: 0, nombre: 0);
+    }
+    var entrees = 0;
+    var depenses = 0;
+    var membresActifs = 0;
+    final branches = <RapportDetailBranche>[];
+    for (final id in ids) {
+      final church = _churchById(id)!;
+      final confirmes = (_contributions[id] ?? []).where((c) {
+        if (c['status'] != 'confirme') return false;
+        final date = DateTime.tryParse(c['created_at'] as String);
+        if (date == null) return false;
+        return !date.isBefore(bornes.debut) && date.isBefore(bornes.fin);
+      }).toList()
+        ..sort((a, b) => (b['created_at'] as String)
+            .compareTo(a['created_at'] as String));
+      final totauxBranche = <String, ContributionTotals>{};
+      for (final t in ['dime', 'offrande', 'don', 'depense']) {
+        totauxBranche[t] = const ContributionTotals(totalFcfa: 0, nombre: 0);
+      }
+      for (final c in confirmes) {
+        final t = c['type'] as String;
+        final prev = totauxBranche[t]!;
+        totauxBranche[t] = ContributionTotals(
+          totalFcfa: prev.totalFcfa + (c['amount_fcfa'] as int),
+          nombre: prev.nombre + 1,
+        );
+        final prevReseau = totaux[t]!;
+        totaux[t] = ContributionTotals(
+          totalFcfa: prevReseau.totalFcfa + (c['amount_fcfa'] as int),
+          nombre: prevReseau.nombre + 1,
+        );
+      }
+      final entreesBranche = (totauxBranche['dime']?.totalFcfa ?? 0) +
+          (totauxBranche['offrande']?.totalFcfa ?? 0) +
+          (totauxBranche['don']?.totalFcfa ?? 0);
+      final depensesBranche = totauxBranche['depense']?.totalFcfa ?? 0;
+      entrees += entreesBranche;
+      depenses += depensesBranche;
+      final actifs =
+          _members[id]?.where((m) => m['status'] == 'actif').length ?? 0;
+      membresActifs += actifs;
+      branches.add(RapportDetailBranche(
+        egliseId: id,
+        egliseCode: church['code'] as String,
+        egliseNom: church['name'] as String,
+        egliseVille: church['city'] as String?,
+        membresActifs: actifs,
+        totaux: totauxBranche,
+        entreesFcfa: entreesBranche,
+        depensesFcfa: depensesBranche,
+        soldeFcfa: entreesBranche - depensesBranche,
+        transactions:
+            confirmes.map((c) => Contribution.fromJson(c)).toList(),
+      ));
+    }
+    return RapportDetailConsolide(
+      eglise: _toChurch(_churchById(_churchId!)!),
+      periode: RapportDetailPeriode(
+        type: periode,
+        debut: bornes.debut.toIso8601String().substring(0, 10),
+        fin: bornes.fin.toIso8601String().substring(0, 10),
+        label: bornes.label,
+      ),
+      // Comme l'API réelle : mon église d'abord, puis les branches par nom.
+      branches: branches
+        ..sort((a, b) {
+          if (a.egliseId == _churchId) return -1;
+          if (b.egliseId == _churchId) return 1;
+          return a.egliseNom.compareTo(b.egliseNom);
+        }),
+      totaux: totaux,
+      entreesFcfa: entrees,
+      depensesFcfa: depenses,
+      soldeFcfa: entrees - depenses,
+      membresActifs: membresActifs,
+    );
+  }
+
   @override
   Future<List<Announcement>> getAnnonces() async {
     await _delay();

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import 'annonces_screen.dart';
 import 'dashboard_screen.dart';
+import 'finances_mere_screen.dart';
 import 'finances_screen.dart';
 import 'membres_screen.dart';
 import 'rattachements_screen.dart';
@@ -139,6 +140,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                         builder: (_) => const TransfertsScreen()),
+                  );
+                },
+              ),
+            if (state.isAdmin)
+              ListTile(
+                leading: const Icon(Icons.account_balance_outlined),
+                title: const Text('Finances de la mère'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const FinancesMereScreen()),
                   );
                 },
               ),

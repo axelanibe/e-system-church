@@ -105,6 +105,14 @@ abstract class ApiService {
   // -- Rapports et annonces --------------------------------------------------
   Future<RapportConsolide> getRapport();
 
+  /// Finances de la mère en détail : total consolidé + détail par branche,
+  /// par période (mois, trimestre, année) et par type, avec chaque
+  /// transaction confirmée. La vue agrégée reste pour le tableau de bord.
+  Future<RapportDetailConsolide> getRapportDetail({
+    required String periode,
+    String? mois,
+  });
+
   Future<List<Announcement>> getAnnonces();
 
   Future<Announcement> createAnnonce({

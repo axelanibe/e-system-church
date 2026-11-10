@@ -201,6 +201,35 @@ curl -X POST http://localhost:3000/transferts/<id>/refuser -H "Authorization: Be
 curl -X POST http://localhost:3000/transferts/<id>/annuler -H "Authorization: Bearer TOKEN_DEPART"
 ```
 
+### 16. Finances de la mère en détail (total consolidé + détail par branche)
+
+Règle : admin de l'église mère seulement. Périmètre strict, mon église +
+ses sous-églises directes, filtré par la `church_id` de la session, jamais
+une autre mère. Seules les contributions confirmées comptent. La vue
+agrégée `/rapports/consolide` reste pour le tableau de bord ; cette route
+ajoute le détail, elle ne la remplace pas. Chaque consultation est
+journalisée en `audit_logs` (`rapport.detail_consulte`).
+
+```bash
+# Mois en cours (novembre 2026 par défaut si la date serveur est en novembre)
+curl "http://localhost:3000/rapports/consolide/detail" -H "Authorization: Bearer TOKEN"
+# → { "eglise": {...}, "periode": { "type": "mois", "debut": "2026-11-01", "fin": "2026-12-01", "label": "Novembre 2026" }, "branches": [...], "totaux_reseau": {...} }
+
+# Trimestre et année, ancrés sur novembre 2026
+curl "http://localhost:3000/rapports/consolide/detail?periode=trimestre&mois=2026-11" -H "Authorization: Bearer TOKEN"
+curl "http://localhost:3000/rapports/consolide/detail?periode=annee&mois=2026-11" -H "Authorization: Bearer TOKEN"
+# → chaque branche : totaux par type, entrees_fcfa, depenses_fcfa, solde_fcfa,
+#   membres_actifs, et transactions (confirmées, 100 au plus par branche).
+# Un trésorier ou un membre simple est refusé : 403.
+```
+
+Recette de test contre une vraie base : lancer PostgreSQL,
+`npm run migrate`, créer une mère et une sous-église, enregistrer des
+contributions confirmées dans les deux églises sur novembre 2026, puis
+jouer les exemples ci-dessus et vérifier que les totaux par type, le
+solde et les transactions correspondent, et qu'une autre mère ne voit
+rien de ce réseau (403 ou 404 selon son rôle).
+
 ## Rôles
 
 | Rôle | Droits dans son église |
@@ -221,6 +250,9 @@ curl -X POST http://localhost:3000/transferts/<id>/annuler -H "Authorization: Be
 - Les routes de transfert n'ont pas été testées contre une vraie base
   PostgreSQL (pas de base sur cette machine) : lancer PostgreSQL,
   `npm run migrate`, puis jouer les exemples curl de la section 15.
+- La route de détail consolidé (`GET /rapports/consolide/detail`) n'a pas
+  non plus été testée contre une vraie base PostgreSQL : lancer PostgreSQL,
+  `npm run migrate`, puis jouer les exemples curl de la section 16.
 - Enregistrement manuel des paiements Mobile Money (référence) ; pas de
   webhook Wave / Orange / MTN (V2).
 - JWT sans table de révocation : un jeton reste valide jusqu'à expiration
