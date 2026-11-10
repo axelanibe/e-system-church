@@ -1,0 +1,181 @@
+import 'package:flutter/material.dart';
+
+/// Indicateur de chargement centré.
+class AppLoading extends StatelessWidget {
+  const AppLoading({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: CircularProgressIndicator());
+  }
+}
+
+/// Panneau d'erreur avec bouton « Réessayer ».
+class AppError extends StatelessWidget {
+  final String message;
+  final VoidCallback? onRetry;
+
+  const AppError({super.key, required this.message, this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline,
+                size: 48, color: Theme.of(context).colorScheme.error),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+            if (onRetry != null) ...[
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: onRetry,
+                child: const Text('Réessayer'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// État vide (liste sans élément).
+class EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const EmptyState({
+    super.key,
+    required this.icon,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 48,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 16),
+              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Titre de section (majuscules légères, espacement).
+class SectionTitle extends StatelessWidget {
+  final String title;
+
+  const SectionTitle({super.key, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      child: Text(
+        title.toUpperCase(),
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              letterSpacing: 1.2,
+            ),
+      ),
+    );
+  }
+}
+
+/// Petite pastille colorée de statut.
+class StatusChip extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const StatusChip({super.key, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      backgroundColor: color.withValues(alpha: 0.15),
+      side: BorderSide(color: color.withValues(alpha: 0.4)),
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+    );
+  }
+}
+
+/// Carte de chiffre (tableau de bord).
+class StatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color? color;
+
+  const StatCard({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.icon,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color ?? scheme.primary),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Affiche une erreur d'API dans un SnackBar.
+void showApiError(BuildContext context, Object error) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(error.toString()),
+      backgroundColor: Theme.of(context).colorScheme.error,
+    ),
+  );
+}
+
+/// Affiche une confirmation dans un SnackBar.
+void showSuccess(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message)),
+  );
+}
