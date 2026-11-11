@@ -24,7 +24,7 @@ jobs:
           channel: stable
           flutter-version: '3.47.9'
           cache: true
-          cache-key: flutter-3.47.9-:os:-:channel:-:arch:
+          cache-key: 'flutter-3.47.9-:os:-:channel:-:arch:'
       - run: flutter --version
       - run: flutter pub get
       - run: flutter analyze
