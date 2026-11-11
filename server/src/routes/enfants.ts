@@ -20,6 +20,7 @@ const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 export function registerEnfantsRoutes(app: FastifyInstance, db: Pool) {
   registerCrud(app, db, {
     base: "/classes-enfants",
+    module: "enfants",
     table: "classes_enfants",
     columns: ["nom", "age_min", "age_max", "salle"],
     createSchema: z.object({
@@ -36,6 +37,7 @@ export function registerEnfantsRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/enseignants-classes",
+    module: "enfants",
     table: "enseignants_classes",
     columns: ["classe_id", "member_id", "role"],
     createSchema: z.object({
@@ -60,6 +62,7 @@ export function registerEnfantsRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/autorisations-sorties",
+    module: "enfants",
     table: "autorisations_sorties",
     columns: ["enfant_member_id", "parent_member_id", "activite", "date_sortie", "statut"],
     createSchema: z.object({
@@ -87,6 +90,7 @@ export function registerEnfantsRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/activites-jeunesse",
+    module: "enfants",
     table: "activites_jeunesse",
     columns: ["titre", "description", "date_activite", "lieu", "responsable_member_id"],
     createSchema: z.object({

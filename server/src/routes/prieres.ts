@@ -19,6 +19,7 @@ const uuid = z.string().uuid();
 export function registerPrieresRoutes(app: FastifyInstance, db: Pool) {
   registerCrud(app, db, {
     base: "/demandes-priere",
+    module: "prieres",
     table: "demandes_priere",
     columns: ["member_id", "demandeur_nom", "sujet", "details", "confidentiel", "statut"],
     createSchema: z.object({
@@ -39,6 +40,7 @@ export function registerPrieresRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/messages-internes",
+    module: "prieres",
     table: "messages_internes",
     columns: ["expediteur_id", "destinataire_id", "sujet", "corps", "lu"],
     createSchema: z.object({

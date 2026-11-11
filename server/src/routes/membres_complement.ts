@@ -11,6 +11,7 @@ import {
   registerCrud,
 } from "../crud.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
+import { requireModule } from "../modules.js";
 
 /**
  * Module 1 — Membres (compléter) : familles, historique des statuts,
@@ -32,6 +33,7 @@ function toMemberStatus(statut: string): "actif" | "nouveau_converti" | "inactif
 export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) {
   registerCrud(app, db, {
     base: "/familles",
+    module: "familles",
     table: "familles",
     columns: ["nom", "chef_famille_id", "adresse", "telephone"],
     createSchema: z.object({
@@ -54,6 +56,7 @@ export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) 
 
   registerCrud(app, db, {
     base: "/membre-statuts",
+    module: "familles",
     table: "membre_statuts",
     columns: ["member_id", "statut", "ancien_statut", "motif"],
     createSchema: z.object({
@@ -77,6 +80,7 @@ export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) 
 
   registerCrud(app, db, {
     base: "/baptemes",
+    module: "familles",
     table: "baptemes",
     columns: ["member_id", "date_bapteme", "lieu", "pasteur", "certificat_numero"],
     createSchema: z.object({
@@ -100,6 +104,7 @@ export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) 
 
   registerCrud(app, db, {
     base: "/liens-parent-enfant",
+    module: "familles",
     table: "liens_parent_enfant",
     columns: ["parent_member_id", "enfant_member_id", "lien", "statut"],
     createSchema: z.object({
@@ -123,6 +128,7 @@ export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) 
 
   registerCrud(app, db, {
     base: "/departements",
+    module: "familles",
     table: "departements",
     columns: ["nom", "description", "responsable_member_id"],
     createSchema: z.object({
@@ -144,6 +150,7 @@ export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) 
 
   registerCrud(app, db, {
     base: "/cellules",
+    module: "familles",
     table: "cellules",
     columns: ["nom", "quartier", "responsable_member_id", "jour_reunion", "heure_reunion"],
     createSchema: z.object({
@@ -167,6 +174,7 @@ export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) 
 
   registerCrud(app, db, {
     base: "/membre-departements",
+    module: "familles",
     table: "membre_departements",
     columns: ["member_id", "departement_id", "role"],
     createSchema: z.object({
@@ -191,6 +199,7 @@ export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) 
 
   registerCrud(app, db, {
     base: "/membre-cellules",
+    module: "familles",
     table: "membre_cellules",
     columns: ["member_id", "cellule_id"],
     createSchema: z.object({ member_id: uuid, cellule_id: uuid }),
@@ -217,7 +226,7 @@ export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) 
   });
   app.post(
     "/membres/:id/statut",
-    { preHandler: [requireAuth(db), requireRole(...WRITE_STD)] },
+    { preHandler: [requireAuth(db), requireModule(db, "familles"), requireRole(...WRITE_STD)] },
     async (req, reply) => {
       const parsed = statutSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -261,7 +270,7 @@ export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) 
   //    cellules, liens parent-enfant. ----------------------------------------
   app.get(
     "/membres/:id/complet",
-    { preHandler: [requireAuth(db), requireRole(...READ_ALL)] },
+    { preHandler: [requireAuth(db), requireModule(db, "familles"), requireRole(...READ_ALL)] },
     async (req, reply) => {
       const memberId = (req.params as { id: string }).id;
       try {

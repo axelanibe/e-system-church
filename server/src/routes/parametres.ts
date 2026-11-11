@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auditLog } from "../auth.js";
 import { invalidInput } from "../crud.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
+import { requireModule } from "../modules.js";
 
 /**
  * Module 12 — Administration : paramètres de l'église (coordonnées, logo,
@@ -35,7 +36,7 @@ export function registerParametresRoutes(app: FastifyInstance, db: Pool) {
   // -- Paramètres de mon église (une ligne par église, créée à la demande). --
   app.get(
     "/parametres",
-    { preHandler: [requireAuth(db), requireRole(...READ_ROLES)] },
+    { preHandler: [requireAuth(db), requireModule(db, "parametres"), requireRole(...READ_ROLES)] },
     async (req, reply) => {
       try {
         const { rows } = await db.query(
@@ -62,7 +63,7 @@ export function registerParametresRoutes(app: FastifyInstance, db: Pool) {
 
   app.patch(
     "/parametres",
-    { preHandler: [requireAuth(db), requireRole(...ADMIN)] },
+    { preHandler: [requireAuth(db), requireModule(db, "parametres"), requireRole(...ADMIN)] },
     async (req, reply) => {
       const parsed = parametresSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -102,7 +103,7 @@ export function registerParametresRoutes(app: FastifyInstance, db: Pool) {
   // -- Rôles : qui fait quoi dans mon église. --------------------------------
   app.get(
     "/parametres/roles",
-    { preHandler: [requireAuth(db), requireRole(...ADMIN)] },
+    { preHandler: [requireAuth(db), requireModule(db, "parametres"), requireRole(...ADMIN)] },
     async (req, reply) => {
       try {
         const { rows } = await db.query(
@@ -122,7 +123,7 @@ export function registerParametresRoutes(app: FastifyInstance, db: Pool) {
 
   app.patch(
     "/parametres/roles/:userId",
-    { preHandler: [requireAuth(db), requireRole(...ADMIN)] },
+    { preHandler: [requireAuth(db), requireModule(db, "parametres"), requireRole(...ADMIN)] },
     async (req, reply) => {
       const parsed = roleSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -159,7 +160,7 @@ export function registerParametresRoutes(app: FastifyInstance, db: Pool) {
   // -- Journal d'audit de mon église (lecture seule, admin). -----------------
   app.get(
     "/parametres/audit",
-    { preHandler: [requireAuth(db), requireRole(...ADMIN)] },
+    { preHandler: [requireAuth(db), requireModule(db, "parametres"), requireRole(...ADMIN)] },
     async (req, reply) => {
       const limit = Math.min(Math.max(Number((req.query as { limit?: string }).limit ?? 50) || 50, 1), 100);
       const offset = Math.max(Number((req.query as { offset?: string }).offset ?? 0) || 0, 0);
