@@ -1,6 +1,6 @@
 # User stories — e-System Church (propositions V2)
 
-Statut : proposition, à valider par Bouf et par les églises qui utiliseront la plateforme. Format : cahier des charges MVP.
+Statut : validé par Bouf le 11 novembre 2026, à implémenter par tranches, MVP US1, US2, US3 d'abord, le reste en V2. Format : cahier des charges MVP.
 Date : 11 novembre 2026.
 
 Suite de `docs/user-stories-mvp-extensions.md` (US1 modules activables, US2 campagnes de collecte, US3 attestations annuelles de dons). Les idées ci-dessous viennent de la lecture du dépôt. Ce sont des propositions, pas des décisions. Aucune n'est implémentée. Les sujets de prière restent par e-mail seulement, jamais par WhatsApp ni par notification.
@@ -168,7 +168,7 @@ Suite de `docs/user-stories-mvp-extensions.md` (US1 modules activables, US2 camp
 1. Qui valide le contenu et le prix des envois WhatsApp, et quel opérateur ou prestataire est retenu en Côte d'Ivoire ?
 2. La carte dans le portefeuille du téléphone doit-elle être disponible pour toutes les églises, ou seulement pour celles qui l'activent ?
 3. Le repli SMS du mode économique est-il facturé à l'église ou au membre, et avec quel plafond ?
-4. Qui valide la valeur juridique des attestations annuelles de dons, déjà posée en US3 ?
+4. Valeur juridique des attestations annuelles de dons : tranchée par Bouf le 11 novembre 2026, en Côte d'Ivoire, pas de déclaration d'impôt pour les églises, l'attestation sert de reçu justificatif, aucune validation juridique de sa valeur fiscale n'est requise.
 
 ## Intégration au dépôt
 
