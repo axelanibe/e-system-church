@@ -9,6 +9,7 @@ import '../models/auth.dart';
 import '../models/church.dart';
 import '../models/contribution.dart';
 import '../models/member.dart';
+import '../models/plateforme.dart';
 import '../models/rapport.dart';
 import '../models/rattachement.dart';
 import '../models/transfert.dart';
@@ -348,6 +349,13 @@ class HttpApiService implements ApiService {
           if (mois != null) 'mois': mois,
         },
       ));
+
+  @override
+  Future<ChiffresPlateforme> getPlateforme() async {
+    final data = await _call('GET', '/plateforme/chiffres');
+    return ChiffresPlateforme.fromJson(
+        data['chiffres'] as Map<String, dynamic>);
+  }
 
   @override
   Future<List<Announcement>> getAnnonces() async {

@@ -3,6 +3,7 @@ import '../models/auth.dart';
 import '../models/church.dart';
 import '../models/contribution.dart';
 import '../models/member.dart';
+import '../models/plateforme.dart';
 import '../models/rapport.dart';
 import '../models/rattachement.dart';
 import '../models/transfert.dart';
@@ -114,6 +115,11 @@ abstract class ApiService {
   });
 
   Future<List<Announcement>> getAnnonces();
+
+  // -- Plateforme ------------------------------------------------------------
+  /// Chiffres globaux seulement (`GET /plateforme/chiffres`, super_admin
+  /// seulement). Aucun détail nominatif, aucune gestion des membres.
+  Future<ChiffresPlateforme> getPlateforme();
 
   Future<Announcement> createAnnonce({
     required String title,

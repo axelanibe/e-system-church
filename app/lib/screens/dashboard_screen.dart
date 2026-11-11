@@ -7,6 +7,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import 'finances_mere_screen.dart';
+import 'plateforme_screen.dart';
 
 class _DashboardData {
   final int membresTotal;
@@ -120,6 +121,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                if (state.isSuperAdmin)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Plateforme',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                              'Chiffres globaux de toutes les églises mères '
+                              'ensemble, sans détail nominatif.'),
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: FilledButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const PlateformeScreen(),
+                                  ),
+                                );
+                              },
+                              icon:
+                                  const Icon(Icons.public_outlined),
+                              label: const Text(
+                                  'Voir les chiffres de la plateforme'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (state.isSuperAdmin) const SizedBox(height: 16),
                 FutureBuilder<_DashboardData>(
                   future: _future,
                   builder: (context, snapshot) {
@@ -213,7 +254,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           Icons.account_tree_outlined),
                                       title: Text(s.egliseNom),
                                       subtitle: Text(
-                                          '${s.membresActifs} membres · ${formatFcfa(s.totalFcfa)}'),
+                                          '${s.membresActifs} membres · ${formatFcfa(s.totalFcfa)}'
+                                          '${s.niveau == 1 ? '' : ' · niveau ${s.niveau}'}'),
                                       trailing: Text(
                                           '${s.nombreContributions} contributions'),
                                     ),

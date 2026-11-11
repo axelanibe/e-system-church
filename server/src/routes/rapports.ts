@@ -7,13 +7,14 @@ import { dbError, requireAuth, requireRole } from "../middleware.js";
 /**
  * Rapports consolidés — admin de l'église mère seulement.
  * GET /rapports/consolide — chiffres de mon église + agrégats de chaque
- * sous-église (vue v_rapports_consolides : totaux uniquement, jamais le
- * détail nominatif d'une antenne).
- * GET /rapports/consolide/detail — même périmètre (mon église + ses
- * sous-églises directes), mais en détail : total consolidé et détail par
- * branche, par période (mois, trimestre, année) et par type, avec chaque
- * transaction confirmée. La vue agrégée reste pour le tableau de bord ;
- * le détail s'ajoute à côté, il ne la remplace pas.
+ * descendant (vue v_rapports_consolides, récursive : totaux uniquement,
+ * jamais le détail nominatif d'une antenne).
+ * GET /rapports/consolide/detail — même périmètre (mon église + tous ses
+ * descendants, petites-filles comprises, avec leur niveau), mais en détail :
+ * total consolidé et détail par branche, par période (mois, trimestre,
+ * année) et par type, avec chaque transaction confirmée. La vue agrégée
+ * reste pour le tableau de bord ; le détail s'ajoute à côté, il ne la
+ * remplace pas.
  */
 
 const TYPES = ["dime", "offrande", "don", "depense"] as const;
@@ -91,13 +92,14 @@ export function registerRapportsRoutes(app: FastifyInstance, db: Pool) {
         );
         const propres = propresRows[0];
 
-        // Agrégats de mes sous-églises directes (la vue ne couvre que les
-        // églises qui ont une mère ; on ne remonte qu'un niveau ici).
+        // Agrégats de tous mes descendants (la vue est récursive : la
+        // racine est l'église de la session, niveau 1 = sous-église
+        // directe, niveau 2 = antenne d'une sous-église, …).
         const { rows: sousEglises } = await db.query(
-          `SELECT eglise_id, eglise_nom, membres_actifs, nombre_contributions, total_fcfa
+          `SELECT eglise_id, eglise_nom, niveau, membres_actifs, nombre_contributions, total_fcfa
              FROM v_rapports_consolides
             WHERE eglise_mere_id = $1
-            ORDER BY eglise_nom ASC`,
+            ORDER BY niveau ASC, eglise_nom ASC`,
           [req.session.churchId],
         );
 
@@ -148,14 +150,22 @@ export function registerRapportsRoutes(app: FastifyInstance, db: Pool) {
         const church = churchRows[0];
         if (!church) return reply.code(404).send({ error: "not_found", message: "Église introuvable." });
 
-        // Périmètre strict : mon église + ses sous-églises directes, comme
-        // pour /rapports/consolide. Jamais une autre mère, jamais une autre
-        // branche du réseau. Les petites-filles ne sont pas listées ici :
-        // elles sont vues par leur propre mère directe.
+        // Périmètre strict : mon église + tous ses descendants, récursif
+        // (petites-filles comprises). Jamais une autre mère, jamais une
+        // autre branche du réseau. Le niveau est renvoyé avec chaque
+        // branche : 0 = mon église, 1 = sous-église directe,
+        // 2 = antenne d'une sous-église, …
         const { rows: branchesRows } = await db.query(
-          `SELECT id, code, name, city FROM churches
-            WHERE id = $1 OR parent_church_id = $1
-            ORDER BY CASE WHEN id = $1 THEN 0 ELSE 1 END, name ASC`,
+          `WITH RECURSIVE descendants AS (
+             SELECT id, code, name, city, 0 AS niveau
+               FROM churches WHERE id = $1
+              UNION ALL
+             SELECT c.id, c.code, c.name, c.city, d.niveau + 1
+               FROM churches c
+               JOIN descendants d ON c.parent_church_id = d.id
+           )
+           SELECT id, code, name, city, niveau FROM descendants
+            ORDER BY niveau ASC, name ASC`,
           [req.session.churchId],
         );
 
@@ -208,6 +218,7 @@ export function registerRapportsRoutes(app: FastifyInstance, db: Pool) {
             eglise_code: b.code,
             eglise_nom: b.name,
             eglise_ville: b.city,
+            niveau: b.niveau,
             membres_actifs: membresRows[0].n,
             totaux,
             entrees_fcfa: entrees,

@@ -22,10 +22,11 @@ class RapportChiffres {
       );
 }
 
-/// Agrégats d'une sous-église (vue `v_rapports_consolides`).
+/// Agrégats d'une sous-église (vue `v_rapports_consolides`, récursive).
 class RapportSousEglise {
   final String egliseId;
   final String egliseNom;
+  final int niveau; // 1 = sous-église directe, 2 = antenne, …
   final int membresActifs;
   final int nombreContributions;
   final int totalFcfa;
@@ -33,6 +34,7 @@ class RapportSousEglise {
   const RapportSousEglise({
     required this.egliseId,
     required this.egliseNom,
+    this.niveau = 1,
     required this.membresActifs,
     required this.nombreContributions,
     required this.totalFcfa,
@@ -42,6 +44,7 @@ class RapportSousEglise {
       RapportSousEglise(
         egliseId: json['eglise_id'] as String,
         egliseNom: json['eglise_nom'] as String,
+        niveau: (json['niveau'] as num?)?.toInt() ?? 1,
         membresActifs: (json['membres_actifs'] as num?)?.toInt() ?? 0,
         nombreContributions:
             (json['nombre_contributions'] as num?)?.toInt() ?? 0,
@@ -107,6 +110,7 @@ class RapportDetailBranche {
   final String egliseCode;
   final String egliseNom;
   final String? egliseVille;
+  final int niveau; // 0 = mon église, 1 = sous-église directe, 2 = antenne, …
   final int membresActifs;
   final Map<String, ContributionTotals> totaux;
   final int entreesFcfa;
@@ -119,6 +123,7 @@ class RapportDetailBranche {
     required this.egliseCode,
     required this.egliseNom,
     this.egliseVille,
+    this.niveau = 0,
     required this.membresActifs,
     required this.totaux,
     required this.entreesFcfa,
@@ -138,6 +143,7 @@ class RapportDetailBranche {
       egliseCode: json['eglise_code'] as String,
       egliseNom: json['eglise_nom'] as String,
       egliseVille: json['eglise_ville'] as String?,
+      niveau: (json['niveau'] as num?)?.toInt() ?? 0,
       membresActifs: (json['membres_actifs'] as num?)?.toInt() ?? 0,
       totaux: totaux,
       entreesFcfa: (json['entrees_fcfa'] as num?)?.toInt() ?? 0,

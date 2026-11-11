@@ -183,13 +183,26 @@ CREATE INDEX idx_audit_church ON audit_logs (church_id, created_at);
 
 -- ---------------------------------------------------------------------------
 -- Vues consolidées pour l'église mère (agrégats uniquement, jamais le détail
--- nominatif d'une antenne sans autorisation explicite)
+-- nominatif d'une antenne sans autorisation explicite). Récursive depuis le
+-- 10 novembre 2026 (tranche Plateforme) : une mère voit tous ses
+-- descendants, petites-filles comprises, avec leur niveau (1 = sous-église
+-- directe, 2 = antenne d'une sous-église, …). eglise_mere_id est la racine
+-- du réseau, pas la mère directe.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE VIEW v_rapports_consolides AS
+WITH RECURSIVE descendants AS (
+    SELECT id AS eglise_id, id AS racine_id, 0 AS niveau
+      FROM churches
+     UNION ALL
+    SELECT c.id, d.racine_id, d.niveau + 1
+      FROM churches c
+      JOIN descendants d ON c.parent_church_id = d.eglise_id
+)
 SELECT
-    c.parent_church_id AS eglise_mere_id,
-    c.id               AS eglise_id,
-    c.name             AS eglise_nom,
+    d.racine_id AS eglise_mere_id,
+    c.id        AS eglise_id,
+    c.name      AS eglise_nom,
+    d.niveau    AS niveau,
     (SELECT count(*) FROM members m WHERE m.church_id = c.id AND m.status = 'actif') AS membres_actifs,
     (SELECT count(*) FROM contributions co
       WHERE co.church_id = c.id AND co.type IN ('dime','offrande','don')
@@ -198,7 +211,8 @@ SELECT
       WHERE co.church_id = c.id AND co.type IN ('dime','offrande','don')
         AND co.status = 'confirme') AS total_fcfa
 FROM churches c
-WHERE c.parent_church_id IS NOT NULL;
+JOIN descendants d ON d.eglise_id = c.id
+WHERE d.racine_id <> c.id;
 
 -- ---------------------------------------------------------------------------
 -- Transferts de membre entre branches (tranche symbiose, 10 novembre 2026)

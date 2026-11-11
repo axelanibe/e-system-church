@@ -15,6 +15,7 @@ import { registerTransfertsRoutes } from "./routes/transferts.js";
 import { registerMembresRoutes } from "./routes/membres.js";
 import { registerContributionsRoutes } from "./routes/contributions.js";
 import { registerRapportsRoutes } from "./routes/rapports.js";
+import { registerPlateformeRoutes } from "./routes/plateforme.js";
 import { registerAnnoncesRoutes } from "./routes/annonces.js";
 
 export function buildApp(db: Pool) {
@@ -33,6 +34,7 @@ export function buildApp(db: Pool) {
   registerMembresRoutes(app, db);
   registerContributionsRoutes(app, db);
   registerRapportsRoutes(app, db);
+  registerPlateformeRoutes(app, db);
   registerAnnoncesRoutes(app, db);
 
   app.setNotFoundHandler((_req, reply) => {
