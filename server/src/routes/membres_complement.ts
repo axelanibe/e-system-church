@@ -146,6 +146,59 @@ export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) 
       }
       return null;
     },
+    // Un département encore affecté à des membres ou à des serviteurs ne
+    // se supprime pas : les données liées ne sont jamais effacées avec lui.
+    beforeDelete: async (db2, churchId, id) => {
+      const affecte = await db2.query(
+        `SELECT 1 FROM membre_departements WHERE departement_id = $1 AND church_id = $2 LIMIT 1`,
+        [id, churchId],
+      );
+      if ((affecte.rowCount ?? 0) > 0) {
+        return "Ce département est encore affecté à des membres : retirez-les d'abord.";
+      }
+      const servi = await db2.query(
+        `SELECT 1 FROM serviteurs WHERE departement_id = $1 AND church_id = $2 LIMIT 1`,
+        [id, churchId],
+      );
+      if ((servi.rowCount ?? 0) > 0) {
+        return "Ce département a encore des serviteurs : retirez-les d'abord.";
+      }
+      return null;
+    },
+  });
+
+  // Fonctions de l'église (catalogue par église, amorcé à la création avec
+  // les 11 choix de CONNEXION PROPHÉTIQUE ; le membre choisit sa fonction
+  // dans ce catalogue, « Aucun » veut dire sans fonction précise).
+  registerCrud(app, db, {
+    base: "/fonctions",
+    module: "familles",
+    table: "fonctions",
+    columns: ["nom"],
+    createSchema: z.object({
+      nom: z.string().min(2).max(120),
+    }),
+    readRoles: READ_ALL,
+    writeRoles: WRITE_STD,
+    audit: "fonction",
+    searchColumn: "nom",
+    orderBy: "nom ASC",
+    // Une fonction encore portée par des membres ne se supprime pas.
+    beforeDelete: async (db2, churchId, id) => {
+      const { rows } = await db2.query(
+        `SELECT nom FROM fonctions WHERE id = $1 AND church_id = $2`,
+        [id, churchId],
+      );
+      if (rows.length === 0) return null;
+      const porte = await db2.query(
+        `SELECT 1 FROM members WHERE church_id = $1 AND fonction = $2 LIMIT 1`,
+        [churchId, rows[0].nom as string],
+      );
+      if ((porte.rowCount ?? 0) > 0) {
+        return "Cette fonction est encore portée par des membres : changez-la d'abord.";
+      }
+      return null;
+    },
   });
 
   registerCrud(app, db, {
@@ -172,15 +225,55 @@ export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) 
     },
   });
 
+  // Postes de l'église (catalogue par église, amorcé à la création avec
+  // les 5 postes d'exemple du document d'architecture, §4). Fonction,
+  // département et poste sont trois notions séparées, stockées séparément.
+  registerCrud(app, db, {
+    base: "/postes",
+    module: "familles",
+    table: "postes",
+    columns: ["nom"],
+    createSchema: z.object({
+      nom: z.string().min(2).max(120),
+    }),
+    readRoles: READ_ALL,
+    writeRoles: WRITE_STD,
+    audit: "poste",
+    searchColumn: "nom",
+    orderBy: "nom ASC",
+    // Un poste encore occupé par des membres ne se supprime pas.
+    beforeDelete: async (db2, churchId, id) => {
+      const { rows } = await db2.query(
+        `SELECT nom FROM postes WHERE id = $1 AND church_id = $2`,
+        [id, churchId],
+      );
+      if (rows.length === 0) return null;
+      const occupe = await db2.query(
+        `SELECT 1 FROM members WHERE church_id = $1 AND poste = $2 LIMIT 1`,
+        [churchId, rows[0].nom as string],
+      );
+      if ((occupe.rowCount ?? 0) > 0) {
+        return "Ce poste est encore occupé par des membres : changez-le d'abord.";
+      }
+      return null;
+    },
+  });
+
   registerCrud(app, db, {
     base: "/membre-departements",
     module: "familles",
     table: "membre_departements",
-    columns: ["member_id", "departement_id", "role"],
+    // Une affectation : personne, département, rôle, période de validité
+    // et statut. Une affectation terminée est archivée, pas effacée :
+    // on la termine (PATCH statut « terminee ») au lieu de la supprimer.
+    columns: ["member_id", "departement_id", "role", "date_debut", "date_fin", "statut"],
     createSchema: z.object({
       member_id: uuid,
       departement_id: uuid,
       role: z.string().min(2).max(80).default("membre"),
+      date_debut: z.string().regex(dateRe, "Date au format AAAA-MM-JJ.").optional(),
+      date_fin: z.string().regex(dateRe, "Date au format AAAA-MM-JJ.").optional(),
+      statut: z.enum(["active", "terminee"]).default("active"),
     }),
     readRoles: READ_ALL,
     writeRoles: WRITE_STD,

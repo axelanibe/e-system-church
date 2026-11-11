@@ -12,6 +12,7 @@ import '../utils/format.dart';
 import '../widgets/change_password_dialog.dart';
 import '../widgets/church_avatar.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/mere_badge.dart';
 import 'member_detail_screen.dart';
 
 /// Accueil fidèle (rôle `membre`) : mon église, mes annonces, cultes à
@@ -108,9 +109,17 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   if (church != null)
-                    Text(
-                      church.code,
-                      style: Theme.of(context).textTheme.bodySmall,
+                    Row(
+                      children: [
+                        Text(
+                          church.code,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        if (church.isMere) ...[
+                          const SizedBox(width: 8),
+                          const MereBadge(),
+                        ],
+                      ],
                     ),
                 ],
               ),
@@ -162,6 +171,10 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                                   .headlineSmall
                                   ?.copyWith(fontWeight: FontWeight.bold),
                             ),
+                            if (church?.isMere ?? false) ...[
+                              const SizedBox(height: 8),
+                              const MereBadge(),
+                            ],
                             const SizedBox(height: 4),
                             Text(
                               'Code : ${church?.code ?? ''}'

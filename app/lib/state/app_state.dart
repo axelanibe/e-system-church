@@ -166,6 +166,8 @@ class AppState extends ChangeNotifier {
     required String adminEmail,
     required String password,
     String? parentCode,
+    String? logoBase64,
+    String? logoFilename,
   }) async {
     final result = await _api.register(
       churchName: churchName,
@@ -176,6 +178,8 @@ class AppState extends ChangeNotifier {
       adminEmail: adminEmail,
       password: password,
       parentCode: parentCode,
+      logoBase64: logoBase64,
+      logoFilename: logoFilename,
     );
     _applyAuth(result);
     await _store.saveToken(result.token);
@@ -215,6 +219,8 @@ class AppState extends ChangeNotifier {
     required String telephone,
     required String password,
     required String codeEglise,
+    String? department,
+    String? fonction,
   }) async {
     final result = await _api.registerMembreParCode(
       nomPrenom: nomPrenom,
@@ -222,6 +228,8 @@ class AppState extends ChangeNotifier {
       telephone: telephone,
       password: password,
       codeEglise: codeEglise,
+      department: department,
+      fonction: fonction,
     );
     if (result.auth != null) {
       _applyAuth(result.auth!);

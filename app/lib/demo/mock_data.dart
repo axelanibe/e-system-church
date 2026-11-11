@@ -64,6 +64,9 @@ class DemoSeed {
   final List<Announcement> annonces = _buildAnnonces();
   final List<Famille> familles = _buildFamilles();
   final List<Departement> departements = _buildDepartements();
+  final List<Fonction> fonctions = _buildFonctions();
+  // Postes de l'organigramme (distincts des postes budgétaires `postes`).
+  final List<Poste> postesOrganisation = _buildPostesOrganisation();
   final List<Cellule> cellules = _buildCellules();
   final List<Bapteme> baptemes = _buildBaptemes();
   final List<LienParentEnfant> liens = _buildLiens();
@@ -769,6 +772,14 @@ List<Famille> _buildFamilles() => [
           adresse: 'Plateau, Abidjan',
           telephone: '+225 07 47 12 34 03'),
     ];
+
+List<Poste> _buildPostesOrganisation() => postesParDefaut
+    .map((nom) => Poste(id: 'demo-poste-$nom', nom: nom))
+    .toList();
+
+List<Fonction> _buildFonctions() => fonctionsParDefaut
+    .map((nom) => Fonction(id: 'demo-fonction-$nom', nom: nom))
+    .toList();
 
 List<Departement> _buildDepartements() => [
       const Departement(

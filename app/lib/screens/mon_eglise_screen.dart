@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_theme.dart';
 import '../models/fidele.dart';
 import '../models/parametres.dart';
 import '../models/profil.dart';
@@ -12,6 +13,7 @@ import '../state/app_state.dart';
 import '../widgets/church_avatar.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import '../widgets/mere_badge.dart';
 import 'paiements_screen.dart';
 
 /// Module 13 — « Mon église » : identité publique de l'église active
@@ -339,6 +341,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
   Future<void> _editProfil(
       ProfilEglise profil, EgliseParametres parametres) async {
     final eglise = profil.eglise;
+    final nomController = TextEditingController(text: eglise.name);
     final descriptionController =
         TextEditingController(text: eglise.description ?? '');
     final couleurController =
@@ -368,6 +371,16 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
       saveLabel: 'Enregistrer',
       fields: [
         dialogTextField(
+          controller: nomController,
+          label: 'Nom de l’église',
+        ),
+        const Text(
+          'Le code de l’église ne change jamais, ni les matricules, '
+          'ni les cartes existantes.',
+          style: TextStyle(fontSize: 12),
+        ),
+        const SizedBox(height: 12),
+        dialogTextField(
           controller: descriptionController,
           label: 'Description',
           maxLines: 3,
@@ -382,8 +395,10 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
             label: const Text('Choisir un logo (PNG/JPG, max 2 Mo)'),
           ),
         ),
-        dialogTextField(
-            controller: couleurController, label: 'Couleur principale'),
+        _ChoixCouleur(
+          controller: couleurController,
+          nomEglise: eglise.name,
+        ),
         dialogTextField(controller: deviseController, label: 'Devise'),
         dialogTextField(
             controller: fuseauController, label: 'Fuseau horaire'),
@@ -410,7 +425,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
         ),
         dialogTextField(controller: cityController, label: 'Ville'),
       ],
-      isValid: () => true,
+      isValid: () => nomController.text.trim().length >= 2,
       onSave: () async {
         final horaires = <HoraireCulte>[];
         for (final line in horairesController.text.split('\n')) {
@@ -435,6 +450,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
         try {
           await api.updateProfil(
                 churchId: eglise.id,
+                name: nomController.text.trim(),
                 description: descriptionController.text.trim().isEmpty
                     ? null
                     : descriptionController.text.trim(),
@@ -524,6 +540,10 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                                   .headlineSmall
                                   ?.copyWith(fontWeight: FontWeight.bold),
                             ),
+                            if (eglise.isMere) ...[
+                              const SizedBox(height: 8),
+                              const MereBadge(),
+                            ],
                             const SizedBox(height: 4),
                             Text(
                               'Code : ${eglise.code}'
@@ -736,4 +756,127 @@ class _InviteSaisie {
     this.memberId,
     this.fullName,
   });
+}
+
+/// Choix de la couleur principale parmi des couleurs prédéfinies, avec
+/// aperçu de l'avatar (audit accessibilité, cas A2/A10 : plus de champ hex
+/// libre, que « or » ou « doré » ne remplissait pas). Écrit dans [controller].
+class _ChoixCouleur extends StatefulWidget {
+  final TextEditingController controller;
+  final String nomEglise;
+
+  const _ChoixCouleur({required this.controller, required this.nomEglise});
+
+  @override
+  State<_ChoixCouleur> createState() => _ChoixCouleurState();
+}
+
+class _ChoixCouleurState extends State<_ChoixCouleur> {
+  static const _presets = ['#0B1F3A', '#8A6A12', '#0C5B40', '#1B4F72'];
+  late String _choisie;
+  // Couleur actuelle hors des choix prédéfinis : on la garde visible
+  // plutôt que de l'écraser silencieusement par le bleu nuit.
+  String? _extra;
+
+  @override
+  void initState() {
+    super.initState();
+    final actuel = widget.controller.text.trim().toUpperCase();
+    if (actuel.isEmpty) {
+      _choisie = '#0B1F3A';
+      widget.controller.text = _choisie;
+    } else if (_presets.contains(actuel)) {
+      _choisie = actuel;
+    } else if (RegExp(r'^#[0-9A-F]{6}$').hasMatch(actuel)) {
+      _choisie = actuel;
+      _extra = actuel;
+    } else {
+      _choisie = '#0B1F3A';
+    }
+  }
+
+  Color _parse(String hex) {
+    final valeur = int.tryParse('FF${hex.substring(1)}', radix: 16);
+    return valeur == null ? AppTheme.bleuNuit : Color(valeur);
+  }
+
+  String get _initiales {
+    final mots = widget.nomEglise
+        .split(RegExp(r'\s+'))
+        .where((mot) => mot.isNotEmpty)
+        .take(2)
+        .toList();
+    return mots.map((mot) => mot[0].toUpperCase()).join();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fond = _parse(_choisie);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Couleur principale',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: fond,
+                child: Text(
+                  _initiales,
+                  style: TextStyle(
+                    color: ChurchAvatar.texteSur(fond),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ..._presets,
+                    if (_extra != null) _extra!,
+                  ].map((hex) {
+                    final selectionne = _choisie == hex;
+                    return GestureDetector(
+                      onTap: () => setState(() {
+                        _choisie = hex;
+                        widget.controller.text = hex;
+                      }),
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: _parse(hex),
+                          shape: BoxShape.circle,
+                          border: selectionne
+                              ? Border.all(color: AppTheme.or, width: 3)
+                              : null,
+                        ),
+                        child: selectionne
+                            ? const Icon(Icons.check,
+                                color: Colors.white, size: 20)
+                            : null,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Choisissez une couleur : vos initiales restent lisibles dessus.',
+            style: TextStyle(fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -198,6 +198,8 @@ class MemberDetailScreen extends StatelessWidget {
                                 : formatDate(
                                     DateTime.tryParse(member.birthDate!))),
                         _row(context, 'Département', member.department),
+                        _row(context, 'Fonction', member.fonctionAffichee),
+                        _row(context, 'Poste', member.poste),
                         _row(context, 'Cellule', member.cellGroup),
                         _row(context, 'Membre depuis',
                             formatDate(member.createdAt)),
