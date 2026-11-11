@@ -12,6 +12,7 @@ class Contribution {
   final String? memberId;
   final String? membreNom;
   final String? membreMatricule;
+  final String? campagneId;
   final DateTime? createdAt;
 
   /// Champs du reçu (`GET /contributions/:id` → `{ recu }`).
@@ -29,6 +30,7 @@ class Contribution {
     this.memberId,
     this.membreNom,
     this.membreMatricule,
+    this.campagneId,
     this.createdAt,
     this.egliseNom,
     this.egliseCode,
@@ -45,6 +47,7 @@ class Contribution {
         memberId: json['member_id'] as String?,
         membreNom: json['membre_nom'] as String?,
         membreMatricule: json['membre_matricule'] as String?,
+        campagneId: json['campagne_id'] as String?,
         createdAt: parseDate(json['created_at'] as String?),
         egliseNom: json['eglise_nom'] as String?,
         egliseCode: json['eglise_code'] as String?,
