@@ -9,6 +9,7 @@ class AppConfig {
   /// Version affichée dans Réglages.
   static const String appVersion = '0.1.0 (MVP)';
 
-  /// URL de l'API par défaut (mode API réelle).
-  static const String defaultApiBaseUrl = 'http://localhost:3000';
+  /// URL de l'API par défaut (mode API réelle, serveur Render en production).
+  /// L'URL reste modifiable dans Réglages pour les tests locaux.
+  static const String defaultApiBaseUrl = 'https://e-system-church.onrender.com';
 }
