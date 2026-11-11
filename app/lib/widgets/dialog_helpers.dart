@@ -92,13 +92,24 @@ Widget dialogDropdown<T>({
     padding: const EdgeInsets.only(bottom: 12),
     child: DropdownButtonFormField<T>(
       initialValue: value,
+      // Pleine largeur du dialogue : le menu s'ouvre alors aligné sur
+      // le champ, sans dépasser sur le champ voisin (photo 3).
+      isExpanded: true,
+      menuMaxHeight: 300,
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
         isDense: true,
       ),
       items: options.entries
-          .map((e) => DropdownMenuItem<T>(value: e.key, child: Text(e.value)))
+          .map((e) => DropdownMenuItem<T>(
+                value: e.key,
+                child: Text(
+                  e.value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ))
           .toList(),
       onChanged: onChanged,
     ),
@@ -127,6 +138,12 @@ Widget searchField({
 
 /// Affiche un dialogue de création/édition : [fields] puis Annuler/Valider.
 /// [onSave] n'est appelé que si [isValid] est vrai.
+///
+/// Mise en page (photo 3) : largeur limitée à 520 px sur tablette et
+/// ordinateur, pleine largeur sur téléphone, champs empilés un par ligne
+/// dans une zone défilante, boutons côte à côte en bas, 48 px de haut.
+/// Les boutons ne passent plus par `actions` : sur un dialogue étroit,
+/// la barre d'actions les empilait à la verticale.
 Future<void> showCreateDialog({
   required BuildContext context,
   required String title,
@@ -139,23 +156,41 @@ Future<void> showCreateDialog({
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: Text(title),
-      content: SingleChildScrollView(
-        child: Column(mainAxisSize: MainAxisSize.min, children: fields),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ...fields,
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () =>
+                          Navigator.of(dialogContext).pop(),
+                      child: const Text('Annuler'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () async {
+                        if (!isValid()) return;
+                        Navigator.of(dialogContext).pop();
+                        await onSave();
+                      },
+                      child: Text(saveLabel),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('Annuler'),
-        ),
-        FilledButton(
-          onPressed: () async {
-            if (!isValid()) return;
-            Navigator.of(dialogContext).pop();
-            await onSave();
-          },
-          child: Text(saveLabel),
-        ),
-      ],
     ),
   );
 }

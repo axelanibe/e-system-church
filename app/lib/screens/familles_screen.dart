@@ -417,6 +417,7 @@ class _FamillesScreenState extends State<FamillesScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<Member>(
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Choisir un membre',
                   border: OutlineInputBorder(),
@@ -425,7 +426,11 @@ class _FamillesScreenState extends State<FamillesScreen> {
                 items: membres
                     .map((m) => DropdownMenuItem<Member>(
                           value: m,
-                          child: Text('${m.fullName} (${m.matricule})'),
+                          child: Text(
+                            '${m.fullName} (${m.matricule})',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ))
                     .toList(),
                 onChanged: (m) {
