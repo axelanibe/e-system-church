@@ -16,6 +16,7 @@ import '../models/finances.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
+import '../models/module_eglise.dart';
 import '../models/paiements.dart';
 import '../models/parametres.dart';
 import '../models/pastoral.dart';
@@ -1585,6 +1586,23 @@ class HttpApiService implements ApiService {
     final data = await _call('GET', '/plateforme/chiffres');
     return ChiffresPlateforme.fromJson(
         data['chiffres'] as Map<String, dynamic>);
+  }
+
+  @override
+  Future<List<ModuleEglise>> getModules() async {
+    final data = await _call('GET', '/modules');
+    return (data['modules'] as List<dynamic>)
+        .map((e) => ModuleEglise.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<ModuleEglise> setModule({
+    required String code,
+    required bool actif,
+  }) async {
+    final data = await _call('PATCH', '/modules/$code', body: {'actif': actif});
+    return ModuleEglise.fromJson(data);
   }
 
   @override
