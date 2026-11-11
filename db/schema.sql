@@ -230,6 +230,33 @@ CREATE TABLE audit_logs (
 CREATE INDEX idx_audit_church ON audit_logs (church_id, created_at);
 
 -- ---------------------------------------------------------------------------
+-- Attestations annuelles de dons (US3) : une attestation émise est figée,
+-- son contenu est copié en JSONB à l'émission. Voir db/migrations/
+-- 007_attestations.sql (même définition, pour les bases existantes).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS attestations (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id      UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    member_id      UUID NOT NULL REFERENCES members (id) ON DELETE CASCADE,
+    annee          INT NOT NULL CHECK (annee BETWEEN 2000 AND 2100),
+    numero         TEXT NOT NULL,
+    total_fcfa     INT NOT NULL CHECK (total_fcfa > 0),
+    nb_dons        INT NOT NULL CHECK (nb_dons > 0),
+    statut         TEXT NOT NULL DEFAULT 'emise' CHECK (statut IN ('emise', 'annulee')),
+    remplace_id    UUID REFERENCES attestations (id) ON DELETE SET NULL,
+    date_emission  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    contenu        JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (church_id, annee, numero)
+);
+CREATE INDEX IF NOT EXISTS idx_attestations_church_annee
+    ON attestations (church_id, annee);
+CREATE INDEX IF NOT EXISTS idx_attestations_member
+    ON attestations (member_id, annee);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_attestations_une_emise
+    ON attestations (church_id, member_id, annee) WHERE statut = 'emise';
+
+-- ---------------------------------------------------------------------------
 -- Vues consolidées pour l'église mère (agrégats uniquement, jamais le détail
 -- nominatif d'une antenne sans autorisation explicite). Récursive depuis le
 -- 10 novembre 2026 (tranche Plateforme) : une mère voit tous ses
