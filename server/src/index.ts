@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 config({ path: join(dirname(fileURLToPath(import.meta.url)), "..", ".env") });
 
 import Fastify from "fastify";
+import cors from "@fastify/cors";
 import type { Pool } from "pg";
 import { getDb } from "./db.js";
 import { registerAuthRoutes } from "./routes/auth.js";
@@ -37,6 +38,36 @@ import { registerModulesRoutes } from "./routes/modules.js";
 
 export function buildApp(db: Pool) {
   const app = Fastify({ logger: true });
+
+  // CORS : le site web et l'API sont sur deux origines différentes, sans
+  // ces en-têtes le navigateur bloque chaque appel, dont POST /auth/login
+  // (« ClientException: Load failed »). Authentification par jeton Bearer,
+  // pas de cookie, donc credentials: false. Seules les origines listées
+  // ici et localhost (développement local) sont autorisées.
+  const ORIGINES_AUTORISEES = new Set([
+    "https://e-system-church-web.onrender.com",
+  ]);
+  app.register(cors, {
+    origin: (origin, cb) => {
+      if (origin === undefined) return cb(null, true); // curl, mobile, tests
+      if (ORIGINES_AUTORISEES.has(origin)) return cb(null, true);
+      try {
+        const url = new URL(origin);
+        if (
+          (url.hostname === "localhost" || url.hostname === "127.0.0.1") &&
+          (url.protocol === "http:" || url.protocol === "https:")
+        ) {
+          return cb(null, true);
+        }
+      } catch {
+        // Origine invalide : refusée.
+      }
+      return cb(null, false);
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: false,
+  });
 
   app.get("/sante", async () => ({
     status: "ok",
