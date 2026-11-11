@@ -27,6 +27,27 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Nom affiché (AndroidManifest.xml, ${appLabel}) : la flavor
+        // `demo` le surcharge par « e-System Church Démo ».
+        manifestPlaceholders["appLabel"] = "esystem_church"
+    }
+
+    flavorDimensions += "app"
+
+    productFlavors {
+        // Application réelle : `flutter build apk --flavor prod`.
+        create("prod") {
+            dimension = "app"
+        }
+        // Version démo (données fictives, `lib/main_demo.dart`) :
+        // s'installe À CÔTÉ de la vraie appli (suffixe `.demo`).
+        // `flutter build apk --flavor demo -t lib/main_demo.dart`.
+        create("demo") {
+            dimension = "app"
+            applicationIdSuffix = ".demo"
+            versionNameSuffix = "-demo"
+            manifestPlaceholders["appLabel"] = "e-System Church Démo"
+        }
     }
 
     buildTypes {
