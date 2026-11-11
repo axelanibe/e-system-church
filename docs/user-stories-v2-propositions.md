@@ -1,6 +1,6 @@
 # User stories — e-System Church (propositions V2)
 
-Statut : proposition, à valider par Bouf et par les églises qui utiliseront la plateforme. Format : cahier des charges MVP.
+Statut : validé par Bouf le 11 novembre 2026, à implémenter par tranches, MVP US1, US2, US3 d'abord, le reste en V2. Format : cahier des charges MVP.
 Date : 11 novembre 2026.
 
 Suite de `docs/user-stories-mvp-extensions.md` (US1 modules activables, US2 campagnes de collecte, US3 attestations annuelles de dons). Les idées ci-dessous viennent de la lecture du dépôt. Ce sont des propositions, pas des décisions. Aucune n'est implémentée. Les sujets de prière restent par e-mail seulement, jamais par WhatsApp ni par notification.

@@ -1,6 +1,6 @@
 # User stories — e-System Church (extensions proposées)
 
-Statut : proposition, à valider par Bouf. Format : cahier des charges MVP.
+Statut : validé par Bouf le 11 novembre 2026, à implémenter par tranches, MVP US1, US2, US3 d'abord, le reste en V2. Format : cahier des charges MVP.
 Date : 11 novembre 2026.
 
 ## US1 : Modules activables par église
