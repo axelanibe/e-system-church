@@ -305,7 +305,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
       TextEditingController logoUrlController, String churchId) async {
     final api = context.read<AppState>().api;
     try {
-      final result = await FilePicker.pickFiles(
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.image,
         withData: true,
       );
