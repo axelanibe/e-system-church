@@ -3,6 +3,9 @@ class AppConfig {
   /// Nom affiché de l'application.
   static const String appName = 'e-System Church';
 
+  /// Slogan officiel de la plateforme.
+  static const String appSlogan = 'L’église sans frontière';
+
   /// Version affichée dans Réglages.
   static const String appVersion = '0.1.0 (MVP)';
 

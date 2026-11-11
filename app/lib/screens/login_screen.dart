@@ -77,9 +77,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Centraliser les églises de Côte d’Ivoire',
+                  Text(
+                    AppConfig.appSlogan,
                     textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontStyle: FontStyle.italic,
+                          color: scheme.primary,
+                        ),
                   ),
                   const SizedBox(height: 32),
                   TextFormField(

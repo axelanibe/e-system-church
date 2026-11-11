@@ -1,5 +1,7 @@
 # e-System Church
 
+> **L’église sans frontière.**
+
 Plateforme de centralisation des églises en Côte d'Ivoire : chaque église s'inscrit,
 devient église mère ou rejoint une église mère, crée ses sous-églises, et gère
 ses membres, ses finances, ses cultes et sa communication — avec des rapports
@@ -22,11 +24,11 @@ consolidés qui remontent vers l'église mère.
 
 ```
 Plateforme
- └─ Église Mère — Grâce Divine, Plateau (Abidjan)
-     ├─ Sous-église — Yopougon
-     ├─ Sous-église — Bouaké
-     │   └─ Antenne — Bouaké Centre
-     └─ Sous-église — Yamoussoukro
+ └─ Église Mère — [Nom de l'église mère], [Ville]
+     ├─ Sous-église — [Ville 1]
+     ├─ Sous-église — [Ville 2]
+     │   └─ Antenne — [Quartier]
+     └─ Sous-église — [Ville 3]
 ```
 
 ## Modules (par église)
