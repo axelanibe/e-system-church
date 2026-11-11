@@ -4,6 +4,7 @@ import '../config/app_config.dart';
 import '../models/auth.dart';
 import '../models/church.dart';
 import '../models/fidele.dart';
+import '../models/module_eglise.dart';
 import '../services/api_service.dart';
 import '../services/http_api_service.dart';
 import '../services/session_store.dart';
@@ -26,9 +27,38 @@ class AppState extends ChangeNotifier {
   String? _role;
   List<Membership> _eglises = [];
 
+  /// Modules de l'église active (US1). Vide tant qu'ils ne sont pas chargés :
+  /// [isModuleActif] ouvre alors tout, le serveur restant l'autorité.
+  List<ModuleEglise> _modules = [];
+
   bool get initialized => _initialized;
   String get apiBaseUrl => _apiBaseUrl;
   ApiService get api => _api;
+
+  List<ModuleEglise> get modules => List.unmodifiable(_modules);
+
+  /// Vrai si le module est actif pour l'église active (le noyau l'est
+  /// toujours ; un code inconnu est ouvert, le serveur reste l'autorité).
+  bool isModuleActif(String code) {
+    if (CodesModules.noyau.contains(code)) return true;
+    if (_modules.isEmpty) return true;
+    for (final module in _modules) {
+      if (module.code == code) return module.actif;
+    }
+    return true;
+  }
+
+  /// Recharge les modules de l'église active. Silencieux en cas d'échec :
+  /// l'affichage reste ouvert, le serveur bloque les appels interdits.
+  Future<void> refreshModules() async {
+    if (_token == null || _church == null) return;
+    try {
+      _modules = await api.getModules();
+      notifyListeners();
+    } catch (_) {
+      // Modules non chargés : isModuleActif ouvre tout par défaut.
+    }
+  }
 
   bool get isLoggedIn => _token != null && _church != null;
   AppUser? get user => _user;
@@ -94,6 +124,7 @@ class AppState extends ChangeNotifier {
       try {
         final me = await _api.me();
         _applyMe(me);
+        await refreshModules();
       } catch (_) {
         _token = null;
         await _store.clearToken();
@@ -122,6 +153,7 @@ class AppState extends ChangeNotifier {
     final result = await _api.login(email: email, password: password);
     _applyAuth(result);
     await _store.saveToken(result.token);
+    await refreshModules();
     notifyListeners();
   }
 
@@ -147,6 +179,7 @@ class AppState extends ChangeNotifier {
     );
     _applyAuth(result);
     await _store.saveToken(result.token);
+    await refreshModules();
     notifyListeners();
     return result;
   }
@@ -167,6 +200,7 @@ class AppState extends ChangeNotifier {
     if (result.auth != null) {
       _applyAuth(result.auth!);
       await _store.saveToken(result.auth!.token);
+      await refreshModules();
       notifyListeners();
     }
     return result;
@@ -176,6 +210,7 @@ class AppState extends ChangeNotifier {
   Future<void> refreshMe() async {
     final me = await _api.me();
     _applyMe(me);
+    await refreshModules();
     notifyListeners();
   }
 
@@ -192,6 +227,7 @@ class AppState extends ChangeNotifier {
     _church = null;
     _role = null;
     _eglises = [];
+    _modules = [];
     await _store.clearToken();
     notifyListeners();
   }

@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import { z } from "zod";
 import { auditLog } from "./auth.js";
 import { dbError, requireAuth, requireRole } from "./middleware.js";
+import { requireModule } from "./modules.js";
 
 /**
  * Usine de routes CRUD standard pour les ressources « par église ».
@@ -42,6 +43,9 @@ export interface CrudOptions {
   updateSchema?: z.ZodObject<z.ZodRawShape>;
   readRoles: string[];
   writeRoles: string[];
+  /** Code du module US1 (ex. 'cultes') : si renseigné, chaque route exige
+      que le module soit actif pour l'église (403 `module_desactive`). */
+  module?: string;
   /** Préfixe d'audit, ex. 'famille' → 'famille.cree'. */
   audit: string;
   orderBy?: string;
@@ -104,11 +108,15 @@ function listQueryWithFilters(filters: Record<string, string>) {
 
 export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions): void {
   const orderBy = opts.orderBy ?? "created_at DESC";
+  // US1 : garde du module, après l'authentification, avant le rôle.
+  const moduleGarde = opts.module ? [requireModule(db, opts.module)] : [];
+  const lecture = [requireAuth(db), ...moduleGarde, requireRole(...opts.readRoles)];
+  const ecriture = [requireAuth(db), ...moduleGarde, requireRole(...opts.writeRoles)];
   const querySchema = listQueryWithFilters(opts.filters ?? {});
   const updateSchema = opts.updateSchema ?? opts.createSchema.partial();
 
   // -- Liste -----------------------------------------------------------------
-  app.get(opts.base, { preHandler: [requireAuth(db), requireRole(...opts.readRoles)] }, async (req, reply) => {
+  app.get(opts.base, { preHandler: lecture }, async (req, reply) => {
     const parsed = querySchema.safeParse(req.query);
     if (!parsed.success) {
       invalidInput(reply, parsed.error);
@@ -151,7 +159,7 @@ export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions):
   // -- Lecture d'un élément ----------------------------------------------------
   app.get(
     `${opts.base}/:id`,
-    { preHandler: [requireAuth(db), requireRole(...opts.readRoles)] },
+    { preHandler: lecture },
     async (req, reply) => {
       try {
         const { rows } = await db.query(
@@ -169,7 +177,7 @@ export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions):
   );
 
   // -- Création ---------------------------------------------------------------
-  app.post(opts.base, { preHandler: [requireAuth(db), requireRole(...opts.writeRoles)] }, async (req, reply) => {
+  app.post(opts.base, { preHandler: ecriture }, async (req, reply) => {
     const parsed = opts.createSchema.safeParse(req.body);
     if (!parsed.success) {
       invalidInput(reply, parsed.error);
@@ -209,7 +217,7 @@ export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions):
   // -- Mise à jour -------------------------------------------------------------
   app.patch(
     `${opts.base}/:id`,
-    { preHandler: [requireAuth(db), requireRole(...opts.writeRoles)] },
+    { preHandler: ecriture },
     async (req, reply) => {
       const parsed = updateSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -251,7 +259,7 @@ export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions):
   // -- Suppression -------------------------------------------------------------
   app.delete(
     `${opts.base}/:id`,
-    { preHandler: [requireAuth(db), requireRole(...opts.writeRoles)] },
+    { preHandler: ecriture },
     async (req, reply) => {
       try {
         const { rows } = await db.query(

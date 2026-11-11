@@ -21,6 +21,7 @@ const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 export function registerServiteursRoutes(app: FastifyInstance, db: Pool) {
   registerCrud(app, db, {
     base: "/serviteurs",
+    module: "serviteurs",
     table: "serviteurs",
     columns: ["member_id", "departement_id", "role", "disponibilite", "actif"],
     createSchema: z.object({
@@ -47,6 +48,7 @@ export function registerServiteursRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/planning-serviteurs",
+    module: "serviteurs",
     table: "planning_serviteurs",
     columns: ["serviteur_id", "culte_id", "event_id", "date_service", "role_service", "statut"],
     createSchema: z.object({

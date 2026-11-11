@@ -33,6 +33,7 @@ import { registerParametresRoutes } from "./routes/parametres.js";
 import { registerProfilEgliseRoutes } from "./routes/profil_eglise.js";
 import { registerPaiementsRoutes } from "./routes/paiements.js";
 import { registerTransfertsRoutes } from "./routes/transferts.js";
+import { registerModulesRoutes } from "./routes/modules.js";
 
 export function buildApp(db: Pool) {
   const app = Fastify({ logger: true });
@@ -68,6 +69,7 @@ export function buildApp(db: Pool) {
   registerProfilEgliseRoutes(app, db);
   registerPaiementsRoutes(app, db);
   registerTransfertsRoutes(app, db);
+  registerModulesRoutes(app, db);
 
   app.setNotFoundHandler((_req, reply) => {
     reply.code(404).send({ error: "not_found", message: "Route inconnue." });

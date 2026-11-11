@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../models/module_eglise.dart';
+import '../state/app_state.dart';
 import 'biens_screen.dart';
 import 'cultes_screen.dart';
 import 'enfants_screen.dart';
@@ -20,63 +23,76 @@ class ModulesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // US1 : seules les cartes des modules actifs sont affichées ; les
+    // rapports font partie du noyau, toujours actif (`module` null).
+    final state = context.watch<AppState>();
     const modules = <_ModuleCard>[
       _ModuleCard(
         icon: Icons.family_restroom_outlined,
+        module: CodesModules.familles,
         label: 'Familles',
         description: 'Familles, départements, cellules et fiches complètes.',
         screen: FamillesScreen(),
       ),
       _ModuleCard(
         icon: Icons.event_outlined,
+        module: CodesModules.cultes,
         label: 'Cultes',
         description: 'Types de culte, cultes, ordre du culte et événements.',
         screen: CultesScreen(),
       ),
       _ModuleCard(
         icon: Icons.how_to_reg_outlined,
+        module: CodesModules.presences,
         label: 'Présences',
         description: 'Feuille de présence par culte et statistiques.',
         screen: PresencesScreen(),
       ),
       _ModuleCard(
         icon: Icons.account_balance_outlined,
+        module: CodesModules.budget,
         label: 'Budget & caisse',
         description: 'Postes, budgets, dépenses, caisse et rapport financier.',
         screen: FinancesComplementScreen(),
       ),
       _ModuleCard(
         icon: Icons.volunteer_activism_outlined,
+        module: CodesModules.prieres,
         label: 'Prières & messages',
         description: 'Demandes de prière et messages internes.',
         screen: PrieresScreen(),
       ),
       _ModuleCard(
         icon: Icons.route_outlined,
+        module: CodesModules.pastoral,
         label: 'Suivi pastoral',
         description: 'Parcours des nouveaux, visites et accompagnements.',
         screen: PastoralScreen(),
       ),
       _ModuleCard(
         icon: Icons.volunteer_activism_outlined,
+        module: CodesModules.serviteurs,
         label: 'Serviteurs',
         description: 'Affectations par département et planning des services.',
         screen: ServiteursScreen(),
       ),
       _ModuleCard(
         icon: Icons.child_care_outlined,
+        module: CodesModules.enfants,
         label: 'Enfants & jeunesse',
         description: 'Classes, autorisations de sortie et activités.',
         screen: EnfantsScreen(),
       ),
       _ModuleCard(
         icon: Icons.mic_outlined,
+        module: CodesModules.medias,
         label: 'Médias & bibliothèque',
         description: 'Prédications, plans de lecture, livres et prêts.',
         screen: MediasScreen(),
       ),
       _ModuleCard(
         icon: Icons.meeting_room_outlined,
+        module: CodesModules.biens,
         label: 'Biens de l’église',
         description: 'Salles, réservations, matériel et maintenance.',
         screen: BiensScreen(),
@@ -89,17 +105,23 @@ class ModulesScreen extends StatelessWidget {
       ),
       _ModuleCard(
         icon: Icons.settings_outlined,
+        module: CodesModules.parametres,
         label: 'Paramètres',
         description: 'Paramètres de l’église, rôles et journal d’audit.',
         screen: ParametresScreen(),
       ),
       _ModuleCard(
         icon: Icons.church_outlined,
+        module: CodesModules.monEglise,
         label: 'Mon église',
         description: 'Logo, présentation, horaires, pasteur et antennes.',
         screen: MonEgliseScreen(),
       ),
     ];
+
+    final visibles = modules
+        .where((m) => m.module == null || state.isModuleActif(m.module!))
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -117,9 +139,9 @@ class ModulesScreen extends StatelessWidget {
               mainAxisSpacing: 12,
               childAspectRatio: 1.1,
             ),
-            itemCount: modules.length,
+            itemCount: visibles.length,
             itemBuilder: (context, index) {
-              final module = modules[index];
+              final module = visibles[index];
               return Card(
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
@@ -170,10 +192,14 @@ class _ModuleCard {
   final String description;
   final Widget screen;
 
+  // Code du module US1, ou null pour le noyau (rapports, toujours actif).
+  final String? module;
+
   const _ModuleCard({
     required this.icon,
     required this.label,
     required this.description,
     required this.screen,
+    this.module,
   });
 }

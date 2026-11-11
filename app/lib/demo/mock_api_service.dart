@@ -18,6 +18,7 @@ import '../models/finances.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
+import '../models/module_eglise.dart';
 import '../models/paiements.dart';
 import '../models/parametres.dart';
 import '../models/pastoral.dart';
@@ -3396,6 +3397,73 @@ class MockApiService implements ApiService {
       depensesFcfa: depenses,
       soldeFcfa: entrees - depenses,
       membresActifs: membres,
+    );
+  }
+
+  // -- Modules activables (US1) : en démo, tout est actif. ------------------
+  final Map<String, bool> _modulesActifs = {
+    CodesModules.annonces: true,
+    CodesModules.familles: true,
+    CodesModules.cultes: true,
+    CodesModules.presences: true,
+    CodesModules.budget: true,
+    CodesModules.prieres: true,
+    CodesModules.pastoral: true,
+    CodesModules.serviteurs: true,
+    CodesModules.enfants: true,
+    CodesModules.medias: true,
+    CodesModules.biens: true,
+    CodesModules.parametres: true,
+    CodesModules.monEglise: true,
+  };
+
+  static const Map<String, String> _modulesLibelles = {
+    CodesModules.annonces: 'Annonces',
+    CodesModules.familles: 'Familles',
+    CodesModules.cultes: 'Cultes',
+    CodesModules.presences: 'Présences',
+    CodesModules.budget: 'Budget & caisse',
+    CodesModules.prieres: 'Prières & messages',
+    CodesModules.pastoral: 'Suivi pastoral',
+    CodesModules.serviteurs: 'Serviteurs',
+    CodesModules.enfants: 'Enfants & jeunesse',
+    CodesModules.medias: 'Médias & bibliothèque',
+    CodesModules.biens: 'Biens de l’église',
+    CodesModules.parametres: 'Paramètres',
+    CodesModules.monEglise: 'Mon église',
+  };
+
+  @override
+  Future<List<ModuleEglise>> getModules() async {
+    await _latence();
+    _requireAuth();
+    return [
+      const ModuleEglise(code: 'membres', label: 'Membres', noyau: true, actif: true),
+      const ModuleEglise(code: 'finances', label: 'Finances', noyau: true, actif: true),
+      const ModuleEglise(code: 'rapports', label: 'Rapports', noyau: true, actif: true),
+      for (final e in _modulesActifs.entries)
+        ModuleEglise(
+          code: e.key,
+          label: _modulesLibelles[e.key] ?? e.key,
+          noyau: false,
+          actif: e.value,
+        ),
+    ];
+  }
+
+  @override
+  Future<ModuleEglise> setModule({required String code, required bool actif}) async {
+    await _latence();
+    _requireAuth();
+    if (!_modulesActifs.containsKey(code)) {
+      throw const ApiException('Module inconnu ou non désactivable.');
+    }
+    _modulesActifs[code] = actif;
+    return ModuleEglise(
+      code: code,
+      label: _modulesLibelles[code] ?? code,
+      noyau: false,
+      actif: actif,
     );
   }
 

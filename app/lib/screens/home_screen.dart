@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/module_eglise.dart';
 import '../state/app_state.dart';
 import '../widgets/church_avatar.dart';
 import 'annonces_screen.dart';
@@ -8,6 +9,7 @@ import 'dashboard_screen.dart';
 import 'finances_mere_screen.dart';
 import 'finances_screen.dart';
 import 'membres_screen.dart';
+import 'modules_activation_screen.dart';
 import 'modules_screen.dart';
 import 'mon_eglise_screen.dart';
 import 'plateforme_screen.dart';
@@ -39,6 +41,17 @@ class _HomeScreenState extends State<HomeScreen> {
     'Finances',
     'Annonces',
     'Modules',
+  ];
+
+  /// Code du module US1 par destination, ou null (toujours visible). Seules
+  /// les annonces sont un module activable dans cette navigation.
+  static const List<String?> _modules = [
+    null,
+    null,
+    null,
+    null,
+    'annonces',
+    null,
   ];
 
   Widget _screenFor(int index) {
@@ -93,6 +106,16 @@ class _HomeScreenState extends State<HomeScreen> {
           label: 'Modules'),
     ];
 
+    // US1 : les destinations des modules désactivés disparaissent de la
+    // navigation. `courant` est la destination réelle affichée.
+    final visibles = <int>[];
+    for (var i = 0; i < _titles.length; i++) {
+      final code = _modules[i];
+      if (code == null || state.isModuleActif(code)) visibles.add(i);
+    }
+    final courant = visibles[_index.clamp(0, visibles.length - 1)];
+    final dests = visibles.map((i) => destinations[i]).toList();
+
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -117,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             Text(
-              _titles[_index],
+              _titles[courant],
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ],
@@ -181,17 +204,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.church_outlined),
-              title: const Text('Mon église'),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const MonEgliseScreen()),
-                );
-              },
-            ),
+            // US1 : l'entrée Mon église disparaît si le module est désactivé.
+            if (state.isModuleActif(CodesModules.monEglise))
+              ListTile(
+                leading: const Icon(Icons.church_outlined),
+                title: const Text('Mon église'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const MonEgliseScreen()),
+                  );
+                },
+              ),
+            if (state.isAdmin)
+              ListTile(
+                leading: const Icon(Icons.toggle_on_outlined),
+                title: const Text('Modules de l’église'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const ModulesActivationScreen()),
+                  );
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.group_add_outlined),
               title: const Text('Demandes de rattachement'),
@@ -265,10 +302,11 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           if (wide)
             NavigationRail(
-              selectedIndex: _index,
-              onDestinationSelected: (i) => setState(() => _index = i),
+              selectedIndex: visibles.indexOf(courant),
+              onDestinationSelected: (i) =>
+                  setState(() => _index = visibles[i]),
               labelType: NavigationRailLabelType.all,
-              destinations: destinations
+              destinations: dests
                   .map((d) => NavigationRailDestination(
                         icon: d.icon,
                         selectedIcon: d.selectedIcon,
@@ -276,15 +314,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       ))
                   .toList(),
             ),
-          Expanded(child: _screenFor(_index)),
+          Expanded(child: _screenFor(courant)),
         ],
       ),
       bottomNavigationBar: wide
           ? null
           : NavigationBar(
-              selectedIndex: _index,
-              onDestinationSelected: (i) => setState(() => _index = i),
-              destinations: destinations,
+              selectedIndex: visibles.indexOf(courant),
+              onDestinationSelected: (i) =>
+                  setState(() => _index = visibles[i]),
+              destinations: dests,
             ),
     );
   }
