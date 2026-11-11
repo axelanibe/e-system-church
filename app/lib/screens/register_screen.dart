@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -31,6 +35,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _loading = false;
   String? _error;
   bool _obscurePassword = true;
+  // Logo choisi à l'inscription (facultatif) : téléversé après la création
+  // de l'église, comme dans Mon église. Sans logo, les initiales de
+  // l'église s'affichent sur fond bleu nuit.
+  Uint8List? _logoBytes;
+  String? _logoName;
 
   @override
   void dispose() {
@@ -43,6 +52,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     _passwordConfirmController.dispose();
     super.dispose();
+  }
+
+  /// Choix du logo (PNG/JPG, max 2 Mo), avec aperçu. Facultatif.
+  Future<void> _choisirLogo() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+      final file = result?.files.single;
+      if (file == null) return;
+      if (file.size > 2 * 1024 * 1024) {
+        if (mounted) {
+          setState(() => _error = 'Le logo doit peser 2 Mo au maximum.');
+        }
+        return;
+      }
+      if (file.bytes == null) {
+        if (mounted) {
+          setState(() => _error = 'Impossible de lire ce fichier.');
+        }
+        return;
+      }
+      setState(() {
+        _logoBytes = file.bytes;
+        _logoName = file.name;
+        _error = null;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    }
   }
 
   Future<void> _register() async {
@@ -64,6 +104,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             parentCode: _joinMother
                 ? _parentCodeController.text.trim().toUpperCase()
                 : null,
+            logoBase64: _logoBytes == null
+                ? null
+                : base64Encode(_logoBytes!),
+            logoFilename: _logoName,
           );
       if (!mounted) return;
       if (result.rattachement != null) {
@@ -222,6 +266,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           : null,
                     ),
                   ],
+                  const SizedBox(height: 24),
+                  Text('Logo de l’église (optionnel)',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 32,
+                        backgroundImage: _logoBytes == null
+                            ? null
+                            : MemoryImage(_logoBytes!),
+                        child: _logoBytes == null
+                            ? const Icon(Icons.church_outlined, size: 32)
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            FilledButton.tonalIcon(
+                              onPressed: _choisirLogo,
+                              icon: const Icon(Icons.image_outlined),
+                              label: const Text(
+                                  'Choisir un logo (PNG/JPG, max 2 Mo)'),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Sans logo, vos initiales s’affichent '
+                              'sur fond bleu nuit.',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 24),
                   Text('Vous, administrateur de l’église',
                       style: Theme.of(context).textTheme.titleMedium),

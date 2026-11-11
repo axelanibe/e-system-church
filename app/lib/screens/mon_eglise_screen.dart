@@ -14,6 +14,7 @@ import '../state/app_state.dart';
 import '../widgets/church_avatar.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import '../widgets/mere_badge.dart';
 import 'paiements_screen.dart';
 
 /// Module 13 — « Mon église » : identité publique de l'église active
@@ -341,6 +342,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
   Future<void> _editProfil(
       ProfilEglise profil, EgliseParametres parametres) async {
     final eglise = profil.eglise;
+    final nomController = TextEditingController(text: eglise.name);
     final descriptionController =
         TextEditingController(text: eglise.description ?? '');
     final couleurController =
@@ -369,6 +371,16 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
       title: 'Modifier le profil de l’église',
       saveLabel: 'Enregistrer',
       fields: [
+        dialogTextField(
+          controller: nomController,
+          label: 'Nom de l’église',
+        ),
+        const Text(
+          'Le code de l’église ne change jamais, ni les matricules, '
+          'ni les cartes existantes.',
+          style: TextStyle(fontSize: 12),
+        ),
+        const SizedBox(height: 12),
         dialogTextField(
           controller: descriptionController,
           label: 'Description',
@@ -416,7 +428,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
         ),
         dialogTextField(controller: cityController, label: 'Ville'),
       ],
-      isValid: () => true,
+      isValid: () => nomController.text.trim().length >= 2,
       onSave: () async {
         final horaires = <HoraireCulte>[];
         for (final line in horairesController.text.split('\n')) {
@@ -441,6 +453,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
         try {
           await api.updateProfil(
                 churchId: eglise.id,
+                name: nomController.text.trim(),
                 description: descriptionController.text.trim().isEmpty
                     ? null
                     : descriptionController.text.trim(),
@@ -530,6 +543,10 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                                   .headlineSmall
                                   ?.copyWith(fontWeight: FontWeight.bold),
                             ),
+                            if (eglise.isMere) ...[
+                              const SizedBox(height: 8),
+                              const MereBadge(),
+                            ],
                             const SizedBox(height: 4),
                             Text(
                               'Code : ${eglise.code}'

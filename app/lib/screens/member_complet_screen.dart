@@ -217,6 +217,8 @@ class _MemberCompletScreenState extends State<MemberCompletScreen> {
                     subtitle: Text(
                       '${membre.matricule} · ${membre.statusLabel}'
                       '${membre.department != null ? ' · ${membre.department}' : ''}'
+                      '${membre.fonction != null ? ' · ${membre.fonctionAffichee}' : ''}'
+                      '${membre.poste != null ? ' · ${membre.poste}' : ''}'
                       '${membre.cellGroup != null ? ' · ${membre.cellGroup}' : ''}',
                     ),
                   ),

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/module_eglise.dart';
 import '../state/app_state.dart';
 import '../widgets/church_avatar.dart';
+import '../widgets/mere_badge.dart';
 import 'annonces_screen.dart';
 import 'dashboard_screen.dart';
 import 'finances_mere_screen.dart';
@@ -133,9 +134,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   if (church != null)
-                    Text(
-                      church.code,
-                      style: Theme.of(context).textTheme.bodySmall,
+                    Row(
+                      children: [
+                        Text(
+                          church.code,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        if (church.isMere) ...[
+                          const SizedBox(width: 8),
+                          const MereBadge(),
+                        ],
+                      ],
                     ),
                 ],
               ),
@@ -165,6 +174,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     church?.name ?? 'e-System Church',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
+                  if (church?.isMere ?? false) ...[
+                    const SizedBox(height: 8),
+                    const MereBadge(),
+                  ],
                   const SizedBox(height: 4),
                   Text(
                     '${church?.code ?? ''} · ${church?.city ?? ''}',

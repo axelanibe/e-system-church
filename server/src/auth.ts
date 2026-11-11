@@ -276,6 +276,9 @@ export async function registerChurch(
     );
     const church = churchRows[0];
 
+    // Départements, fonctions et postes pré-enregistrés (listes par défaut).
+    await seedCatalogues(client, church.id);
+
     const passwordHash = await hashPassword(admin.password);
     const { rows: userRows } = await client.query<{ id: string; full_name: string; email: string }>(
       `INSERT INTO users (email, password_hash, full_name, phone)
@@ -321,6 +324,90 @@ export async function registerChurch(
   }
 }
 
+/**
+ * 16 départements de départ, en 4 pôles (document d'architecture, §3).
+ * Catalogue de départ, pas une structure rigide : modifiable ensuite par
+ * l'administrateur. Le pôle est conservé en description du département.
+ */
+export const DEPARTEMENTS_DEFAUT: ReadonlyArray<{ nom: string; pole: string }> = [
+  { nom: "Prière et intercession", pole: "Spiritualité et ministère" },
+  { nom: "Évangélisation et missions", pole: "Spiritualité et ministère" },
+  { nom: "Formation biblique", pole: "Spiritualité et ministère" },
+  { nom: "Louange et adoration", pole: "Spiritualité et ministère" },
+  { nom: "Accompagnement pastoral", pole: "Spiritualité et ministère" },
+  { nom: "Administration générale", pole: "Administration et gestion" },
+  { nom: "Finances et comptabilité", pole: "Administration et gestion" },
+  { nom: "Ressources humaines", pole: "Administration et gestion" },
+  { nom: "Logistique et patrimoine", pole: "Administration et gestion" },
+  { nom: "Protocole, accueil et sécurité", pole: "Administration et gestion" },
+  { nom: "Communication et médias", pole: "Communication et développement" },
+  { nom: "Informatique et numérique", pole: "Communication et développement" },
+  { nom: "Événementiel", pole: "Communication et développement" },
+  { nom: "Jeunesse et enfants", pole: "Communauté et action sociale" },
+  { nom: "Femmes, hommes et familles", pole: "Communauté et action sociale" },
+  { nom: "Action sociale et solidarité", pole: "Communauté et action sociale" },
+];
+
+/**
+ * Fonctions habituelles dans les églises (liste d'Axel, pas celle de
+ * CONNEXION PROPHÉTIQUE). « Aucun » veut dire sans fonction précise.
+ */
+export const FONCTIONS_DEFAUT = [
+  "Pasteur",
+  "Ancien",
+  "Diacre",
+  "Diaconesse",
+  "Intercesseur",
+  "Chantre",
+  "Responsable",
+  "Secrétaire",
+  "Trésorier",
+  "Leader",
+  "Membre",
+  "Aucun",
+] as const;
+
+/** Postes d'exemple (document d'architecture, §4). */
+export const POSTES_DEFAUT = [
+  "Directeur de département",
+  "Directeur adjoint",
+  "Chef de service ou d'équipe",
+  "Responsable d'activité",
+  "Collaborateur ou bénévole",
+] as const;
+
+/**
+ * Amorce les départements, les fonctions et les postes d'une église qui
+ * vient d'être créée (listes par défaut, modifiables ensuite par
+ * l'administrateur). Idempotente (ON CONFLICT DO NOTHING).
+ */
+export async function seedCatalogues(
+  client: Pool | PoolClient,
+  churchId: string,
+): Promise<void> {
+  for (const d of DEPARTEMENTS_DEFAUT) {
+    await client.query(
+      `INSERT INTO departements (church_id, nom, description) VALUES ($1, $2, $3)
+       ON CONFLICT (church_id, nom) DO NOTHING`,
+      [churchId, d.nom, `Pôle : ${d.pole}`],
+    );
+  }
+  for (const nom of FONCTIONS_DEFAUT) {
+    await client.query(
+      `INSERT INTO fonctions (church_id, nom) VALUES ($1, $2)
+       ON CONFLICT (church_id, nom) DO NOTHING`,
+      [churchId, nom],
+    );
+  }
+  for (const nom of POSTES_DEFAUT) {
+    await client.query(
+      `INSERT INTO postes (church_id, nom) VALUES ($1, $2)
+       ON CONFLICT (church_id, nom) DO NOTHING`,
+      [churchId, nom],
+    );
+  }
+}
+
 export const inscriptionMembreSchema = z.object({
   nom_prenom: z.string().min(2).max(200),
   email: z.string().email().max(254),
@@ -328,6 +415,9 @@ export const inscriptionMembreSchema = z.object({
   mot_de_passe: z.string().min(8).max(256),
   /** Code d'invitation de l'église (ESC-…), il fait foi : aucune validation. */
   code_eglise: z.string().min(4).max(20),
+  /** Département et fonction choisis à l'inscription (facultatifs). */
+  department: z.string().min(2).max(120).optional(),
+  fonction: z.string().min(2).max(120).optional(),
   channel: z.enum(["web", "mobile"]).default("web"),
 });
 
@@ -356,9 +446,12 @@ export async function inscriptionMembreParCode(
 ): Promise<InscriptionMembreResult> {
   const parsed = inscriptionMembreSchema.safeParse(rawInput);
   if (!parsed.success) return { ok: false, reason: "invalid_input" };
-  const { nom_prenom, email, telephone, mot_de_passe, code_eglise, channel } = parsed.data;
+  const { nom_prenom, email, telephone, mot_de_passe, code_eglise, department, fonction, channel } = parsed.data;
   const emailNorm = email.toLowerCase();
   const codeNorm = code_eglise.trim().toUpperCase();
+  // « Aucun » veut dire sans fonction précise : on ne stocke rien, la
+  // carte affichera alors « Membre ».
+  const fonctionNorm = fonction && fonction !== "Aucun" ? fonction : null;
 
   const client = await db.connect();
   try {
@@ -404,9 +497,9 @@ export async function inscriptionMembreParCode(
       await client.query("SAVEPOINT matricule");
       try {
         const { rows: memberRows } = await client.query<{ id: string }>(
-          `INSERT INTO members (church_id, user_id, matricule, full_name, phone, email, status)
-           VALUES ($1, $2, $3, $4, $5, $6, 'actif') RETURNING id`,
-          [church.id, userId, matricule, nom_prenom, telephone, emailNorm],
+          `INSERT INTO members (church_id, user_id, matricule, full_name, phone, email, department, fonction, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'actif') RETURNING id`,
+          [church.id, userId, matricule, nom_prenom, telephone, emailNorm, department ?? null, fonctionNorm],
         );
         memberId = memberRows[0].id;
         await client.query("RELEASE SAVEPOINT matricule");
@@ -427,7 +520,7 @@ export async function inscriptionMembreParCode(
       churchId: church.id as string,
       userId,
       action: "fidele.inscrit_par_code",
-      details: { member_id: memberId, matricule },
+      details: { member_id: memberId, matricule, department: department ?? null, fonction: fonctionNorm },
     });
     await client.query("COMMIT");
 

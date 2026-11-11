@@ -177,6 +177,89 @@ class Departement {
       );
 }
 
+/// Fonction de l'église (`fonctions`, catalogue par église).
+class Fonction {
+  final String id;
+  final String nom;
+  final DateTime? createdAt;
+
+  const Fonction({required this.id, required this.nom, this.createdAt});
+
+  factory Fonction.fromJson(Map<String, dynamic> json) => Fonction(
+        id: json['id'] as String,
+        nom: json['nom'] as String,
+        createdAt: parseDate(json['created_at'] as String?),
+      );
+}
+
+/// Poste de l'église (`postes`, catalogue par église).
+class Poste {
+  final String id;
+  final String nom;
+  final DateTime? createdAt;
+
+  const Poste({required this.id, required this.nom, this.createdAt});
+
+  factory Poste.fromJson(Map<String, dynamic> json) => Poste(
+        id: json['id'] as String,
+        nom: json['nom'] as String,
+        createdAt: parseDate(json['created_at'] as String?),
+      );
+}
+
+/// 16 départements de départ, en 4 pôles (document d'architecture, §3).
+/// Catalogue de départ, pas une structure rigide, à valider par Axel, tous
+/// modifiables ensuite par l'administrateur. Mêmes valeurs côté serveur
+/// (`DEPARTEMENTS_DEFAUT` dans `server/src/auth.ts`, pôle en description).
+const List<String> departementsParDefaut = [
+  'Prière et intercession',
+  'Évangélisation et missions',
+  'Formation biblique',
+  'Louange et adoration',
+  'Accompagnement pastoral',
+  'Administration générale',
+  'Finances et comptabilité',
+  'Ressources humaines',
+  'Logistique et patrimoine',
+  'Protocole, accueil et sécurité',
+  'Communication et médias',
+  'Informatique et numérique',
+  'Événementiel',
+  'Jeunesse et enfants',
+  'Femmes, hommes et familles',
+  'Action sociale et solidarité',
+];
+
+/// Fonctions habituelles dans les églises (liste d'Axel), libellé « Fonction ».
+/// « Aucun » veut dire sans fonction précise, la carte montre alors « Membre ».
+/// Pas la liste de CONNEXION PROPHÉTIQUE. Mêmes valeurs côté serveur
+/// (`FONCTIONS_DEFAUT` dans `server/src/auth.ts`).
+const List<String> fonctionsParDefaut = [
+  'Pasteur',
+  'Ancien',
+  'Diacre',
+  'Diaconesse',
+  'Intercesseur',
+  'Chantre',
+  'Responsable',
+  'Secrétaire',
+  'Trésorier',
+  'Leader',
+  'Membre',
+  'Aucun',
+];
+
+/// Postes d'exemple (document d'architecture, §4). Fonction, département et
+/// poste sont trois notions séparées, stockées séparément. Mêmes valeurs côté
+/// serveur (`POSTES_DEFAUT` dans `server/src/auth.ts`).
+const List<String> postesParDefaut = [
+  'Directeur de département',
+  'Directeur adjoint',
+  "Chef de service ou d'équipe",
+  "Responsable d'activité",
+  'Collaborateur ou bénévole',
+];
+
 /// Cellule de maison / groupe de quartier (`cellules`).
 class Cellule {
   final String id;

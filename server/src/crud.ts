@@ -60,6 +60,16 @@ export interface CrudOptions {
     data: Record<string, unknown>,
     userId: string,
   ) => Promise<string | null>;
+  /**
+   * Garde avant suppression : message d'erreur ou null si OK. Sert à
+   * refuser la suppression d'un élément encore utilisé (ex. département
+   * ou fonction lié à des membres) sans supprimer les données liées.
+   */
+  beforeDelete?: (
+    db: Pool,
+    churchId: string,
+    id: string,
+  ) => Promise<string | null>;
 }
 
 export function invalidInput(reply: FastifyReply, error: z.ZodError): void {
@@ -262,9 +272,16 @@ export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions):
     { preHandler: ecriture },
     async (req, reply) => {
       try {
+        const id = (req.params as { id: string }).id;
+        if (opts.beforeDelete) {
+          const message = await opts.beforeDelete(db, req.session.churchId, id);
+          if (message) {
+            return reply.code(409).send({ error: "linked", message });
+          }
+        }
         const { rows } = await db.query(
           `DELETE FROM ${opts.table} WHERE id = $1 AND church_id = $2 RETURNING id`,
-          [(req.params as { id: string }).id, req.session.churchId],
+          [id, req.session.churchId],
         );
         if (rows.length === 0) {
           return reply.code(404).send({ error: "not_found", message: "Élément introuvable." });

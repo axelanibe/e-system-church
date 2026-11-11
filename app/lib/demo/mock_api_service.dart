@@ -459,6 +459,8 @@ class MockApiService implements ApiService {
     required String adminEmail,
     required String password,
     String? parentCode,
+    String? logoBase64,
+    String? logoFilename,
   }) async {
     await _latence();
     Church? parent;
@@ -649,6 +651,8 @@ class MockApiService implements ApiService {
     required String telephone,
     required String password,
     required String codeEglise,
+    String? department,
+    String? fonction,
   }) async {
     await _latence();
     final eglise = _data.plateau;
@@ -669,6 +673,8 @@ class MockApiService implements ApiService {
       fullName: nomPrenom.trim(),
       phone: telephone.trim(),
       email: email.trim().toLowerCase(),
+      department: department,
+      fonction: fonction == 'Aucun' ? null : fonction,
       status: 'actif',
       createdAt: DateTime.now(),
     );
@@ -1162,6 +1168,8 @@ class MockApiService implements ApiService {
     String? email,
     String? birthDate,
     String? department,
+    String? fonction,
+    String? poste,
     String? cellGroup,
     String? status,
   }) async {
@@ -1177,6 +1185,8 @@ class MockApiService implements ApiService {
       email: email,
       birthDate: birthDate,
       department: department,
+      fonction: fonction,
+      poste: poste,
       cellGroup: cellGroup,
       status: status ?? 'actif',
       createdAt: DateTime.now(),
@@ -1192,6 +1202,8 @@ class MockApiService implements ApiService {
       String? email,
       String? birthDate,
       String? department,
+      String? fonction,
+      String? poste,
       String? cellGroup,
       String? status}) async {
     await _latence();
@@ -1210,6 +1222,8 @@ class MockApiService implements ApiService {
       email: email,
       birthDate: birthDate,
       department: department,
+      fonction: fonction,
+      poste: poste,
       cellGroup: cellGroup,
       status: status ?? ancien.status,
       createdAt: ancien.createdAt,
@@ -1420,6 +1434,93 @@ class MockApiService implements ApiService {
     _requireAuth();
     _data.departements.removeWhere((e) => e.id == id);
     _itemChurch.remove(id);
+  }
+
+  @override
+  Future<Departement> updateDepartement(String id,
+      {required String nom}) async {
+    await _latence();
+    _requireAuth();
+    final index = _data.departements.indexWhere((e) => e.id == id);
+    if (index == -1) throw const ApiException('Département introuvable (démo).');
+    final ancien = _data.departements[index];
+    final maj = Departement(
+      id: ancien.id,
+      nom: nom,
+      description: ancien.description,
+      responsableMemberId: ancien.responsableMemberId,
+      createdAt: ancien.createdAt,
+    );
+    _data.departements[index] = maj;
+    return maj;
+  }
+
+  @override
+  Future<List<Fonction>> getFonctions() async {
+    await _latence();
+    _requireAuth();
+    return List.unmodifiable(_data.fonctions);
+  }
+
+  @override
+  Future<Fonction> createFonction({required String nom}) async {
+    await _latence();
+    _requireAuth();
+    final fonction = Fonction(id: _nextId('fonction'), nom: nom);
+    _data.fonctions.add(fonction);
+    return fonction;
+  }
+
+  @override
+  Future<Fonction> updateFonction(String id, {required String nom}) async {
+    await _latence();
+    _requireAuth();
+    final index = _data.fonctions.indexWhere((e) => e.id == id);
+    if (index == -1) throw const ApiException('Fonction introuvable (démo).');
+    final maj = Fonction(id: id, nom: nom);
+    _data.fonctions[index] = maj;
+    return maj;
+  }
+
+  @override
+  Future<void> deleteFonction(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.fonctions.removeWhere((e) => e.id == id);
+  }
+
+  @override
+  Future<List<Poste>> getPostes() async {
+    await _latence();
+    _requireAuth();
+    return List.unmodifiable(_data.postesOrganisation);
+  }
+
+  @override
+  Future<Poste> createPoste({required String nom}) async {
+    await _latence();
+    _requireAuth();
+    final poste = Poste(id: _nextId('poste'), nom: nom);
+    _data.postesOrganisation.add(poste);
+    return poste;
+  }
+
+  @override
+  Future<Poste> updatePoste(String id, {required String nom}) async {
+    await _latence();
+    _requireAuth();
+    final index = _data.postesOrganisation.indexWhere((e) => e.id == id);
+    if (index == -1) throw const ApiException('Poste introuvable (démo).');
+    final maj = Poste(id: id, nom: nom);
+    _data.postesOrganisation[index] = maj;
+    return maj;
+  }
+
+  @override
+  Future<void> deletePoste(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.postesOrganisation.removeWhere((e) => e.id == id);
   }
 
   @override
@@ -3064,6 +3165,7 @@ class MockApiService implements ApiService {
   @override
   Future<Church> updateProfil({
     required String churchId,
+    String? name,
     String? description,
     List<HoraireCulte>? horaires,
     String? couleurPrincipale,
@@ -3081,7 +3183,7 @@ class MockApiService implements ApiService {
     final maj = Church(
       id: eglise.id,
       code: eglise.code,
-      name: eglise.name,
+      name: name ?? eglise.name,
       parentChurchId: eglise.parentChurchId,
       city: city ?? eglise.city,
       status: eglise.status,

@@ -17,7 +17,8 @@ import { requireModule } from "../modules.js";
  *                                   stocké côté serveur sous server/uploads/logos/.
  * GET   /logos/:fichier          — service du fichier logo (public).
  * GET   /eglises/:code/presentation — page publique de l'église (par code unique).
- * PATCH /eglises/:id/profil      — description, horaires, contacts, devise…
+ * PATCH /eglises/:id/profil      — nom, description, horaires, contacts, devise…
+ *                                  (le code ESC-… ne change jamais).
  * POST  /auth/eglise-active      — changement d'église active (sélecteur).
  */
 
@@ -45,6 +46,9 @@ const horaireSchema = z.object({
 });
 
 const profilSchema = z.object({
+  // Nom de l'église : corrigeable par l'admin après l'inscription (le code
+  // ESC-… ne change jamais : il n'est pas dans ce schéma).
+  name: z.string().min(2).max(200).optional(),
   description: z.string().max(2000).optional(),
   horaires_cultes: z.array(horaireSchema).max(20).optional(),
   couleur_principale: z
@@ -190,6 +194,7 @@ export function registerProfilEgliseRoutes(app: FastifyInstance, db: Pool) {
       }
       const data = parsed.data as Record<string, unknown>;
       const columns = [
+        "name",
         "description",
         "horaires_cultes",
         "couleur_principale",

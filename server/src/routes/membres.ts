@@ -22,6 +22,8 @@ const createMembreSchema = z.object({
   email: z.string().email().max(254).optional(),
   birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format AAAA-MM-JJ.").optional(),
   department: z.string().min(2).max(120).optional(),
+  fonction: z.string().min(2).max(120).optional(),
+  poste: z.string().min(2).max(120).optional(),
   cell_group: z.string().min(2).max(120).optional(),
   status: z.enum(["actif", "nouveau_converti", "inactif"]).default("actif"),
   matricule: z.string().min(1).max(30).optional(),
@@ -71,7 +73,7 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
       );
       const { rows } = await db.query(
         `SELECT id, church_id, matricule, full_name, phone, email, birth_date,
-                department, cell_group, status, created_at
+                department, fonction, poste, cell_group, status, created_at
            FROM members ${where}
           ORDER BY full_name ASC
           LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
@@ -90,7 +92,7 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
       try {
         const { rows } = await db.query(
           `SELECT id, church_id, matricule, full_name, phone, email, birth_date,
-                  department, cell_group, status, created_at
+                  department, fonction, poste, cell_group, status, created_at
              FROM members WHERE id = $1 AND church_id = $2`,
           [(req.params as { id: string }).id, req.session.churchId],
         );
@@ -123,10 +125,10 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
         try {
           const { rows } = await db.query(
             `INSERT INTO members
-               (church_id, matricule, full_name, phone, email, birth_date, department, cell_group, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+               (church_id, matricule, full_name, phone, email, birth_date, department, fonction, poste, cell_group, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
              RETURNING id, church_id, matricule, full_name, phone, email, birth_date,
-                       department, cell_group, status, created_at`,
+                       department, fonction, poste, cell_group, status, created_at`,
             [
               req.session.churchId,
               matricule,
@@ -135,6 +137,8 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
               data.email ?? null,
               data.birth_date ?? null,
               data.department ?? null,
+              data.fonction ?? null,
+              data.poste ?? null,
               data.cell_group ?? null,
               data.status,
             ],
@@ -168,6 +172,8 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
     email: z.string().email().max(254).optional(),
     birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format AAAA-MM-JJ.").optional(),
     department: z.string().min(2).max(120).optional(),
+    fonction: z.string().min(2).max(120).optional(),
+    poste: z.string().min(2).max(120).optional(),
     cell_group: z.string().min(2).max(120).optional(),
     status: z.enum(["actif", "nouveau_converti", "inactif"]).optional(),
   });
@@ -184,7 +190,7 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
         });
       }
       const data = parsed.data as Record<string, unknown>;
-      const keys = ["full_name", "phone", "email", "birth_date", "department", "cell_group", "status"].filter(
+      const keys = ["full_name", "phone", "email", "birth_date", "department", "fonction", "poste", "cell_group", "status"].filter(
         (c) => data[c] !== undefined,
       );
       if (keys.length === 0) {
@@ -195,7 +201,7 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
         const { rows } = await db.query(
           `UPDATE members SET ${sets} WHERE id = $1 AND church_id = $2
            RETURNING id, church_id, matricule, full_name, phone, email, birth_date,
-                     department, cell_group, status, created_at`,
+                     department, fonction, poste, cell_group, status, created_at`,
           [(req.params as { id: string }).id, req.session.churchId, ...keys.map((c) => data[c])],
         );
         if (rows.length === 0) {

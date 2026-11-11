@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/membres_complement.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 
@@ -24,7 +25,9 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
   final _emailController = TextEditingController();
   final _telephoneController = TextEditingController();
   final _codeController = TextEditingController();
+  final _departementController = TextEditingController();
   final _passwordController = TextEditingController();
+  String _fonction = 'Aucun';
   bool _loading = false;
   String? _error;
   bool _obscurePassword = true;
@@ -35,6 +38,7 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
     _emailController.dispose();
     _telephoneController.dispose();
     _codeController.dispose();
+    _departementController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -52,6 +56,10 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
             telephone: _telephoneController.text.trim(),
             password: _passwordController.text,
             codeEglise: _codeController.text.trim().toUpperCase(),
+            department: _departementController.text.trim().isEmpty
+                ? null
+                : _departementController.text.trim(),
+            fonction: _fonction == 'Aucun' ? null : _fonction,
           );
       if (!mounted) return;
       if (result.lie) {
@@ -159,6 +167,32 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _departementController,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Département (optionnel)',
+                      hintText: 'Ex. Louange et adoration, Jeunesse…',
+                      prefixIcon: Icon(Icons.group_work_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _fonction,
+                    decoration: const InputDecoration(
+                      labelText: 'Fonction',
+                      prefixIcon: Icon(Icons.work_outline),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: fonctionsParDefaut
+                        .map((f) => DropdownMenuItem(
+                            value: f, child: Text(f)))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _fonction = v ?? 'Aucun'),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
