@@ -1,0 +1,33 @@
+# e-System Church — APK de test
+# Construction de l'APK Android par GitHub Actions, déclenchement manuel seulement.
+# La construction locale échoue, Gradle coupe la connexion au daemon, donc on
+# construit ici, sur ubuntu-latest, avec Flutter 3.47.9 stable, comme le CI web.
+# APK de test par lien direct seulement, pas publiée sur Play Store.
+# Signature debug pour l'instant, pas de signature de publication, à dire clairement.
+# Aucun secret n'y est écrit. L'API par défaut est l'API Render en production,
+# https://e-system-church.onrender.com, définie dans app/lib/config/app_config.dart.
+name: APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.9"
+          channel: stable
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter build apk --split-per-abi --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e-system-church-apk
+          path: build/app/outputs/flutter-apk/*.apk
+          retention-days: 14
