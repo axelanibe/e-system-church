@@ -7,6 +7,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import 'qr_scan_screen.dart';
 
 /// Module 3 — Feuille de présence : choix du culte, pointage par
 /// matricule, liste des présents et statistiques.
@@ -70,6 +71,19 @@ class _PresencesScreenState extends State<PresencesScreen> {
     } catch (e) {
       if (mounted) showApiError(context, e);
     }
+  }
+
+  Future<void> _scanner() async {
+    if (_culteId == null) {
+      showApiError(context, 'Choisissez d’abord un culte.');
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => QrScanScreen(culteId: _culteId!),
+      ),
+    );
+    if (mounted) _refresh();
   }
 
   Color _statutColor(String statut) {
@@ -226,6 +240,12 @@ class _PresencesScreenState extends State<PresencesScreen> {
                       isDense: true,
                     ),
                   ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.outlined(
+                  onPressed: _scanner,
+                  icon: const Icon(Icons.qr_code_scanner),
+                  tooltip: 'Scanner une carte',
                 ),
                 const SizedBox(width: 8),
                 FilledButton(
