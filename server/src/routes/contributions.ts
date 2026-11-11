@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import { z } from "zod";
 import { auditLog } from "../auth.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
+import { verifierCampagneAffectation } from "./campagnes.js";
 
 /**
  * Finances de l'église de la session (dons sur le compte de CHAQUE église,
@@ -21,6 +22,7 @@ const createSchema = z.object({
   payment_method: z.enum(["wave", "orange_money", "mtn_momo", "especes", "virement"]),
   payment_ref: z.string().min(1).max(120).optional(),
   member_id: z.string().uuid().optional(),
+  campagne_id: z.string().uuid().optional(),
   note: z.string().max(500).optional(),
 });
 
@@ -82,7 +84,7 @@ export function registerContributionsRoutes(app: FastifyInstance, db: Pool) {
 
         const { rows } = await db.query(
           `SELECT c.id, c.type, c.amount_fcfa, c.payment_method, c.payment_ref,
-                  c.status, c.note, c.created_at,
+                  c.status, c.note, c.created_at, c.campagne_id,
                   c.member_id, m.full_name AS membre_nom, m.matricule AS membre_matricule
              FROM contributions c
              LEFT JOIN members m ON m.id = c.member_id
@@ -192,12 +194,22 @@ export function registerContributionsRoutes(app: FastifyInstance, db: Pool) {
             });
           }
         }
+        // Une contribution affectée à une campagne : campagne active de
+        // mon église, jamais une dépense, jamais une autre église.
+        if (data.campagne_id) {
+          const erreur = await verifierCampagneAffectation(
+            db, req.session.churchId, data.campagne_id, data.type,
+          );
+          if (erreur) {
+            return reply.code(erreur.code).send({ error: erreur.error, message: erreur.message });
+          }
+        }
         const { rows } = await db.query(
           `INSERT INTO contributions
-             (church_id, member_id, type, amount_fcfa, payment_method, payment_ref, status, received_by, note)
-           VALUES ($1, $2, $3, $4, $5, $6, 'en_attente', $7, $8)
+             (church_id, member_id, type, amount_fcfa, payment_method, payment_ref, status, received_by, note, campagne_id)
+           VALUES ($1, $2, $3, $4, $5, $6, 'en_attente', $7, $8, $9)
            RETURNING id, church_id, member_id, type, amount_fcfa, payment_method,
-                     payment_ref, status, note, created_at`,
+                     payment_ref, status, note, campagne_id, created_at`,
           [
             req.session.churchId,
             data.member_id ?? null,
@@ -207,6 +219,7 @@ export function registerContributionsRoutes(app: FastifyInstance, db: Pool) {
             data.payment_ref ?? null,
             req.session.userId,
             data.note ?? null,
+            data.campagne_id ?? null,
           ],
         );
         await auditLog(db, {
@@ -252,6 +265,55 @@ export function registerContributionsRoutes(app: FastifyInstance, db: Pool) {
           userId: req.session.userId,
           action: `contribution.${parsed.data.status === "confirme" ? "confirmee" : "annulee"}`,
           details: { contribution_id: rows[0].id, type: rows[0].type, amount_fcfa: rows[0].amount_fcfa },
+        });
+        return reply.send(rows[0]);
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  app.patch(
+    "/contributions/:id/campagne",
+    { preHandler: [requireAuth(db), requireRole(...WRITE_ROLES)] },
+    async (req, reply) => {
+      // Affecter une contribution confirmée à une campagne active de son
+      // église, ou la retirer (campagne_id null) vers le fonds général.
+      const parsed = z.object({ campagne_id: z.string().uuid().nullable() }).safeParse(req.body);
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "invalid_input",
+          message: "Campagne invalide.",
+          details: parsed.error.issues.map((i) => i.message),
+        });
+      }
+      try {
+        const { rows: existantes } = await db.query(
+          `SELECT type FROM contributions WHERE id = $1 AND church_id = $2`,
+          [(req.params as { id: string }).id, req.session.churchId],
+        );
+        if (existantes.length === 0) {
+          return reply.code(404).send({ error: "not_found", message: "Contribution introuvable." });
+        }
+        if (parsed.data.campagne_id) {
+          const erreur = await verifierCampagneAffectation(
+            db, req.session.churchId, parsed.data.campagne_id, existantes[0].type as string,
+          );
+          if (erreur) {
+            return reply.code(erreur.code).send({ error: erreur.error, message: erreur.message });
+          }
+        }
+        const { rows } = await db.query(
+          `UPDATE contributions SET campagne_id = $3
+            WHERE id = $1 AND church_id = $2
+            RETURNING id, type, amount_fcfa, status, campagne_id`,
+          [(req.params as { id: string }).id, req.session.churchId, parsed.data.campagne_id],
+        );
+        await auditLog(db, {
+          churchId: req.session.churchId,
+          userId: req.session.userId,
+          action: "contribution.campagne_affectee",
+          details: { contribution_id: rows[0].id, campagne_id: parsed.data.campagne_id },
         });
         return reply.send(rows[0]);
       } catch (e) {

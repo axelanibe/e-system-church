@@ -10,6 +10,7 @@ import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
 import '../models/church.dart';
+import '../models/campagne.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/enfants.dart';
@@ -2204,6 +2205,7 @@ class MockApiService implements ApiService {
     required String paymentMethod,
     String? paymentRef,
     String? memberId,
+    String? campagneId,
     String? note,
   }) async {
     await _latence();
@@ -2253,6 +2255,43 @@ class MockApiService implements ApiService {
     );
     list[i] = maj;
     return maj;
+  }
+
+  // -- Campagnes de collecte (US2, démo : aucune campagne fictive) -----------
+
+  @override
+  Future<List<Campagne>> getCampagnes() async {
+    await _latence();
+    _requireAuth();
+    return const [];
+  }
+
+  @override
+  Future<Campagne> createCampagne({
+    required String nom,
+    required int objectifFcfa,
+    required String dateDebut,
+    required String dateFin,
+    String statut = 'brouillon',
+    bool visibleMembres = false,
+  }) async {
+    throw const ApiException('Campagnes non disponibles en démo.');
+  }
+
+  @override
+  Future<Campagne> setCampagneStatut(String id, String statut) async {
+    throw const ApiException('Campagnes non disponibles en démo.');
+  }
+
+  @override
+  Future<void> cloturerCampagne(String id) async {
+    throw const ApiException('Campagnes non disponibles en démo.');
+  }
+
+  @override
+  Future<Contribution> affecterContributionCampagne(
+      String id, String? campagneId) async {
+    throw const ApiException('Campagnes non disponibles en démo.');
   }
 
   // -- Communication ---------------------------------------------------------
