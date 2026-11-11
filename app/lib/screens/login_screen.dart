@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
 import '../state/app_state.dart';
+import 'forgot_password_screen.dart';
+import 'register_fidele_screen.dart';
 import 'register_screen.dart';
 
 /// Écran de connexion : e-mail + mot de passe, JWT stocké en sécurité.
@@ -145,6 +147,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: _loading
+                        ? null
+                        : () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ForgotPasswordScreen(),
+                              ),
+                            ),
+                    child: const Text('Mot de passe oublié ?'),
+                  ),
+                  const SizedBox(height: 12),
                   OutlinedButton(
                     onPressed: _loading
                         ? null
@@ -154,6 +167,17 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                     child: const Text('Inscrire mon église'),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: _loading
+                        ? null
+                        : () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const RegisterFideleScreen(),
+                              ),
+                            ),
+                    child: const Text('Je suis membre d’une église'),
                   ),
                 ],
               ),

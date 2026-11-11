@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../config/app_config.dart';
 import '../models/auth.dart';
 import '../models/church.dart';
+import '../models/fidele.dart';
 import '../services/api_service.dart';
 import '../services/http_api_service.dart';
 import '../services/session_store.dart';
@@ -51,6 +52,10 @@ class AppState extends ChangeNotifier {
       _role == 'admin_eglise' ||
       _role == 'tresorier' ||
       _role == 'responsable_culte';
+
+  /// L'utilisateur est un fidèle (rôle `membre`) : accueil fidèle, sans
+  /// les écrans d'administration.
+  bool get isMembre => _role == 'membre';
 
   /// L'utilisateur est admin de son église.
   bool get isAdmin => _role == 'admin_eglise';
@@ -143,6 +148,27 @@ class AppState extends ChangeNotifier {
     _applyAuth(result);
     await _store.saveToken(result.token);
     notifyListeners();
+    return result;
+  }
+
+  /// Inscription fidèle par matricule : si la liaison est immédiate,
+  /// la session est appliquée (connexion) ; sinon, le résultat porte le
+  /// message « demande envoyée » et l'écran l'affiche.
+  Future<FideleInscriptionResult> registerFidele({
+    required String email,
+    required String password,
+    required String matricule,
+  }) async {
+    final result = await _api.registerFidele(
+      email: email,
+      password: password,
+      matricule: matricule,
+    );
+    if (result.auth != null) {
+      _applyAuth(result.auth!);
+      await _store.saveToken(result.auth!.token);
+      notifyListeners();
+    }
     return result;
   }
 

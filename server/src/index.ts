@@ -9,6 +9,8 @@ import Fastify from "fastify";
 import type { Pool } from "pg";
 import { getDb } from "./db.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerMotDePasseRoutes } from "./routes/mot_de_passe.js";
+import { registerFideleRoutes } from "./routes/fidele.js";
 import { registerEglisesRoutes } from "./routes/eglises.js";
 import { registerRattachementsRoutes } from "./routes/rattachements.js";
 import { registerMembresRoutes } from "./routes/membres.js";
@@ -41,6 +43,8 @@ export function buildApp(db: Pool) {
   }));
 
   registerAuthRoutes(app, db);
+  registerMotDePasseRoutes(app, db);
+  registerFideleRoutes(app, db);
   registerEglisesRoutes(app, db);
   registerRattachementsRoutes(app, db);
   registerMembresRoutes(app, db);

@@ -48,7 +48,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
             ? 400
             : result.reason === "locked"
               ? 423
-              : result.reason === "invalid_church"
+              : result.reason === "invalid_church" || result.reason === "no_church"
                 ? 400
                 : 401;
         const message =
@@ -58,7 +58,11 @@ export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
               ? "Compte verrouillé 15 minutes après 5 échecs de connexion."
               : result.reason === "invalid_church"
                 ? "Cette église ne fait pas partie de vos églises."
-                : "E-mail ou mot de passe incorrect.";
+                : result.reason === "password_not_set"
+                  ? "Pour vous connecter, initialisez d'abord votre mot de passe via le lien reçu."
+                  : result.reason === "no_church"
+                    ? "Votre demande de liaison n'a pas encore été validée par votre église."
+                    : "E-mail ou mot de passe incorrect.";
         return reply.code(status).send({ error: result.reason, message });
       }
       return reply.send({

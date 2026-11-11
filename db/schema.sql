@@ -59,12 +59,19 @@ CREATE TYPE user_role AS ENUM (
 CREATE TABLE users (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email         TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,                     -- argon2id
+    password_hash TEXT,                             -- argon2id, NULL tant que le mot
+                                                    -- de passe n'est pas initialisé
+                                                    -- (compte créé par invitation)
     full_name     TEXT NOT NULL,
     phone         TEXT,
+    member_id     UUID,                             -- fiche membre liée (modules 15-16),
+                                                    -- FK posée après la table members
     totp_secret   TEXT,                             -- 2FA, NULL = non activée
     failed_logins INT NOT NULL DEFAULT 0,
     locked_until  TIMESTAMPTZ,
+    token_version INT NOT NULL DEFAULT 0,           -- invalidations de sessions :
+                                                    -- +1 à chaque changement de mot
+                                                    -- de passe (jetons plus anciens refusés)
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -102,6 +109,45 @@ CREATE TABLE members (
 );
 CREATE INDEX idx_members_church ON members (church_id);
 CREATE INDEX idx_members_name ON members (church_id, full_name);
+
+-- Lien compte ↔ fiche membre (modules 15-16) : la FK ne peut être posée
+-- qu'ici, la table members étant définie après users. Un compte = un
+-- fidèle au plus ; un fidèle = un compte au plus (les NULL restent libres).
+ALTER TABLE users ADD CONSTRAINT fk_users_member
+  FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE SET NULL;
+ALTER TABLE users ADD CONSTRAINT users_member_id_unique UNIQUE (member_id);
+
+-- ---------------------------------------------------------------------------
+-- Mot de passe et accès fidèle (modules 15-16) : jetons à usage unique et
+-- demandes de liaison compte ↔ fiche membre. Miroir de la migration 003.
+-- ---------------------------------------------------------------------------
+CREATE TABLE auth_tokens (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL,                       -- SHA-256 du jeton brut,
+                                                    -- jamais le jeton en clair
+    type       TEXT NOT NULL CHECK (type IN ('invitation', 'reinitialisation')),
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at    TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_auth_tokens_user ON auth_tokens (user_id);
+CREATE INDEX idx_auth_tokens_hash ON auth_tokens (token_hash);
+
+CREATE TABLE member_link_requests (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    member_id  UUID NOT NULL REFERENCES members (id) ON DELETE CASCADE,
+    user_id    UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    status     TEXT NOT NULL DEFAULT 'en_attente'
+               CHECK (status IN ('en_attente', 'valide', 'refuse')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_by UUID REFERENCES users (id) ON DELETE SET NULL,
+    decided_at TIMESTAMPTZ
+);
+CREATE UNIQUE INDEX idx_link_requests_pending_unique
+    ON member_link_requests (member_id) WHERE status = 'en_attente';
+CREATE INDEX idx_link_requests_user ON member_link_requests (user_id);
+CREATE INDEX idx_link_requests_member ON member_link_requests (member_id);
 
 -- ---------------------------------------------------------------------------
 -- Finances : dîmes, offrandes, dons, dépenses (par église, jamais globales)

@@ -40,9 +40,28 @@ export function requireAuth(db: Pool) {
       reply.code(401).send({ error: "unauthorized", message: "Jeton invalide ou expiré." });
       return;
     }
-    const p = payload as { sub?: string; churchId?: string; role?: string };
+    const p = payload as { sub?: string; churchId?: string; role?: string; v?: number };
     if (!p.sub || !p.churchId || !p.role) {
       reply.code(401).send({ error: "unauthorized", message: "Jeton incomplet." });
+      return;
+    }
+    // Invalidation des sessions : un mot de passe changé (réinitialisation,
+    // initialisation, changement) incrémente users.token_version ; les
+    // jetons émis avant sont refusés. Les jetons sans version (v absente)
+    // valent 0, comme les comptes créés avant les modules 15-16.
+    const { rows: versionRows } = await db.query<{ token_version: number }>(
+      `SELECT token_version FROM users WHERE id = $1`,
+      [p.sub],
+    );
+    if (versionRows.length === 0) {
+      reply.code(401).send({ error: "unauthorized", message: "Compte introuvable." });
+      return;
+    }
+    if ((p.v ?? 0) !== versionRows[0].token_version) {
+      reply.code(401).send({
+        error: "unauthorized",
+        message: "Session invalidée (mot de passe changé). Reconnectez-vous.",
+      });
       return;
     }
     const { rows } = await db.query<{ role: string }>(

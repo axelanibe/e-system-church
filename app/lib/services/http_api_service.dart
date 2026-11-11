@@ -11,6 +11,7 @@ import '../models/church.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/enfants.dart';
+import '../models/fidele.dart';
 import '../models/finances.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
@@ -157,6 +158,137 @@ class HttpApiService implements ApiService {
   @override
   Future<MeResult> me() async =>
       MeResult.fromJson(await _call('GET', '/moi/eglise'));
+
+  // -- Mot de passe et accès fidèle (modules 15-16) -------------------------
+  @override
+  Future<bool> forgotPassword({required String email}) async {
+    final data = await _call('POST', '/auth/mot-de-passe-oublie', body: {
+      'email': email,
+    });
+    return data['email_envoye'] as bool? ?? false;
+  }
+
+  @override
+  Future<void> resetPassword(
+      {required String token, required String password}) async {
+    await _call('POST', '/auth/reinitialiser-mot-de-passe', body: {
+      'token': token,
+      'mot_de_passe': password,
+    });
+  }
+
+  @override
+  Future<void> initPassword(
+      {required String token, required String password}) async {
+    await _call('POST', '/auth/initialiser-mot-de-passe', body: {
+      'token': token,
+      'mot_de_passe': password,
+    });
+  }
+
+  @override
+  Future<void> changePassword(
+      {required String ancien, required String nouveau}) async {
+    await _call('POST', '/auth/changer-mot-de-passe', body: {
+      'ancien': ancien,
+      'nouveau': nouveau,
+    });
+  }
+
+  @override
+  Future<String> inviter({
+    required String email,
+    required String role,
+    String? memberId,
+    String? fullName,
+  }) async {
+    final data = await _call('POST', '/auth/inviter', body: {
+      'email': email,
+      'role': role,
+      if (memberId != null) 'member_id': memberId,
+      if (fullName != null) 'full_name': fullName,
+    });
+    return data['lien_invitation'] as String;
+  }
+
+  @override
+  Future<String> adminResetLink({required String email}) async {
+    final data = await _call(
+        'POST', '/auth/admin/lien-reinitialisation',
+        body: {'email': email});
+    return data['lien'] as String;
+  }
+
+  @override
+  Future<FideleInscriptionResult> registerFidele({
+    required String email,
+    required String password,
+    required String matricule,
+  }) async {
+    final data = await _call('POST', '/auth/inscription-fidele', body: {
+      'email': email,
+      'mot_de_passe': password,
+      'matricule': matricule,
+      'channel': 'mobile',
+    });
+    final result = FideleInscriptionResult.fromJson(data);
+    if (result.auth != null) _token = result.auth!.token;
+    return result;
+  }
+
+  @override
+  Future<FideleProfil> getMoi() async =>
+      FideleProfil.fromJson(await _call('GET', '/moi'));
+
+  @override
+  Future<List<DemandeLiaison>> getDemandesLiaison() async {
+    final data = await _call('GET', '/membres/demandes-liaison');
+    return (data['demandes'] as List<dynamic>? ?? [])
+        .map((e) => DemandeLiaison.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<void> decideDemandeLiaison(String id, {required bool accept}) async {
+    await _call(
+        'POST', '/membres/demandes-liaison/$id/${accept ? 'valider' : 'refuser'}');
+  }
+
+  @override
+  Future<List<Announcement>> getMesAnnonces() async {
+    final data = await _call('GET', '/moi/annonces');
+    return (data['annonces'] as List<dynamic>? ?? [])
+        .map((e) => Announcement.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<List<Culte>> getMesCultes() async {
+    final data = await _call('GET', '/moi/cultes');
+    return (data['cultes'] as List<dynamic>? ?? [])
+        .map((e) => Culte.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<List<Presence>> getMesPresences() async {
+    final data = await _call('GET', '/moi/presences');
+    return (data['presences'] as List<dynamic>? ?? [])
+        .map((e) => Presence.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<List<Contribution>> getMesContributions() async {
+    final data = await _call('GET', '/moi/contributions');
+    return (data['contributions'] as List<dynamic>? ?? [])
+        .map((e) => Contribution.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<MaCarte> getMaCarte() async =>
+      MaCarte.fromJson(await _call('GET', '/moi/carte'));
 
   @override
   Future<TreeResult> getTree() async {

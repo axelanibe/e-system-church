@@ -2,8 +2,10 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../models/fidele.dart';
 import '../models/parametres.dart';
 import '../models/profil.dart';
 import '../state/app_state.dart';
@@ -26,12 +28,16 @@ class MonEgliseScreen extends StatefulWidget {
 class _MonEgliseScreenState extends State<MonEgliseScreen> {
   late Future<ProfilEglise> _future;
   late Future<EgliseParametres> _parametresFuture;
+  Future<List<DemandeLiaison>>? _demandesFuture;
 
   @override
   void initState() {
     super.initState();
     _future = _load();
     _parametresFuture = context.read<AppState>().api.getParametres();
+    if (context.read<AppState>().isAdmin) {
+      _demandesFuture = context.read<AppState>().api.getDemandesLiaison();
+    }
   }
 
   Future<ProfilEglise> _load() {
@@ -43,7 +49,167 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
     setState(() {
       _future = _load();
       _parametresFuture = context.read<AppState>().api.getParametres();
+      _refreshDemandes();
     });
+  }
+
+  void _refreshDemandes() {
+    if (context.read<AppState>().isAdmin) {
+      _demandesFuture = context.read<AppState>().api.getDemandesLiaison();
+    }
+  }
+
+  /// Valide ou refuse une demande de liaison (admin).
+  Future<void> _decider(DemandeLiaison demande, bool accepter) async {
+    try {
+      await context
+          .read<AppState>()
+          .api
+          .decideDemandeLiaison(demande.id, accept: accepter);
+      if (mounted) {
+        showSuccess(
+            context,
+            accepter
+                ? 'Liaison validée : le fidèle peut se connecter.'
+                : 'Demande refusée.');
+      }
+      setState(_refreshDemandes);
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
+  /// Invitation par l'admin : le dialogue ne fait que saisir les données ;
+  /// l'appel API a lieu ici (contexte de l'écran), puis le lien est affiché
+  /// à transmettre (WhatsApp, SMS, etc.). Le lien expire dans 7 jours ;
+  /// le jeton n'est exposé nulle part ailleurs.
+  Future<void> _inviter() async {
+    final emailController = TextEditingController();
+    final memberIdController = TextEditingController();
+    final nomController = TextEditingController();
+    String role = 'membre';
+    final saisie = await showDialog<_InviteSaisie>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Inviter une personne'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                dialogTextField(
+                  controller: emailController,
+                  label: 'E-mail',
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                dialogDropdown<String>(
+                  value: role,
+                  label: 'Rôle dans l’église',
+                  options: const {
+                    'membre': 'Membre (fidèle)',
+                    'tresorier': 'Trésorier',
+                    'responsable_culte': 'Responsable de culte',
+                    'admin_eglise': 'Admin d’église',
+                  },
+                  onChanged: (v) {
+                    if (v != null) setDialogState(() => role = v);
+                  },
+                ),
+                dialogTextField(
+                  controller: memberIdController,
+                  label: 'ID de la fiche membre (optionnel)',
+                  hintText: 'Pour lier le compte à un membre existant',
+                ),
+                dialogTextField(
+                  controller: nomController,
+                  label: 'Nom complet (optionnel)',
+                ),
+                const Text(
+                  'Le compte est créé sans mot de passe : la personne '
+                  'l’initialise avec le lien (valable 7 jours).',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (emailController.text.trim().isEmpty ||
+                    !emailController.text.contains('@')) {
+                  return;
+                }
+                Navigator.of(dialogContext).pop(_InviteSaisie(
+                  email: emailController.text.trim(),
+                  role: role,
+                  memberId: memberIdController.text.trim().isEmpty
+                      ? null
+                      : memberIdController.text.trim(),
+                  fullName: nomController.text.trim().isEmpty
+                      ? null
+                      : nomController.text.trim(),
+                ));
+              },
+              child: const Text('Créer l’invitation'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (saisie == null) return;
+    if (!mounted) return;
+    try {
+      final lien = await context.read<AppState>().api.inviter(
+            email: saisie.email,
+            role: saisie.role,
+            memberId: saisie.memberId,
+            fullName: saisie.fullName,
+          );
+      if (!mounted) return;
+      _afficherLienInvitation(lien);
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
+  /// Affiche le lien d'invitation à copier et transmettre.
+  void _afficherLienInvitation(String lien) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Invitation créée'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Transmettez ce lien à la personne (WhatsApp, SMS, e-mail). '
+              'Il expire dans 7 jours.',
+            ),
+            const SizedBox(height: 12),
+            SelectableText(lien),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: lien));
+              Navigator.of(dialogContext).pop();
+              showSuccess(context, 'Lien copié.');
+            },
+            child: const Text('Copier le lien'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Module 13 — choisit un logo (PNG/JPG, max 2 Mo), le téléverse et
@@ -381,6 +547,73 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                             subtitle: Text(
                                 '${a.code}${a.city != null ? ' · ${a.city}' : ''}'),
                           )),
+                    if (state.isAdmin) ...[
+                      const SectionTitle(title: 'Demandes de liaison'),
+                      FilledButton.icon(
+                        onPressed: _inviter,
+                        icon: const Icon(Icons.person_add_outlined),
+                        label: const Text('Inviter une personne'),
+                      ),
+                      const SizedBox(height: 12),
+                      FutureBuilder<List<DemandeLiaison>>(
+                        future: _demandesFuture,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const AppLoading();
+                          }
+                          if (snapshot.hasError) {
+                            return AppError(
+                              message: snapshot.error.toString(),
+                              onRetry: () =>
+                                  setState(_refreshDemandes),
+                            );
+                          }
+                          final demandes = snapshot.data ?? [];
+                          if (demandes.isEmpty) {
+                            return const EmptyState(
+                              icon: Icons.link_outlined,
+                              message:
+                                  'Aucune demande de liaison en attente.',
+                            );
+                          }
+                          return Column(
+                            children: demandes
+                                .map((d) => Card(
+                                      child: ListTile(
+                                        leading: const CircleAvatar(
+                                          child:
+                                              Icon(Icons.person_outline),
+                                        ),
+                                        title: Text(d.membreNom),
+                                        subtitle: Text(
+                                            '${d.matricule} · ${d.userEmail}'),
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.check,
+                                                  color: Colors.green),
+                                              tooltip: 'Valider',
+                                              onPressed: () =>
+                                                  _decider(d, true),
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.close,
+                                                  color: Colors.red),
+                                              tooltip: 'Refuser',
+                                              onPressed: () =>
+                                                  _decider(d, false),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ))
+                                .toList(),
+                          );
+                        },
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     Text(
                       'Présentation publique : ${state.church?.code ?? ''}',
@@ -396,4 +629,19 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
       ),
     );
   }
+}
+
+/// Données saisies dans le dialogue d'invitation (avant l'appel API).
+class _InviteSaisie {
+  final String email;
+  final String role;
+  final String? memberId;
+  final String? fullName;
+
+  const _InviteSaisie({
+    required this.email,
+    required this.role,
+    this.memberId,
+    this.fullName,
+  });
 }

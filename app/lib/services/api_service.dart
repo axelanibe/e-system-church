@@ -5,6 +5,7 @@ import '../models/church.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/enfants.dart';
+import '../models/fidele.dart';
 import '../models/finances.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
@@ -52,6 +53,62 @@ abstract class ApiService {
   });
 
   Future<MeResult> me();
+
+  // -- Mot de passe et accès fidèle (modules 15-16) -------------------------
+  /// Demande de réinitialisation : renvoie vrai si un e-mail a été envoyé
+  /// (faux si le SMTP n'est pas configuré — l'admin transmet le lien).
+  /// La réponse ne révèle jamais si l'e-mail existe.
+  Future<bool> forgotPassword({required String email});
+
+  /// Réinitialisation par jeton (lien reçu par e-mail ou de l'admin).
+  Future<void> resetPassword({required String token, required String password});
+
+  /// Initialisation du mot de passe par jeton d'invitation.
+  Future<void> initPassword({required String token, required String password});
+
+  /// Changement de mot de passe (connecté) : vérifie l'ancien.
+  Future<void> changePassword({required String ancien, required String nouveau});
+
+  /// Invitation par l'admin : crée le compte (sans mot de passe) et renvoie
+  /// le lien d'invitation à transmettre. `memberId` lie la fiche membre.
+  Future<String> inviter({
+    required String email,
+    required String role,
+    String? memberId,
+    String? fullName,
+  });
+
+  /// Lien de réinitialisation généré par l'admin (sans SMTP).
+  Future<String> adminResetLink({required String email});
+
+  /// Inscription fidèle par matricule : liée immédiatement (avec session)
+  /// si l'e-mail concorde avec la fiche membre, demande en attente sinon.
+  Future<FideleInscriptionResult> registerFidele({
+    required String email,
+    required String password,
+    required String matricule,
+  });
+
+  /// Mon profil fidèle (`GET /moi`) : utilisateur, église, rôle, membre lié.
+  Future<FideleProfil> getMoi();
+
+  /// Demandes de liaison en attente de mon église (admin).
+  Future<List<DemandeLiaison>> getDemandesLiaison();
+
+  /// Valider / refuser une demande de liaison (admin).
+  Future<void> decideDemandeLiaison(String id, {required bool accept});
+
+  // -- Lectures fidèle (rôle membre, son église, ses données) ---------------
+  Future<List<Announcement>> getMesAnnonces();
+
+  Future<List<Culte>> getMesCultes();
+
+  Future<List<Presence>> getMesPresences();
+
+  Future<List<Contribution>> getMesContributions();
+
+  /// Ma carte de membre (fiche + église).
+  Future<MaCarte> getMaCarte();
 
   // -- Églises et arborescence ----------------------------------------------
   Future<TreeResult> getTree();

@@ -247,6 +247,66 @@ serveur les récupère seulement au moment d'exécuter un paiement.
   masquée, test), don avec le moyen de l'église.
 
 
+## 15. Mot de passe : réinitialisation et initialisation
+
+- Demande de réinitialisation (`POST /auth/mot-de-passe-oublie`) : même
+  réponse que l'e-mail existe ou non (pas d'énumération) ; jeton
+  `reinitialisation` (32 octets aléatoires, hash SHA-256 stocké, usage
+  unique, 24 h) ; e-mail envoyé si le SMTP est configuré (`SMTP_HOST`,
+  `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `APP_URL`), sinon
+  `email_envoye: false` et l'admin génère le lien
+  (`POST /auth/admin/lien-reinitialisation`). Limite : 5 demandes / heure
+  / e-mail. Les tentatives sur les jetons comptent comme des échecs
+  (5 échecs → 15 min).
+- Réinitialisation (`POST /auth/reinitialiser-mot-de-passe`) et
+  initialisation (`POST /auth/initialiser-mot-de-passe`, jeton
+  `invitation`, 7 jours) : nouveau mot de passe argon2id (8 caractères
+  minimum), jeton marqué utilisé, toutes les sessions invalidées
+  (`users.token_version`).
+- Invitation par l'admin (`POST /auth/inviter`, `admin_eglise`) : crée le
+  compte sans mot de passe (`password_hash` NULL) + appartenance à
+  l'église, renvoie le lien d'invitation à transmettre (WhatsApp, SMS).
+  Un compte invité ne peut pas se connecter avant l'initialisation.
+- Changement de mot de passe (`POST /auth/changer-mot-de-passe`,
+  connecté) : vérifie l'ancien, invalide les autres sessions.
+- Écrans Flutter : « Mot de passe oublié ? » sur la connexion, écran de
+  demande, écran de réinitialisation / initialisation (même écran, mode
+  selon le jeton ; sur le web, `?token=` lu dans l'URL ; sur mobile,
+  collage du lien ou du jeton), « Changer mon mot de passe » dans les
+  Réglages et dans l'accueil fidèle.
+- Base : `auth_tokens` (hash SHA-256, type, expiration, usage unique),
+  `users.member_id`, `users.token_version`, `password_hash` NULL autorisé
+  (migration `003_mot_de_passe_acces_fidele.sql`, reprise dans
+  `db/schema.sql`).
+
+## 16. Accès fidèle : un membre se connecte pour suivre son église
+
+- Inscription fidèle (`POST /auth/inscription-fidele`, e-mail + mot de
+  passe + matricule) : trouve le membre actif par matricule (ambiguïté
+  possible — le matricule est unique par église, pas global — résolue
+  par l'e-mail concordant, sinon refus explicite). E-mail concordant
+  avec la fiche membre → liaison immédiate + connexion immédiate. Sinon
+  → compte créé sans église + demande en attente dans
+  `member_link_requests` (« demande envoyée, l'administrateur de ton
+  église doit la valider ») ; connexion impossible avant validation.
+- Validation par l'admin (`GET /membres/demandes-liaison`,
+  `POST /membres/demandes-liaison/:id/valider|refuser`) : valider crée
+  l'appartenance (`membre`) + `users.member_id` ; un seul « en attente »
+  par membre (index unique partiel).
+- Profil (`GET /moi`) : utilisateur + église + rôle + `member_id` +
+  matricule. Lectures fidèle (`GET /moi/annonces`, `/moi/cultes`,
+  `/moi/presences`, `/moi/contributions`, `/moi/carte`) : rôle `membre`
+  seulement, son église, ses propres données — jamais celles d'un autre
+  membre, jamais les finances globales. La carte réutilise la fiche
+  membre existante (MemberDetailScreen), sans la reconstruire.
+- Écrans Flutter : « Je suis membre d’une église » sur la connexion ;
+  accueil fidèle (mon église, annonces, cultes à venir, ma carte, mes
+  présences, mes contributions, mon profil) ; le menu masque tous les
+  écrans d'administration pour le rôle `membre`. Côté admin, section
+  « Demandes de liaison » + bouton « Inviter » dans « Mon église ».
+- Base : `member_link_requests` (membre, utilisateur, statut, décision),
+  `users.member_id` UNIQUE (un compte = un fidèle au plus).
+
 ## Ordre d'implémentation
 
 1. Schéma : nouvelles tables dans `db/schema.sql` (sans casser

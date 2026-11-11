@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
 import type { Pool, PoolClient } from "pg";
@@ -81,7 +81,13 @@ export type LoginResult =
     }
   | {
       ok: false;
-      reason: "invalid_input" | "invalid_credentials" | "locked" | "invalid_church";
+      reason:
+        | "invalid_input"
+        | "invalid_credentials"
+        | "locked"
+        | "invalid_church"
+        | "password_not_set"
+        | "no_church";
     };
 
 // ---------------------------------------------------------------------------
@@ -98,7 +104,7 @@ export function getJwtSecret(): string {
 export const hashPassword = (password: string): Promise<string> =>
   argon2.hash(password, { type: argon2.argon2id });
 
-const verifyPassword = (hash: string, password: string): Promise<boolean> =>
+export const verifyPassword = (hash: string, password: string): Promise<boolean> =>
   argon2.verify(hash, password).catch(() => false);
 
 /** Hachage jetable pour égaliser le temps de réponse quand le compte n'existe pas. */
@@ -106,7 +112,10 @@ let dummyHash: Promise<string> | null = null;
 const getDummyHash = () =>
   (dummyHash ??= argon2.hash(randomBytes(16).toString("hex"), { type: argon2.argon2id }));
 
-function signToken(payload: { sub: string; churchId: string; role: string }, channel: Channel): string {
+function signToken(
+  payload: { sub: string; churchId: string; role: string; v: number },
+  channel: Channel,
+): string {
   return jwt.sign(payload, getJwtSecret(), { expiresIn: SESSION_TTL[channel] });
 }
 
@@ -135,6 +144,11 @@ export async function issueTokenForChurch(
   );
   if (rows.length === 0) return { ok: false, reason: "invalid_church" };
   const m = rows[0];
+  const { rows: versionRows } = await db.query<{ token_version: number }>(
+    `SELECT token_version FROM users WHERE id = $1`,
+    [userId],
+  );
+  const tokenVersion = versionRows[0]?.token_version ?? 0;
   const church: ChurchSummary & { role: string } = {
     id: m.id as string,
     code: m.code as string,
@@ -149,7 +163,10 @@ export async function issueTokenForChurch(
     description: m.description as string | null,
     horaires_cultes: m.horaires_cultes as unknown,
   };
-  const token = signToken({ sub: userId, churchId, role: church.role }, channel);
+  const token = signToken(
+    { sub: userId, churchId, role: church.role, v: tokenVersion },
+    channel,
+  );
   await auditLog(db, {
     churchId,
     userId,
@@ -291,7 +308,10 @@ export async function registerChurch(
 
     await client.query("COMMIT");
 
-    const token = signToken({ sub: user.id, churchId: church.id, role: "admin_eglise" }, channel);
+    const token = signToken(
+      { sub: user.id, churchId: church.id, role: "admin_eglise", v: 0 },
+      channel,
+    );
     return { ok: true, token, user, church, rattachement };
   } catch (e) {
     await client.query("ROLLBACK").catch(() => undefined);
@@ -311,7 +331,8 @@ export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
   const { email, password, channel, church_id } = parsed.data;
 
   const { rows } = await db.query(
-    `SELECT id, password_hash, failed_logins, locked_until, full_name, email
+    `SELECT id, password_hash, failed_logins, locked_until, full_name, email,
+            token_version
        FROM users WHERE email = $1 LIMIT 1`,
     [email],
   );
@@ -323,6 +344,12 @@ export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
   }
   if (user.locked_until && new Date(user.locked_until) > new Date()) {
     return { ok: false, reason: "locked" };
+  }
+  // Compte créé par invitation, mot de passe pas encore initialisé :
+  // la connexion est refusée (sans compter d'échec) et l'utilisateur est
+  // renvoyé vers le lien reçu.
+  if (!user.password_hash) {
+    return { ok: false, reason: "password_not_set" };
   }
 
   const passwordOk = await verifyPassword(user.password_hash as string, password);
@@ -363,12 +390,19 @@ export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
     if (!chosen) return { ok: false, reason: "invalid_church" };
   }
   if (!chosen) {
-    // Compte sans église (ne devrait pas arriver en MVP) : pas de session d'église.
-    return { ok: false, reason: "invalid_church" };
+    // Compte sans église : fidèle en attente de validation de sa liaison,
+    // ou compte orphelin. Il ne peut pas se connecter tant qu'aucune
+    // église ne l'a rattaché.
+    return { ok: false, reason: "no_church" };
   }
 
   const token = signToken(
-    { sub: user.id as string, churchId: chosen.church.id, role: chosen.role },
+    {
+      sub: user.id as string,
+      churchId: chosen.church.id,
+      role: chosen.role,
+      v: (user.token_version as number) ?? 0,
+    },
     channel,
   );
   await auditLog(db, {
@@ -387,10 +421,16 @@ export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
   };
 }
 
-async function recordFailure(
+/**
+ * Un échec d'authentification : compteur +1, verrouillage 15 min au 5e
+ * échec (même règle que le login). Renvoie vrai si le compte vient d'être
+ * verrouillé. Utilisé par le login et par les tentatives sur les jetons
+ * (réinitialisation / initialisation).
+ */
+export async function recordFailedAttempt(
   db: Pool,
   user: { id: string; failed_logins: number },
-): Promise<LoginResult> {
+): Promise<boolean> {
   const attempts = user.failed_logins + 1;
   const lock = attempts >= MAX_FAILED_LOGINS;
   await db.query(
@@ -406,5 +446,100 @@ async function recordFailure(
     action: "auth.login_failed",
     details: { locked: lock },
   });
+  return lock;
+}
+
+async function recordFailure(
+  db: Pool,
+  user: { id: string; failed_logins: number },
+): Promise<LoginResult> {
+  const lock = await recordFailedAttempt(db, user);
   return lock ? { ok: false, reason: "locked" } : { ok: false, reason: "invalid_credentials" };
+}
+
+// ---------------------------------------------------------------------------
+// Jetons à usage unique (modules 15-16) : invitation et réinitialisation.
+// Seul le hash SHA-256 est stocké ; le jeton brut (32 octets aléatoires,
+// hex) n'existe qu'au moment de sa création.
+// ---------------------------------------------------------------------------
+export type AuthTokenType = "invitation" | "reinitialisation";
+
+export const TOKEN_TTL_HOURS: Record<AuthTokenType, number> = {
+  invitation: 24 * 7,
+  reinitialisation: 24,
+};
+
+/** SHA-256 hex d'un jeton brut (ce qui est stocké en base). */
+export function hashAuthToken(rawToken: string): string {
+  return createHash("sha256").update(rawToken).digest("hex");
+}
+
+/** Crée un jeton et le stocke hashé. Renvoie le jeton brut (à transmettre une seule fois). */
+export async function createAuthToken(
+  db: Pool | PoolClient,
+  userId: string,
+  type: AuthTokenType,
+  ttlHours: number = TOKEN_TTL_HOURS[type],
+): Promise<{ token: string; expiresAt: Date }> {
+  const raw = randomBytes(32).toString("hex");
+  const { rows } = await db.query<{ expires_at: Date }>(
+    `INSERT INTO auth_tokens (user_id, token_hash, type, expires_at)
+     VALUES ($1, $2, $3, now() + make_interval(hours => $4))
+     RETURNING expires_at`,
+    [userId, hashAuthToken(raw), type, ttlHours],
+  );
+  return { token: raw, expiresAt: rows[0].expires_at };
+}
+
+export type TokenCheck =
+  | { ok: true; tokenId: string; userId: string }
+  | { ok: false; reason: "introuvable" | "type" | "expire" | "utilise"; userId?: string };
+
+/** Vérifie un jeton brut : hash, type, expiration, usage unique. */
+export async function checkAuthToken(
+  db: Pool,
+  rawToken: string,
+  type: AuthTokenType,
+): Promise<TokenCheck> {
+  const { rows } = await db.query(
+    `SELECT id, user_id, type, expires_at, used_at
+       FROM auth_tokens WHERE token_hash = $1`,
+    [hashAuthToken(rawToken)],
+  );
+  const t = rows[0];
+  if (!t) return { ok: false, reason: "introuvable" };
+  if (t.type !== type) return { ok: false, reason: "type", userId: t.user_id as string };
+  if (t.used_at) return { ok: false, reason: "utilise", userId: t.user_id as string };
+  if (new Date(t.expires_at as string) <= new Date()) {
+    return { ok: false, reason: "expire", userId: t.user_id as string };
+  }
+  return { ok: true, tokenId: t.id as string, userId: t.user_id as string };
+}
+
+/** Marque un jeton comme utilisé (usage unique). */
+export async function consumeAuthToken(db: Pool, tokenId: string): Promise<void> {
+  await db.query(`UPDATE auth_tokens SET used_at = now() WHERE id = $1`, [tokenId]);
+}
+
+/**
+ * Invalide toutes les sessions d'un utilisateur : les JWT émis avant
+ * (version `v` inférieure) sont refusés par requireAuth.
+ */
+export async function invalidateSessions(db: Pool, userId: string): Promise<void> {
+  await db.query(`UPDATE users SET token_version = token_version + 1 WHERE id = $1`, [userId]);
+}
+
+/**
+ * Définit (ou redéfinit) le mot de passe : hash argon2id, compteurs
+ * d'échecs remis à zéro, sessions existantes invalidées.
+ */
+export async function setPassword(db: Pool, userId: string, password: string): Promise<void> {
+  const hash = await hashPassword(password);
+  await db.query(
+    `UPDATE users
+        SET password_hash = $2, failed_logins = 0, locked_until = NULL,
+            token_version = token_version + 1, updated_at = now()
+      WHERE id = $1`,
+    [userId, hash],
+  );
 }

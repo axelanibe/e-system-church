@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
 import '../state/app_state.dart';
+import '../widgets/change_password_dialog.dart';
 import '../widgets/common_widgets.dart';
 import 'mon_eglise_screen.dart';
 import 'parametres_screen.dart';
@@ -97,6 +98,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                             );
                           },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SectionTitle(title: 'Compte'),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.lock_outline),
+                          title: const Text('Changer mon mot de passe'),
+                          subtitle: const Text(
+                              'Vérifie l’ancien mot de passe. Les autres sessions sont déconnectées.'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => showChangePasswordDialog(context),
                         ),
                       ],
                     ),

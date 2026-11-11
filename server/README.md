@@ -21,6 +21,9 @@ cp .env.example .env
 #   DATABASE_URL=postgres://user:password@localhost:5432/esystem
 #   JWT_SECRET=<32 caractères minimum, aléatoire>
 #   PORT=3000
+#   SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM (optionnels :
+#     sans eux, aucun e-mail n'est envoyé et l'admin transmet les liens)
+#   APP_URL=http://localhost:8080 (liens ?token=... de l'application web)
 ```
 
 ## Migrations
@@ -246,6 +249,117 @@ curl http://localhost:3000/plateforme/chiffres -H "Authorization: Bearer <redact
 # Un admin_eglise, un trésorier ou un membre simple est refusé : 403.
 ```
 
+### 18. Mot de passe oublié → réinitialisation → connexion
+
+Règle : la demande renvoie toujours la même réponse, que l'e-mail existe
+ou non (pas d'énumération). Si le SMTP est configuré, l'e-mail contient le
+lien `APP_URL/reinitialiser?token=...` (valable 24 h) et `email_envoye`
+vaut `true` ; sinon `false` et l'admin génère le lien (section 19). Le
+jeton est à usage unique ; 5 échecs sur un jeton verrouillent le compte
+15 min, comme le login. La réinitialisation invalide toutes les sessions
+(`token_version`).
+
+```bash
+# Demande (toujours 200, même si l'e-mail n'existe pas)
+curl -X POST http://localhost:3000/auth/mot-de-passe-oublie \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@gracedivine.ci"}'
+# → { "message": "Si cet e-mail correspond à un compte, ...", "email_envoye": true|false }
+
+# Réinitialisation avec le jeton du lien (8 caractères minimum)
+curl -X POST http://localhost:3000/auth/reinitialiser-mot-de-passe \
+  -H "Content-Type: application/json" \
+  -d '{"token":"<jeton_hex>","mot_de_passe":"nouveau-mot-de-passe"}'
+# → { "message": "Mot de passe réinitialisé. Vous pouvez vous connecter." }
+# Un jeton invalide ou expiré : 400 { "error": "invalid_token", "message": "Lien invalide ou expiré." }
+
+# Connexion avec le nouveau mot de passe (voir section 2)
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@gracedivine.ci","password":"nouveau-mot-de-passe","channel":"web"}'
+```
+
+### 19. Invitation par l'admin → initialisation → connexion
+
+Règle : l'admin de l'église crée le compte sans mot de passe et reçoit le
+lien d'invitation (`APP_URL/initialiser?token=...`, valable 7 jours) à
+transmettre (WhatsApp, SMS, etc.). Le jeton n'est exposé nulle part
+ailleurs. Un compte invité ne peut pas se connecter tant que son mot de
+passe n'est pas initialisé (401 « initialisez votre mot de passe via le
+lien reçu »). Sans SMTP, l'admin génère aussi les liens de
+réinitialisation avec la dernière commande ci-dessous.
+
+```bash
+# Inviter (admin, jeton admin) : rôle membre, trésorier, responsable_culte ou admin_eglise
+curl -X POST http://localhost:3000/auth/inviter \
+  -H "Authorization: Bearer <redacted>" -H "Content-Type: application/json" \
+  -d '{"email":"nouveau@membre.ci","role":"membre"}'
+# → { "user": {...}, "lien_invitation": "http://localhost:8080/initialiser?token=<jeton_hex>", "expires_at": "..." }
+
+# Initialisation avec le jeton du lien
+curl -X POST http://localhost:3000/auth/initialiser-mot-de-passe \
+  -H "Content-Type: application/json" \
+  -d '{"token":"<jeton_hex>","mot_de_passe":"premier-mot-de-passe"}'
+# → { "message": "Mot de passe initialisé. Vous pouvez vous connecter." }
+
+# Changer son mot de passe (connecté) : vérifie l'ancien, invalide les autres sessions
+curl -X POST http://localhost:3000/auth/changer-mot-de-passe \
+  -H "Authorization: Bearer <redacted>" -H "Content-Type: application/json" \
+  -d '{"ancien":"premier-mot-de-passe","nouveau":"mot-de-passe-suivant"}'
+# → { "message": "Mot de passe changé. Vos autres sessions ont été déconnectées." }
+
+# Sans SMTP : l'admin génère un lien de réinitialisation pour un compte existant
+curl -X POST http://localhost:3000/auth/admin/lien-reinitialisation \
+  -H "Authorization: Bearer <redacted>" -H "Content-Type: application/json" \
+  -d '{"email":"admin@gracedivine.ci"}'
+# → { "lien": "http://localhost:8080/reinitialiser?token=<jeton_hex>", "expires_at": "..." }
+```
+
+### 20. Inscription fidèle → liaison → connexion fidèle
+
+Règle : le fidèle s'inscrit avec son e-mail, un mot de passe et son
+matricule (carte de membre). Si l'e-mail est celui de sa fiche membre, le
+compte est lié immédiatement et la connexion est immédiate. Sinon, une
+demande de liaison est créée et l'admin de l'église la valide (ou refuse)
+dans « Mon église » ; le fidèle ne peut se connecter qu'après validation.
+Le matricule est unique par église, pas global : s'il est ambigu, la
+réponse l'indique. Le fidèle (rôle `membre`) ne voit que son église et
+ses propres données (`/moi/*`) — jamais les données d'un autre membre,
+ni les finances globales.
+
+```bash
+# 1. Inscription fidèle (e-mail = celui de la fiche membre → liaison immédiate)
+curl -X POST http://localhost:3000/auth/inscription-fidele \
+  -H "Content-Type: application/json" \
+  -d '{"email":"membre@gracedivine.ci","mot_de_passe":"mot-de-passe-fidele","matricule":"M-0001"}'
+# → { "lie": true, "message": "Compte créé et lié à votre fiche membre. Bienvenue !", "token": "...", "user": {...}, "church": {...}, "eglises": [...] }
+
+# 1bis. E-mail différent de la fiche → demande en attente
+# → { "lie": false, "demande_id": "...", "message": "Demande envoyée, l'administrateur de ton église doit la valider. ..." }
+
+# 2. L'admin liste les demandes en attente de son église
+curl http://localhost:3000/membres/demandes-liaison -H "Authorization: Bearer <redacted>"
+# → { "demandes": [{ "id": "...", "matricule": "M-0001", "membre_nom": "...", "user_email": "...", ... }] }
+
+# 3. L'admin valide (ou refuse : .../refuser)
+curl -X POST http://localhost:3000/membres/demandes-liaison/<demande_id>/valider -H "Authorization: Bearer <redacted>"
+# → { "id": "...", "status": "valide", "message": "Liaison validée : le fidèle peut se connecter." }
+
+# 4. Connexion fidèle, puis lectures /moi/* (jeton du fidèle, rôle membre)
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"membre@gracedivine.ci","password":"mot-de-passe-fidele","channel":"mobile"}'
+curl http://localhost:3000/moi -H "Authorization: Bearer <redacted>"
+# → { "user": {...,"member_id": "...","matricule": "M-0001"}, "church": {...}, "role": "membre" }
+curl http://localhost:3000/moi/annonces -H "Authorization: Bearer <redacted>"
+curl http://localhost:3000/moi/cultes -H "Authorization: Bearer <redacted>"
+curl http://localhost:3000/moi/presences -H "Authorization: Bearer <redacted>"
+curl http://localhost:3000/moi/contributions -H "Authorization: Bearer <redacted>"
+curl http://localhost:3000/moi/carte -H "Authorization: Bearer <redacted>"
+# → { "member": {...}, "church": {...} } (carte de membre existante)
+# Un autre rôle que membre sur /moi/* : 403. Les finances globales restent interdites (403).
+```
+
 Recette de test contre une vraie base : lancer PostgreSQL,
 `npm run migrate`, créer une mère et une sous-église, enregistrer des
 contributions confirmées, rattacher un super_admin en base, puis jouer
@@ -265,7 +379,7 @@ rien de ce réseau (403 ou 404 selon son rôle).
 | `admin_eglise` | Tout (églises, rattachements, transferts, membres, finances, rapports, annonces) |
 | `tresorier` | Finances (lecture + saisie + confirmation), lecture des membres — **pas de création de membre**, **pas de transfert** |
 | `responsable_culte` | Membres (lecture + création), lecture des finances, lecture des transferts — **pas de décision de transfert** |
-| `membre` | Lecture des membres, de l'arbre et des annonces — **pas de finances**, **pas de transferts** |
+| `membre` | Lecture des membres, de l'arbre et des annonces — **pas de finances**, **pas de transferts** ; lectures `/moi/*` (son église, ses données, sa carte) |
 | `super_admin` | Plateforme : chiffres globaux seulement (`GET /plateforme/chiffres`) — **pas de détail nominatif, pas de gestion des membres** |
 
 ## Limites connues du MVP
@@ -286,7 +400,17 @@ rien de ce réseau (403 ou 404 selon son rôle).
   été testée contre une vraie base PostgreSQL : lancer PostgreSQL,
   `npm run migrate`, rattacher un super_admin en base, puis jouer
   l'exemple curl de la section 17.
+- Les routes de mot de passe et d'accès fidèle (sections 18 à 20) n'ont
+  pas non plus été testées contre une vraie base PostgreSQL : lancer
+  PostgreSQL, `npm run migrate`, puis jouer les exemples curl des
+  sections 18, 19 et 20. La migration
+  `db/migrations/003_mot_de_passe_acces_fidele.sql` crée `auth_tokens`,
+  `users.member_id` et `member_link_requests` ; le schéma `db/schema.sql`
+  les contient aussi pour les nouvelles bases. Sans SMTP configuré,
+  aucun e-mail n'est envoyé : l'admin transmet les liens (invitation,
+  lien de réinitialisation).
 - Enregistrement manuel des paiements Mobile Money (référence) ; pas de
   webhook Wave / Orange / MTN (V2).
-- JWT sans table de révocation : un jeton reste valide jusqu'à expiration
-  (30 min web, 2 h mobile).
+- Révocation des sessions : un changement de mot de passe invalide les
+  jetons émis avant (`users.token_version`, vérifié à chaque requête) ;
+  sinon, un jeton reste valide jusqu'à expiration (30 min web, 2 h mobile).
