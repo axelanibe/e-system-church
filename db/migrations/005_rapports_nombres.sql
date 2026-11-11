@@ -3,12 +3,22 @@
 -- (bigint) sans cast : node-postgres les transmet comme des chaînes, et
 -- l'appli plantait sur l'écran Rapports (« type 'String' is not a subtype
 -- of type 'num?' in type cast », constaté le 11/11 sur Render). Désormais
--- les trois agrégats sont castés en `::int`. CREATE OR REPLACE VIEW :
--- rejouable sans erreur. Le même correctif est appliqué dans db/schema.sql
--- (schéma initial) pour les nouvelles bases. La route /rapports/consolide
--- normalise aussi les lignes avec Number() et l'appli parse désormais les
--- nombres défensivement (rapport.dart) : triple protection.
-CREATE OR REPLACE VIEW v_rapports_consolides AS
+-- les trois agrégats sont castés en `::int`. Le même correctif est appliqué
+-- dans db/schema.sql (schéma initial) pour les nouvelles bases. La route
+-- /rapports/consolide normalise aussi les lignes avec Number() et l'appli
+-- parse désormais les nombres défensivement (rapport.dart) : triple
+-- protection.
+-- Correctif 11 nov. 2026 (déploiement Render dep-dbqb1kjncjis7390edvg) :
+-- CREATE OR REPLACE VIEW ne peut PAS changer le type d'une colonne de vue
+-- existante (erreur 42P16 « cannot change data type of view column
+-- "membres_actifs" from bigint to integer ») : sur la base en ligne, la
+-- vue créée par la 002 a ses agrégats en bigint, la 005 n'a jamais été
+-- appliquée, donc elle est rejouée à chaque déploiement et bloque la 006.
+-- La vue est donc supprimée puis recréée (DROP + CREATE) au lieu d'être
+-- remplacée. Sûr ici : une vue ne contient aucune donnée, et aucune autre
+-- vue ne dépend de v_rapports_consolides (seules les routes la lisent).
+DROP VIEW IF EXISTS v_rapports_consolides;
+CREATE VIEW v_rapports_consolides AS
 WITH RECURSIVE descendants AS (
     SELECT id AS eglise_id, id AS racine_id, 0 AS niveau
       FROM churches
