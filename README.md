@@ -19,8 +19,8 @@ consolidés qui remontent vers l'église mère.
   de niveaux.
 - Chaque église a son propre admin, ses propres membres, ses propres finances.
 - **Isolation stricte** : une église ne voit que ses données. L'église mère voit
-  un tableau de bord **consolidé** (totaux, pas le détail d'une antenne sauf
-  autorisation).
+  un tableau de bord **consolidé** : totaux et détail par antenne, récursif
+  (une antenne compte aussi chez sa grand-mère).
 
 ```
 Plateforme
@@ -37,16 +37,16 @@ Plateforme
 | --- | --- |
 | Membres | Inscription, carte de membre avec QR, départements, groupes et cellules |
 | Finances | Dîmes, offrandes, dons, dépenses, reçus — Wave, Orange Money, MTN MoMo |
-| Cultes et événements | Planning, présences par scan QR, intervenants |
+| Cultes et événements | Planning, présences par matricule, intervenants (scan QR en V2) |
 | Communication | Annonces, notifications, SMS |
-| Médias | Prédications audio/vidéo, Bible Louis Segond |
-| Rapports | Chiffres par antenne, consolidés vers l'église mère |
+| Médias | Prédications audio/vidéo (Bible en V2) |
+| Rapports | Chiffres par antenne, consolidés et détaillés vers l'église mère |
 
 ## Pile technique
 
 - **Application** : Flutter (Android / iOS / web) — même base que Connexion Prophétique.
 - **Backend** : TypeScript + Fastify + PostgreSQL.
-- **Auth** : argon2id, sessions, 2FA TOTP en option, verrouillage après 5 échecs.
+- **Auth** : argon2id, sessions, verrouillage après 5 échecs (2FA TOTP en V2).
 - **Paiements** : Wave, Orange Money, MTN MoMo (Mobile Money, Côte d'Ivoire).
 - **Hébergement** : à définir (Render en référence pour Connexion Prophétique).
 
@@ -63,9 +63,11 @@ db/
 
 ## Feuille de route
 
-1. **MVP** : inscription, arborescence mère / sous-églises, membres + finances de base.
-2. **V2** : cultes, présences, communication, rapports consolidés.
-3. **V3** : annuaire public des églises, médias, application membre.
+1. **MVP** : inscription, arborescence mère / sous-églises, membres + carte
+   avec QR, finances de base, transferts entre branches, rapports consolidés
+   et détaillés, écran Plateforme.
+2. **V2** : cultes, présences, communication.
+3. **V3** : annuaire public des églises, médias, application membre, Bible.
 
 Détail : `docs/cahier-des-charges-mvp.md`.
 

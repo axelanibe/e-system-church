@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
+import '../config/app_theme.dart';
 import '../state/app_state.dart';
 import '../screens/forgot_password_screen.dart';
 import '../screens/register_fidele_screen.dart';
@@ -119,7 +120,7 @@ class _DemoLoginScreenState extends State<DemoLoginScreen> {
                                   ),
                           style: FilledButton.styleFrom(
                             backgroundColor: scheme.secondary,
-                            foregroundColor: const Color(0xFF083D2B),
+                            foregroundColor: AppTheme.bleuNuit,
                           ),
                           child: const Padding(
                             padding: EdgeInsets.symmetric(vertical: 4),
