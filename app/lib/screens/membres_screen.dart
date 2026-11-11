@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../config/app_theme.dart';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -91,9 +92,9 @@ class _MembresScreenState extends State<MembresScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'actif':
-        return Colors.green;
+        return AppTheme.vertFonce;
       case 'nouveau_converti':
-        return Colors.blue;
+        return AppTheme.bleuFonce;
       case 'inactif':
         return Colors.grey;
       default:

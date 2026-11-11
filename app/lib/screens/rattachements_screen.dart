@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/rattachement.dart';
@@ -80,8 +81,8 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
 
   Widget _rattachementTile(Rattachement r, {required bool isRecue}) {
     final color = switch (r.status) {
-      'acceptee' => Colors.green,
-      'refusee' => Colors.red,
+      'acceptee' => AppTheme.vertFonce,
+      'refusee' => AppTheme.rougeErreur,
       _ => Colors.orange,
     };
     return Card(
@@ -96,12 +97,12 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
             StatusChip(label: r.statusLabel, color: color),
             if (isRecue && r.status == 'en_attente') ...[
               IconButton(
-                icon: const Icon(Icons.check, color: Colors.green),
+                icon: const Icon(Icons.check, color: AppTheme.vertFonce),
                 tooltip: 'Accepter',
                 onPressed: () => _decide(r.id, true),
               ),
               IconButton(
-                icon: const Icon(Icons.close, color: Colors.red),
+                icon: const Icon(Icons.close, color: AppTheme.rougeErreur),
                 tooltip: 'Refuser',
                 onPressed: () => _decide(r.id, false),
               ),

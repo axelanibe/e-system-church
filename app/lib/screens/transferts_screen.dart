@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/transfert.dart';
@@ -106,8 +107,8 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
   Widget _transfertTile(TransfertMembre t,
       {required bool aTraiter, required bool emis}) {
     final color = switch (t.status) {
-      'accepte' => Colors.green,
-      'refuse' || 'annule' => Colors.red,
+      'accepte' => AppTheme.vertFonce,
+      'refuse' || 'annule' => AppTheme.rougeErreur,
       _ => Colors.orange,
     };
     return Card(
@@ -134,19 +135,19 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
             StatusChip(label: t.statusLabel, color: color),
             if (aTraiter) ...[
               IconButton(
-                icon: const Icon(Icons.check, color: Colors.green),
+                icon: const Icon(Icons.check, color: AppTheme.vertFonce),
                 tooltip: 'Accepter',
                 onPressed: () => _decide(t.id, true),
               ),
               IconButton(
-                icon: const Icon(Icons.close, color: Colors.red),
+                icon: const Icon(Icons.close, color: AppTheme.rougeErreur),
                 tooltip: 'Refuser',
                 onPressed: () => _decide(t.id, false),
               ),
             ],
             if (emis && t.status == 'en_attente')
               IconButton(
-                icon: const Icon(Icons.cancel_outlined, color: Colors.red),
+                icon: const Icon(Icons.cancel_outlined, color: AppTheme.rougeErreur),
                 tooltip: 'Annuler la demande',
                 onPressed: () => _annuler(t.id),
               ),

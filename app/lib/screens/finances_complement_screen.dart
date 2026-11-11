@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/finances.dart';
@@ -315,14 +316,14 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
   Color _depenseColor(String statut) {
     switch (statut) {
       case 'payee':
-        return Colors.green;
+        return AppTheme.vertFonce;
       case 'validee_pasteur':
       case 'validee_tresorier':
-        return Colors.blue;
+        return AppTheme.bleuFonce;
       case 'soumise':
         return Colors.orange;
       case 'refusee':
-        return Colors.red;
+        return AppTheme.rougeErreur;
       default:
         return Colors.grey;
     }
@@ -430,7 +431,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                                               .map((b) => Text(
                                                     '${b.annee} : ${formatMontant(b.montantPrevu, state.devise)}',
                                                     style: const TextStyle(
-                                                        fontSize: 12),
+                                                        fontSize: 14),
                                                   ))
                                               .toList(),
                                         ),
@@ -715,13 +716,13 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                         label: 'Entrées',
                         value: formatMontant(solde.entrees, state.devise),
                         icon: Icons.trending_up,
-                        color: Colors.green,
+                        color: AppTheme.vertFonce,
                       ),
                       StatCard(
                         label: 'Sorties',
                         value: formatMontant(solde.sorties, state.devise),
                         icon: Icons.trending_down,
-                        color: Colors.red,
+                        color: AppTheme.rougeErreur,
                       ),
                     ],
                   );

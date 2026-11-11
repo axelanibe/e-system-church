@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_theme.dart';
+import '../models/church.dart';
 import '../models/fidele.dart';
 import '../models/parametres.dart';
 import '../models/profil.dart';
@@ -127,7 +129,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                 const Text(
                   'Le compte est créé sans mot de passe : la personne '
                   'l’initialise avec le lien (valable 7 jours).',
-                  style: TextStyle(fontSize: 12),
+                  style: TextStyle(fontSize: 14),
                 ),
               ],
             ),
@@ -382,8 +384,12 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
             label: const Text('Choisir un logo (PNG/JPG, max 2 Mo)'),
           ),
         ),
-        dialogTextField(
-            controller: couleurController, label: 'Couleur principale'),
+        // Couleurs prédéfinies avec aperçu, au lieu d'un champ hex libre
+        // qu'un débutant ne sait pas remplir (« or », « doré »…).
+        _ChoixCouleur(
+          controller: couleurController,
+          nomEglise: eglise.name,
+        ),
         dialogTextField(controller: deviseController, label: 'Devise'),
         dialogTextField(
             controller: fuseauController, label: 'Fuseau horaire'),
@@ -394,7 +400,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
         ),
         const Text(
           'Un horaire par ligne : jour, heure, puis titre.',
-          style: TextStyle(fontSize: 12),
+          style: TextStyle(fontSize: 14),
         ),
         const SizedBox(height: 12),
         dialogTextField(controller: addressController, label: 'Adresse'),
@@ -685,14 +691,14 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                                           children: [
                                             IconButton(
                                               icon: const Icon(Icons.check,
-                                                  color: Colors.green),
+                                                  color: AppTheme.vertFonce),
                                               tooltip: 'Valider',
                                               onPressed: () =>
                                                   _decider(d, true),
                                             ),
                                             IconButton(
                                               icon: const Icon(Icons.close,
-                                                  color: Colors.red),
+                                                  color: AppTheme.rougeErreur),
                                               tooltip: 'Refuser',
                                               onPressed: () =>
                                                   _decider(d, false),
@@ -736,4 +742,107 @@ class _InviteSaisie {
     this.memberId,
     this.fullName,
   });
+}
+
+/// Choix de la couleur principale de l'église : couleurs prédéfinies
+/// avec aperçu de l'avatar, au lieu d'un champ hex libre qu'un débutant
+/// ne sait pas remplir. La couleur choisie est écrite dans [controller]
+/// au format hex. Une couleur déjà enregistrée hors de la liste est
+/// gardée comme « Couleur actuelle ».
+class _ChoixCouleur extends StatefulWidget {
+  final TextEditingController controller;
+  final String nomEglise;
+
+  const _ChoixCouleur({required this.controller, required this.nomEglise});
+
+  @override
+  State<_ChoixCouleur> createState() => _ChoixCouleurState();
+}
+
+class _ChoixCouleurState extends State<_ChoixCouleur> {
+  static const _choix = <String, String>{
+    'Bleu nuit': '#0B1F3A',
+    'Or foncé': '#8A6A12',
+    'Vert foncé': '#0C5B40',
+    'Bleu foncé': '#1B4F72',
+    'Rouge': '#B3261E',
+  };
+
+  late String _choisie;
+
+  @override
+  void initState() {
+    super.initState();
+    _choisie = widget.controller.text.trim().toUpperCase();
+    if (_choisie.isEmpty) {
+      // Pas de couleur : le bleu nuit, comme l'avatar par défaut.
+      _choisie = '#0B1F3A';
+      widget.controller.text = _choisie;
+    }
+  }
+
+  Color _couleur(String hex) {
+    final nettoye = hex.replaceFirst('#', '');
+    final valeur = int.tryParse('FF$nettoye', radix: 16);
+    return valeur == null ? AppTheme.bleuNuit : Color(valeur);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final entrees = Map<String, String>.of(_choix);
+    if (!entrees.containsValue(_choisie)) {
+      entrees['Couleur actuelle'] = _choisie;
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Couleur principale'),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              ChurchAvatar(
+                church: Church(
+                  id: '',
+                  code: '',
+                  name: widget.nomEglise,
+                  status: 'active',
+                  couleurPrincipale: _choisie,
+                ),
+                radius: 20,
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Touchez une couleur : l’aperçu à gauche montre '
+                  'comment vos initiales s’affichent.',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final entree in entrees.entries)
+                ChoiceChip(
+                  label: Text(entree.key),
+                  selected: _choisie == entree.value,
+                  avatar: CircleAvatar(
+                    backgroundColor: _couleur(entree.value),
+                    radius: 10,
+                  ),
+                  onSelected: (_) {
+                    setState(() => _choisie = entree.value);
+                    widget.controller.text = entree.value;
+                  },
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }

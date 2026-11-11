@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/cultes.dart';
@@ -89,9 +90,9 @@ class _PresencesScreenState extends State<PresencesScreen> {
   Color _statutColor(String statut) {
     switch (statut) {
       case 'present':
-        return Colors.green;
+        return AppTheme.vertFonce;
       case 'absent':
-        return Colors.red;
+        return AppTheme.rougeErreur;
       case 'excuse':
         return Colors.orange;
       default:
@@ -163,13 +164,13 @@ class _PresencesScreenState extends State<PresencesScreen> {
                           label: 'Présents',
                           value: '${stats.presents}',
                           icon: Icons.check_circle_outline,
-                          color: Colors.green,
+                          color: AppTheme.vertFonce,
                         ),
                         StatCard(
                           label: 'Absents',
                           value: '${stats.absents}',
                           icon: Icons.cancel_outlined,
-                          color: Colors.red,
+                          color: AppTheme.rougeErreur,
                         ),
                         StatCard(
                           label: 'Taux de présence',

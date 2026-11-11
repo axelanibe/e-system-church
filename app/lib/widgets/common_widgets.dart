@@ -10,6 +10,52 @@ class AppLoading extends StatelessWidget {
   }
 }
 
+/// Traduit une erreur technique en phrase simple en français, pour une
+/// personne qui n'a aucune notion de technologie. Une phrase déjà claire
+/// est gardée telle quelle, le reste devient un message générique
+/// compréhensible. Ex. « ClientException: Load failed » devient
+/// « Pas de connexion internet. Vérifiez votre connexion et réessayez. »
+String messageErreurSimple(Object error) {
+  final brut = error.toString();
+  final bas = brut.toLowerCase();
+  if (bas.contains('load failed') ||
+      bas.contains('socketexception') ||
+      bas.contains('failed host lookup') ||
+      bas.contains('network is unreachable') ||
+      bas.contains('connection refused')) {
+    return 'Pas de connexion internet. Vérifiez votre connexion et réessayez.';
+  }
+  if (bas.contains('invalid_code') || bas.contains('code inconnu')) {
+    return 'Code d’église inconnu. Demandez-le à votre pasteur.';
+  }
+  if (bas.contains('email_taken')) {
+    return 'Cet e-mail est déjà utilisé.';
+  }
+  if (bas.contains('401') ||
+      bas.contains('unauthorized') ||
+      bas.contains('mot de passe incorrect') ||
+      bas.contains('e-mail ou mot de passe')) {
+    return 'E-mail ou mot de passe incorrect.';
+  }
+  if (bas.contains('403') || bas.contains('forbidden')) {
+    return 'Vous n’avez pas accès à cette fonction.';
+  }
+  if (bas.contains('404') || bas.contains('not found')) {
+    return 'Introuvable. Vérifiez et réessayez.';
+  }
+  if (bas.contains('409')) {
+    return 'Cette information existe déjà.';
+  }
+  if (bas.contains('exception') ||
+      bas.contains('error') ||
+      bas.contains('failed') ||
+      bas.contains('null check') ||
+      bas.contains('typeerror')) {
+    return 'Quelque chose ne va pas. Vérifiez votre connexion et réessayez.';
+  }
+  return brut;
+}
+
 /// Panneau d'erreur avec bouton « Réessayer ».
 class AppError extends StatelessWidget {
   final String message;
@@ -28,7 +74,7 @@ class AppError extends StatelessWidget {
             Icon(Icons.error_outline,
                 size: 48, color: Theme.of(context).colorScheme.error),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
+            Text(messageErreurSimple(message), textAlign: TextAlign.center),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
               FilledButton(
@@ -113,7 +159,7 @@ class StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Chip(
-      label: Text(label, style: const TextStyle(fontSize: 12)),
+      label: Text(label, style: const TextStyle(fontSize: 14)),
       backgroundColor: color.withValues(alpha: 0.15),
       side: BorderSide(color: color.withValues(alpha: 0.4)),
       visualDensity: VisualDensity.compact,
@@ -167,7 +213,7 @@ class StatCard extends StatelessWidget {
 void showApiError(BuildContext context, Object error) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text(error.toString()),
+      content: Text(messageErreurSimple(error)),
       backgroundColor: Theme.of(context).colorScheme.error,
     ),
   );
