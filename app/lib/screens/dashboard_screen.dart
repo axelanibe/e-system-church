@@ -10,6 +10,7 @@ import '../widgets/church_avatar.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/mere_badge.dart';
 import 'finances_mere_screen.dart';
+import 'mes_eglises_screen.dart';
 import 'plateforme_screen.dart';
 
 class _DashboardData {
@@ -101,39 +102,73 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: Theme.of(context).colorScheme.primaryContainer,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        ChurchAvatar(church: church, radius: 28),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                church?.name ?? '—',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                  '${church?.code ?? ''} · ${church?.city ?? ''} · ${state.roleLabel}'),
-                              if (church?.isMere ?? false) ...[
-                                const SizedBox(height: 8),
-                                const Row(
-                                  children: [
-                                    MereBadge(),
-                                    SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                          'Tête de votre réseau.'),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ChurchAvatar(church: church, radius: 28),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    church?.name ?? '—',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall
+                                        ?.copyWith(
+                                            fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${church?.code ?? ''} · ${church?.city ?? ''} · ${state.roleLabel}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (church?.isMere ?? false) ...[
+                                    const SizedBox(height: 8),
+                                    const Row(
+                                      children: [
+                                        MereBadge(),
+                                        SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Tête de votre réseau.',
+                                            maxLines: 2,
+                                            overflow:
+                                                TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        // Changer d'église : l'écran dédié « Mes églises »
+                        // est paginé et cherchable, il remplace la liste
+                        // complète qui était dans le tiroir.
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const MesEglisesScreen(),
                                 ),
-                              ],
-                            ],
+                              );
+                            },
+                            icon: const Icon(Icons.swap_horiz_outlined),
+                            label: const Text('Changer d’église'),
                           ),
                         ),
                       ],

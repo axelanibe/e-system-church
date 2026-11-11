@@ -167,6 +167,39 @@ class Membership {
       );
 }
 
+/// Une page de `GET /moi/eglises` : mes églises, paginées + recherche.
+/// Le sélecteur d'églises charge 50 églises par page et ne demande la
+/// suite qu'au défilement, pour rester utilisable avec 500 branches.
+class MesEglisesPage {
+  final List<Membership> eglises;
+  final int total;
+  final int page;
+  final int limite;
+  final int pages;
+
+  const MesEglisesPage({
+    required this.eglises,
+    required this.total,
+    required this.page,
+    required this.limite,
+    required this.pages,
+  });
+
+  factory MesEglisesPage.fromJson(Map<String, dynamic> json) =>
+      MesEglisesPage(
+        eglises: (json['eglises'] as List<dynamic>? ?? [])
+            .map((e) => Membership.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        total: json['total'] as int? ?? 0,
+        page: json['page'] as int? ?? 1,
+        limite: json['limite'] as int? ?? 50,
+        pages: json['pages'] as int? ?? 0,
+      );
+
+  /// Vrai s'il reste des pages à charger après celle-ci.
+  bool get aUneSuite => page < pages;
+}
+
 /// Résultat de `GET /eglises/arbre`.
 class TreeResult {
   final ChurchNode arbre;

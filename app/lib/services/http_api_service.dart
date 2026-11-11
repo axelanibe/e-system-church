@@ -1694,6 +1694,16 @@ class HttpApiService implements ApiService {
     _token = data['token'] as String?;
   }
 
+  @override
+  Future<MesEglisesPage> listerMesEglises(
+          {String? recherche, int page = 1, int limite = 50}) async =>
+      MesEglisesPage.fromJson(await _call('GET', '/moi/eglises', query: {
+        if (recherche != null && recherche.trim().isNotEmpty)
+          'recherche': recherche.trim(),
+        'page': '$page',
+        'limite': '$limite',
+      }));
+
   // -- Paiements par pays et clés API (module 14) ---------------------------
   @override
   Future<List<FournisseurPaiement>> getFournisseursPaiement(

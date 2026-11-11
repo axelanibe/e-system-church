@@ -682,6 +682,12 @@ abstract class ApiService {
   /// Bascule l'église active (le jeton est renouvelé côté serveur).
   Future<void> switchChurch(String churchId);
 
+  /// Mes églises, paginées + recherche (nom, code, ville) :
+  /// `GET /moi/eglises`, 50 par page par défaut. L'église active est
+  /// en tête de la première page.
+  Future<MesEglisesPage> listerMesEglises(
+      {String? recherche, int page = 1, int limite = 50});
+
   // -- Paiements par pays et clés API (module 14) ---------------------------
   /// Catalogue des fournisseurs pour un pays (`CI`, `SN`, `KE`, `INTL`).
   /// Sans pays : tout le catalogue.
