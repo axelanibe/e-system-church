@@ -166,6 +166,28 @@ class DemoAppState extends AppState {
   }
 
   @override
+  Future<FideleInscriptionResult> registerMembreParCode({
+    required String nomPrenom,
+    required String email,
+    required String telephone,
+    required String password,
+    required String codeEglise,
+  }) async {
+    final result = await _demoApi.registerMembreParCode(
+      nomPrenom: nomPrenom,
+      email: email,
+      telephone: telephone,
+      password: password,
+      codeEglise: codeEglise,
+    );
+    if (result.auth != null) {
+      _applyAuth(result.auth!);
+      notifyListeners();
+    }
+    return result;
+  }
+
+  @override
   Future<void> refreshMe() async {
     final me = await _demoApi.me();
     _applyMe(me);
