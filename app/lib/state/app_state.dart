@@ -206,6 +206,32 @@ class AppState extends ChangeNotifier {
     return result;
   }
 
+  /// Inscription membre par code d'église, sans validation : le code fait
+  /// foi, le matricule est attribué automatiquement, la session est
+  /// appliquée tout de suite (connexion).
+  Future<FideleInscriptionResult> registerMembreParCode({
+    required String nomPrenom,
+    required String email,
+    required String telephone,
+    required String password,
+    required String codeEglise,
+  }) async {
+    final result = await _api.registerMembreParCode(
+      nomPrenom: nomPrenom,
+      email: email,
+      telephone: telephone,
+      password: password,
+      codeEglise: codeEglise,
+    );
+    if (result.auth != null) {
+      _applyAuth(result.auth!);
+      await _store.saveToken(result.auth!.token);
+      await refreshModules();
+      notifyListeners();
+    }
+    return result;
+  }
+
   /// Recharge mon église et mon rôle depuis l'API.
   Future<void> refreshMe() async {
     final me = await _api.me();

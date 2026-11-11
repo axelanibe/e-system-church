@@ -238,6 +238,27 @@ class HttpApiService implements ApiService {
   }
 
   @override
+  Future<FideleInscriptionResult> registerMembreParCode({
+    required String nomPrenom,
+    required String email,
+    required String telephone,
+    required String password,
+    required String codeEglise,
+  }) async {
+    final data = await _call('POST', '/auth/inscription-par-code', body: {
+      'nom_prenom': nomPrenom,
+      'email': email,
+      'telephone': telephone,
+      'mot_de_passe': password,
+      'code_eglise': codeEglise,
+      'channel': 'mobile',
+    });
+    final result = FideleInscriptionResult.fromJson(data);
+    if (result.auth != null) _token = result.auth!.token;
+    return result;
+  }
+
+  @override
   Future<FideleProfil> getMoi() async =>
       FideleProfil.fromJson(await _call('GET', '/moi'));
 

@@ -321,6 +321,137 @@ export async function registerChurch(
   }
 }
 
+export const inscriptionMembreSchema = z.object({
+  nom_prenom: z.string().min(2).max(200),
+  email: z.string().email().max(254),
+  telephone: z.string().min(8).max(30),
+  mot_de_passe: z.string().min(8).max(256),
+  /** Code d'invitation de l'église (ESC-…), il fait foi : aucune validation. */
+  code_eglise: z.string().min(4).max(20),
+  channel: z.enum(["web", "mobile"]).default("web"),
+});
+
+export type InscriptionMembreResult =
+  | {
+      ok: true;
+      token: string;
+      user: { id: string; full_name: string; email: string };
+      church: ChurchSummary & { role: string };
+      eglises: Membership[];
+      matricule: string;
+    }
+  | { ok: false; reason: "invalid_input" | "invalid_code" | "email_taken" };
+
+/**
+ * Inscription d'un membre par code d'église, sans validation (décision de
+ * Bouf, 11 nov. 2026) : le code fait foi. Comme CONNEXION PROPHÉTIQUE,
+ * le membre saisit nom et prénom, e-mail, téléphone, mot de passe et le
+ * code de son église à la place du matricule. Le matricule est attribué
+ * automatiquement (unique par église), la fiche membre et la carte sont
+ * créées tout de suite, le compte est lié immédiatement.
+ */
+export async function inscriptionMembreParCode(
+  db: Pool,
+  rawInput: unknown,
+): Promise<InscriptionMembreResult> {
+  const parsed = inscriptionMembreSchema.safeParse(rawInput);
+  if (!parsed.success) return { ok: false, reason: "invalid_input" };
+  const { nom_prenom, email, telephone, mot_de_passe, code_eglise, channel } = parsed.data;
+  const emailNorm = email.toLowerCase();
+  const codeNorm = code_eglise.trim().toUpperCase();
+
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { rows: churchRows } = await client.query(
+      `SELECT id, code, name, parent_church_id, status,
+              logo_url, couleur_principale, devise, fuseau_horaire,
+              description, horaires_cultes
+         FROM churches WHERE upper(code) = $1 AND status = 'active'`,
+      [codeNorm],
+    );
+    const church = churchRows[0];
+    if (!church) {
+      await client.query("ROLLBACK");
+      return { ok: false, reason: "invalid_code" };
+    }
+
+    const emailPris = await client.query(
+      `SELECT id FROM users WHERE lower(email) = $1`,
+      [emailNorm],
+    );
+    if (emailPris.rowCount && emailPris.rowCount > 0) {
+      await client.query("ROLLBACK");
+      return { ok: false, reason: "email_taken" };
+    }
+
+    const passwordHash = await hashPassword(mot_de_passe);
+    const { rows: userRows } = await client.query<{ id: string }>(
+      `INSERT INTO users (email, password_hash, full_name, phone)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [emailNorm, passwordHash, nom_prenom, telephone],
+    );
+    const userId = userRows[0].id;
+
+    // Matricule automatique, unique par église. En cas de course sur le
+    // compteur, la contrainte UNIQUE déclenche un réessai (SAVEPOINT, la
+    // transaction n'est pas perdue).
+    let memberId = "";
+    let matricule = "";
+    for (let attempt = 0; attempt < 5; attempt++) {
+      matricule = await generateMatricule(client, church.id as string);
+      await client.query("SAVEPOINT matricule");
+      try {
+        const { rows: memberRows } = await client.query<{ id: string }>(
+          `INSERT INTO members (church_id, user_id, matricule, full_name, phone, email, status)
+           VALUES ($1, $2, $3, $4, $5, $6, 'actif') RETURNING id`,
+          [church.id, userId, matricule, nom_prenom, telephone, emailNorm],
+        );
+        memberId = memberRows[0].id;
+        await client.query("RELEASE SAVEPOINT matricule");
+        break;
+      } catch (e) {
+        await client.query("ROLLBACK TO SAVEPOINT matricule");
+        await client.query("RELEASE SAVEPOINT matricule");
+        if ((e as { code?: string }).code !== "23505" || attempt === 4) throw e;
+      }
+    }
+
+    await client.query(
+      `INSERT INTO church_users (user_id, church_id, role) VALUES ($1, $2, 'membre')`,
+      [userId, church.id],
+    );
+    await client.query(`UPDATE users SET member_id = $2 WHERE id = $1`, [userId, memberId]);
+    await auditLog(client, {
+      churchId: church.id as string,
+      userId,
+      action: "fidele.inscrit_par_code",
+      details: { member_id: memberId, matricule },
+    });
+    await client.query("COMMIT");
+
+    // Connexion immédiate (même réponse que /auth/login, + matricule).
+    const result = await login(db, { email: emailNorm, password: mot_de_passe, channel });
+    if (!result.ok) {
+      throw new Error("Compte créé, mais la connexion a échoué.");
+    }
+    return {
+      ok: true,
+      token: result.token,
+      user: result.user,
+      church: result.church,
+      eglises: result.eglises,
+      matricule,
+    };
+  } catch (e) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Connexion : argon2id + verrouillage après 5 échecs → 15 min.
 // Le JWT embarque l'église choisie (churchId) et son rôle dans cette église.

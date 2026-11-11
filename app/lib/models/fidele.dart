@@ -78,12 +78,15 @@ class FideleInscriptionResult {
   final AuthResult? auth;
   final String message;
   final String? demandeId;
+  /// Matricule attribué automatiquement (inscription par code d'église).
+  final String? matricule;
 
   const FideleInscriptionResult({
     required this.lie,
     this.auth,
     required this.message,
     this.demandeId,
+    this.matricule,
   });
 
   factory FideleInscriptionResult.fromJson(Map<String, dynamic> json) {
@@ -93,6 +96,7 @@ class FideleInscriptionResult {
       auth: lie ? AuthResult.fromJson(json) : null,
       message: json['message'] as String? ?? '',
       demandeId: json['demande_id'] as String?,
+      matricule: json['matricule'] as String?,
     );
   }
 }

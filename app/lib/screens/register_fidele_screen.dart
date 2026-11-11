@@ -3,10 +3,13 @@ import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
 
-/// Inscription fidèle : « Je suis membre d'une église » (e-mail, mot de
-/// passe, matricule). Si l'e-mail concorde avec la fiche membre, le compte
-/// est lié immédiatement et la session démarre ; sinon, une demande est
-/// envoyée à l'administrateur de l'église et l'écran l'explique.
+/// Inscription membre par code d'église : « Je suis membre d'une église »
+/// (nom et prénom, e-mail, téléphone, mot de passe, code de l'église).
+/// Le code fait foi : aucune validation par l'administrateur, le matricule
+/// est attribué automatiquement, la fiche membre et la carte sont créées
+/// tout de suite, le compte est lié immédiatement et la session démarre.
+/// L'ancien parcours par matricule n'est plus proposé ici (il reste
+/// disponible côté serveur pour les membres déjà fichés).
 class RegisterFideleScreen extends StatefulWidget {
   const RegisterFideleScreen({super.key});
 
@@ -16,19 +19,22 @@ class RegisterFideleScreen extends StatefulWidget {
 
 class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nomPrenomController = TextEditingController();
   final _emailController = TextEditingController();
+  final _telephoneController = TextEditingController();
+  final _codeController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _matriculeController = TextEditingController();
   bool _loading = false;
   String? _error;
   bool _obscurePassword = true;
-  String? _messageDemande;
 
   @override
   void dispose() {
+    _nomPrenomController.dispose();
     _emailController.dispose();
+    _telephoneController.dispose();
+    _codeController.dispose();
     _passwordController.dispose();
-    _matriculeController.dispose();
     super.dispose();
   }
 
@@ -37,13 +43,14 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
     setState(() {
       _loading = true;
       _error = null;
-      _messageDemande = null;
     });
     try {
-      final result = await context.read<AppState>().registerFidele(
+      final result = await context.read<AppState>().registerMembreParCode(
+            nomPrenom: _nomPrenomController.text.trim(),
             email: _emailController.text.trim(),
+            telephone: _telephoneController.text.trim(),
             password: _passwordController.text,
-            matricule: _matriculeController.text.trim(),
+            codeEglise: _codeController.text.trim().toUpperCase(),
           );
       if (!mounted) return;
       if (result.lie) {
@@ -51,7 +58,7 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
         // l'accueil fidèle. Rien à faire ici.
         return;
       }
-      setState(() => _messageDemande = result.message);
+      setState(() => _error = result.message);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -69,121 +76,136 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
           padding: const EdgeInsets.all(24),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
-            child: _messageDemande != null
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Icon(Icons.mark_email_read_outlined,
-                          size: 64, color: scheme.primary),
-                      const SizedBox(height: 16),
-                      Text(
-                        _messageDemande!,
-                        textAlign: TextAlign.center,
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Créez votre compte avec le code de votre église. '
+                    'Le code fait foi : aucune validation n’est nécessaire. '
+                    'Votre matricule vous est attribué automatiquement et '
+                    'votre carte de membre est créée tout de suite.',
+                  ),
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    controller: _nomPrenomController,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Nom et prénom',
+                      prefixIcon: Icon(Icons.person_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().length < 2) {
+                        return 'Saisissez votre nom et prénom.';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'E-mail',
+                      prefixIcon: Icon(Icons.email_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Saisissez votre e-mail.';
+                      }
+                      if (!v.contains('@')) return 'E-mail invalide.';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _telephoneController,
+                    keyboardType: TextInputType.phone,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Téléphone',
+                      prefixIcon: Icon(Icons.phone_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().length < 8) {
+                        return 'Saisissez votre téléphone.';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _codeController,
+                    textCapitalization: TextCapitalization.characters,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Code de l’église (ex. ESC-XXXXXX)',
+                      prefixIcon: Icon(Icons.key_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().length < 4) {
+                        return 'Saisissez le code de votre église.';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _submit(),
+                    decoration: InputDecoration(
+                      labelText: 'Mot de passe',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined),
+                        onPressed: () => setState(() =>
+                            _obscurePassword = !_obscurePassword),
                       ),
-                      const SizedBox(height: 24),
-                      FilledButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Retour à la connexion'),
-                      ),
-                    ],
-                  )
-                : Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Text(
-                          'Créez votre compte avec le matricule de votre '
-                          'carte de membre. Si votre e-mail est celui de '
-                          'votre fiche membre, votre compte est lié tout de '
-                          'suite ; sinon, l’administrateur de votre église '
-                          'devra valider votre demande.',
-                        ),
-                        const SizedBox(height: 24),
-                        TextFormField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(
-                            labelText: 'E-mail',
-                            prefixIcon: Icon(Icons.email_outlined),
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (v) {
-                            if (v == null || v.trim().isEmpty) {
-                              return 'Saisissez votre e-mail.';
-                            }
-                            if (!v.contains('@')) return 'E-mail invalide.';
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _matriculeController,
-                          textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(
-                            labelText: 'Matricule (sur votre carte de membre)',
-                            prefixIcon: Icon(Icons.badge_outlined),
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (v) {
-                            if (v == null || v.trim().isEmpty) {
-                              return 'Saisissez votre matricule.';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          textInputAction: TextInputAction.done,
-                          onFieldSubmitted: (_) => _submit(),
-                          decoration: InputDecoration(
-                            labelText: 'Mot de passe',
-                            prefixIcon: const Icon(Icons.lock_outline),
-                            border: const OutlineInputBorder(),
-                            suffixIcon: IconButton(
-                              icon: Icon(_obscurePassword
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined),
-                              onPressed: () => setState(() =>
-                                  _obscurePassword = !_obscurePassword),
-                            ),
-                          ),
-                          validator: (v) {
-                            if (v == null || v.length < 8) {
-                              return '8 caractères minimum.';
-                            }
-                            return null;
-                          },
-                        ),
-                        if (_error != null) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            _error!,
-                            style: TextStyle(color: scheme.error),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                        const SizedBox(height: 24),
-                        FilledButton(
-                          onPressed: _loading ? null : _submit,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: _loading
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2),
-                                  )
-                                : const Text('Créer mon compte fidèle'),
-                          ),
-                        ),
-                      ],
+                    ),
+                    validator: (v) {
+                      if (v == null || v.length < 8) {
+                        return '8 caractères minimum.';
+                      }
+                      return null;
+                    },
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      _error!,
+                      style: TextStyle(color: scheme.error),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: _loading ? null : _submit,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: _loading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2),
+                            )
+                          : const Text('Créer mon compte fidèle'),
                     ),
                   ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

@@ -1,15 +1,17 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
-import { auditLog, hashPassword, login } from "../auth.js";
+import { auditLog, hashPassword, inscriptionMembreParCode, login } from "../auth.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
 import { requireModule } from "../modules.js";
 
 /**
  * Modules 15-16 — accès fidèle : inscription par matricule (liaison
- * immédiate si l'e-mail concorde, demande en attente sinon), validation
- * des liaisons par l'admin, profil `/moi` et lectures limitées à son
- * église et à ses propres données (annonces, cultes, présences,
+ * immédiate si l'e-mail concorde, demande en attente sinon) et inscription
+ * par code d'église, sans validation (le code fait foi : matricule
+ * attribué automatiquement, fiche membre et carte créées tout de suite),
+ * validation des liaisons par l'admin, profil `/moi` et lectures limitées
+ * à son église et à ses propres données (annonces, cultes, présences,
  * contributions, carte de membre).
  *
  * Un fidèle ne voit jamais les données d'un autre membre, ni les finances
@@ -177,6 +179,44 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
       return dbError(reply, e);
     } finally {
       client.release();
+    }
+  });
+
+  // -- Inscription membre par code d'église, sans validation : le code
+  // fait foi (décision de Bouf, 11 nov. 2026). Matricule attribué
+  // automatiquement, fiche membre et carte créées tout de suite, compte
+  // lié immédiatement et session démarrée. L'ancien parcours par
+  // matricule (/auth/inscription-fidele, ci-dessous) est conservé pour
+  // les membres déjà fichés, mais l'écran n'y renvoie plus.
+  app.post("/auth/inscription-par-code", async (req, reply) => {
+    try {
+      const result = await inscriptionMembreParCode(db, req.body);
+      if (!result.ok) {
+        const status =
+          result.reason === "invalid_input"
+            ? 400
+            : result.reason === "invalid_code"
+              ? 404
+              : 409;
+        const message =
+          result.reason === "invalid_input"
+            ? "Nom, e-mail, téléphone, mot de passe (8 caractères minimum) ou code d'église invalide."
+            : result.reason === "invalid_code"
+              ? "Code d'église invalide. Vérifiez le code donné par votre église."
+              : "Cet e-mail est déjà utilisé.";
+        return reply.code(status).send({ error: result.reason, message });
+      }
+      return reply.code(201).send({
+        lie: true,
+        matricule: result.matricule,
+        message: `Compte créé, votre matricule est ${result.matricule}. Bienvenue !`,
+        token: result.token,
+        user: result.user,
+        church: result.church,
+        eglises: result.eglises,
+      });
+    } catch (e) {
+      return dbError(reply, e);
     }
   });
 

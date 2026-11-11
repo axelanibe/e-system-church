@@ -643,6 +643,54 @@ class MockApiService implements ApiService {
   }
 
   @override
+  Future<FideleInscriptionResult> registerMembreParCode({
+    required String nomPrenom,
+    required String email,
+    required String telephone,
+    required String password,
+    required String codeEglise,
+  }) async {
+    await _latence();
+    final eglise = _data.plateau;
+    if (codeEglise.trim().toUpperCase() != eglise.code.toUpperCase()) {
+      throw const ApiException('Code d\u2019église invalide (démo).');
+    }
+    final membres = _data.membersOf(eglise.id);
+    if (membres.any(
+        (m) => m.email?.toLowerCase() == email.trim().toLowerCase())) {
+      throw const ApiException('Cet e-mail est déjà utilisé (démo).');
+    }
+    final prefix = DemoSeed.matriculePrefix(eglise.id);
+    final matricule =
+        '$prefix-${(membres.length + 1).toString().padLeft(3, '0')}';
+    final membre = Member(
+      id: _nextId('membre'),
+      matricule: matricule,
+      fullName: nomPrenom.trim(),
+      phone: telephone.trim(),
+      email: email.trim().toLowerCase(),
+      status: 'actif',
+      createdAt: DateTime.now(),
+    );
+    membres.add(membre);
+    final user = AppUser(
+      id: _nextId('user'),
+      fullName: nomPrenom.trim(),
+      email: email.trim(),
+      phone: telephone.trim(),
+    );
+    _eglises = [Membership(church: _withRole(eglise, 'membre'), role: 'membre')];
+    final auth = _buildAuth(user, eglise, 'membre');
+    _applyAuth(auth);
+    return FideleInscriptionResult(
+      lie: true,
+      auth: auth,
+      matricule: matricule,
+      message: 'Compte créé, votre matricule est $matricule.',
+    );
+  }
+
+  @override
   Future<FideleProfil> getMoi() async {
     await _latence();
     _requireAuth();

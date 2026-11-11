@@ -70,6 +70,12 @@ class MemberDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // QR de la carte : CODE_EGLISE:MATRICULE (ex. ESC-K7M2QX:M-0001).
+    // Le lecteur accepte aussi les anciennes cartes, matricule seul.
+    final codeEglise = context.read<AppState>().church?.code;
+    final qrData = codeEglise != null && codeEglise.isNotEmpty
+        ? '$codeEglise:${member.matricule}'
+        : member.matricule;
     return Scaffold(
       appBar: AppBar(
         title: Text(member.fullName),
@@ -131,7 +137,7 @@ class MemberDetailScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: QrImageView(
-                            data: member.matricule,
+                            data: qrData,
                             version: QrVersions.auto,
                             size: 180,
                           ),

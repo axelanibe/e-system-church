@@ -84,10 +84,22 @@ abstract class ApiService {
 
   /// Inscription fidèle par matricule : liée immédiatement (avec session)
   /// si l'e-mail concorde avec la fiche membre, demande en attente sinon.
+  /// Ancien parcours, conservé côté serveur ; l'écran n'y renvoie plus.
   Future<FideleInscriptionResult> registerFidele({
     required String email,
     required String password,
     required String matricule,
+  });
+
+  /// Inscription membre par code d'église, sans validation : le code fait
+  /// foi, le matricule est attribué automatiquement, la fiche membre et
+  /// la carte sont créées tout de suite, le compte est lié immédiatement.
+  Future<FideleInscriptionResult> registerMembreParCode({
+    required String nomPrenom,
+    required String email,
+    required String telephone,
+    required String password,
+    required String codeEglise,
   });
 
   /// Mon profil fidèle (`GET /moi`) : utilisateur, église, rôle, membre lié.
