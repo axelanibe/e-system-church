@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Scan QR des cartes de membre : la caméra est demandée à l'ouverture
+         de l'écran de scan, jamais au démarrage de l'application. -->
+    <uses-permission android:name="android.permission.CAMERA" />
     <application
         android:label="${appLabel}"
         android:name="${applicationName}"
