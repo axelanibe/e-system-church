@@ -21,6 +21,8 @@ import '../models/pastoral.dart';
 import '../models/presences.dart';
 import '../models/prieres.dart';
 import '../models/profil.dart';
+import '../models/plateforme.dart';
+import '../models/transfert.dart';
 import '../models/rapport.dart';
 import '../models/rattachement.dart';
 import '../models/serviteurs.dart';
@@ -215,6 +217,53 @@ class HttpApiService implements ApiService {
   Future<void> decideRattachement(String id, {required bool accept}) async {
     await _call(
         'POST', '/rattachements/$id/${accept ? 'accepter' : 'refuser'}');
+  }
+
+  @override
+  Future<TransfertsResult> getTransferts() async {
+    final data = await _call('GET', '/transferts');
+    List<TransfertMembre> list(String key) =>
+        (data[key] as List<dynamic>)
+            .map((e) => TransfertMembre.fromJson(e as Map<String, dynamic>))
+            .toList();
+    return TransfertsResult(
+      aTraiter: list('a_traiter'),
+      emises: list('emises'),
+      recues: list('recues'),
+      historique: list('historique'),
+    );
+  }
+
+  @override
+  Future<TransfertMembre> requestTransfert({
+    required String matricule,
+    required String destinationCode,
+    String? motif,
+  }) async {
+    final data = await _call('POST', '/transferts', body: {
+      'matricule': matricule,
+      'eglise_arrivee_code': destinationCode,
+      if (motif != null && motif.isNotEmpty) 'motif': motif,
+    });
+    // La réponse ne contient pas les noms des églises : on relit la demande.
+    final id = data['id'] as String;
+    final result = await getTransferts();
+    final found = [...result.emises, ...result.aTraiter]
+        .where((t) => t.id == id)
+        .firstOrNull;
+    if (found != null) return found;
+    throw const ApiException('Transfert créé, mais relecture impossible.');
+  }
+
+  @override
+  Future<void> decideTransfert(String id, {required bool accept}) async {
+    await _call(
+        'POST', '/transferts/$id/${accept ? 'accepter' : 'refuser'}');
+  }
+
+  @override
+  Future<void> annulerTransfert(String id) async {
+    await _call('POST', '/transferts/$id/annuler');
   }
 
   @override
@@ -1303,6 +1352,27 @@ class HttpApiService implements ApiService {
   @override
   Future<RapportConsolide> getRapport() async =>
       RapportConsolide.fromJson(await _call('GET', '/rapports/consolide'));
+
+  @override
+  Future<RapportDetailConsolide> getRapportDetail({
+    required String periode,
+    String? mois,
+  }) async =>
+      RapportDetailConsolide.fromJson(await _call(
+        'GET',
+        '/rapports/consolide/detail',
+        query: {
+          'periode': periode,
+          if (mois != null) 'mois': mois,
+        },
+      ));
+
+  @override
+  Future<ChiffresPlateforme> getPlateforme() async {
+    final data = await _call('GET', '/plateforme/chiffres');
+    return ChiffresPlateforme.fromJson(
+        data['chiffres'] as Map<String, dynamic>);
+  }
 
   @override
   Future<List<Announcement>> getAnnonces() async {

@@ -15,6 +15,8 @@ import '../models/pastoral.dart';
 import '../models/presences.dart';
 import '../models/prieres.dart';
 import '../models/profil.dart';
+import '../models/plateforme.dart';
+import '../models/transfert.dart';
 import '../models/rapport.dart';
 import '../models/rattachement.dart';
 import '../models/serviteurs.dart';
@@ -67,6 +69,18 @@ abstract class ApiService {
   Future<Rattachement> requestRattachement({required String parentCode});
 
   Future<void> decideRattachement(String id, {required bool accept});
+
+  Future<TransfertsResult> getTransferts();
+
+  Future<TransfertMembre> requestTransfert({
+    required String matricule,
+    required String destinationCode,
+    String? motif,
+  });
+
+  Future<void> decideTransfert(String id, {required bool accept});
+
+  Future<void> annulerTransfert(String id);
 
   // -- Membres ---------------------------------------------------------------
   Future<MemberPage> getMembers({String? q, String? department, String? status});
@@ -542,7 +556,20 @@ abstract class ApiService {
   // -- Rapports et annonces --------------------------------------------------
   Future<RapportConsolide> getRapport();
 
+  /// Finances de la mère en détail : total consolidé + détail par branche,
+  /// par période (mois, trimestre, année) et par type, avec chaque
+  /// transaction confirmée. La vue agrégée reste pour le tableau de bord.
+  Future<RapportDetailConsolide> getRapportDetail({
+    required String periode,
+    String? mois,
+  });
+
   Future<List<Announcement>> getAnnonces();
+
+  // -- Plateforme ------------------------------------------------------------
+  /// Chiffres globaux seulement (`GET /plateforme/chiffres`, super_admin
+  /// seulement). Aucun détail nominatif, aucune gestion des membres.
+  Future<ChiffresPlateforme> getPlateforme();
 
   Future<Announcement> createAnnonce({
     required String title,

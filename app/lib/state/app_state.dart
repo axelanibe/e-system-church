@@ -55,6 +55,9 @@ class AppState extends ChangeNotifier {
   /// L'utilisateur est admin de son église.
   bool get isAdmin => _role == 'admin_eglise';
 
+  /// L'utilisateur est admin de la plateforme (chiffres globaux seulement).
+  bool get isSuperAdmin => _role == 'super_admin';
+
   String get roleLabel {
     switch (_role) {
       case 'admin_eglise':

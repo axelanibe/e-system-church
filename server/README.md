@@ -173,21 +173,119 @@ curl http://localhost:3000/annonces -H "Authorization: Bearer TOKEN"
 # → mes annonces + celles diffusées par mes églises mères.
 ```
 
+### 15. Transférer un membre vers une autre branche (double validation)
+
+Règle : demande par matricule, validation par les deux pasteurs, historique
+gardé. L'admin de l'église de départ demande, puis accepte ; l'admin de
+l'église d'arrivée accepte ensuite. À la double acceptation, le membre
+change d'église et reçoit un nouveau matricule dans l'église d'arrivée ;
+l'ancienne branche ne le voit plus. Un refus d'un côté clôt la demande.
+
+```bash
+# Depuis l'église de départ (admin), avec le jeton du pasteur de départ :
+curl -X POST http://localhost:3000/transferts \
+  -H "Authorization: Bearer TOKEN" -H 'Content-Type: application/json' \
+  -d '{ "matricule": "M-0001", "eglise_arrivee_code": "ESC-YOP001", "motif": "Déménagement à Yopougon" }'
+# → { "id": "...", "status": "en_attente", ... }
+
+# Lister : à traiter par mon église, émises, reçues, historique
+curl http://localhost:3000/transferts -H "Authorization: Bearer TOKEN"
+
+# Décider (avec le jeton de l'église concernée) : d'abord le départ, puis l'arrivée
+curl -X POST http://localhost:3000/transferts/<id>/accepter -H "Authorization: Bearer TOKEN_DEPART"
+curl -X POST http://localhost:3000/transferts/<id>/accepter -H "Authorization: Bearer TOKEN_ARRIVEE"
+# → { "id": "...", "status": "accepte", "nouveau_matricule": "M-0004" }
+
+# Refuser (n'importe quel côté, avant la double acceptation) ou annuler (départ seulement, tant que en attente)
+curl -X POST http://localhost:3000/transferts/<id>/refuser -H "Authorization: Bearer TOKEN"
+curl -X POST http://localhost:3000/transferts/<id>/annuler -H "Authorization: Bearer TOKEN_DEPART"
+```
+
+### 16. Finances de la mère en détail (total consolidé + détail par branche)
+
+Règle : admin de l'église mère seulement. Périmètre strict, mon église +
+tous ses descendants, récursif (petites-filles comprises, avec leur niveau),
+filtré par la `church_id` de la session, jamais une autre mère. Seules les
+contributions confirmées comptent. La vue agrégée `/rapports/consolide`
+reste pour le tableau de bord ; cette route ajoute le détail, elle ne la
+remplace pas. Chaque consultation est journalisée en `audit_logs`
+(`rapport.detail_consulte`). La vue `v_rapports_consolides` est récursive
+depuis la migration `002_vue_consolidee_recursive.sql` : une petite-fille
+compte désormais dans le total de sa grand-mère.
+
+```bash
+# Mois en cours (novembre 2026 par défaut si la date serveur est en novembre)
+curl "http://localhost:3000/rapports/consolide/detail" -H "Authorization: Bearer TOKEN"
+# → { "eglise": {...}, "periode": { "type": "mois", "debut": "2026-11-01", "fin": "2026-12-01", "label": "Novembre 2026" }, "branches": [...], "totaux_reseau": {...} }
+
+# Trimestre et année, ancrés sur novembre 2026
+curl "http://localhost:3000/rapports/consolide/detail?periode=trimestre&mois=2026-11" -H "Authorization: Bearer TOKEN"
+curl "http://localhost:3000/rapports/consolide/detail?periode=annee&mois=2026-11" -H "Authorization: Bearer TOKEN"
+# → chaque branche : niveau (0 = mon église, 1 = sous-église directe,
+#   2 = antenne d'une sous-église), totaux par type, entrees_fcfa,
+#   depenses_fcfa, solde_fcfa, membres_actifs, et transactions
+#   (confirmées, 100 au plus par branche).
+# Un trésorier ou un membre simple est refusé : 403.
+```
+
+### 17. Chiffres globaux de la plateforme (super_admin seulement)
+
+Règle : `super_admin` seulement. Chiffres globaux seulement, sans détail
+nominatif, sans liste de membres, sans gestion des membres au jour le jour.
+Chaque consultation est journalisée en `audit_logs`
+(`plateforme.chiffres_consultes`). Limite honnête : il n'existe pas encore
+de compte super_admin créé par l'API ; un tel compte doit être rattaché
+directement en base (ligne `church_users` avec le rôle `super_admin`) avant
+le premier appel, l'inscription libre ne crée que des `admin_eglise`.
+
+```bash
+curl http://localhost:3000/plateforme/chiffres -H "Authorization: Bearer <redacted>"
+# → { "chiffres": { "eglises_meres": 1, "branches": 5, "eglises_total": 6,
+#     "membres_actifs": 14, "nombre_contributions": 7,
+#     "total_contributions_fcfa": 113000, "depenses_fcfa": 20000 } }
+# Un admin_eglise, un trésorier ou un membre simple est refusé : 403.
+```
+
+Recette de test contre une vraie base : lancer PostgreSQL,
+`npm run migrate`, créer une mère et une sous-église, enregistrer des
+contributions confirmées, rattacher un super_admin en base, puis jouer
+l'exemple ci-dessus et vérifier que les chiffres globaux correspondent.
+
+Recette de test contre une vraie base : lancer PostgreSQL,
+`npm run migrate`, créer une mère et une sous-église, enregistrer des
+contributions confirmées dans les deux églises sur novembre 2026, puis
+jouer les exemples ci-dessus et vérifier que les totaux par type, le
+solde et les transactions correspondent, et qu'une autre mère ne voit
+rien de ce réseau (403 ou 404 selon son rôle).
+
 ## Rôles
 
 | Rôle | Droits dans son église |
 | --- | --- |
-| `admin_eglise` | Tout (églises, rattachements, membres, finances, rapports, annonces) |
-| `tresorier` | Finances (lecture + saisie + confirmation), lecture des membres — **pas de création de membre** |
-| `responsable_culte` | Membres (lecture + création), lecture des finances |
-| `membre` | Lecture des membres, de l'arbre et des annonces — **pas de finances** |
-| `super_admin` | Plateforme (hors périmètre MVP) |
+| `admin_eglise` | Tout (églises, rattachements, transferts, membres, finances, rapports, annonces) |
+| `tresorier` | Finances (lecture + saisie + confirmation), lecture des membres — **pas de création de membre**, **pas de transfert** |
+| `responsable_culte` | Membres (lecture + création), lecture des finances, lecture des transferts — **pas de décision de transfert** |
+| `membre` | Lecture des membres, de l'arbre et des annonces — **pas de finances**, **pas de transferts** |
+| `super_admin` | Plateforme : chiffres globaux seulement (`GET /plateforme/chiffres`) — **pas de détail nominatif, pas de gestion des membres** |
 
 ## Limites connues du MVP
 
 - Schéma PostgreSQL non encore exécuté contre une base réelle sur cette
   machine (pas de PostgreSQL ici) : lancer `npm run migrate` contre une vraie
-  base avant le premier test HTTP.
+  base avant le premier test HTTP. La migration `db/migrations/001_transferts_membre.sql`
+  crée la table `transferts_membre` ; le schéma `db/schema.sql` la contient
+  aussi pour les nouvelles bases.
+- Les routes de transfert n'ont pas été testées contre une vraie base
+  PostgreSQL (pas de base sur cette machine) : lancer PostgreSQL,
+  `npm run migrate`, puis jouer les exemples curl de la section 15.
+- La route de détail consolidé (`GET /rapports/consolide/detail`) n'a pas
+  non plus été testée contre une vraie base PostgreSQL : lancer PostgreSQL,
+  `npm run migrate`, puis jouer les exemples curl de la section 16. La vue
+  est récursive depuis la migration `002_vue_consolidee_recursive.sql`.
+- La route de la plateforme (`GET /plateforme/chiffres`) n'a pas non plus
+  été testée contre une vraie base PostgreSQL : lancer PostgreSQL,
+  `npm run migrate`, rattacher un super_admin en base, puis jouer
+  l'exemple curl de la section 17.
 - Enregistrement manuel des paiements Mobile Money (référence) ; pas de
   webhook Wave / Orange / MTN (V2).
 - JWT sans table de révocation : un jeton reste valide jusqu'à expiration

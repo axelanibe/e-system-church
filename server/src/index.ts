@@ -15,6 +15,7 @@ import { registerMembresRoutes } from "./routes/membres.js";
 import { registerMembresComplementRoutes } from "./routes/membres_complement.js";
 import { registerContributionsRoutes } from "./routes/contributions.js";
 import { registerRapportsRoutes } from "./routes/rapports.js";
+import { registerPlateformeRoutes } from "./routes/plateforme.js";
 import { registerAnnoncesRoutes } from "./routes/annonces.js";
 import { registerCultesRoutes } from "./routes/cultes.js";
 import { registerPresencesRoutes } from "./routes/presences.js";
@@ -46,6 +47,7 @@ export function buildApp(db: Pool) {
   registerMembresComplementRoutes(app, db);
   registerContributionsRoutes(app, db);
   registerRapportsRoutes(app, db);
+  registerPlateformeRoutes(app, db);
   registerAnnoncesRoutes(app, db);
   registerCultesRoutes(app, db);
   registerPresencesRoutes(app, db);
