@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import '../models/attestation.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
@@ -321,6 +323,14 @@ class HttpApiService implements ApiService {
     final data = await _call('GET', '/moi/contributions');
     return (data['contributions'] as List<dynamic>? ?? [])
         .map((e) => Contribution.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<List<Attestation>> getMesAttestations() async {
+    final data = await _call('GET', '/moi/attestations');
+    return (data['attestations'] as List<dynamic>? ?? [])
+        .map((e) => Attestation.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
@@ -1017,6 +1027,16 @@ class HttpApiService implements ApiService {
         .toList();
   }
 
+  // -- Attestations annuelles de dons (US3) ----------------------------------
+  @override
+  Future<List<Attestation>> getAttestations({int? annee}) async {
+    final data = await _call('GET', '/attestations',
+        query: _q({'annee': annee}));
+    return (data['attestations'] as List<dynamic>? ?? [])
+        .map((e) => Attestation.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   @override
   Future<Campagne> createCampagne({
     required String nom,
@@ -1055,6 +1075,47 @@ class HttpApiService implements ApiService {
         body: {'campagne_id': campagneId});
     // La réponse est partielle : on relit le reçu complet.
     return getReceipt(id);
+  }
+
+  @override
+  Future<List<Attestation>> genererAttestations({required int annee}) async {
+    final data =
+        await _call('POST', '/attestations/generer', body: {'annee': annee});
+    return (data['creees'] as List<dynamic>? ?? [])
+        .map((e) => Attestation.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<Attestation> corrigerAttestation(String id,
+      {required String motif}) async {
+    final data = await _call('POST', '/attestations/$id/corriger',
+        body: {'motif': motif});
+    return Attestation.fromJson(data);
+  }
+
+  @override
+  Future<Uint8List> telechargerAttestationPdf(String id) async {
+    final uri = Uri.parse('$baseUrl/attestations/$id/pdf');
+    http.Response res;
+    try {
+      res = await http
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 20));
+    } on TimeoutException {
+      throw const ApiException('Le serveur ne répond pas.');
+    } on SocketException {
+      throw const ApiException('Impossible de joindre le serveur.');
+    }
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return Uint8List.fromList(res.bodyBytes);
+    }
+    String message = 'Erreur ${res.statusCode}.';
+    try {
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      message = (data['message'] as String?) ?? message;
+    } catch (_) {}
+    throw ApiException(message, res.statusCode);
   }
 
   // -- Communication : prières et messages (module 5) ------------------------

@@ -8,6 +8,7 @@ import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import 'campagnes_screen.dart';
 import 'contribution_form_screen.dart';
+import 'attestations_screen.dart';
 import 'receipt_screen.dart';
 
 /// Finances de mon église : totaux par type, liste avec filtres, ajout
@@ -164,6 +165,21 @@ class _FinancesScreenState extends State<FinancesScreen> {
                             );
                             _refresh();
                           },
+                        ),
+                      ),
+                      SizedBox(
+                        height: 48,
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const AttestationsScreen(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.description_outlined),
+                          label: const Text('Attestations annuelles'),
                         ),
                       ),
                       const SizedBox(height: 16),
