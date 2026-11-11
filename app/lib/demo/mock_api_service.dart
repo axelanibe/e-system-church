@@ -3286,6 +3286,32 @@ class MockApiService implements ApiService {
     if (_role != 'super_admin') _role = 'admin_eglise';
   }
 
+  @override
+  Future<MesEglisesPage> listerMesEglises(
+      {String? recherche, int page = 1, int limite = 50}) async {
+    await _latence();
+    _requireAuth();
+    final q = recherche?.trim().toLowerCase() ?? '';
+    final toutes = _eglises.where((m) {
+      if (q.isEmpty) return true;
+      final c = m.church;
+      return c.name.toLowerCase().contains(q) ||
+          c.code.toLowerCase().contains(q) ||
+          (c.city ?? '').toLowerCase().contains(q);
+    }).toList();
+    final debut = (page - 1) * limite;
+    final fin = (debut + limite).clamp(0, toutes.length);
+    final tranche =
+        debut >= toutes.length ? <Membership>[] : toutes.sublist(debut, fin);
+    return MesEglisesPage(
+      eglises: tranche,
+      total: toutes.length,
+      page: page,
+      limite: limite,
+      pages: (toutes.length / limite).ceil(),
+    );
+  }
+
   // -- Paiements --------------------------------------------------------------------
 
   static const List<FournisseurPaiement> _fournisseurs = [

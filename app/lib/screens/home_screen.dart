@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/module_eglise.dart';
@@ -11,6 +10,7 @@ import 'dashboard_screen.dart';
 import 'finances_mere_screen.dart';
 import 'finances_screen.dart';
 import 'membres_screen.dart';
+import 'mes_eglises_screen.dart';
 import 'modules_activation_screen.dart';
 import 'modules_screen.dart';
 import 'mon_eglise_screen.dart';
@@ -22,9 +22,12 @@ import 'tree_screen.dart';
 
 /// Coquille principale après connexion : navigation entre les 6 écrans.
 /// Écrans larges (≥ 900 px) : rail latéral ; écrans étroits : barre inférieure.
-/// Le tiroir donne accès aux demandes de rattachement, à « Mes églises »
-/// (sélecteur d'église active), à « Mon église », aux réglages et à la
-/// déconnexion. L'AppBar affiche l'identité de l'église active (logo ou
+/// Le tiroir donne accès aux demandes de rattachement, à « Changer
+/// d'église » (écran dédié « Mes églises », paginé et cherchable), à
+/// « Mon église », aux réglages et à la déconnexion. Il ne liste plus
+/// les églises : avec plus de 500 branches, la liste complète rendait
+/// le tiroir interminable et repoussait les entrées du menu en bas.
+/// L'AppBar affiche l'identité de l'église active (logo ou
 /// initiales, nom et code) — données réelles de l'API.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -212,39 +215,30 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Text(
-                'MES ÉGLISES',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            // Une seule entrée « Changer d'église », avec le nombre
+            // d'églises : la liste complète n'est plus dans le tiroir.
+            // Avec plus de 500 branches, elle rendait le tiroir
+            // interminable et repoussait les entrées du menu en bas.
+            // Le choix se fait dans l'écran dédié « Mes églises »,
+            // paginé (50 par page) et cherchable par nom ou code.
+            ListTile(
+              leading: const Icon(Icons.swap_horiz_outlined),
+              title: const Text('Changer d’église'),
+              subtitle: Text(
+                state.eglises.length == 1
+                    ? '1 église'
+                    : '${state.eglises.length} églises',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) => const MesEglisesScreen()),
+                );
+              },
             ),
-            for (final membership in state.eglises)
-              ListTile(
-                leading: ChurchAvatar(
-                    church: membership.church, radius: 18),
-                title: Text(
-                  membership.church.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  '${membership.church.code} · ${membership.role}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: membership.church.id == church?.id
-                    ? const Icon(Icons.check, color: AppTheme.vertFonce)
-                    : null,
-                onTap: () async {
-                  Navigator.of(context).pop();
-                  if (membership.church.id != church?.id) {
-                    await context
-                        .read<AppState>()
-                        .switchChurch(membership.church.id);
-                  }
-                },
-              ),
             const Divider(),
             // US1 : l'entrée Mon église disparaît si le module est désactivé.
             if (state.isModuleActif(CodesModules.monEglise))
