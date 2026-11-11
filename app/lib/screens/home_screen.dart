@@ -149,9 +149,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            Text(
-              _titles[courant],
-              style: Theme.of(context).textTheme.titleMedium,
+            // Titre de l'écran, coupé avec « … » si la place manque.
+            Flexible(
+              child: Text(
+                _titles[courant],
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             ),
           ],
         ),
@@ -160,32 +164,49 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-              ),
+            // En-tête à hauteur libre, pas un DrawerHeader : sa hauteur
+            // fixe faisait déborder le contenu sur le titre
+            // « MES ÉGLISES » quand le nom de l'église tenait sur deux
+            // lignes et que le nom de l'utilisateur était long (photo 1).
+            // Nom, rôle et code sont sur des lignes séparées, coupées
+            // avec « … » si la place manque, jamais superposées.
+            Container(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   ChurchAvatar(church: church, radius: 24),
                   const SizedBox(height: 8),
                   Text(
                     church?.name ?? 'e-System Church',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   if (church?.isMere ?? false) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     const MereBadge(),
                   ],
                   const SizedBox(height: 4),
                   Text(
                     '${church?.code ?? ''} · ${church?.city ?? ''}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${state.user?.fullName ?? ''} — ${state.roleLabel}',
+                    state.user?.fullName ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  Text(
+                    state.roleLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -202,9 +223,16 @@ class _HomeScreenState extends State<HomeScreen> {
               ListTile(
                 leading: ChurchAvatar(
                     church: membership.church, radius: 18),
-                title: Text(membership.church.name),
+                title: Text(
+                  membership.church.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 subtitle: Text(
-                    '${membership.church.code} · ${membership.role}'),
+                  '${membership.church.code} · ${membership.role}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 trailing: membership.church.id == church?.id
                     ? const Icon(Icons.check, color: AppTheme.vertFonce)
                     : null,

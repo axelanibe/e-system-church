@@ -142,50 +142,105 @@ class _TreeScreenState extends State<TreeScreen> {
             );
           }
           final result = snapshot.data!;
+          // Réseau vide (une seule église, aucune sous-église) : la page
+          // ne reste pas vide et confuse (photo 2). Une carte explique
+          // ce qu'est le réseau et ce qu'il faut faire ensuite, avec un
+          // bouton bien visible, au lieu du seul petit bouton flottant.
+          final reseauVide = result.arbre.totalEglises <= 1 &&
+              result.arbre.children.isEmpty &&
+              result.demandesRattachement.isEmpty;
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                if (result.demandesRattachement.isNotEmpty) ...[
-                  const SectionTitle(title: 'Demandes de rattachement'),
-                  ...result.demandesRattachement.map(
-                    (d) => Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.group_add_outlined),
-                        title: Text(d.egliseNom),
-                        subtitle: Text(
-                            '${d.egliseCode} · ${d.egliseVille ?? ''}'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.check,
-                                  color: AppTheme.vertFonce),
-                              tooltip: 'Accepter',
-                              onPressed: () => _decide(d.id, true),
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 720),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (result.demandesRattachement.isNotEmpty) ...[
+                          const SectionTitle(title: 'Demandes de rattachement'),
+                          ...result.demandesRattachement.map(
+                            (d) => Card(
+                              child: ListTile(
+                                leading:
+                                    const Icon(Icons.group_add_outlined),
+                                title: Text(
+                                  d.egliseNom,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: Text(
+                                    '${d.egliseCode} · ${d.egliseVille ?? ''}'),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.check,
+                                          color: AppTheme.vertFonce),
+                                      tooltip: 'Accepter',
+                                      onPressed: () => _decide(d.id, true),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close,
+                                          color: AppTheme.rougeErreur),
+                                      tooltip: 'Refuser',
+                                      onPressed: () => _decide(d.id, false),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                            IconButton(
-                              icon:
-                                  const Icon(Icons.close, color: AppTheme.rougeErreur),
-                              tooltip: 'Refuser',
-                              onPressed: () => _decide(d.id, false),
-                            ),
-                          ],
+                          ),
+                        ],
+                        const SectionTitle(title: 'Mon réseau'),
+                        Card(
+                          child:
+                              _TreeNodeTile(node: result.arbre, isRoot: true),
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${result.arbre.totalEglises} église${result.arbre.totalEglises > 1 ? 's' : ''} · ${result.arbre.totalMembresActifs} membre${result.arbre.totalMembresActifs > 1 ? 's' : ''} actif${result.arbre.totalMembresActifs > 1 ? 's' : ''} dans le réseau.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                          textAlign: TextAlign.center,
+                        ),
+                        if (reseauVide) ...[
+                          const SizedBox(height: 16),
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Votre réseau, c’est votre église et ses sous-églises.',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Pour l’instant, vous n’avez qu’une seule église. '
+                                    'Créez une sous-église pour une nouvelle antenne : '
+                                    'elle aura son propre code, ses membres et ses finances, '
+                                    'et vous verrez ici ses chiffres avec les vôtres.',
+                                  ),
+                                  const SizedBox(height: 16),
+                                  FilledButton.icon(
+                                    onPressed: _addSubChurch,
+                                    icon: const Icon(Icons.add),
+                                    label: const Text('Créer une sous-église'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                ],
-                const SectionTitle(title: 'Mon réseau'),
-                Card(
-                  child: _TreeNodeTile(node: result.arbre, isRoot: true),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${result.arbre.totalEglises} église(s) · ${result.arbre.totalMembresActifs} membre(s) actif(s) dans le réseau.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -194,6 +249,10 @@ class _TreeScreenState extends State<TreeScreen> {
       ),
       floatingActionButton: state.isAdmin
           ? FloatingActionButton.extended(
+              // Bleu nuit et blanc, bien lisible : l'or du thème sur fond
+              // papier paraissait effacé sur la photo 2.
+              backgroundColor: AppTheme.bleuNuit,
+              foregroundColor: Colors.white,
               onPressed: _addSubChurch,
               icon: const Icon(Icons.add),
               label: const Text('Sous-église'),
@@ -219,9 +278,15 @@ class _TreeNodeTile extends StatelessWidget {
       ),
       title: Text(
         node.name,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: isRoot ? const TextStyle(fontWeight: FontWeight.bold) : null,
       ),
-      subtitle: Text('${node.code} · ${node.city ?? ''}'),
+      subtitle: Text(
+        '${node.code} · ${node.city ?? ''}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       trailing: Text('${node.membresActifs} membre(s)'),
     );
     if (node.children.isEmpty) return tile;
@@ -232,9 +297,15 @@ class _TreeNodeTile extends StatelessWidget {
       ),
       title: Text(
         node.name,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: isRoot ? const TextStyle(fontWeight: FontWeight.bold) : null,
       ),
-      subtitle: Text('${node.code} · ${node.city ?? ''}'),
+      subtitle: Text(
+        '${node.code} · ${node.city ?? ''}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       trailing: Text('${node.membresActifs} membre(s)'),
       initiallyExpanded: true,
       childrenPadding: const EdgeInsets.only(left: 24),
