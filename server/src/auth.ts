@@ -54,6 +54,9 @@ export const loginSchema = z.object({
 export interface ChurchSummary {
   id: string;
   code: string;
+  /** Code fidèle (ESC-F-…) : les membres l'utilisent pour s'inscrire
+   *  dans cette église. Absent des anciennes réponses (avant la 007). */
+  code_fidele?: string | null;
   name: string;
   parent_church_id: string | null;
   status: string;
@@ -134,7 +137,7 @@ export async function issueTokenForChurch(
   | { ok: false; reason: "invalid_church" }
 > {
   const { rows } = await db.query(
-    `SELECT cu.role, c.id, c.code, c.name, c.parent_church_id, c.status,
+    `SELECT cu.role, c.id, c.code, c.code_fidele, c.name, c.parent_church_id, c.status,
             c.logo_url, c.couleur_principale, c.devise, c.fuseau_horaire,
             c.description, c.horaires_cultes
        FROM church_users cu
@@ -152,6 +155,7 @@ export async function issueTokenForChurch(
   const church: ChurchSummary & { role: string } = {
     id: m.id as string,
     code: m.code as string,
+    code_fidele: m.code_fidele as string | null,
     name: m.name as string,
     parent_church_id: m.parent_church_id as string | null,
     status: m.status as string,
@@ -186,6 +190,18 @@ export function generateChurchCode(): string {
   let suffix = "";
   for (let i = 0; i < 6; i++) suffix += CODE_ALPHABET[randomBytes(1)[0] % CODE_ALPHABET.length];
   return `ESC-${suffix}`;
+}
+
+/**
+ * Code fidèle unique par église, ex. ESC-F-K7M2QX : les membres
+ * l'utilisent pour s'inscrire dans la bonne église (le code désigne une
+ * seule église, sans ambiguïté). Préfixe distinct du code de tutelle
+ * (`ESC-…`, utilisé par les églises secondaires pour se rattacher).
+ */
+export function generateFideleCode(): string {
+  let suffix = "";
+  for (let i = 0; i < 6; i++) suffix += CODE_ALPHABET[randomBytes(1)[0] % CODE_ALPHABET.length];
+  return `ESC-F-${suffix}`;
 }
 
 /**
@@ -255,7 +271,9 @@ export async function registerChurch(
       }
     }
 
-    // Code d'invitation unique (réessai en cas de collision).
+    // Deux codes uniques (réessai en cas de collision) : le code de
+    // tutelle (ESC-…) pour rattacher une sous-église, et le code fidèle
+    // (ESC-F-…) pour inscrire les membres dans la bonne église.
     let code = "";
     for (let attempt = 0; attempt < 5; attempt++) {
       code = generateChurchCode();
@@ -263,16 +281,23 @@ export async function registerChurch(
       if (clash.rowCount === 0) break;
       if (attempt === 4) throw new Error("Impossible de générer un code d'église unique.");
     }
+    let codeFidele = "";
+    for (let attempt = 0; attempt < 5; attempt++) {
+      codeFidele = generateFideleCode();
+      const clash = await client.query(`SELECT 1 FROM churches WHERE code_fidele = $1`, [codeFidele]);
+      if (clash.rowCount === 0) break;
+      if (attempt === 4) throw new Error("Impossible de générer un code fidèle unique.");
+    }
 
     // Inscription libre : l'église naît ACTIVE. Le parent n'est rattaché
     // qu'après acceptation de la demande (voir rattachements.ts).
     const { rows: churchRows } = await client.query<ChurchSummary>(
-      `INSERT INTO churches (code, name, city, phone, email, status)
-       VALUES ($1, $2, $3, $4, $5, 'active')
-       RETURNING id, code, name, parent_church_id, status,
+      `INSERT INTO churches (code, code_fidele, name, city, phone, email, status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'active')
+       RETURNING id, code, code_fidele, name, parent_church_id, status,
                  logo_url, couleur_principale, devise, fuseau_horaire,
                  description, horaires_cultes`,
-      [code, eglise.name, eglise.city, eglise.phone ?? null, eglise.email ?? null],
+      [code, codeFidele, eglise.name, eglise.city, eglise.phone ?? null, eglise.email ?? null],
     );
     const church = churchRows[0];
 
@@ -413,7 +438,7 @@ export const inscriptionMembreSchema = z.object({
   email: z.string().email().max(254),
   telephone: z.string().min(8).max(30),
   mot_de_passe: z.string().min(8).max(256),
-  /** Code d'invitation de l'église (ESC-…), il fait foi : aucune validation. */
+  /** Code fidèle de l'église (ESC-F-…), il fait foi : aucune validation. */
   code_eglise: z.string().min(4).max(20),
   /** Département et fonction choisis à l'inscription (facultatifs). */
   department: z.string().min(2).max(120).optional(),
@@ -433,12 +458,15 @@ export type InscriptionMembreResult =
   | { ok: false; reason: "invalid_input" | "invalid_code" | "email_taken" };
 
 /**
- * Inscription d'un membre par code d'église, sans validation (décision de
+ * Inscription d'un membre par code fidèle, sans validation (décision de
  * Bouf, 11 nov. 2026) : le code fait foi. Comme CONNEXION PROPHÉTIQUE,
  * le membre saisit nom et prénom, e-mail, téléphone, mot de passe et le
- * code de son église à la place du matricule. Le matricule est attribué
- * automatiquement (unique par église), la fiche membre et la carte sont
- * créées tout de suite, le compte est lié immédiatement.
+ * code fidèle de son église à la place du matricule. Le code fidèle
+ * (ESC-F-…) désigne une seule église, sans ambiguïté — le code de
+ * tutelle (ESC-…) ne sert qu'aux églises qui se rattachent à une mère.
+ * Le matricule est attribué automatiquement (unique par église), la fiche
+ * membre et la carte sont créées tout de suite, le compte est lié
+ * immédiatement.
  */
 export async function inscriptionMembreParCode(
   db: Pool,
@@ -458,10 +486,10 @@ export async function inscriptionMembreParCode(
     await client.query("BEGIN");
 
     const { rows: churchRows } = await client.query(
-      `SELECT id, code, name, parent_church_id, status,
+      `SELECT id, code, code_fidele, name, parent_church_id, status,
               logo_url, couleur_principale, devise, fuseau_horaire,
               description, horaires_cultes
-         FROM churches WHERE upper(code) = $1 AND status = 'active'`,
+         FROM churches WHERE upper(code_fidele) = $1 AND status = 'active'`,
       [codeNorm],
     );
     const church = churchRows[0];
@@ -582,7 +610,7 @@ export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
   await db.query(`UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = $1`, [user.id]);
 
   const { rows: memberships } = await db.query(
-    `SELECT cu.role, c.id, c.code, c.name, c.parent_church_id, c.status,
+    `SELECT cu.role, c.id, c.code, c.code_fidele, c.name, c.parent_church_id, c.status,
             c.logo_url, c.couleur_principale, c.devise, c.fuseau_horaire,
             c.description, c.horaires_cultes
        FROM church_users cu
@@ -596,6 +624,7 @@ export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
     church: {
       id: m.id as string,
       code: m.code as string,
+      code_fidele: m.code_fidele as string | null,
       name: m.name as string,
       parent_church_id: m.parent_church_id as string | null,
       status: m.status as string,

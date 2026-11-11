@@ -6,7 +6,16 @@ import 'rattachement.dart';
 /// Église (réponse API : `churches`).
 class Church {
   final String id;
+
+  /// Code de tutelle (ESC-…) : une église secondaire l'utilise pour se
+  /// rattacher à sa mère.
   final String code;
+
+  /// Code fidèle (ESC-F-…) : les membres l'utilisent pour s'inscrire dans
+  /// cette église. Nullable pour compatibilité avec les réponses servies
+  /// avant la migration 007.
+  final String? codeFidele;
+
   final String name;
   final String? parentChurchId;
   final String? city;
@@ -37,6 +46,7 @@ class Church {
   const Church({
     required this.id,
     required this.code,
+    this.codeFidele,
     required this.name,
     this.parentChurchId,
     this.city,
@@ -53,6 +63,7 @@ class Church {
   factory Church.fromJson(Map<String, dynamic> json) => Church(
         id: json['id'] as String,
         code: json['code'] as String,
+        codeFidele: json['code_fidele'] as String?,
         name: json['name'] as String,
         parentChurchId: json['parent_church_id'] as String?,
         city: json['city'] as String?,
@@ -106,6 +117,7 @@ class ChurchNode extends Church {
   const ChurchNode({
     required super.id,
     required super.code,
+    super.codeFidele,
     required super.name,
     super.parentChurchId,
     super.city,
@@ -124,6 +136,7 @@ class ChurchNode extends Church {
   factory ChurchNode.fromJson(Map<String, dynamic> json) => ChurchNode(
         id: json['id'] as String,
         code: json['code'] as String,
+        codeFidele: json['code_fidele'] as String?,
         name: json['name'] as String,
         parentChurchId: json['parent_church_id'] as String?,
         city: json['city'] as String?,

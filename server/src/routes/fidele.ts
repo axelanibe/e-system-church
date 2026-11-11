@@ -7,12 +7,13 @@ import { requireModule } from "../modules.js";
 
 /**
  * Modules 15-16 — accès fidèle : inscription par matricule (liaison
- * immédiate si l'e-mail concorde, demande en attente sinon) et inscription
- * par code d'église, sans validation (le code fait foi : matricule
- * attribué automatiquement, fiche membre et carte créées tout de suite),
- * validation des liaisons par l'admin, profil `/moi` et lectures limitées
- * à son église et à ses propres données (annonces, cultes, présences,
- * contributions, carte de membre).
+ * immédiate si l'e-mail concorde, demande en attente sinon ; champ
+ * optionnel `code_fidele` pour restreindre la recherche à une église)
+ * et inscription par code fidèle, sans validation (le code fait foi :
+ * matricule attribué automatiquement, fiche membre et carte créées tout
+ * de suite), validation des liaisons par l'admin, profil `/moi` et
+ * lectures limitées à son église et à ses propres données (annonces,
+ * cultes, présences, contributions, carte de membre).
  *
  * Un fidèle ne voit jamais les données d'un autre membre, ni les finances
  * globales, ni les écrans d'administration (rôle `membre` seulement).
@@ -22,6 +23,13 @@ const inscriptionSchema = z.object({
   email: z.string().email().max(254),
   mot_de_passe: z.string().min(8).max(256),
   matricule: z.string().min(1).max(30),
+  /**
+   * Code fidèle de l'église (ESC-F-…), optionnel : quand il est fourni,
+   * la recherche du membre par matricule est restreinte à cette église
+   * (le matricule est unique par église, pas global). Sans lui, on garde
+   * le comportement existant (e-mail concordant, sinon ambiguïté).
+   */
+  code_fidele: z.string().min(4).max(20).optional(),
   channel: z.enum(["web", "mobile"]).default("mobile"),
 });
 
@@ -37,19 +45,40 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
         details: parsed.error.issues.map((i) => i.message),
       });
     }
-    const { email, mot_de_passe, matricule, channel } = parsed.data;
+    const { email, mot_de_passe, matricule, code_fidele, channel } = parsed.data;
     const emailNorm = email.toLowerCase();
     const client = await db.connect();
     try {
       await client.query("BEGIN");
 
+      // Code fidèle fourni : on restreint la recherche à son église
+      // (le matricule seul est ambigu entre églises).
+      let churchId: string | null = null;
+      if (code_fidele) {
+        const { rows: churchRows } = await client.query<{ id: string }>(
+          `SELECT id FROM churches WHERE upper(code_fidele) = $1 AND status = 'active'`,
+          [code_fidele.trim().toUpperCase()],
+        );
+        if (churchRows.length === 0) {
+          await client.query("ROLLBACK");
+          return reply.code(404).send({
+            error: "invalid_code_fidele",
+            message: "Code fidèle inconnu. Vérifiez le code donné par votre église.",
+          });
+        }
+        churchId = churchRows[0].id;
+      }
+
       // Le matricule est unique PAR église : plusieurs membres peuvent le
       // porter. On préfère celui dont l'e-mail concorde ; sinon, un seul
       // candidat actif ; sinon, l'inscription est refusée (ambiguïté).
       const { rows: candidats } = await client.query(
-        `SELECT id, church_id, matricule, full_name, email, user_id
-           FROM members WHERE matricule = $1 AND status = 'actif'`,
-        [matricule],
+        churchId
+          ? `SELECT id, church_id, matricule, full_name, email, user_id
+               FROM members WHERE matricule = $1 AND status = 'actif' AND church_id = $2`
+          : `SELECT id, church_id, matricule, full_name, email, user_id
+               FROM members WHERE matricule = $1 AND status = 'actif'`,
+        churchId ? [matricule, churchId] : [matricule],
       );
       let member: (typeof candidats)[number] | undefined;
       if (candidats.length === 0) {
@@ -182,7 +211,7 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
     }
   });
 
-  // -- Inscription membre par code d'église, sans validation : le code
+  // -- Inscription membre par code fidèle, sans validation : le code
   // fait foi (décision de Bouf, 11 nov. 2026). Matricule attribué
   // automatiquement, fiche membre et carte créées tout de suite, compte
   // lié immédiatement et session démarrée. L'ancien parcours par
@@ -200,9 +229,9 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
               : 409;
         const message =
           result.reason === "invalid_input"
-            ? "Nom, e-mail, téléphone, mot de passe (8 caractères minimum) ou code d'église invalide."
+            ? "Nom, e-mail, téléphone, mot de passe (8 caractères minimum) ou code fidèle invalide."
             : result.reason === "invalid_code"
-              ? "Code d'église invalide. Vérifiez le code donné par votre église."
+              ? "Code fidèle invalide. Vérifiez le code fidèle donné par votre église."
               : "Cet e-mail est déjà utilisé.";
         return reply.code(status).send({ error: result.reason, message });
       }
@@ -226,7 +255,7 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
       const { rows } = await db.query(
         `SELECT u.id, u.full_name, u.email, u.phone, u.member_id,
                 m.matricule,
-                c.id AS church_id, c.code, c.name, c.parent_church_id, c.city,
+                c.id AS church_id, c.code, c.code_fidele, c.name, c.parent_church_id, c.city,
                 c.country, c.phone AS church_phone, c.email AS church_email,
                 c.status, c.logo_url, c.couleur_principale, c.devise,
                 c.fuseau_horaire, c.description, c.horaires_cultes
@@ -250,6 +279,7 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
         church: {
           id: r.church_id,
           code: r.code,
+          code_fidele: r.code_fidele,
           name: r.name,
           parent_church_id: r.parent_church_id,
           city: r.city,
