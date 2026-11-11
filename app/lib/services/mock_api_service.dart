@@ -5,6 +5,7 @@ import '../models/auth.dart';
 import '../models/church.dart';
 import '../models/contribution.dart';
 import '../models/member.dart';
+import '../models/plateforme.dart';
 import '../models/rapport.dart';
 import '../models/rattachement.dart';
 import '../models/transfert.dart';
@@ -119,6 +120,30 @@ class MockApiService implements ApiService {
     return result;
   }
 
+  /// Tous les descendants de [id] avec leur niveau (0 = [id] lui-même,
+  /// 1 = sous-église directe, 2 = antenne d'une sous-église, …),
+  /// triés par niveau puis par nom.
+  List<({String id, int niveau})> _subtreeWithNiveau(String id) {
+    final result = <({String id, int niveau})>[];
+    final queue = <({String id, int niveau})>[(id: id, niveau: 0)];
+    final seen = <String>{};
+    while (queue.isNotEmpty) {
+      final current = queue.removeAt(0);
+      if (!seen.add(current.id)) continue;
+      result.add(current);
+      for (final child in _childrenIds(current.id)) {
+        queue.add((id: child, niveau: current.niveau + 1));
+      }
+    }
+    result.sort((a, b) {
+      if (a.niveau != b.niveau) return a.niveau.compareTo(b.niveau);
+      final na = _churchById(a.id)!['name'] as String;
+      final nb = _churchById(b.id)!['name'] as String;
+      return na.compareTo(nb);
+    });
+    return result;
+  }
+
   /// Ancêtres de [id] (mères, grand-mères…), sans [id] lui-même.
   List<String> _ancestorIds(String id) {
     final result = <String>[];
@@ -202,6 +227,13 @@ class MockApiService implements ApiService {
       'full_name': 'Koffi Yao',
       'church_id': 'demo-plateau',
       'role': 'membre',
+    },
+    {
+      'email': 'admin@esystem.ci',
+      'password': 'demo1234',
+      'full_name': 'Admin Plateforme',
+      'church_id': 'demo-plateforme',
+      'role': 'super_admin',
     },
   ];
 
@@ -796,12 +828,17 @@ class MockApiService implements ApiService {
     await _delay();
     _requireRole(['admin_eglise']);
     final church = _toChurch(_churchById(_churchId!)!);
-    final sousEglises = _childrenIds(_churchId!).map((childId) {
-      final child = _churchById(childId)!;
-      final chiffres = _chiffres(childId);
+    // Tous les descendants, récursif (petites-filles comprises), comme
+    // la vue v_rapports_consolides côté API réelle.
+    final sousEglises = _subtreeWithNiveau(_churchId!)
+        .where((e) => e.id != _churchId)
+        .map((e) {
+      final child = _churchById(e.id)!;
+      final chiffres = _chiffres(e.id);
       return RapportSousEglise(
-        egliseId: childId,
+        egliseId: e.id,
         egliseNom: child['name'] as String,
+        niveau: e.niveau,
         membresActifs: chiffres.membresActifs,
         nombreContributions: chiffres.nombreContributions,
         totalFcfa: chiffres.totalFcfa,
@@ -870,9 +907,9 @@ class MockApiService implements ApiService {
     final ancre = mois ??
         '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}';
     final bornes = _bornesDetail(periode, ancre);
-    // Périmètre strict : mon église + ses sous-églises directes, comme
-    // pour getRapport. Les petites-filles ne sont pas listées ici.
-    final ids = [_churchId!, ..._childrenIds(_churchId!)];
+    // Périmètre strict : mon église + tous ses descendants, récursif
+    // (petites-filles comprises, avec leur niveau), comme l'API réelle.
+    final ids = _subtreeWithNiveau(_churchId!);
     final totaux = <String, ContributionTotals>{};
     for (final t in ['dime', 'offrande', 'don', 'depense']) {
       totaux[t] = const ContributionTotals(totalFcfa: 0, nombre: 0);
@@ -881,7 +918,8 @@ class MockApiService implements ApiService {
     var depenses = 0;
     var membresActifs = 0;
     final branches = <RapportDetailBranche>[];
-    for (final id in ids) {
+    for (final entry in ids) {
+      final id = entry.id;
       final church = _churchById(id)!;
       final confirmes = (_contributions[id] ?? []).where((c) {
         if (c['status'] != 'confirme') return false;
@@ -922,6 +960,7 @@ class MockApiService implements ApiService {
         egliseCode: church['code'] as String,
         egliseNom: church['name'] as String,
         egliseVille: church['city'] as String?,
+        niveau: entry.niveau,
         membresActifs: actifs,
         totaux: totauxBranche,
         entreesFcfa: entreesBranche,
@@ -939,11 +978,13 @@ class MockApiService implements ApiService {
         fin: bornes.fin.toIso8601String().substring(0, 10),
         label: bornes.label,
       ),
-      // Comme l'API réelle : mon église d'abord, puis les branches par nom.
+      // Comme l'API réelle : mon église d'abord, puis les branches par
+      // niveau, puis par nom.
       branches: branches
         ..sort((a, b) {
           if (a.egliseId == _churchId) return -1;
           if (b.egliseId == _churchId) return 1;
+          if (a.niveau != b.niveau) return a.niveau.compareTo(b.niveau);
           return a.egliseNom.compareTo(b.egliseNom);
         }),
       totaux: totaux,
@@ -951,6 +992,48 @@ class MockApiService implements ApiService {
       depensesFcfa: depenses,
       soldeFcfa: entrees - depenses,
       membresActifs: membresActifs,
+    );
+  }
+
+  @override
+  Future<ChiffresPlateforme> getPlateforme() async {
+    await _delay();
+    _requireRole(['super_admin']);
+    // Chiffres globaux seulement, sur toutes les vraies églises du réseau.
+    // La pseudo-église de session `demo-plateforme` n'est pas une vraie
+    // église : elle est exclue des comptes.
+    final eglises = _churches.where((c) => c['id'] != 'demo-plateforme');
+    final meres =
+        eglises.where((c) => c['parent_church_id'] == null).length;
+    final branches =
+        eglises.where((c) => c['parent_church_id'] != null).length;
+    var membresActifs = 0;
+    var nombreContributions = 0;
+    var totalContributions = 0;
+    var depenses = 0;
+    for (final c in eglises) {
+      final id = c['id'] as String;
+      membresActifs +=
+          _members[id]?.where((m) => m['status'] == 'actif').length ?? 0;
+      for (final contribution in _contributions[id] ?? []) {
+        if (contribution['status'] != 'confirme') continue;
+        final montant = contribution['amount_fcfa'] as int;
+        if (contribution['type'] == 'depense') {
+          depenses += montant;
+        } else {
+          nombreContributions++;
+          totalContributions += montant;
+        }
+      }
+    }
+    return ChiffresPlateforme(
+      eglisesMeres: meres,
+      branches: branches,
+      eglisesTotal: eglises.length,
+      membresActifs: membresActifs,
+      nombreContributions: nombreContributions,
+      totalContributionsFcfa: totalContributions,
+      depensesFcfa: depenses,
     );
   }
 

@@ -30,10 +30,26 @@ const List<Map<String, String>> demoAccounts = [
     'password': 'demo1234',
     'label': 'Membre simple — Grâce Divine, Plateau',
   },
+  {
+    'email': 'admin@esystem.ci',
+    'password': 'demo1234',
+    'label': 'Admin plateforme — e-System Church (chiffres globaux)',
+  },
 ];
 
 /// Églises du réseau (champ `parent_church_id` = null pour la mère).
+/// `demo-plateforme` n'est pas une vraie église : c'est l'église de session
+/// du compte de démo super_admin, pour que la plateforme ait une session.
+/// Elle est exclue des chiffres globaux de la plateforme.
 final List<Map<String, dynamic>> demoChurches = [
+  {
+    'id': 'demo-plateforme',
+    'code': 'ESC-PLATEFORME',
+    'name': 'e-System Church — Plateforme',
+    'parent_church_id': null,
+    'city': 'Abidjan',
+    'status': 'active',
+  },
   {
     'id': 'demo-plateau',
     'code': 'ESC-GD2026',
@@ -86,6 +102,7 @@ final List<Map<String, dynamic>> demoChurches = [
 
 /// Membres par église (matricule unique par église).
 final Map<String, List<Map<String, dynamic>>> demoMembers = {
+  'demo-plateforme': [],
   'demo-plateau': [
     {
       'id': 'demo-m-p1',
@@ -284,6 +301,7 @@ final Map<String, List<Map<String, dynamic>>> demoMembers = {
 
 /// Contributions par église.
 final Map<String, List<Map<String, dynamic>>> demoContributions = {
+  'demo-plateforme': [],
   'demo-plateau': [
     {
       'id': 'demo-c-p1',

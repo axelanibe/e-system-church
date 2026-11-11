@@ -204,11 +204,14 @@ curl -X POST http://localhost:3000/transferts/<id>/annuler -H "Authorization: Be
 ### 16. Finances de la mère en détail (total consolidé + détail par branche)
 
 Règle : admin de l'église mère seulement. Périmètre strict, mon église +
-ses sous-églises directes, filtré par la `church_id` de la session, jamais
-une autre mère. Seules les contributions confirmées comptent. La vue
-agrégée `/rapports/consolide` reste pour le tableau de bord ; cette route
-ajoute le détail, elle ne la remplace pas. Chaque consultation est
-journalisée en `audit_logs` (`rapport.detail_consulte`).
+tous ses descendants, récursif (petites-filles comprises, avec leur niveau),
+filtré par la `church_id` de la session, jamais une autre mère. Seules les
+contributions confirmées comptent. La vue agrégée `/rapports/consolide`
+reste pour le tableau de bord ; cette route ajoute le détail, elle ne la
+remplace pas. Chaque consultation est journalisée en `audit_logs`
+(`rapport.detail_consulte`). La vue `v_rapports_consolides` est récursive
+depuis la migration `002_vue_consolidee_recursive.sql` : une petite-fille
+compte désormais dans le total de sa grand-mère.
 
 ```bash
 # Mois en cours (novembre 2026 par défaut si la date serveur est en novembre)
@@ -218,10 +221,35 @@ curl "http://localhost:3000/rapports/consolide/detail" -H "Authorization: Bearer
 # Trimestre et année, ancrés sur novembre 2026
 curl "http://localhost:3000/rapports/consolide/detail?periode=trimestre&mois=2026-11" -H "Authorization: Bearer TOKEN"
 curl "http://localhost:3000/rapports/consolide/detail?periode=annee&mois=2026-11" -H "Authorization: Bearer TOKEN"
-# → chaque branche : totaux par type, entrees_fcfa, depenses_fcfa, solde_fcfa,
-#   membres_actifs, et transactions (confirmées, 100 au plus par branche).
+# → chaque branche : niveau (0 = mon église, 1 = sous-église directe,
+#   2 = antenne d'une sous-église), totaux par type, entrees_fcfa,
+#   depenses_fcfa, solde_fcfa, membres_actifs, et transactions
+#   (confirmées, 100 au plus par branche).
 # Un trésorier ou un membre simple est refusé : 403.
 ```
+
+### 17. Chiffres globaux de la plateforme (super_admin seulement)
+
+Règle : `super_admin` seulement. Chiffres globaux seulement, sans détail
+nominatif, sans liste de membres, sans gestion des membres au jour le jour.
+Chaque consultation est journalisée en `audit_logs`
+(`plateforme.chiffres_consultes`). Limite honnête : il n'existe pas encore
+de compte super_admin créé par l'API ; un tel compte doit être rattaché
+directement en base (ligne `church_users` avec le rôle `super_admin`) avant
+le premier appel, l'inscription libre ne crée que des `admin_eglise`.
+
+```bash
+curl http://localhost:3000/plateforme/chiffres -H "Authorization: Bearer <redacted>"
+# → { "chiffres": { "eglises_meres": 1, "branches": 5, "eglises_total": 6,
+#     "membres_actifs": 14, "nombre_contributions": 7,
+#     "total_contributions_fcfa": 113000, "depenses_fcfa": 20000 } }
+# Un admin_eglise, un trésorier ou un membre simple est refusé : 403.
+```
+
+Recette de test contre une vraie base : lancer PostgreSQL,
+`npm run migrate`, créer une mère et une sous-église, enregistrer des
+contributions confirmées, rattacher un super_admin en base, puis jouer
+l'exemple ci-dessus et vérifier que les chiffres globaux correspondent.
 
 Recette de test contre une vraie base : lancer PostgreSQL,
 `npm run migrate`, créer une mère et une sous-église, enregistrer des
@@ -238,7 +266,7 @@ rien de ce réseau (403 ou 404 selon son rôle).
 | `tresorier` | Finances (lecture + saisie + confirmation), lecture des membres — **pas de création de membre**, **pas de transfert** |
 | `responsable_culte` | Membres (lecture + création), lecture des finances, lecture des transferts — **pas de décision de transfert** |
 | `membre` | Lecture des membres, de l'arbre et des annonces — **pas de finances**, **pas de transferts** |
-| `super_admin` | Plateforme (hors périmètre MVP) |
+| `super_admin` | Plateforme : chiffres globaux seulement (`GET /plateforme/chiffres`) — **pas de détail nominatif, pas de gestion des membres** |
 
 ## Limites connues du MVP
 
@@ -252,7 +280,12 @@ rien de ce réseau (403 ou 404 selon son rôle).
   `npm run migrate`, puis jouer les exemples curl de la section 15.
 - La route de détail consolidé (`GET /rapports/consolide/detail`) n'a pas
   non plus été testée contre une vraie base PostgreSQL : lancer PostgreSQL,
-  `npm run migrate`, puis jouer les exemples curl de la section 16.
+  `npm run migrate`, puis jouer les exemples curl de la section 16. La vue
+  est récursive depuis la migration `002_vue_consolidee_recursive.sql`.
+- La route de la plateforme (`GET /plateforme/chiffres`) n'a pas non plus
+  été testée contre une vraie base PostgreSQL : lancer PostgreSQL,
+  `npm run migrate`, rattacher un super_admin en base, puis jouer
+  l'exemple curl de la section 17.
 - Enregistrement manuel des paiements Mobile Money (référence) ; pas de
   webhook Wave / Orange / MTN (V2).
 - JWT sans table de révocation : un jeton reste valide jusqu'à expiration

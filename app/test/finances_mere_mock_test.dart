@@ -28,8 +28,8 @@ void main() {
     expect(rapport.periode.label, 'Novembre 2026');
     expect(rapport.periode.debut, '2026-11-01');
     expect(rapport.periode.fin, '2026-12-01');
-    // Mon église + ses 4 sous-églises directes. Bouaké Centre, petite-fille,
-    // n'est pas listée ici : elle est vue par sa propre mère, Bouaké.
+    // Mon église + tous ses descendants, récursif : Bouaké Centre,
+    // petite-fille (niveau 2), est désormais listée, après sa mère Bouaké.
     expect(
       rapport.branches.map((b) => b.egliseNom),
       [
@@ -38,8 +38,19 @@ void main() {
         'Grâce Divine — San Pedro',
         'Grâce Divine — Yamoussoukro',
         'Grâce Divine — Yopougon',
+        'Grâce Divine — Bouaké Centre',
       ],
     );
+    // Niveaux : 0 = mon église, 1 = sous-église directe, 2 = antenne.
+    expect(
+      rapport.branches.map((b) => b.niveau),
+      [0, 1, 1, 1, 1, 2],
+    );
+    final centre = rapport.branches
+        .firstWhere((b) => b.egliseNom.contains('Bouaké Centre'));
+    expect(centre.niveau, 2);
+    expect(centre.membresActifs, 2);
+    expect(centre.entreesFcfa, 0);
 
     final plateau = rapport.branches.first;
     expect(plateau.totaux['dime']?.totalFcfa, 10000);
@@ -66,12 +77,13 @@ void main() {
     expect(yakro.entreesFcfa, 0);
     expect(yakro.transactions, isEmpty);
 
-    // Réseau : 40 000 + 11 000 + 12 000 + 0 + 50 000 = 113 000 entrées,
-    // 20 000 de dépenses, solde 93 000, 12 membres actifs.
+    // Réseau : 40 000 + 11 000 + 12 000 + 0 + 50 000 + 0 = 113 000 entrées,
+    // 20 000 de dépenses, solde 93 000, 14 membres actifs (12 + 2 de
+    // Bouaké Centre, la petite-fille désormais comptée).
     expect(rapport.entreesFcfa, 113000);
     expect(rapport.depensesFcfa, 20000);
     expect(rapport.soldeFcfa, 93000);
-    expect(rapport.membresActifs, 12);
+    expect(rapport.membresActifs, 14);
   });
 
   test('trimestre et année : mêmes chiffres, autres bornes', () async {
