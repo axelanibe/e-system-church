@@ -6,6 +6,9 @@
 // Utilisé uniquement par `lib/main_demo.dart` via `DemoAppState`.
 // L'application réelle (`lib/main.dart`) n'importe jamais ce fichier.
 
+import 'dart:typed_data';
+
+import '../models/attestation.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
@@ -759,6 +762,26 @@ class MockApiService implements ApiService {
         .contributionsOf(_churchId)
         .where((c) => c.memberId == 'demo-m-001'));
   }
+
+  @override
+  Future<List<Attestation>> getMesAttestations() async => [];
+
+  // US3 : pas d'attestations dans le seed démo.
+  @override
+  Future<List<Attestation>> getAttestations({int? annee}) async => [];
+
+  @override
+  Future<List<Attestation>> genererAttestations({required int annee}) async =>
+      [];
+
+  @override
+  Future<Attestation> corrigerAttestation(String id,
+          {required String motif}) async =>
+      throw UnimplementedError('Attestations non gérées en démo.');
+
+  @override
+  Future<Uint8List> telechargerAttestationPdf(String id) async =>
+      throw UnimplementedError('Attestations non gérées en démo.');
 
   @override
   Future<MaCarte> getMaCarte() async {

@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import '../models/attestation.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
@@ -126,6 +129,9 @@ abstract class ApiService {
   Future<List<Presence>> getMesPresences();
 
   Future<List<Contribution>> getMesContributions();
+
+  /// Mes attestations annuelles de dons (US3, rôle membre, les miennes).
+  Future<List<Attestation>> getMesAttestations();
 
   /// Ma carte de membre (fiche + église).
   Future<MaCarte> getMaCarte();
@@ -418,6 +424,20 @@ abstract class ApiService {
   Future<void> cloturerCampagne(String id);
 
   Future<Contribution> affecterContributionCampagne(String id, String? campagneId);
+
+  // -- Attestations annuelles de dons (US3, trésorier / admin) --------------
+  /// Liste de mon église, filtre par année. Génère pour tous les donateurs
+  /// identifiés avec au moins un don confirmé cette année (ne régénère
+  /// pas une attestation émise existante).
+  Future<List<Attestation>> getAttestations({int? annee});
+
+  Future<List<Attestation>> genererAttestations({required int annee});
+
+  /// Nouvelle attestation qui annule l'ancienne (motif obligatoire).
+  Future<Attestation> corrigerAttestation(String id, {required String motif});
+
+  /// PDF de l'attestation (octets bruts, contenu figé).
+  Future<Uint8List> telechargerAttestationPdf(String id);
 
   // -- Communication : prières et messages (module 5) ------------------------
   Future<List<DemandePriere>> getDemandesPriere({String? statut});

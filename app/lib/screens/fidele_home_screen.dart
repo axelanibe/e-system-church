@@ -16,6 +16,7 @@ import '../widgets/common_widgets.dart';
 import '../widgets/mere_badge.dart';
 import 'campagnes_screen.dart';
 import 'member_detail_screen.dart';
+import 'mes_attestations_screen.dart';
 
 /// Accueil fidèle (rôle `membre`) : mon église, mes annonces, cultes à
 /// venir, ma carte de membre, mes présences, mes contributions, mon profil.
@@ -192,6 +193,23 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                               onPressed: _voirMaCarte,
                               icon: const Icon(Icons.badge_outlined),
                               label: const Text('Voir ma carte de membre'),
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 48,
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const MesAttestationsScreen(),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.description_outlined),
+                                label: const Text('Mes attestations'),
+                              ),
                             ),
                           ],
                         ),
