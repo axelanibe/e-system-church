@@ -12,6 +12,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'config/app_config.dart';
+import 'config/app_theme.dart';
 import 'demo/demo_app_state.dart';
 import 'demo/demo_banner.dart';
 import 'demo/demo_login_screen.dart';
@@ -76,28 +77,7 @@ class DemoApp extends StatelessWidget {
           return MaterialApp(
             title: '${AppConfig.appName} — Démo',
             debugShowCheckedModeBanner: false,
-            theme: ThemeData(
-              useMaterial3: true,
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF0C5B40),
-                primary: const Color(0xFF0C5B40),
-                secondary: const Color(0xFFC9971C),
-                tertiary: const Color(0xFFB3261E),
-                surface: const Color(0xFFFFFFFF),
-                error: const Color(0xFFB3261E),
-                brightness: Brightness.light,
-              ),
-              scaffoldBackgroundColor: const Color(0xFFF2F4F1),
-              appBarTheme: const AppBarTheme(
-                backgroundColor: Color(0xFF0C5B40),
-                foregroundColor: Colors.white,
-              ),
-              floatingActionButtonTheme:
-                  const FloatingActionButtonThemeData(
-                backgroundColor: Color(0xFFC9971C),
-                foregroundColor: Color(0xFF083D2B),
-              ),
-            ),
+            theme: AppTheme.theme,
             locale: const Locale('fr'),
             localizationsDelegates: const [
               GlobalMaterialLocalizations.delegate,

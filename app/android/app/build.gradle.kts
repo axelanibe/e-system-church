@@ -29,7 +29,7 @@ android {
         versionName = flutter.versionName
         // Nom affiché (AndroidManifest.xml, ${appLabel}) : la flavor
         // `demo` le surcharge par « e-System Church Démo ».
-        manifestPlaceholders["appLabel"] = "esystem_church"
+        manifestPlaceholders["appLabel"] = "e-System Church"
     }
 
     flavorDimensions += "app"
