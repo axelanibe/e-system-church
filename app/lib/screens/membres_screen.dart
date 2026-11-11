@@ -92,9 +92,9 @@ class _MembresScreenState extends State<MembresScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'actif':
-        return AppTheme.vertFonce;
+        return AppTheme.saugeFonce;
       case 'nouveau_converti':
-        return AppTheme.bleuFonce;
+        return AppTheme.bleuDoux;
       case 'inactif':
         return Colors.grey;
       default:

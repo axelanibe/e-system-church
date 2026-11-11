@@ -169,11 +169,16 @@ class StatusChip extends StatelessWidget {
 }
 
 /// Carte de chiffre (tableau de bord).
+/// Carte de chiffre (tableau de bord). [aide] est la courte explication
+/// sous le libellé : un nouveau responsable comprend le chiffre sans
+/// deviner. [onTap] rend toute la carte touchable, une seule action.
 class StatCard extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
   final Color? color;
+  final String? aide;
+  final VoidCallback? onTap;
 
   const StatCard({
     super.key,
@@ -181,12 +186,14 @@ class StatCard extends StatelessWidget {
     required this.value,
     required this.icon,
     this.color,
+    this.aide,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
+    final card = Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -196,15 +203,34 @@ class StatCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               value,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
-            Text(label, style: Theme.of(context).textTheme.bodyMedium),
+            Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            if (aide != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                aide!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
           ],
         ),
       ),
+    );
+    if (onTap == null) return card;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: card,
     );
   }
 }

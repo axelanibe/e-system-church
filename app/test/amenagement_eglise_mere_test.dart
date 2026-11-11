@@ -27,14 +27,14 @@ void main() {
     expect(eglise.isMere, isFalse);
   });
 
-  test('Avatar : texte blanc sur fond sombre, bleu nuit sur fond clair', () {
+  test('Avatar : texte blanc sur fond sombre, sauge foncé sur fond clair', () {
     expect(
-      ChurchAvatar.texteSur(const Color(0xFF0B1F3A)),
+      ChurchAvatar.texteSur(const Color(0xFF3F5A50)),
       Colors.white,
     );
     expect(
-      ChurchAvatar.texteSur(const Color(0xFFD4A72C)),
-      const Color(0xFF0B1F3A),
+      ChurchAvatar.texteSur(const Color(0xFFC9A24B)),
+      const Color(0xFF3F5A50),
     );
   });
 

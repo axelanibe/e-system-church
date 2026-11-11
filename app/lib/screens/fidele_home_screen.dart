@@ -10,18 +10,24 @@ import '../models/fidele.dart';
 import '../models/presences.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
+import '../widgets/carte_membre_vedette.dart';
 import '../widgets/change_password_dialog.dart';
-import '../widgets/church_avatar.dart';
 import '../widgets/common_widgets.dart';
-import '../widgets/mere_badge.dart';
+import '../widgets/soft_button.dart';
+import '../widgets/soft_card.dart';
 import 'campagnes_screen.dart';
 import 'member_detail_screen.dart';
 import 'mes_attestations_screen.dart';
 
-/// Accueil fidèle (rôle `membre`) : mon église, mes annonces, cultes à
-/// venir, ma carte de membre, mes présences, mes contributions, mon profil.
-/// Aucun écran d'administration n'est accessible depuis ici : les données
-/// viennent des lectures `/moi/*` (son église, ses propres données).
+/// Accueil fidèle (rôle `membre`) : un espace qui donne envie d'ouvrir
+/// l'application, pas une liste de lignes alignées. Une seule colonne
+/// lisible, une belle carte de membre en vedette, un accueil
+/// personnalisé, le prochain culte, les actions principales en gros
+/// boutons, puis ce qui attend le fidèle : annonces, dons, campagnes,
+/// présences. Rien d'inventé : que des données réelles, et des états
+/// vides chaleureux quand il n'y a rien. Aucun écran d'administration
+/// n'est accessible depuis ici : les données viennent des lectures
+/// `/moi/*` (son église, ses propres données).
 class FideleHomeScreen extends StatefulWidget {
   const FideleHomeScreen({super.key});
 
@@ -96,42 +102,23 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
     await showChangePasswordDialog(context);
   }
 
+  void _voirMesAttestations() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const MesAttestationsScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final church = state.church;
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            ChurchAvatar(church: church, radius: 18),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    church?.name ?? 'Mon église',
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  if (church != null)
-                    Row(
-                      children: [
-                        Text(
-                          church.code,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        if (church.isMere) ...[
-                          const SizedBox(width: 8),
-                          const MereBadge(),
-                        ],
-                      ],
-                    ),
-                ],
-              ),
-            ),
-          ],
+        title: const Text(
+          'Accueil',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         actions: [
           IconButton(
@@ -146,188 +133,194 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            FutureBuilder<FideleProfil>(
-              future: _profilFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const AppLoading();
-                }
-                if (snapshot.hasError || !snapshot.hasData) {
-                  return AppError(
-                    message: snapshot.error?.toString() ??
-                        'Impossible de charger votre profil.',
-                    onRetry: () => setState(_charger),
-                  );
-                }
-                final profil = snapshot.data!;
-                return Column(
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
+                    FutureBuilder<FideleProfil>(
+                      future: _profilFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const AppLoading();
+                        }
+                        if (snapshot.hasError || !snapshot.hasData) {
+                          return AppError(
+                            message: snapshot.error?.toString() ??
+                                'Impossible de charger votre profil.',
+                            onRetry: () => setState(_charger),
+                          );
+                        }
+                        final profil = snapshot.data!;
+                        final prenom = profil.user.fullName
+                            .trim()
+                            .split(RegExp(r'\s+'))
+                            .first;
+                        return Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.stretch,
                           children: [
-                            ChurchAvatar(church: church, radius: 40),
-                            const SizedBox(height: 12),
-                            Text(
-                              church?.name ?? '',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineSmall
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            if (church?.isMere ?? false) ...[
-                              const SizedBox(height: 8),
-                              const MereBadge(),
-                            ],
-                            const SizedBox(height: 4),
-                            Text(
-                              'Code : ${church?.code ?? ''}'
-                              '${church?.city != null ? ' · ${church!.city}' : ''}',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 16),
-                            FilledButton.icon(
-                              onPressed: _voirMaCarte,
-                              icon: const Icon(Icons.badge_outlined),
-                              label: const Text('Voir ma carte de membre'),
-                            ),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              height: 48,
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const MesAttestationsScreen(),
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(Icons.description_outlined),
-                                label: const Text('Mes attestations'),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(4, 8, 4, 16),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Bonjour, $prenom',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Content de vous revoir.',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.color,
+                                        ),
+                                  ),
+                                ],
                               ),
                             ),
+                            CarteMembreVedette(
+                              profil: profil,
+                              onVoirCarte: _voirMaCarte,
+                            ),
+                            const SizedBox(height: 12),
+                            BoutonAvecAide(
+                              label: 'Mes attestations',
+                              aide: 'Vos attestations de don et de '
+                                  'présence, à télécharger ou à recevoir.',
+                              icon: Icons.description_outlined,
+                              secondaire: true,
+                              onPressed: _voirMesAttestations,
+                            ),
+                            const SizedBox(height: 8),
+                            const SectionTitle(title: 'Mon profil'),
+                            ListTile(
+                              leading:
+                                  const Icon(Icons.person_outline),
+                              title: Text(profil.user.fullName),
+                              subtitle: Text(profil.user.email),
+                            ),
+                            if (profil.matricule != null)
+                              ListTile(
+                                leading:
+                                    const Icon(Icons.badge_outlined),
+                                title: Text(
+                                    'Matricule : ${profil.matricule}'),
+                                subtitle: const Text(
+                                    'Votre carte de membre'),
+                              ),
+                            ListTile(
+                              leading:
+                                  const Icon(Icons.lock_outline),
+                              title: const Text(
+                                  'Changer mon mot de passe'),
+                              trailing:
+                                  const Icon(Icons.chevron_right),
+                              onTap: _changerMotDePasse,
+                            ),
                           ],
+                        );
+                      },
+                    ),
+                    if (state.isModuleActif(CodesModules.cultes)) ...[
+                      const SectionTitle(title: 'Prochain culte'),
+                      _ProchainCulte(future: _cultesFuture),
+                    ],
+                    if (state.isModuleActif(CodesModules.annonces)) ...[
+                      const SectionTitle(title: 'Ce qui vous attend'),
+                      _SectionList<Announcement>(
+                        future: _annoncesFuture,
+                        emptyIcon: Icons.campaign_outlined,
+                        emptyMessage: 'Rien de nouveau pour l’instant. '
+                            'Votre église n’a rien publié.',
+                        itemBuilder: (a) => ListTile(
+                          leading:
+                              const Icon(Icons.campaign_outlined),
+                          title: Text(a.title),
+                          subtitle: Text(
+                            a.body,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
+                    ],
+                    const SectionTitle(title: 'Mes dons'),
+                    _DonsSection(
+                      future: _contributionsFuture,
+                      devise: state.devise,
                     ),
-                    const SectionTitle(title: 'Mon profil'),
-                    ListTile(
-                      leading: const Icon(Icons.person_outline),
-                      title: Text(profil.user.fullName),
-                      subtitle: Text(profil.user.email),
+                    const SectionTitle(title: 'Campagnes de mon église'),
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: Text(
+                          'Chaque campagne montre ce qui a déjà été '
+                          'collecté.'),
                     ),
-                    if (profil.matricule != null)
-                      ListTile(
-                        leading: const Icon(Icons.badge_outlined),
-                        title: Text('Matricule : ${profil.matricule}'),
-                        subtitle: const Text('Votre carte de membre'),
+                    _SectionList<Campagne>(
+                      future: _campagnesFuture,
+                      emptyIcon: Icons.volunteer_activism_outlined,
+                      emptyMessage: 'Aucune campagne visible pour '
+                          'l’instant. Votre église n’en a pas lancé.',
+                      itemBuilder: (c) => ListTile(
+                        leading: const Icon(
+                            Icons.volunteer_activism_outlined),
+                        title: Text(c.nom),
+                        subtitle: Text(
+                          c.depasse
+                              ? 'Objectif dépassé : ${formatFcfa(c.totalCollecte)} sur ${formatFcfa(c.objectifFcfa)} (${c.pourcentage} %).'
+                              : '${formatFcfa(c.totalCollecte)} sur ${formatFcfa(c.objectifFcfa)} (${c.pourcentage} %).',
+                        ),
+                        trailing:
+                            const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const CampagnesScreen(),
+                            ),
+                          );
+                        },
                       ),
-                    ListTile(
-                      leading: const Icon(Icons.lock_outline),
-                      title: const Text('Changer mon mot de passe'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: _changerMotDePasse,
+                    ),
+                    if (state.isModuleActif(CodesModules.presences)) ...[
+                      const SectionTitle(title: 'Mes présences'),
+                      _SectionList<Presence>(
+                        future: _presencesFuture,
+                        emptyIcon: Icons.how_to_reg_outlined,
+                        emptyMessage: 'Aucune présence enregistrée '
+                            'pour l’instant. Votre première présence '
+                            'apparaîtra ici.',
+                        itemBuilder: (p) => ListTile(
+                          leading: const Icon(
+                              Icons.how_to_reg_outlined),
+                          title: Text(p.statutLabel),
+                          subtitle: Text(
+                            '${formatDateTime(p.pointeAt)} · ${p.mode}',
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    Text(
+                      '${state.user?.fullName ?? ''} — ${state.roleLabel}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                      textAlign: TextAlign.center,
                     ),
                   ],
-                );
-              },
-            ),
-            if (state.isModuleActif(CodesModules.annonces))
-              const SectionTitle(title: 'Mes annonces'),
-            if (state.isModuleActif(CodesModules.annonces))
-              _SectionList<Announcement>(
-              future: _annoncesFuture,
-              emptyIcon: Icons.campaign_outlined,
-              emptyMessage: 'Aucune annonce pour l’instant.',
-              itemBuilder: (a) => ListTile(
-                leading: const Icon(Icons.campaign_outlined),
-                title: Text(a.title),
-                subtitle: Text(
-                  a.body,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
-            if (state.isModuleActif(CodesModules.cultes))
-              const SectionTitle(title: 'Cultes à venir'),
-            if (state.isModuleActif(CodesModules.cultes))
-              _SectionList<Culte>(
-              future: _cultesFuture,
-              emptyIcon: Icons.event_outlined,
-              emptyMessage: 'Aucun culte à venir pour l’instant.',
-              itemBuilder: (c) => ListTile(
-                leading: const Icon(Icons.event_outlined),
-                title: Text(c.titre),
-                subtitle: Text(
-                  '${formatDateTime(c.date)}'
-                  '${c.lieu != null ? ' · ${c.lieu}' : ''}'
-                  '${c.orateur != null ? ' · ${c.orateur}' : ''}',
-                ),
-              ),
-            ),
-            if (state.isModuleActif(CodesModules.presences))
-              const SectionTitle(title: 'Mes présences'),
-            if (state.isModuleActif(CodesModules.presences))
-              _SectionList<Presence>(
-              future: _presencesFuture,
-              emptyIcon: Icons.how_to_reg_outlined,
-              emptyMessage: 'Aucune présence enregistrée pour l’instant.',
-              itemBuilder: (p) => ListTile(
-                leading: const Icon(Icons.how_to_reg_outlined),
-                title: Text(p.statutLabel),
-                subtitle: Text(
-                  '${formatDateTime(p.pointeAt)} · ${p.mode}',
-                ),
-              ),
-            ),
-            const SectionTitle(title: 'Mes contributions'),
-            _SectionList<Contribution>(
-              future: _contributionsFuture,
-              emptyIcon: Icons.volunteer_activism_outlined,
-              emptyMessage: 'Aucune contribution enregistrée pour l’instant.',
-              itemBuilder: (c) => ListTile(
-                leading: const Icon(Icons.volunteer_activism_outlined),
-                title: Text(
-                    '${Contribution.labelForType(c.type)} — ${formatMontant(c.amountFcfa, state.devise)}'),
-                subtitle: Text(
-                  '${formatDate(c.createdAt)} · ${c.status}',
-                ),
-              ),
-            ),
-            const SectionTitle(title: 'Campagnes de mon église'),
-            _SectionList<Campagne>(
-              future: _campagnesFuture,
-              emptyIcon: Icons.volunteer_activism_outlined,
-              emptyMessage: 'Aucune campagne visible pour l’instant.',
-              itemBuilder: (c) => ListTile(
-                leading: const Icon(Icons.volunteer_activism_outlined),
-                title: Text(c.nom),
-                subtitle: Text(
-                  c.depasse
-                      ? 'Objectif dépassé : ${formatFcfa(c.totalCollecte)} sur ${formatFcfa(c.objectifFcfa)} (${c.pourcentage} %).'
-                      : '${formatFcfa(c.totalCollecte)} sur ${formatFcfa(c.objectifFcfa)} (${c.pourcentage} %).',
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const CampagnesScreen(),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '${state.user?.fullName ?? ''} — ${state.roleLabel}',
-              style: Theme.of(context).textTheme.bodySmall,
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -369,6 +362,169 @@ class _SectionList<T> extends StatelessWidget {
           child: Column(
             children: items.map(itemBuilder).toList(),
           ),
+        );
+      },
+    );
+  }
+}
+
+/// Prochain culte en vedette : le plus proche, avec sa date, son lieu
+/// et son orateur quand ils existent. État vide chaleureux sinon.
+class _ProchainCulte extends StatelessWidget {
+  final Future<List<Culte>> future;
+
+  const _ProchainCulte({required this.future});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Culte>>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AppLoading();
+        }
+        if (snapshot.hasError) {
+          return AppError(message: snapshot.error.toString(), onRetry: null);
+        }
+        final cultes = [...(snapshot.data ?? [])]
+          ..sort((a, b) {
+            final da = a.date;
+            final db = b.date;
+            if (da == null && db == null) return 0;
+            if (da == null) return 1;
+            if (db == null) return -1;
+            return da.compareTo(db);
+          });
+        if (cultes.isEmpty) {
+          return const EmptyState(
+            icon: Icons.event_outlined,
+            message: 'Aucun culte prévu pour l’instant. Revenez bientôt, '
+                'votre église vous attend.',
+          );
+        }
+        final culte = cultes.first;
+        return SoftCard(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.event_outlined, size: 32),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      culte.titre,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(formatDateTime(culte.date)),
+                    if (culte.lieu != null) Text(culte.lieu!),
+                    if (culte.orateur != null)
+                      Text('Avec ${culte.orateur}'),
+                    if (culte.theme != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        culte.theme!,
+                        style:
+                            Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Mes dons : total confirmé en tête, puis chaque don. La progression
+/// du fidèle, sans rien inventer : que ses contributions réelles.
+class _DonsSection extends StatelessWidget {
+  final Future<List<Contribution>> future;
+  final String devise;
+
+  const _DonsSection({required this.future, required this.devise});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Contribution>>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AppLoading();
+        }
+        if (snapshot.hasError) {
+          return AppError(message: snapshot.error.toString(), onRetry: null);
+        }
+        final dons = snapshot.data ?? [];
+        if (dons.isEmpty) {
+          return const EmptyState(
+            icon: Icons.volunteer_activism_outlined,
+            message: 'Vous n’avez pas encore donné. Quand vous donnerez, '
+                'tout apparaîtra ici.',
+          );
+        }
+        final confirme = dons
+            .where((c) => c.status == 'confirme')
+            .fold<int>(0, (s, c) => s + c.amountFcfa);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SoftCard(
+              child: Row(
+                children: [
+                  const Icon(Icons.volunteer_activism_outlined,
+                      size: 32),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Total donné (confirmé)',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium,
+                        ),
+                        Text(
+                          formatMontant(confirme, devise),
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall,
+                        ),
+                        Text(
+                          '${dons.length} don${dons.length > 1 ? 's' : ''} au total',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: Column(
+                children: dons
+                    .map((c) => ListTile(
+                          leading: const Icon(
+                              Icons.volunteer_activism_outlined),
+                          title: Text(
+                              '${Contribution.labelForType(c.type)} — ${formatMontant(c.amountFcfa, devise)}'),
+                          subtitle: Text(
+                            '${formatDate(c.createdAt)} · ${c.statusLabel}',
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ),
+          ],
         );
       },
     );

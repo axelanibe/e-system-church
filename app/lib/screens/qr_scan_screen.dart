@@ -149,7 +149,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                     height: 240,
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: AppTheme.or,
+                        color: AppTheme.orDoux,
                         width: 3,
                       ),
                       borderRadius: BorderRadius.circular(16),
@@ -161,7 +161,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
           ),
           Container(
             width: double.infinity,
-            color: AppTheme.bleuNuit,
+            color: AppTheme.saugeFonce,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -171,7 +171,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                   style: TextStyle(
                     color: _message == null
                         ? Colors.white
-                        : (_succes ? AppTheme.or : Colors.red.shade200),
+                        : (_succes ? Colors.white : Colors.red.shade200),
                     fontWeight:
                         _message == null ? FontWeight.normal : FontWeight.bold,
                   ),
@@ -223,7 +223,7 @@ class _ErreurCamera extends StatelessWidget {
           const Icon(
             Icons.no_photography_outlined,
             size: 64,
-            color: AppTheme.bleuNuit,
+            color: AppTheme.saugeFonce,
           ),
           const SizedBox(height: 16),
           Text(

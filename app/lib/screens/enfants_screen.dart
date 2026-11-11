@@ -367,7 +367,7 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.check,
-                                        color: AppTheme.vertFonce),
+                                        color: AppTheme.saugeFonce),
                                     tooltip: 'Autoriser',
                                     onPressed: () => _setAutorisationStatut(
                                         a, 'autorisee'),
@@ -388,7 +388,7 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
                                         ? 'Refusée'
                                         : a.statut,
                                 color: a.statut == 'autorisee'
-                                    ? AppTheme.vertFonce
+                                    ? AppTheme.saugeFonce
                                     : a.statut == 'refusee'
                                         ? AppTheme.rougeErreur
                                         : Colors.orange,
