@@ -1,4 +1,0 @@
-<resources>
-    <!-- Keep compatibility with flavor manifests that still reference @mipmap/ic_launcher. -->
-    <item name="ic_launcher" type="mipmap">@drawable/ic_launcher</item>
-</resources>
