@@ -894,3 +894,24 @@ INSERT INTO fournisseurs_paiement (code, nom, pays, type, champs_requis) VALUES
   ('virement', 'Virement bancaire', ARRAY['*'], 'virement', '[]'::jsonb),
   ('especes', 'Espèces', ARRAY['*'], 'especes', '[]'::jsonb)
 ON CONFLICT (code) DO NOTHING;
+
+-- ===========================================================================
+-- US1 — Modules activables par église (11 novembre 2026)
+-- Une ligne par église et par module activable, avec son état. Absence de
+-- ligne = module inactif : à la création d'une église, seuls le noyau
+-- (membres, finances, rapports) est actif. Le noyau n'est jamais stocké
+-- ici, il est toujours actif. Désactiver ne supprime aucune donnée.
+-- Chaque église décide seule pour elle-même ; la mère ne force pas ses
+-- antennes. Voir server/src/modules.ts pour le catalogue des codes.
+-- ===========================================================================
+CREATE TABLE IF NOT EXISTS eglise_modules (
+    church_id  UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    module     TEXT NOT NULL CHECK (module IN
+                 ('annonces','familles','cultes','presences','budget',
+                  'prieres','pastoral','serviteurs','enfants','medias',
+                  'biens','parametres','mon_eglise')),
+    actif      BOOLEAN NOT NULL DEFAULT TRUE,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (church_id, module)
+);
+CREATE INDEX IF NOT EXISTS idx_eglise_modules_church ON eglise_modules (church_id);
