@@ -6,6 +6,7 @@ import '../models/contribution.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import 'campagnes_screen.dart';
 import 'contribution_form_screen.dart';
 import 'attestations_screen.dart';
 import 'receipt_screen.dart';
@@ -149,6 +150,23 @@ class _FinancesScreenState extends State<FinancesScreen> {
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.volunteer_activism_outlined),
+                          title: const Text('Campagnes de collecte'),
+                          subtitle: const Text(
+                              'Objectif, période et progression des collectes.'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const CampagnesScreen(),
+                              ),
+                            );
+                            _refresh();
+                          },
+                        ),
+                      ),
                       SizedBox(
                         height: 48,
                         width: double.infinity,

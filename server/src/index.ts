@@ -35,6 +35,7 @@ import { registerProfilEgliseRoutes } from "./routes/profil_eglise.js";
 import { registerPaiementsRoutes } from "./routes/paiements.js";
 import { registerTransfertsRoutes } from "./routes/transferts.js";
 import { registerModulesRoutes } from "./routes/modules.js";
+import { registerCampagnesRoutes } from "./routes/campagnes.js";
 import { registerAttestationsRoutes } from "./routes/attestations.js";
 
 export function buildApp(db: Pool) {
@@ -102,6 +103,7 @@ export function buildApp(db: Pool) {
   registerPaiementsRoutes(app, db);
   registerTransfertsRoutes(app, db);
   registerModulesRoutes(app, db);
+  registerCampagnesRoutes(app, db);
   registerAttestationsRoutes(app, db);
 
   app.setNotFoundHandler((_req, reply) => {

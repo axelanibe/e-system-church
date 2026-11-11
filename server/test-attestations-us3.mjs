@@ -24,7 +24,7 @@ const db = new Client({ connectionString: DB });
 await db.connect();
 // Schéma + migrations (même ordre que migrate.ts, sans toucher à Render).
 await db.query(readFileSync("../db/schema.sql", "utf8"));
-for (const f of ["001_fonctionnalites_eglise.sql","001_transferts_membre.sql","002_vue_consolidee_recursive.sql","003_mot_de_passe_acces_fidele.sql","004_depenses_budget_stats.sql","005_modules_eglise.sql","005_rapports_nombres.sql","006_organisation_catalogues.sql","007_attestations.sql"]) {
+for (const f of ["001_fonctionnalites_eglise.sql","001_transferts_membre.sql","002_vue_consolidee_recursive.sql","003_mot_de_passe_acces_fidele.sql","004_depenses_budget_stats.sql","005_modules_eglise.sql","005_rapports_nombres.sql","006_organisation_catalogues.sql","007_campagnes.sql","008_attestations.sql"]) {
   await db.query(readFileSync(`../db/migrations/${f}`, "utf8"));
 }
 const hash = await argon2.hash("Test1234!");

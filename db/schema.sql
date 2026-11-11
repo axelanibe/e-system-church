@@ -174,6 +174,27 @@ CREATE TABLE contributions (
 CREATE INDEX idx_contributions_church ON contributions (church_id, created_at);
 CREATE INDEX idx_contributions_type ON contributions (church_id, type, created_at);
 
+-- Campagnes de collecte (US2, migration 007) : objectif FCFA strictement
+-- positif, période, statut brouillon, active ou cloturee. Le total collecté
+-- est la somme des contributions confirmées affectées, calculée à la lecture.
+CREATE TABLE IF NOT EXISTS campagnes (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id       UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    nom             TEXT NOT NULL,
+    objectif_fcfa   INT NOT NULL CHECK (objectif_fcfa > 0),
+    date_debut      DATE NOT NULL,
+    date_fin        DATE NOT NULL,
+    statut          TEXT NOT NULL DEFAULT 'brouillon'
+                    CHECK (statut IN ('brouillon', 'active', 'cloturee')),
+    visible_membres BOOLEAN NOT NULL DEFAULT false,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK (date_fin > date_debut)
+);
+CREATE INDEX IF NOT EXISTS idx_campagnes_church ON campagnes (church_id, statut);
+ALTER TABLE contributions
+  ADD COLUMN IF NOT EXISTS campagne_id UUID REFERENCES campagnes (id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_contributions_campagne ON contributions (campagne_id);
+
 -- ---------------------------------------------------------------------------
 -- Cultes, événements et présences (scan QR par matricule)
 -- ---------------------------------------------------------------------------
@@ -232,7 +253,7 @@ CREATE INDEX idx_audit_church ON audit_logs (church_id, created_at);
 -- ---------------------------------------------------------------------------
 -- Attestations annuelles de dons (US3) : une attestation émise est figée,
 -- son contenu est copié en JSONB à l'émission. Voir db/migrations/
--- 007_attestations.sql (même définition, pour les bases existantes).
+-- 008_attestations.sql (même définition, pour les bases existantes).
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS attestations (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
