@@ -101,6 +101,8 @@ CREATE TABLE members (
     email       TEXT,
     birth_date  DATE,
     department  TEXT,                              -- ex. Louange, Intercession, Jeunesse
+    fonction    TEXT,                              -- ex. Pasteur, Chantre… ; NULL = « Aucun »
+    poste       TEXT,                              -- ex. Directeur de département, Collaborateur…
     cell_group  TEXT,                              -- cellule / groupe de maison
     status      member_status NOT NULL DEFAULT 'actif',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -339,6 +341,29 @@ CREATE TABLE IF NOT EXISTS departements (
 );
 CREATE INDEX IF NOT EXISTS idx_departements_church ON departements (church_id);
 
+-- Catalogue des fonctions par église (migration 006 ; mêmes listes par
+-- défaut que les départements, amorcées à la création de l'église).
+CREATE TABLE IF NOT EXISTS fonctions (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id  UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    nom        TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (church_id, nom)
+);
+CREATE INDEX IF NOT EXISTS idx_fonctions_church ON fonctions (church_id);
+
+-- Catalogue des postes par église (migration 006 ; postes d'exemple du
+-- document d'architecture, §4 : fonction, département et poste sont trois
+-- notions séparées, stockées séparément).
+CREATE TABLE IF NOT EXISTS postes (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id  UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    nom        TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (church_id, nom)
+);
+CREATE INDEX IF NOT EXISTS idx_postes_org_church ON postes (church_id);
+
 CREATE TABLE IF NOT EXISTS cellules (
     id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     church_id             UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
@@ -357,6 +382,9 @@ CREATE TABLE IF NOT EXISTS membre_departements (
     member_id      UUID NOT NULL REFERENCES members (id) ON DELETE CASCADE,
     departement_id UUID NOT NULL REFERENCES departements (id) ON DELETE CASCADE,
     role           TEXT NOT NULL DEFAULT 'membre',
+    date_debut     DATE,
+    date_fin       DATE,
+    statut         TEXT NOT NULL DEFAULT 'active' CHECK (statut IN ('active', 'terminee')),
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (member_id, departement_id)
 );

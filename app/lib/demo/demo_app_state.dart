@@ -131,6 +131,8 @@ class DemoAppState extends AppState {
     required String adminEmail,
     required String password,
     String? parentCode,
+    String? logoBase64,
+    String? logoFilename,
   }) async {
     final result = await _demoApi.register(
       churchName: churchName,
@@ -141,6 +143,8 @@ class DemoAppState extends AppState {
       adminEmail: adminEmail,
       password: password,
       parentCode: parentCode,
+      logoBase64: logoBase64,
+      logoFilename: logoFilename,
     );
     _applyAuth(result);
     notifyListeners();
@@ -172,6 +176,8 @@ class DemoAppState extends AppState {
     required String telephone,
     required String password,
     required String codeEglise,
+    String? department,
+    String? fonction,
   }) async {
     final result = await _demoApi.registerMembreParCode(
       nomPrenom: nomPrenom,
@@ -179,6 +185,8 @@ class DemoAppState extends AppState {
       telephone: telephone,
       password: password,
       codeEglise: codeEglise,
+      department: department,
+      fonction: fonction,
     );
     if (result.auth != null) {
       _applyAuth(result.auth!);

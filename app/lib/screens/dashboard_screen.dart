@@ -6,7 +6,9 @@ import '../models/contribution.dart';
 import '../models/rapport.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
+import '../widgets/church_avatar.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/mere_badge.dart';
 import 'finances_mere_screen.dart';
 import 'plateforme_screen.dart';
 
@@ -99,24 +101,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: Theme.of(context).colorScheme.primaryContainer,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Column(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          church?.name ?? '—',
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ChurchAvatar(church: church, radius: 28),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                church?.name ?? '—',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                  '${church?.code ?? ''} · ${church?.city ?? ''} · ${state.roleLabel}'),
+                              if (church?.isMere ?? false) ...[
+                                const SizedBox(height: 8),
+                                const Row(
+                                  children: [
+                                    MereBadge(),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                          'Tête de votre réseau.'),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                            '${church?.code ?? ''} · ${church?.city ?? ''} · ${state.roleLabel}'),
-                        if (church?.isMere ?? false)
-                          const SizedBox(height: 4),
-                        if (church?.isMere ?? false)
-                          const Text(
-                              'Église mère — tête de votre réseau.'),
                       ],
                     ),
                   ),

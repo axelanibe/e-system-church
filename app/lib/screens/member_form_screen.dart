@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/membres_complement.dart';
 import '../models/member.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
@@ -26,6 +27,13 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
   final _cellController = TextEditingController();
   String _status = 'actif';
   DateTime? _birthDate;
+  // Catalogues de l'église (départements, fonctions, postes) : listes
+  // déroulantes quand ils sont chargés, champ libre sinon (département).
+  List<String>? _departements;
+  List<String>? _fonctions;
+  List<String>? _postes;
+  String _fonction = 'Aucun';
+  String? _poste;
   bool _loading = false;
   String? _error;
 
@@ -45,7 +53,19 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
       _birthDate = member.birthDate == null
           ? null
           : DateTime.tryParse(member.birthDate!);
+      _fonction = member.fonction ?? 'Aucun';
+      _poste = member.poste;
     }
+    final api = context.read<AppState>().api;
+    api.getDepartements().then((ds) {
+      if (mounted) setState(() => _departements = ds.map((d) => d.nom).toList());
+    }).catchError((_) {});
+    api.getFonctions().then((fs) {
+      if (mounted) setState(() => _fonctions = fs.map((f) => f.nom).toList());
+    }).catchError((_) {});
+    api.getPostes().then((ps) {
+      if (mounted) setState(() => _postes = ps.map((p) => p.nom).toList());
+    }).catchError((_) {});
   }
 
   Future<void> _choisirDateNaissance() async {
@@ -81,6 +101,21 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
     super.dispose();
   }
 
+  /// Départements proposés : le catalogue, plus le département actuel du
+  /// membre s'il n'y est plus (on ne perd pas la valeur enregistrée).
+  List<String> get _departementChoix {
+    final choix = List<String>.from(_departements ?? []);
+    final actuel = _departmentController.text.trim();
+    if (actuel.isNotEmpty && !choix.contains(actuel)) choix.add(actuel);
+    return choix;
+  }
+
+  String? get _departementValeur {
+    final actuel = _departmentController.text.trim();
+    if (actuel.isEmpty) return null;
+    return _departementChoix.contains(actuel) ? actuel : null;
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -102,6 +137,8 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
               department: _departmentController.text.trim().isEmpty
                   ? null
                   : _departmentController.text.trim(),
+              fonction: _fonction == 'Aucun' ? null : _fonction,
+              poste: _poste,
               cellGroup: _cellController.text.trim().isEmpty
                   ? null
                   : _cellController.text.trim(),
@@ -120,6 +157,8 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
               department: _departmentController.text.trim().isEmpty
                   ? null
                   : _departmentController.text.trim(),
+              fonction: _fonction == 'Aucun' ? null : _fonction,
+              poste: _poste,
               cellGroup: _cellController.text.trim().isEmpty
                   ? null
                   : _cellController.text.trim(),
@@ -207,13 +246,57 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                     onTap: _choisirDateNaissance,
                   ),
                   const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _departmentController,
+                  if (_departements == null || _departements!.isEmpty)
+                    TextFormField(
+                      controller: _departmentController,
+                      decoration: const InputDecoration(
+                        labelText: 'Département',
+                        hintText: 'Ex. Louange, Jeunesse, Protocole…',
+                        border: OutlineInputBorder(),
+                      ),
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      initialValue: _departementValeur,
+                      decoration: const InputDecoration(
+                        labelText: 'Département',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _departementChoix
+                          .map((d) => DropdownMenuItem(
+                              value: d, child: Text(d)))
+                          .toList(),
+                      onChanged: (v) => setState(() =>
+                          _departmentController.text = v ?? ''),
+                    ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: _fonction,
                     decoration: const InputDecoration(
-                      labelText: 'Département',
-                      hintText: 'Ex. Louange, Jeunesse, Protocole…',
+                      labelText: 'Fonction',
                       border: OutlineInputBorder(),
                     ),
+                    items: (_fonctions ?? fonctionsParDefaut)
+                        .map((f) => DropdownMenuItem(
+                            value: f, child: Text(f)))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _fonction = v ?? 'Aucun'),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String?>(
+                    initialValue: _poste,
+                    decoration: const InputDecoration(
+                      labelText: 'Poste',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      const DropdownMenuItem(
+                          value: null, child: Text('Aucun poste')),
+                      ...(_postes ?? postesParDefaut).map((p) =>
+                          DropdownMenuItem(value: p, child: Text(p))),
+                    ],
+                    onChanged: (v) => setState(() => _poste = v),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(

@@ -51,6 +51,10 @@ abstract class ApiService {
     required String adminEmail,
     required String password,
     String? parentCode,
+    // Logo choisi à l'inscription (facultatif) : téléversé après la
+    // création de l'église, comme dans Mon église.
+    String? logoBase64,
+    String? logoFilename,
   });
 
   Future<MeResult> me();
@@ -100,6 +104,8 @@ abstract class ApiService {
     required String telephone,
     required String password,
     required String codeEglise,
+    String? department,
+    String? fonction,
   });
 
   /// Mon profil fidèle (`GET /moi`) : utilisateur, église, rôle, membre lié.
@@ -163,6 +169,8 @@ abstract class ApiService {
     String? email,
     String? birthDate,
     String? department,
+    String? fonction,
+    String? poste,
     String? cellGroup,
     String? status,
   });
@@ -173,6 +181,8 @@ abstract class ApiService {
       String? email,
       String? birthDate,
       String? department,
+      String? fonction,
+      String? poste,
       String? cellGroup,
       String? status});
 
@@ -223,6 +233,29 @@ abstract class ApiService {
   });
 
   Future<void> deleteDepartement(String id);
+
+  Future<Departement> updateDepartement(String id, {required String nom});
+
+  /// Fonctions de l'église (`fonctions`, catalogue amorcé avec les 11
+  /// choix). La suppression est refusée si des membres portent la fonction.
+  Future<List<Fonction>> getFonctions();
+
+  Future<Fonction> createFonction({required String nom});
+
+  Future<Fonction> updateFonction(String id, {required String nom});
+
+  Future<void> deleteFonction(String id);
+
+  /// Postes de l'église (`postes`, catalogue amorcé avec les 5 postes
+  /// d'exemple du document d'architecture). La suppression est refusée
+  /// si des membres occupent le poste.
+  Future<List<Poste>> getPostes();
+
+  Future<Poste> createPoste({required String nom});
+
+  Future<Poste> updatePoste(String id, {required String nom});
+
+  Future<void> deletePoste(String id);
 
   Future<List<Cellule>> getCellules();
 
@@ -587,6 +620,7 @@ abstract class ApiService {
 
   Future<Church> updateProfil({
     required String churchId,
+    String? name,
     String? description,
     List<HoraireCulte>? horaires,
     String? couleurPrincipale,

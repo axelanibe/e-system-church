@@ -135,6 +135,8 @@ class HttpApiService implements ApiService {
     required String adminEmail,
     required String password,
     String? parentCode,
+    String? logoBase64,
+    String? logoFilename,
   }) async {
     final data = await _call('POST', '/auth/register', body: {
       'eglise': {
@@ -153,6 +155,15 @@ class HttpApiService implements ApiService {
     });
     final result = AuthResult.fromJson(data);
     _token = result.token;
+    if (logoBase64 != null) {
+      // Logo choisi à l'inscription : téléversé après la création,
+      // comme dans Mon église (même route, même limite de 2 Mo).
+      await uploadLogo(
+        churchId: result.church.id,
+        base64: logoBase64,
+        filename: logoFilename,
+      );
+    }
     return result;
   }
 
@@ -244,6 +255,8 @@ class HttpApiService implements ApiService {
     required String telephone,
     required String password,
     required String codeEglise,
+    String? department,
+    String? fonction,
   }) async {
     final data = await _call('POST', '/auth/inscription-par-code', body: {
       'nom_prenom': nomPrenom,
@@ -251,6 +264,8 @@ class HttpApiService implements ApiService {
       'telephone': telephone,
       'mot_de_passe': password,
       'code_eglise': codeEglise,
+      if (department != null) 'department': department,
+      if (fonction != null) 'fonction': fonction,
       'channel': 'mobile',
     });
     final result = FideleInscriptionResult.fromJson(data);
@@ -447,6 +462,8 @@ class HttpApiService implements ApiService {
     String? email,
     String? birthDate,
     String? department,
+    String? fonction,
+    String? poste,
     String? cellGroup,
     String? status,
   }) async {
@@ -456,6 +473,8 @@ class HttpApiService implements ApiService {
       if (email != null) 'email': email,
       if (birthDate != null) 'birth_date': birthDate,
       if (department != null) 'department': department,
+      if (fonction != null) 'fonction': fonction,
+      if (poste != null) 'poste': poste,
       if (cellGroup != null) 'cell_group': cellGroup,
       if (status != null) 'status': status,
     });
@@ -469,6 +488,8 @@ class HttpApiService implements ApiService {
       String? email,
       String? birthDate,
       String? department,
+      String? fonction,
+      String? poste,
       String? cellGroup,
       String? status}) async {
     final data = await _call('PATCH', '/membres/$id', body: {
@@ -477,6 +498,8 @@ class HttpApiService implements ApiService {
       'email': email,
       'birth_date': birthDate,
       'department': department,
+      'fonction': fonction,
+      'poste': poste,
       'cell_group': cellGroup,
       'status': status,
     });
@@ -600,6 +623,49 @@ class HttpApiService implements ApiService {
   @override
   Future<void> deleteDepartement(String id) async {
     await _call('DELETE', '/departements/$id');
+  }
+
+  @override
+  Future<Departement> updateDepartement(String id,
+          {required String nom}) async =>
+      Departement.fromJson(
+          await _call('PATCH', '/departements/$id', body: {'nom': nom}));
+
+  @override
+  Future<List<Fonction>> getFonctions() async =>
+      _items(await _call('GET', '/fonctions'), Fonction.fromJson);
+
+  @override
+  Future<Fonction> createFonction({required String nom}) async =>
+      Fonction.fromJson(
+          await _call('POST', '/fonctions', body: {'nom': nom}));
+
+  @override
+  Future<Fonction> updateFonction(String id, {required String nom}) async =>
+      Fonction.fromJson(
+          await _call('PATCH', '/fonctions/$id', body: {'nom': nom}));
+
+  @override
+  Future<void> deleteFonction(String id) async {
+    await _call('DELETE', '/fonctions/$id');
+  }
+
+  @override
+  Future<List<Poste>> getPostes() async =>
+      _items(await _call('GET', '/postes'), Poste.fromJson);
+
+  @override
+  Future<Poste> createPoste({required String nom}) async =>
+      Poste.fromJson(await _call('POST', '/postes', body: {'nom': nom}));
+
+  @override
+  Future<Poste> updatePoste(String id, {required String nom}) async =>
+      Poste.fromJson(
+          await _call('PATCH', '/postes/$id', body: {'nom': nom}));
+
+  @override
+  Future<void> deletePoste(String id) async {
+    await _call('DELETE', '/postes/$id');
   }
 
   @override
@@ -1462,6 +1528,7 @@ class HttpApiService implements ApiService {
   @override
   Future<Church> updateProfil({
     required String churchId,
+    String? name,
     String? description,
     List<HoraireCulte>? horaires,
     String? couleurPrincipale,
@@ -1473,6 +1540,7 @@ class HttpApiService implements ApiService {
     String? city,
   }) async =>
       Church.fromJson(await _call('PATCH', '/eglises/$churchId/profil', body: {
+        if (name != null) 'name': name,
         if (description != null) 'description': description,
         if (horaires != null)
           'horaires_cultes': horaires.map((h) => h.toJson()).toList(),

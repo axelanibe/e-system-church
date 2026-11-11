@@ -532,7 +532,7 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
         }
         const { rows: memberRows } = await db.query(
           `SELECT id, church_id, matricule, full_name, phone, email,
-                  birth_date, department, cell_group, status, created_at
+                  birth_date, department, fonction, poste, cell_group, status, created_at
              FROM members WHERE id = $1 AND church_id = $2`,
           [memberId, req.session.churchId],
         );
