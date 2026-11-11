@@ -32,5 +32,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: e-system-church-apk
-          path: build/app/outputs/flutter-apk/*.apk
+          path: app/build/app/outputs/flutter-apk/*.apk
           retention-days: 14
