@@ -154,6 +154,17 @@ abstract class ApiService {
     String? status,
   });
 
+  Future<Member> updateMember(String id,
+      {required String fullName,
+      String? phone,
+      String? email,
+      String? birthDate,
+      String? department,
+      String? cellGroup,
+      String? status});
+
+  Future<void> deleteMember(String id);
+
   // -- Membres (complément, module 1) ----------------------------------------
   Future<List<Famille>> getFamilles();
 
@@ -198,6 +209,8 @@ abstract class ApiService {
     String? responsableMemberId,
   });
 
+  Future<void> deleteDepartement(String id);
+
   Future<List<Cellule>> getCellules();
 
   Future<Cellule> createCellule({
@@ -207,6 +220,8 @@ abstract class ApiService {
     String? jourReunion,
     String? heureReunion,
   });
+
+  Future<void> deleteCellule(String id);
 
   /// Fiche membre enrichie (`GET /membres/:id/complet` : membre, historique
   /// des statuts, baptême, départements, cellules, enfants, parents).
@@ -233,6 +248,8 @@ abstract class ApiService {
     String? orateur,
     String? theme,
   });
+
+  Future<void> deleteCulte(String id);
 
   Future<List<OrdreCulteItem>> getOrdreCulte(String culteId);
 
@@ -281,6 +298,8 @@ abstract class ApiService {
     String? description,
   });
 
+  Future<void> deletePosteBudgetaire(String id);
+
   Future<List<Budget>> getBudgets({int? annee});
 
   Future<Budget> createBudget({
@@ -288,6 +307,8 @@ abstract class ApiService {
     required int annee,
     required int montantPrevu,
   });
+
+  Future<void> deleteBudget(String id);
 
   Future<List<Depense>> getDepenses({String? statut});
 
@@ -298,6 +319,8 @@ abstract class ApiService {
     String? justificatifRef,
     String? dateDepense,
   });
+
+  Future<void> deleteDepense(String id);
 
   Future<Depense> setDepenseStatut(String id, String statut);
 
@@ -340,6 +363,8 @@ abstract class ApiService {
     String? details,
     bool confidentiel = false,
   });
+
+  Future<void> deleteDemandePriere(String id);
 
   Future<DemandePriere> setDemandePriereStatut(String id, String statut);
 
@@ -390,6 +415,8 @@ abstract class ApiService {
     String? disponibilite,
   });
 
+  Future<void> deleteServiteur(String id);
+
   Future<List<PlanningServiteur>> getPlanningServiteurs();
 
   Future<PlanningServiteur> createPlanningServiteur({
@@ -408,6 +435,8 @@ abstract class ApiService {
     int? ageMax,
     String? salle,
   });
+
+  Future<void> deleteClasseEnfant(String id);
 
   Future<List<AutorisationSortie>> getAutorisationsSorties({String? statut});
 
@@ -459,6 +488,8 @@ abstract class ApiService {
     int exemplaires = 1,
   });
 
+  Future<void> deleteLivre(String id);
+
   Future<List<PretLivre>> getPretsLivres({String? statut});
 
   Future<PretLivre> createPretLivre({
@@ -477,6 +508,8 @@ abstract class ApiService {
     int? capacite,
     String? description,
   });
+
+  Future<void> deleteSalle(String id);
 
   Future<List<ReservationSalle>> getReservationsSalles({String? salleId});
 
@@ -633,4 +666,6 @@ abstract class ApiService {
     required String body,
     required bool broadcast,
   });
+
+  Future<void> deleteAnnonce(String id);
 }

@@ -789,7 +789,13 @@ SELECT
     (SELECT coalesce(sum(amount_fcfa), 0) FROM contributions co
         WHERE co.church_id = c.id AND co.type = 'depense'
         AND co.status = 'confirme'
-        AND co.created_at >= date_trunc('month', now())) AS depenses_mois_fcfa
+        AND co.created_at >= date_trunc('month', now())) +
+    -- Dépenses du module Budget & caisse (hors refusées) du mois courant :
+    -- sans elles, le tableau de bord affichait 0 de dépenses.
+    (SELECT coalesce(sum(montant_fcfa), 0) FROM depenses d
+        WHERE d.church_id = c.id AND d.statut <> 'refusee'
+        AND d.date_depense >= date_trunc('month', now())::date
+        AND d.date_depense < (date_trunc('month', now()) + interval '1 month')::date) AS depenses_mois_fcfa
 FROM churches c;
 
 -- ---------------------------------------------------------------------------

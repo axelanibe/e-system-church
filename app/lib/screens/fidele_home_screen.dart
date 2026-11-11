@@ -41,7 +41,18 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
     final api = context.read<AppState>().api;
     _profilFuture = api.getMoi();
     _annoncesFuture = api.getMesAnnonces();
-    _cultesFuture = api.getMesCultes();
+    // « Cultes à venir » : on ne garde que les cultes d'aujourd'hui ou
+    // après. Un culte sans date exploitable est gardé plutôt que caché.
+    _cultesFuture = api.getMesCultes().then((cultes) {
+      final now = DateTime.now();
+      final aujourdHui = DateTime(now.year, now.month, now.day);
+      return cultes.where((c) {
+        final date = c.date;
+        if (date == null) return true;
+        final jour = DateTime(date.year, date.month, date.day);
+        return !jour.isBefore(aujourdHui);
+      }).toList();
+    });
     _presencesFuture = api.getMesPresences();
     _contributionsFuture = api.getMesContributions();
   }

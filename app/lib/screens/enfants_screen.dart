@@ -52,6 +52,22 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
     });
   }
 
+  Future<void> _deleteClasse(ClasseEnfant classe) async {
+    final confirmed = await confirmDelete(
+      context,
+      'Supprimer définitivement la classe « ${classe.nom} » ?',
+    );
+    if (!confirmed) return;
+    if (!mounted) return;
+    try {
+      await context.read<AppState>().api.deleteClasseEnfant(classe.id);
+      if (mounted) showSuccess(context, 'Classe supprimée.');
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
   bool _matches(String text) =>
       _query.isEmpty || text.toLowerCase().contains(_query.toLowerCase());
 
@@ -268,6 +284,11 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
                         '${c.ageMin != null || c.ageMax != null ? '${c.ageMin ?? '—'} – ${c.ageMax ?? '—'} ans' : 'Âges non précisés'}'
                         '${c.salle != null ? ' · Salle ${c.salle}' : ''}',
                       ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        tooltip: 'Supprimer',
+                        onPressed: () => _deleteClasse(c),
+                      ),
                     );
                   },
                 ),
@@ -459,7 +480,6 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Enfants & jeunesse'),
-          automaticallyImplyLeading: false,
           bottom: TabBar(
             onTap: (i) => setState(() {
               _tab = i;

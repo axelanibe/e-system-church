@@ -11,6 +11,9 @@ import { dbError, requireAuth, requireRole } from "../middleware.js";
  * POST /membres     — création (admin_eglise, responsable_culte).
  *                      Le trésorier ne peut PAS créer de membre ; le matricule
  *                      est généré automatiquement (M-0001…) sauf s'il est fourni.
+ * PATCH /membres/:id — modification (le matricule ne change pas).
+ * DELETE /membres/:id — suppression (contributions → membre NULL, présences /
+ *                      statuts / baptêmes / liens en cascade).
  */
 
 const createMembreSchema = z.object({
@@ -157,4 +160,84 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
       return dbError(reply, e);
     }
   });
+
+  // -- Modification d'un membre (le matricule ne change pas). --------------
+  const updateMembreSchema = z.object({
+    full_name: z.string().min(2).max(200).optional(),
+    phone: z.string().min(8).max(30).optional(),
+    email: z.string().email().max(254).optional(),
+    birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format AAAA-MM-JJ.").optional(),
+    department: z.string().min(2).max(120).optional(),
+    cell_group: z.string().min(2).max(120).optional(),
+    status: z.enum(["actif", "nouveau_converti", "inactif"]).optional(),
+  });
+  app.patch(
+    "/membres/:id",
+    { preHandler: [requireAuth(db), requireRole(...WRITE_ROLES)] },
+    async (req, reply) => {
+      const parsed = updateMembreSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "invalid_input",
+          message: "Données du membre invalides.",
+          details: parsed.error.issues.map((i) => i.message),
+        });
+      }
+      const data = parsed.data as Record<string, unknown>;
+      const keys = ["full_name", "phone", "email", "birth_date", "department", "cell_group", "status"].filter(
+        (c) => data[c] !== undefined,
+      );
+      if (keys.length === 0) {
+        return reply.code(400).send({ error: "invalid_input", message: "Rien à modifier." });
+      }
+      try {
+        const sets = keys.map((c, i) => `${c} = $${i + 3}`).join(", ");
+        const { rows } = await db.query(
+          `UPDATE members SET ${sets} WHERE id = $1 AND church_id = $2
+           RETURNING id, church_id, matricule, full_name, phone, email, birth_date,
+                     department, cell_group, status, created_at`,
+          [(req.params as { id: string }).id, req.session.churchId, ...keys.map((c) => data[c])],
+        );
+        if (rows.length === 0) {
+          return reply.code(404).send({ error: "not_found", message: "Membre introuvable." });
+        }
+        await auditLog(db, {
+          churchId: req.session.churchId,
+          userId: req.session.userId,
+          action: "membre.modifie",
+          details: { membre_id: rows[0].id },
+        });
+        return reply.send(rows[0]);
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  // -- Suppression d'un membre (les contributions passent à membre NULL,
+  //    les présences / statuts / baptêmes / liens sont supprimés en cascade).
+  app.delete(
+    "/membres/:id",
+    { preHandler: [requireAuth(db), requireRole(...WRITE_ROLES)] },
+    async (req, reply) => {
+      try {
+        const { rows } = await db.query(
+          `DELETE FROM members WHERE id = $1 AND church_id = $2 RETURNING id`,
+          [(req.params as { id: string }).id, req.session.churchId],
+        );
+        if (rows.length === 0) {
+          return reply.code(404).send({ error: "not_found", message: "Membre introuvable." });
+        }
+        await auditLog(db, {
+          churchId: req.session.churchId,
+          userId: req.session.userId,
+          action: "membre.supprime",
+          details: { membre_id: rows[0].id },
+        });
+        return reply.send({ ok: true, id: rows[0].id });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
 }

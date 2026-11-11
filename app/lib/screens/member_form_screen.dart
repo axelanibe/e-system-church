@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/member.dart';
 import '../state/app_state.dart';
+import '../utils/format.dart';
 
 /// Formulaire d'ajout d'un membre (le matricule est généré par le serveur).
+/// Si [member] est fourni, le formulaire pré-remplit ses champs et
+/// enregistre une modification (statut compris).
 class MemberFormScreen extends StatefulWidget {
-  const MemberFormScreen({super.key});
+  final Member? member;
+
+  const MemberFormScreen({super.key, this.member});
 
   @override
   State<MemberFormScreen> createState() => _MemberFormScreenState();
@@ -19,8 +25,51 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
   final _departmentController = TextEditingController();
   final _cellController = TextEditingController();
   String _status = 'actif';
+  DateTime? _birthDate;
   bool _loading = false;
   String? _error;
+
+  bool get _isEditing => widget.member != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final member = widget.member;
+    if (member != null) {
+      _nameController.text = member.fullName;
+      _phoneController.text = member.phone ?? '';
+      _emailController.text = member.email ?? '';
+      _departmentController.text = member.department ?? '';
+      _cellController.text = member.cellGroup ?? '';
+      _status = member.status;
+      _birthDate = member.birthDate == null
+          ? null
+          : DateTime.tryParse(member.birthDate!);
+    }
+  }
+
+  Future<void> _choisirDateNaissance() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _birthDate ?? DateTime(now.year - 30, now.month, now.day),
+      firstDate: DateTime(1900),
+      lastDate: now,
+      helpText: 'Date de naissance',
+      cancelText: 'Annuler',
+      confirmText: 'Choisir',
+    );
+    if (picked != null) setState(() => _birthDate = picked);
+  }
+
+  /// Date au format « AAAA-MM-JJ » attendu par l'API (`birth_date`).
+  String? get _birthDateIso {
+    final d = _birthDate;
+    if (d == null) return null;
+    final month = d.month.toString().padLeft(2, '0');
+    final day = d.day.toString().padLeft(2, '0');
+    return '${d.year}-$month-$day';
+  }
 
   @override
   void dispose() {
@@ -39,22 +88,44 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
       _error = null;
     });
     try {
-      await context.read<AppState>().api.createMember(
-            fullName: _nameController.text.trim(),
-            phone: _phoneController.text.trim().isEmpty
-                ? null
-                : _phoneController.text.trim(),
-            email: _emailController.text.trim().isEmpty
-                ? null
-                : _emailController.text.trim(),
-            department: _departmentController.text.trim().isEmpty
-                ? null
-                : _departmentController.text.trim(),
-            cellGroup: _cellController.text.trim().isEmpty
-                ? null
-                : _cellController.text.trim(),
-            status: _status,
-          );
+      if (_isEditing) {
+        await context.read<AppState>().api.updateMember(
+              widget.member!.id,
+              fullName: _nameController.text.trim(),
+              phone: _phoneController.text.trim().isEmpty
+                  ? null
+                  : _phoneController.text.trim(),
+              email: _emailController.text.trim().isEmpty
+                  ? null
+                  : _emailController.text.trim(),
+              birthDate: _birthDateIso,
+              department: _departmentController.text.trim().isEmpty
+                  ? null
+                  : _departmentController.text.trim(),
+              cellGroup: _cellController.text.trim().isEmpty
+                  ? null
+                  : _cellController.text.trim(),
+              status: _status,
+            );
+      } else {
+        await context.read<AppState>().api.createMember(
+              fullName: _nameController.text.trim(),
+              phone: _phoneController.text.trim().isEmpty
+                  ? null
+                  : _phoneController.text.trim(),
+              email: _emailController.text.trim().isEmpty
+                  ? null
+                  : _emailController.text.trim(),
+              birthDate: _birthDateIso,
+              department: _departmentController.text.trim().isEmpty
+                  ? null
+                  : _departmentController.text.trim(),
+              cellGroup: _cellController.text.trim().isEmpty
+                  ? null
+                  : _cellController.text.trim(),
+              status: _status,
+            );
+      }
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
@@ -66,7 +137,8 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Nouveau membre')),
+      appBar: AppBar(
+          title: Text(_isEditing ? 'Modifier le membre' : 'Nouveau membre')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Center(
@@ -115,6 +187,24 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.cake_outlined),
+                    title: Text(
+                      _birthDate == null
+                          ? 'Date de naissance (optionnel)'
+                          : 'Date de naissance : ${formatDate(_birthDate)}',
+                    ),
+                    trailing: _birthDate == null
+                        ? const Icon(Icons.calendar_today_outlined)
+                        : TextButton(
+                            onPressed: () =>
+                                setState(() => _birthDate = null),
+                            child: const Text('Effacer'),
+                          ),
+                    onTap: _choisirDateNaissance,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -172,7 +262,9 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Ajouter le membre'),
+                          : Text(_isEditing
+                              ? 'Enregistrer les modifications'
+                              : 'Ajouter le membre'),
                     ),
                   ),
                 ],

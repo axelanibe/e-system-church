@@ -38,10 +38,11 @@ class DemoIds {
   static const marcory = 'demo-eglise-marcory';
 }
 
-/// Comptes de démonstration (mot de passe : `demo1234` pour les deux).
+/// Comptes de démonstration (mot de passe : `demo1234` pour les trois).
 class DemoAccounts {
   static const adminEmail = 'admin@gracedivine.ci';
   static const membreEmail = 'membre@gracedivine.ci';
+  static const plateformeEmail = 'plateforme@gracedivine.ci';
   static const password = 'demo1234';
 
   /// Matricule du membre lié au compte fidèle de démo.
@@ -96,7 +97,12 @@ class DemoSeed {
   final List<TransfertMembre> transferts = _buildTransferts();
   final List<DemandeLiaison> demandesLiaison = _buildDemandesLiaison();
   final List<EglisePaiement> paiements = _buildPaiements();
-  EgliseParametres parametres = _buildParametres();
+
+  /// Paramètres par église (le seed ne concerne que Plateau ; chaque
+  /// nouvelle église reçoit des paramètres vides à son nom).
+  final Map<String, EgliseParametres> parametresByChurch = {
+    DemoIds.plateau: _buildParametres(),
+  };
 
   Church get plateau => churches.firstWhere((e) => e.id == DemoIds.plateau);
 

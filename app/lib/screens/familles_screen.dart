@@ -218,6 +218,38 @@ class _FamillesScreenState extends State<FamillesScreen> {
     }
   }
 
+  Future<void> _deleteDepartement(Departement departement) async {
+    final confirmed = await confirmDelete(
+      context,
+      'Supprimer définitivement le département « ${departement.nom} » ?',
+    );
+    if (!confirmed) return;
+    if (!mounted) return;
+    try {
+      await context.read<AppState>().api.deleteDepartement(departement.id);
+      if (mounted) showSuccess(context, 'Département supprimé.');
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
+  Future<void> _deleteCellule(Cellule cellule) async {
+    final confirmed = await confirmDelete(
+      context,
+      'Supprimer définitivement la cellule « ${cellule.nom} » ?',
+    );
+    if (!confirmed) return;
+    if (!mounted) return;
+    try {
+      await context.read<AppState>().api.deleteCellule(cellule.id);
+      if (mounted) showSuccess(context, 'Cellule supprimée.');
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
   Widget _famillesTab(List<Member> membres) {
     final noms = {for (final m in membres) m.id: m.fullName};
     return Column(
@@ -370,6 +402,11 @@ class _FamillesScreenState extends State<FamillesScreen> {
                         '${d.responsableMemberId != null ? 'Responsable : ${noms[d.responsableMemberId] ?? '—'}' : 'Sans responsable'}'
                         '${d.description != null ? ' · ${d.description}' : ''}',
                       ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        tooltip: 'Supprimer',
+                        onPressed: () => _deleteDepartement(d),
+                      ),
                     );
                   },
                 ),
@@ -433,6 +470,11 @@ class _FamillesScreenState extends State<FamillesScreen> {
                         '${c.jourReunion != null ? ' · ${c.jourReunion}' : ''}'
                         '${c.heureReunion != null ? ' à ${c.heureReunion}' : ''}',
                       ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        tooltip: 'Supprimer',
+                        onPressed: () => _deleteCellule(c),
+                      ),
                     );
                   },
                 ),
@@ -451,7 +493,6 @@ class _FamillesScreenState extends State<FamillesScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Familles'),
-          automaticallyImplyLeading: false,
           bottom: TabBar(
             onTap: (i) => setState(() {
               _tab = i;

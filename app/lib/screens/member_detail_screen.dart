@@ -6,13 +6,11 @@ import '../models/member.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/dialog_helpers.dart';
+import 'member_complet_screen.dart';
+import 'member_form_screen.dart';
 
-/// Fiche d'un membre : carte avec QR, coordonnées, département, cellule,
-/// statut. Le QR est généré depuis les données réelles du membre :
-/// code de l'église active + matricule, par exemple « ESC-GD2026:M-0001 ».
-/// Le modèle [Member] n'a pas de `church_id` : l'église affichée est
-/// l'église active de la session ([AppState.church]). L'API n'est pas
-/// changée dans cette tranche.
+/// Fiche d'un membre : matricule, coordonnées, département, cellule, statut.
 class MemberDetailScreen extends StatelessWidget {
   final Member member;
 
@@ -52,34 +50,37 @@ class MemberDetailScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _deleteMember(BuildContext context) async {
+    final confirmed = await confirmDelete(
+      context,
+      'Supprimer définitivement le membre « ${member.fullName} » (${member.matricule}) ?',
+    );
+    if (!confirmed) return;
+    if (!context.mounted) return;
+    try {
+      await context.read<AppState>().api.deleteMember(member.id);
+      if (context.mounted) {
+        showSuccess(context, 'Membre supprimé.');
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (context.mounted) showApiError(context, e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
-    final church = state.church;
-
-    // Nom de l'église mère quand il est connu : l'église active est
-    // elle-même une mère, ou sa mère figure parmi les églises de la
-    // session. Sinon, la ligne n'est pas affichée, rien n'est inventé.
-    String? motherName;
-    if (church != null) {
-      if (church.isMere) {
-        motherName = church.name;
-      } else if (church.parentChurchId != null) {
-        for (final membership in state.eglises) {
-          if (membership.church.id == church.parentChurchId) {
-            motherName = membership.church.name;
-            break;
-          }
-        }
-      }
-    }
-
-    final qrData = church == null
-        ? member.matricule
-        : '${church.code}:${member.matricule}';
-
     return Scaffold(
-      appBar: AppBar(title: Text(member.fullName)),
+      appBar: AppBar(
+        title: Text(member.fullName),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Supprimer',
+            onPressed: () => _deleteMember(context),
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Center(
@@ -94,36 +95,6 @@ class MemberDetailScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
-                        Text(
-                          'e-System Church',
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelLarge
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          church?.name ?? 'Église non connue',
-                          style: Theme.of(context).textTheme.titleMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        if (motherName != null) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            'Église mère : $motherName',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                        if (church?.city != null) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            church!.city!,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                        const SizedBox(height: 16),
                         CircleAvatar(
                           radius: 36,
                           child: Text(
@@ -160,26 +131,51 @@ class MemberDetailScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: QrImageView(
-                            data: qrData,
+                            data: member.matricule,
                             version: QrVersions.auto,
-                            size: 200,
-                            backgroundColor: Colors.white,
+                            size: 180,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          member.fullName,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        Text(
-                          qrData,
-                          style: Theme.of(context).textTheme.bodySmall,
+                          member.matricule,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center,
                         ),
                       ],
                     ),
                   ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            MemberCompletScreen(memberId: member.id),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.badge_outlined),
+                  label: const Text('Voir la fiche complète'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final changed = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (_) => MemberFormScreen(member: member),
+                      ),
+                    );
+                    if (changed == true && context.mounted) {
+                      Navigator.of(context).pop(true);
+                    }
+                  },
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Modifier'),
                 ),
                 const SizedBox(height: 16),
                 Card(

@@ -440,6 +440,32 @@ class HttpApiService implements ApiService {
     return Member.fromJson(data);
   }
 
+  @override
+  Future<Member> updateMember(String id,
+      {required String fullName,
+      String? phone,
+      String? email,
+      String? birthDate,
+      String? department,
+      String? cellGroup,
+      String? status}) async {
+    final data = await _call('PATCH', '/membres/$id', body: {
+      'full_name': fullName,
+      'phone': phone,
+      'email': email,
+      'birth_date': birthDate,
+      'department': department,
+      'cell_group': cellGroup,
+      'status': status,
+    });
+    return Member.fromJson(data);
+  }
+
+  @override
+  Future<void> deleteMember(String id) async {
+    await _call('DELETE', '/membres/$id');
+  }
+
   // -- Membres (complément, module 1) ----------------------------------------
   @override
   Future<List<Famille>> getFamilles() async =>
@@ -550,6 +576,11 @@ class HttpApiService implements ApiService {
       }));
 
   @override
+  Future<void> deleteDepartement(String id) async {
+    await _call('DELETE', '/departements/$id');
+  }
+
+  @override
   Future<List<Cellule>> getCellules() async =>
       _items(await _call('GET', '/cellules'), Cellule.fromJson);
 
@@ -569,6 +600,11 @@ class HttpApiService implements ApiService {
         if (jourReunion != null) 'jour_reunion': jourReunion,
         if (heureReunion != null) 'heure_reunion': heureReunion,
       }));
+
+  @override
+  Future<void> deleteCellule(String id) async {
+    await _call('DELETE', '/cellules/$id');
+  }
 
   @override
   Future<Map<String, dynamic>> getMembreComplet(String memberId) async =>
@@ -616,6 +652,11 @@ class HttpApiService implements ApiService {
         if (orateur != null) 'orateur': orateur,
         if (theme != null) 'theme': theme,
       }));
+
+  @override
+  Future<void> deleteCulte(String id) async {
+    await _call('DELETE', '/cultes/$id');
+  }
 
   @override
   Future<List<OrdreCulteItem>> getOrdreCulte(String culteId) async => _items(
@@ -727,6 +768,11 @@ class HttpApiService implements ApiService {
       }));
 
   @override
+  Future<void> deletePosteBudgetaire(String id) async {
+    await _call('DELETE', '/postes-budgetaires/$id');
+  }
+
+  @override
   Future<List<Budget>> getBudgets({int? annee}) async => _items(
       await _call('GET', '/budgets', query: _q({'annee': annee})),
       Budget.fromJson);
@@ -742,6 +788,11 @@ class HttpApiService implements ApiService {
         'annee': annee,
         'montant_prevu': montantPrevu,
       }));
+
+  @override
+  Future<void> deleteBudget(String id) async {
+    await _call('DELETE', '/budgets/$id');
+  }
 
   @override
   Future<List<Depense>> getDepenses({String? statut}) async => _items(
@@ -763,6 +814,11 @@ class HttpApiService implements ApiService {
         if (justificatifRef != null) 'justificatif_ref': justificatifRef,
         if (dateDepense != null) 'date_depense': dateDepense,
       }));
+
+  @override
+  Future<void> deleteDepense(String id) async {
+    await _call('DELETE', '/depenses/$id');
+  }
 
   @override
   Future<Depense> setDepenseStatut(String id, String statut) async {
@@ -886,6 +942,11 @@ class HttpApiService implements ApiService {
       }));
 
   @override
+  Future<void> deleteDemandePriere(String id) async {
+    await _call('DELETE', '/demandes-priere/$id');
+  }
+
+  @override
   Future<DemandePriere> setDemandePriereStatut(String id, String statut) async =>
       DemandePriere.fromJson(await _call(
           'PATCH', '/demandes-priere/$id',
@@ -1004,6 +1065,11 @@ class HttpApiService implements ApiService {
       }));
 
   @override
+  Future<void> deleteServiteur(String id) async {
+    await _call('DELETE', '/serviteurs/$id');
+  }
+
+  @override
   Future<List<PlanningServiteur>> getPlanningServiteurs() async => _items(
       await _call('GET', '/planning-serviteurs'), PlanningServiteur.fromJson);
 
@@ -1040,6 +1106,11 @@ class HttpApiService implements ApiService {
         if (ageMax != null) 'age_max': ageMax,
         if (salle != null) 'salle': salle,
       }));
+
+  @override
+  Future<void> deleteClasseEnfant(String id) async {
+    await _call('DELETE', '/classes-enfants/$id');
+  }
 
   @override
   Future<List<AutorisationSortie>> getAutorisationsSorties(
@@ -1151,6 +1222,11 @@ class HttpApiService implements ApiService {
       }));
 
   @override
+  Future<void> deleteLivre(String id) async {
+    await _call('DELETE', '/livres/$id');
+  }
+
+  @override
   Future<List<PretLivre>> getPretsLivres({String? statut}) async => _items(
       await _call('GET', '/prets-livres', query: _q({'statut': statut})),
       PretLivre.fromJson);
@@ -1188,6 +1264,11 @@ class HttpApiService implements ApiService {
         if (capacite != null) 'capacite': capacite,
         if (description != null) 'description': description,
       }));
+
+  @override
+  Future<void> deleteSalle(String id) async {
+    await _call('DELETE', '/salles/$id');
+  }
 
   @override
   Future<List<ReservationSalle>> getReservationsSalles(
@@ -1526,5 +1607,10 @@ class HttpApiService implements ApiService {
       'broadcast': broadcast,
     });
     return Announcement.fromJson(data);
+  }
+
+  @override
+  Future<void> deleteAnnonce(String id) async {
+    await _call('DELETE', '/annonces/$id');
   }
 }

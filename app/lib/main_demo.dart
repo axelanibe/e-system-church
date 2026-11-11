@@ -12,7 +12,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'config/app_config.dart';
-import 'config/app_theme.dart';
 import 'demo/demo_app_state.dart';
 import 'demo/demo_banner.dart';
 import 'demo/demo_login_screen.dart';
@@ -60,24 +59,47 @@ class DemoApp extends StatelessWidget {
               home = const DemoLoginScreen();
             }
           } else {
-            // Bandeau DÉMO au-dessus de l'accueil (l'écran lui-même
-            // n'est pas modifié : il est simplement enveloppé ici).
-            final ecran = state.isMembre
+            // L'écran n'est pas enveloppé ici : le bandeau DÉMO est
+            // ajouté au niveau du MaterialApp (builder ci-dessous), au-
+            // dessus de toute la navigation — y compris les écrans
+            // poussés par Navigator.push et l'écran de connexion.
+            home = state.isMembre
                 ? const FideleHomeScreen()
                 : const HomeScreen();
-            home = Scaffold(
-              body: Column(
-                children: [
-                  const DemoBanner(),
-                  Expanded(child: ecran),
-                ],
-              ),
-            );
           }
           return MaterialApp(
             title: '${AppConfig.appName} — Démo',
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.theme,
+            builder: (context, child) => Scaffold(
+              body: Column(
+                children: [
+                  const DemoBanner(),
+                  Expanded(child: child ?? const SizedBox.shrink()),
+                ],
+              ),
+            ),
+            theme: ThemeData(
+              useMaterial3: true,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xFF0C5B40),
+                primary: const Color(0xFF0C5B40),
+                secondary: const Color(0xFFC9971C),
+                tertiary: const Color(0xFFB3261E),
+                surface: const Color(0xFFFFFFFF),
+                error: const Color(0xFFB3261E),
+                brightness: Brightness.light,
+              ),
+              scaffoldBackgroundColor: const Color(0xFFF2F4F1),
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Color(0xFF0C5B40),
+                foregroundColor: Colors.white,
+              ),
+              floatingActionButtonTheme:
+                  const FloatingActionButtonThemeData(
+                backgroundColor: Color(0xFFC9971C),
+                foregroundColor: Color(0xFF083D2B),
+              ),
+            ),
             locale: const Locale('fr'),
             localizationsDelegates: const [
               GlobalMaterialLocalizations.delegate,

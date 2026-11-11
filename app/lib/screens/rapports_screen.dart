@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/stats.dart';
 import '../state/app_state.dart';
@@ -34,29 +37,29 @@ class _RapportsScreenState extends State<RapportsScreen> {
   Future<void> _export(String type) async {
     try {
       final csv = await context.read<AppState>().api.exportCsv(type);
-      if (!mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(type == 'membres'
+      final fileName =
+          type == 'membres' ? 'export-membres.csv' : 'export-contributions.csv';
+      final file = XFile.fromData(
+        utf8.encode(csv),
+        name: fileName,
+        mimeType: 'text/csv',
+      );
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [file],
+          subject: type == 'membres'
               ? 'Export CSV — Membres'
-              : 'Export CSV — Contributions'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: SingleChildScrollView(
-              child: SelectableText(csv),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Fermer'),
-            ),
-          ],
+              : 'Export CSV — Contributions',
         ),
       );
     } catch (e) {
-      if (mounted) showApiError(context, e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Le partage de l’export a échoué : $e'),
+          ),
+        );
+      }
     }
   }
 
@@ -66,7 +69,6 @@ class _RapportsScreenState extends State<RapportsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Rapports'),
-        automaticallyImplyLeading: false,
       ),
       body: FutureBuilder<StatsGlobales>(
         future: _future,

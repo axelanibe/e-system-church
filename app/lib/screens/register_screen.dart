@@ -212,7 +212,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
                         labelText: 'Code d’invitation de l’église mère *',
-                        hintText: 'Ex. ESC-GD2026',
+                        hintText: 'Ex. GD-PLAT',
                         border: OutlineInputBorder(),
                       ),
                       validator: (v) => (_joinMother &&

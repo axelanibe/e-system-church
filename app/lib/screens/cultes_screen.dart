@@ -55,6 +55,22 @@ class _CultesScreenState extends State<CultesScreen> {
     });
   }
 
+  Future<void> _deleteCulte(Culte culte) async {
+    final confirmed = await confirmDelete(
+      context,
+      'Supprimer définitivement le culte « ${culte.titre} » ?',
+    );
+    if (!confirmed) return;
+    if (!mounted) return;
+    try {
+      await context.read<AppState>().api.deleteCulte(culte.id);
+      if (mounted) showSuccess(context, 'Culte supprimé.');
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
   bool _matches(String text) =>
       _query.isEmpty || text.toLowerCase().contains(_query.toLowerCase());
 
@@ -274,7 +290,17 @@ class _CultesScreenState extends State<CultesScreen> {
                         '${culte.orateur != null ? ' · ${culte.orateur}' : ''}'
                         '${culte.theme != null ? ' · ${culte.theme}' : ''}',
                       ),
-                      trailing: const Icon(Icons.chevron_right),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            tooltip: 'Supprimer',
+                            onPressed: () => _deleteCulte(culte),
+                          ),
+                          const Icon(Icons.chevron_right),
+                        ],
+                      ),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => CulteDetailScreen(culte: culte),
@@ -421,7 +447,6 @@ class _CultesScreenState extends State<CultesScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Cultes'),
-          automaticallyImplyLeading: false,
           bottom: TabBar(
             onTap: (i) => setState(() {
               _tab = i;

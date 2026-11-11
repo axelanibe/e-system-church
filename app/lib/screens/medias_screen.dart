@@ -57,6 +57,22 @@ class _MediasScreenState extends State<MediasScreen> {
     });
   }
 
+  Future<void> _deleteLivre(Livre livre) async {
+    final confirmed = await confirmDelete(
+      context,
+      'Supprimer définitivement le livre « ${livre.titre} » ?',
+    );
+    if (!confirmed) return;
+    if (!mounted) return;
+    try {
+      await context.read<AppState>().api.deleteLivre(livre.id);
+      if (mounted) showSuccess(context, 'Livre supprimé.');
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
   bool _matches(String text) =>
       _query.isEmpty || text.toLowerCase().contains(_query.toLowerCase());
 
@@ -434,6 +450,11 @@ class _MediasScreenState extends State<MediasScreen> {
                                   '${l.categorie != null ? ' · ${l.categorie}' : ''}'
                                   ' · ${l.exemplaires} exemplaire(s)',
                                 ),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  tooltip: 'Supprimer',
+                                  onPressed: () => _deleteLivre(l),
+                                ),
                               )),
                         const SectionTitle(title: 'Prêts en cours'),
                         if (prets
@@ -497,7 +518,6 @@ class _MediasScreenState extends State<MediasScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Médias & bibliothèque'),
-          automaticallyImplyLeading: false,
           bottom: TabBar(
             onTap: (i) => setState(() {
               _tab = i;

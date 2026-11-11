@@ -226,7 +226,7 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                             textCapitalization: TextCapitalization.characters,
                             decoration: const InputDecoration(
                               labelText: 'Code de l’église d’arrivée',
-                              hintText: 'Ex. ESC-YOP001',
+                              hintText: 'Ex. GD-YOP',
                               border: OutlineInputBorder(),
                             ),
                           ),

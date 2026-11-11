@@ -101,6 +101,36 @@ export function registerContributionsRoutes(app: FastifyInstance, db: Pool) {
         );
         const totaux: Record<string, { total_fcfa: number; nombre: number }> = {};
         for (const t of totauxRows) totaux[t.type as string] = { total_fcfa: t.total_fcfa, nombre: t.nombre };
+        // « Dépenses confirmées » : contributions de type dépense + dépenses
+        // du module Budget & caisse (hors refusées, mêmes bornes de dates
+        // quand elles sont demandées). Sans ça, le tableau de bord affichait
+        // 0 alors que Budget & caisse contenait des dépenses. Pas de fusion
+        // quand on filtre par membre (les dépenses n'ont pas de membre).
+        if (!member_id && (!type || type === "depense")) {
+          const depValues: unknown[] = [req.session.churchId];
+          const depConditions = [`church_id = $1`, `statut <> 'refusee'`];
+          if (from) {
+            depValues.push(from);
+            depConditions.push(`date_depense >= $${depValues.length}::date`);
+          }
+          if (to) {
+            depValues.push(to);
+            depConditions.push(
+              `date_depense < ($${depValues.length}::date + interval '1 day')`,
+            );
+          }
+          const { rows: depRows } = await db.query(
+            `SELECT coalesce(sum(montant_fcfa), 0)::int AS total_fcfa,
+                    count(*)::int AS nombre
+               FROM depenses WHERE ${depConditions.join(" AND ")}`,
+            depValues,
+          );
+          const precedent = totaux["depense"] ?? { total_fcfa: 0, nombre: 0 };
+          totaux["depense"] = {
+            total_fcfa: precedent.total_fcfa + Number(depRows[0].total_fcfa),
+            nombre: precedent.nombre + Number(depRows[0].nombre),
+          };
+        }
         return reply.send({ contributions: rows, totaux });
       } catch (e) {
         return dbError(reply, e);

@@ -36,6 +36,171 @@ import 'mock_data.dart';
 class MockApiService implements ApiService {
   final DemoSeed _data = DemoSeed();
 
+  /// Église de chaque élément du seed ou créé en démo, par identifiant.
+  /// Tout le seed appartient à Plateau ; chaque création est rattachée à
+  /// l'église active au moment de sa création. Sert le filtre d'isolation :
+  /// une église ne voit que ses propres données (une nouvelle église voit
+  /// donc toutes ses listes vides).
+  final Map<String, String> _itemChurch = {};
+
+  MockApiService() {
+    _tagSeed();
+  }
+
+  void _tagSeed() {
+    void tag<T>(List<T> list, String Function(T) idOf) {
+      for (final item in list) {
+        _itemChurch[idOf(item)] = DemoIds.plateau;
+      }
+    }
+
+    tag(_data.cultes, (c) => c.id);
+    tag(_data.culteTypes, (t) => t.id);
+    tag(_data.ordreCulte, (o) => o.id);
+    tag(_data.evenements, (e) => e.id);
+    tag(_data.presences, (p) => p.id);
+    tag(_data.annonces, (a) => a.id);
+    tag(_data.familles, (f) => f.id);
+    tag(_data.departements, (d) => d.id);
+    tag(_data.cellules, (c) => c.id);
+    tag(_data.baptemes, (b) => b.id);
+    tag(_data.liens, (l) => l.id);
+    tag(_data.statuts, (s) => s.id);
+    tag(_data.postes, (p) => p.id);
+    tag(_data.budgets, (b) => b.id);
+    tag(_data.depenses, (d) => d.id);
+    tag(_data.caisseMouvements, (m) => m.id);
+    tag(_data.prieres, (p) => p.id);
+    tag(_data.messages, (m) => m.id);
+    tag(_data.parcours, (p) => p.id);
+    tag(_data.visites, (v) => v.id);
+    tag(_data.accompagnements, (a) => a.id);
+    tag(_data.serviteurs, (s) => s.id);
+    tag(_data.planning, (p) => p.id);
+    tag(_data.classesEnfants, (c) => c.id);
+    tag(_data.autorisations, (a) => a.id);
+    tag(_data.activitesJeunesse, (a) => a.id);
+    tag(_data.predications, (p) => p.id);
+    tag(_data.plansLecture, (p) => p.id);
+    tag(_data.livres, (l) => l.id);
+    tag(_data.pretsLivres, (p) => p.id);
+    tag(_data.salles, (s) => s.id);
+    tag(_data.reservationsSalles, (r) => r.id);
+    tag(_data.materiel, (m) => m.id);
+    tag(_data.maintenances, (m) => m.id);
+    tag(_data.roles, (r) => r.userId);
+    tag(_data.audit, (a) => a.id);
+    tag(_data.paiements, (p) => p.id);
+    tag(_data.demandesLiaison, (d) => d.id);
+    // Chaque antenne du réseau a ses propres copies des types de culte,
+    // sinon elle ne pourrait pas créer de culte.
+    for (final id in [
+      DemoIds.yopougon,
+      DemoIds.bouake,
+      DemoIds.yamoussoukro,
+      DemoIds.sanPedro,
+    ]) {
+      _dupliquerTypesCultes(id);
+    }
+  }
+
+  /// Copie les types de culte du seed pour une église (nouvelle église ou
+  /// antenne) : sans type, la création de culte serait impossible.
+  void _dupliquerTypesCultes(String churchId) {
+    for (final type in _data.culteTypes
+        .where((t) => _itemChurch[t.id] == DemoIds.plateau)
+        .toList()) {
+      final copie = CulteType(
+        id: _nextId('type'),
+        nom: type.nom,
+        heureDebut: type.heureDebut,
+        lieu: type.lieu,
+      );
+      _data.culteTypes.add(copie);
+      _tag(copie.id);
+      _tagPour(churchId, copie.id);
+    }
+  }
+
+  /// Rattache un élément créé à l'église active.
+  void _tag(String id) {
+    _itemChurch[id] = _churchId;
+  }
+
+  /// Rattache un élément créé à une église donnée (inscription, transfert).
+  void _tagPour(String churchId, String id) {
+    _itemChurch[id] = churchId;
+  }
+
+  /// Éléments visibles pour une église donnée. Un élément sans rattachement
+  /// (oubli) n'est visible que depuis Plateau, l'église du seed — jamais
+  /// depuis une autre église (isolation stricte).
+  List<T> _visiblePour<T>(
+      List<T> list, String Function(T) idOf, String churchId) {
+    return list
+        .where((e) =>
+            _itemChurch[idOf(e)] == churchId ||
+            (_itemChurch[idOf(e)] == null && churchId == DemoIds.plateau))
+        .toList();
+  }
+
+  /// Éléments visibles pour l'église active.
+  List<T> _visible<T>(List<T> list, String Function(T) idOf) =>
+      _visiblePour(list, idOf, _churchId);
+
+  /// Dépenses du module Budget & caisse d'une église, hors refusées,
+  /// éventuellement sur une période [debut, fin[ (dates « AAAA-MM-JJ »).
+  int _depensesBudget(String churchId, {String? debut, String? fin}) {
+    return _visiblePour(_data.depenses, (d) => d.id, churchId)
+        .where((d) =>
+            d.statut != 'refusee' &&
+            (debut == null ||
+                (d.dateDepense != null &&
+                    d.dateDepense!.compareTo(debut) >= 0)) &&
+            (fin == null ||
+                (d.dateDepense != null && d.dateDepense!.compareTo(fin) < 0)))
+        .fold<int>(0, (s, d) => s + d.montantFcfa);
+  }
+
+  /// Nombre de dépenses du module Budget & caisse (même périmètre).
+  int _nombreDepensesBudget(String churchId, {String? debut, String? fin}) {
+    return _visiblePour(_data.depenses, (d) => d.id, churchId)
+        .where((d) =>
+            d.statut != 'refusee' &&
+            (debut == null ||
+                (d.dateDepense != null &&
+                    d.dateDepense!.compareTo(debut) >= 0)) &&
+            (fin == null ||
+                (d.dateDepense != null && d.dateDepense!.compareTo(fin) < 0)))
+        .length;
+  }
+
+  /// « Dépenses confirmées » : contributions de type dépense + dépenses du
+  /// module Budget & caisse (hors refusées). Sans ça, le tableau de bord
+  /// affichait 0 alors que Budget & caisse contenait des dépenses.
+  int _depensesConfirmees(String churchId, {String? debut, String? fin}) {
+    final contributions = _confirmedOf(churchId)
+        .where((c) => c.type == 'depense')
+        .where((c) =>
+            debut == null ||
+            (c.createdAt != null &&
+                c.createdAt!
+                        .toIso8601String()
+                        .substring(0, 10)
+                        .compareTo(debut) >=
+                    0))
+        .where((c) =>
+            fin == null ||
+            (c.createdAt != null &&
+                c.createdAt!
+                        .toIso8601String()
+                        .substring(0, 10)
+                        .compareTo(fin) <
+                    0))
+        .fold<int>(0, (s, c) => s + c.amountFcfa);
+    return contributions + _depensesBudget(churchId, debut: debut, fin: fin);
+  }
+
   String _churchId = DemoIds.plateau;
   AppUser? _user;
   String? _role;
@@ -131,7 +296,8 @@ class MockApiService implements ApiService {
     );
   }
 
-  Map<String, ContributionTotals> _totaux(List<Contribution> list) {
+  Map<String, ContributionTotals> _totaux(List<Contribution> list,
+      {int depensesBudget = 0, int nombreDepensesBudget = 0}) {
     final map = <String, ContributionTotals>{};
     for (final c in list) {
       if (c.status != 'confirme') continue;
@@ -141,7 +307,91 @@ class MockApiService implements ApiService {
         nombre: (precedent?.nombre ?? 0) + 1,
       );
     }
+    // Les dépenses du module Budget & caisse comptent dans « Dépenses
+    // confirmées », sinon le tableau de bord affichait 0 alors que Budget &
+    // caisse contenait des dépenses.
+    if (depensesBudget > 0 || nombreDepensesBudget > 0) {
+      final precedent = map['depense'];
+      map['depense'] = ContributionTotals(
+        totalFcfa: (precedent?.totalFcfa ?? 0) + depensesBudget,
+        nombre: (precedent?.nombre ?? 0) + nombreDepensesBudget,
+      );
+    }
     return map;
+  }
+
+  /// Bornes [debut, fin[ et libellé d'une période (mois, trimestre, année),
+  /// ancrée sur le mois « AAAA-MM » (mois courant par défaut).
+  ({String debut, String fin, String label}) _bornesPeriode(
+      String periode, String moisAncre) {
+    final annee = int.parse(moisAncre.substring(0, 4));
+    final mois = int.parse(moisAncre.substring(5, 7));
+    const noms = [
+      'janvier',
+      'février',
+      'mars',
+      'avril',
+      'mai',
+      'juin',
+      'juillet',
+      'août',
+      'septembre',
+      'octobre',
+      'novembre',
+      'décembre'
+    ];
+    String iso(int a, int m) => '$a-${m.toString().padLeft(2, '0')}-01';
+    if (periode == 'annee') {
+      return (
+        debut: iso(annee, 1),
+        fin: iso(annee + 1, 1),
+        label: 'Année $annee'
+      );
+    }
+    if (periode == 'trimestre') {
+      final trimestre = (mois - 1) ~/ 3 + 1;
+      final debutMois = (trimestre - 1) * 3 + 1;
+      final finMois = debutMois + 3;
+      final finA = finMois > 12 ? annee + 1 : annee;
+      final finM = finMois > 12 ? finMois - 12 : finMois;
+      return (
+        debut: iso(annee, debutMois),
+        fin: iso(finA, finM),
+        label: '$trimestre${trimestre == 1 ? 'er' : 'e'} trimestre $annee'
+      );
+    }
+    final finMois = mois + 1;
+    final finA = finMois > 12 ? annee + 1 : annee;
+    final finM = finMois > 12 ? 1 : finMois;
+    final nom = noms[mois - 1];
+    return (
+      debut: iso(annee, mois),
+      fin: iso(finA, finM),
+      label: '${nom[0].toUpperCase()}${nom.substring(1)} $annee'
+    );
+  }
+
+  /// Vrai si [date] tombe dans [debut, fin[ (dates « AAAA-MM-JJ »).
+  bool _dansPeriode(DateTime? date, String debut, String fin) {
+    if (date == null) return false;
+    final jour = date.toIso8601String().substring(0, 10);
+    return jour.compareTo(debut) >= 0 && jour.compareTo(fin) < 0;
+  }
+
+  /// Memberships de l'admin démo sur tout le réseau (mère + antennes).
+  List<Membership> _reseauMemberships(String role) {
+    return [
+      DemoIds.plateau,
+      DemoIds.yopougon,
+      DemoIds.bouake,
+      DemoIds.yamoussoukro,
+      DemoIds.sanPedro,
+    ]
+        .map((id) => Membership(
+              church: _withRole(_data.churchById(id)!, role),
+              role: role,
+            ))
+        .toList();
   }
 
   // -- Authentification -----------------------------------------------------
@@ -159,8 +409,25 @@ class MockApiService implements ApiService {
         phone: '+225 07 47 00 01',
       );
       final church = _data.plateau;
-      _eglises = [Membership(church: _withRole(church, 'admin_eglise'), role: 'admin_eglise')];
+      // L'admin démo administre tout le réseau : le sélecteur « Mes églises »
+      // permet de basculer vers chaque antenne (et donc de décider un
+      // transfert côté arrivée, ce qui était impossible avant).
+      _eglises = _reseauMemberships('admin_eglise');
       final result = _buildAuth(user, church, 'admin_eglise');
+      _applyAuth(result);
+      return result;
+    }
+    if (mail == DemoAccounts.plateformeEmail &&
+        password == _adminPassword) {
+      const user = AppUser(
+        id: 'demo-user-plateforme',
+        fullName: 'Plateforme e-System Church',
+        email: DemoAccounts.plateformeEmail,
+        phone: '+225 07 47 00 02',
+      );
+      final church = _data.plateau;
+      _eglises = _reseauMemberships('super_admin');
+      final result = _buildAuth(user, church, 'super_admin');
       _applyAuth(result);
       return result;
     }
@@ -224,6 +491,19 @@ class MockApiService implements ApiService {
     _data.churches.add(eglise);
     _data.membersByChurch[eglise.id] = [];
     _data.contributionsByChurch[eglise.id] = [];
+    // Une nouvelle église démarre avec des types de culte par défaut et des
+    // paramètres vides à son nom — sinon elle ne pourrait pas créer de culte
+    // et verrait les paramètres de Plateau.
+    _dupliquerTypesCultes(eglise.id);
+    _data.parametresByChurch[eglise.id] = EgliseParametres(
+      egliseNom: churchName,
+      egliseCode: code,
+      ville: city,
+      telephone: churchPhone,
+      email: churchEmail,
+      devise: 'FCFA',
+      fuseauHoraire: 'Africa/Abidjan',
+    );
     final user = AppUser(
       id: _nextId('user'),
       fullName: adminName,
@@ -353,6 +633,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.demandesLiaison.add(demande);
+    _tag(demande.id);
     return const FideleInscriptionResult(
       lie: false,
       message:
@@ -378,8 +659,8 @@ class MockApiService implements ApiService {
   Future<List<DemandeLiaison>> getDemandesLiaison() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.demandesLiaison
-        .where((d) => d.status == 'en_attente'));
+    return List.unmodifiable(_visible(_data.demandesLiaison
+        .where((d) => d.status == 'en_attente').toList(), (e) => e.id));
   }
 
   @override
@@ -396,22 +677,22 @@ class MockApiService implements ApiService {
   Future<List<Announcement>> getMesAnnonces() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.annonces);
+    return List.unmodifiable(_visible(_data.annonces, (e) => e.id));
   }
 
   @override
   Future<List<Culte>> getMesCultes() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.cultes);
+    return List.unmodifiable(_visible(_data.cultes, (e) => e.id));
   }
 
   @override
   Future<List<Presence>> getMesPresences() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.presences
-        .where((p) => p.memberId == 'demo-m-001'));
+    return List.unmodifiable(_visible(_data.presences
+        .where((p) => p.memberId == 'demo-m-001').toList(), (e) => e.id));
   }
 
   @override
@@ -466,10 +747,23 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     return TreeResult(
-      arbre: _nodeOf(_data.plateau),
-      demandesRattachement: List.unmodifiable(_data.rattachementsRecus
-          .where((r) => r.status == 'en_attente')),
+      arbre: _nodeOf(_racine()),
+      demandesRattachement: List.unmodifiable(_visible(_data.rattachementsRecus
+          .where((r) => r.status == 'en_attente').toList(), (e) => e.id)),
     );
+  }
+
+  /// Racine du réseau de l'église active (on remonte les mères). Avant, la
+  /// racine était toujours Plateau : une nouvelle église voyait tout le
+  /// réseau Grâce Divine dans son arborescence.
+  Church _racine() {
+    var eglise = _church;
+    while (eglise.parentChurchId != null) {
+      final parent = _data.churchById(eglise.parentChurchId!);
+      if (parent == null) break;
+      eglise = parent;
+    }
+    return eglise;
   }
 
   @override
@@ -505,6 +799,16 @@ class MockApiService implements ApiService {
     _data.churches.add(eglise);
     _data.membersByChurch[eglise.id] = [];
     _data.contributionsByChurch[eglise.id] = [];
+    _dupliquerTypesCultes(eglise.id);
+    _data.parametresByChurch[eglise.id] = EgliseParametres(
+      egliseNom: name,
+      egliseCode: code,
+      ville: city,
+      telephone: phone,
+      email: email,
+      devise: 'FCFA',
+      fuseauHoraire: 'Africa/Abidjan',
+    );
     return eglise;
   }
 
@@ -515,8 +819,8 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     return RattachementsResult(
-      recues: List.unmodifiable(_data.rattachementsRecus),
-      emises: List.unmodifiable(_data.rattachementsEmis),
+      recues: List.unmodifiable(_visible(_data.rattachementsRecus, (e) => e.id)),
+      emises: List.unmodifiable(_visible(_data.rattachementsEmis, (e) => e.id)),
     );
   }
 
@@ -538,6 +842,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.rattachementsEmis.add(demande);
+    _tag(demande.id);
     return demande;
   }
 
@@ -589,7 +894,12 @@ class MockApiService implements ApiService {
           .where((t) =>
               t.egliseArriveeId == _churchId && !t.estDepartDe(_churchId))
           .toList(),
-      historique: list.where((t) => t.status != 'en_attente').toList(),
+      historique: list
+          .where((t) =>
+              t.status != 'en_attente' &&
+              (t.estDepartDe(_churchId) ||
+                  t.egliseArriveeId == _churchId))
+          .toList(),
     );
   }
 
@@ -635,6 +945,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.transferts.add(transfert);
+    _tag(transfert.id);
     return transfert;
   }
 
@@ -825,13 +1136,53 @@ class MockApiService implements ApiService {
     return membre;
   }
 
+  @override
+  Future<Member> updateMember(String id,
+      {required String fullName,
+      String? phone,
+      String? email,
+      String? birthDate,
+      String? department,
+      String? cellGroup,
+      String? status}) async {
+    await _latence();
+    _requireAuth();
+    final list = _data.membersOf(_churchId);
+    final index = list.indexWhere((m) => m.id == id);
+    if (index == -1) {
+      throw const ApiException('Membre introuvable (démo).');
+    }
+    final ancien = list[index];
+    final maj = Member(
+      id: ancien.id,
+      matricule: ancien.matricule,
+      fullName: fullName,
+      phone: phone,
+      email: email,
+      birthDate: birthDate,
+      department: department,
+      cellGroup: cellGroup,
+      status: status ?? ancien.status,
+      createdAt: ancien.createdAt,
+    );
+    list[index] = maj;
+    return maj;
+  }
+
+  @override
+  Future<void> deleteMember(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.membersOf(_churchId).removeWhere((m) => m.id == id);
+  }
+
   // -- Membres (complément) --------------------------------------------------
 
   @override
   Future<List<Famille>> getFamilles() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.familles);
+    return List.unmodifiable(_visible(_data.familles, (e) => e.id));
   }
 
   @override
@@ -852,6 +1203,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.familles.add(famille);
+    _tag(famille.id);
     return famille;
   }
 
@@ -866,8 +1218,9 @@ class MockApiService implements ApiService {
   Future<List<MembreStatut>> getMembreStatuts(String memberId) async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(
-        _data.statuts.where((s) => s.memberId == memberId));
+    return List.unmodifiable(_visible(
+        _data.statuts.where((s) => s.memberId == memberId).toList(),
+        (e) => e.id));
   }
 
   @override
@@ -886,6 +1239,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.statuts.add(entree);
+    _tag(entree.id);
     // Le statut « membre » de l'historique correspond à « actif » ici.
     final nouveauStatut =
         statut == 'membre' ? 'actif' : statut;
@@ -913,6 +1267,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.baptemes;
+    list = _visible(list, (e) => e.id);
     if (memberId != null) {
       list = list.where((b) => b.memberId == memberId).toList();
     }
@@ -942,6 +1297,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.baptemes.add(bapteme);
+    _tag(bapteme.id);
     return bapteme;
   }
 
@@ -951,6 +1307,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.liens;
+    list = _visible(list, (e) => e.id);
     if (enfantMemberId != null) {
       list = list.where((l) => l.enfantMemberId == enfantMemberId).toList();
     }
@@ -977,6 +1334,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.liens.add(item);
+    _tag(item.id);
     return item;
   }
 
@@ -984,7 +1342,7 @@ class MockApiService implements ApiService {
   Future<List<Departement>> getDepartements() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.departements);
+    return List.unmodifiable(_visible(_data.departements, (e) => e.id));
   }
 
   @override
@@ -1003,14 +1361,23 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.departements.add(departement);
+    _tag(departement.id);
     return departement;
+  }
+
+  @override
+  Future<void> deleteDepartement(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.departements.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
   }
 
   @override
   Future<List<Cellule>> getCellules() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.cellules);
+    return List.unmodifiable(_visible(_data.cellules, (e) => e.id));
   }
 
   @override
@@ -1033,7 +1400,16 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.cellules.add(cellule);
+    _tag(cellule.id);
     return cellule;
+  }
+
+  @override
+  Future<void> deleteCellule(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.cellules.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
   }
 
   Map<String, dynamic> _memberJson(Member m) => {
@@ -1132,7 +1508,7 @@ class MockApiService implements ApiService {
   Future<List<CulteType>> getCulteTypes() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.culteTypes);
+    return List.unmodifiable(_visible(_data.culteTypes, (e) => e.id));
   }
 
   @override
@@ -1155,6 +1531,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.culteTypes.add(type);
+    _tag(type.id);
     return type;
   }
 
@@ -1162,7 +1539,7 @@ class MockApiService implements ApiService {
   Future<List<Culte>> getCultes() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.cultes);
+    return List.unmodifiable(_visible(_data.cultes, (e) => e.id));
   }
 
   @override
@@ -1187,15 +1564,25 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.cultes.add(culte);
+    _tag(culte.id);
     return culte;
+  }
+
+  @override
+  Future<void> deleteCulte(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.cultes.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
   }
 
   @override
   Future<List<OrdreCulteItem>> getOrdreCulte(String culteId) async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(
-        _data.ordreCulte.where((o) => o.culteId == culteId));
+    return List.unmodifiable(_visible(
+        _data.ordreCulte.where((o) => o.culteId == culteId).toList(),
+        (e) => e.id));
   }
 
   @override
@@ -1220,6 +1607,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.ordreCulte.add(item);
+    _tag(item.id);
     return item;
   }
 
@@ -1228,6 +1616,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.evenements;
+    list = _visible(list, (e) => e.id);
     if (type != null && type.isNotEmpty) {
       list = list.where((e) => e.type == type).toList();
     }
@@ -1258,6 +1647,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.evenements.add(evenement);
+    _tag(evenement.id);
     return evenement;
   }
 
@@ -1269,6 +1659,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.presences;
+    list = _visible(list, (e) => e.id);
     if (culteId != null) {
       list = list.where((p) => p.culteId == culteId).toList();
     }
@@ -1321,6 +1712,7 @@ class MockApiService implements ApiService {
       _data.presences[existant] = presence;
     } else {
       _data.presences.add(presence);
+      _tag(presence.id);
     }
     return presence;
   }
@@ -1374,6 +1766,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.postes;
+    list = _visible(list, (e) => e.id);
     if (categorie != null && categorie.isNotEmpty) {
       list = list.where((p) => p.categorie == categorie).toList();
     }
@@ -1396,7 +1789,16 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.postes.add(poste);
+    _tag(poste.id);
     return poste;
+  }
+
+  @override
+  Future<void> deletePosteBudgetaire(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.postes.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
   }
 
   @override
@@ -1404,6 +1806,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.budgets;
+    list = _visible(list, (e) => e.id);
     if (annee != null) {
       list = list.where((b) => b.annee == annee).toList();
     }
@@ -1426,7 +1829,16 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.budgets.add(budget);
+    _tag(budget.id);
     return budget;
+  }
+
+  @override
+  Future<void> deleteBudget(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.budgets.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
   }
 
   @override
@@ -1434,6 +1846,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.depenses;
+    list = _visible(list, (e) => e.id);
     if (statut != null && statut.isNotEmpty) {
       list = list.where((d) => d.statut == statut).toList();
     }
@@ -1461,7 +1874,16 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.depenses.add(depense);
+    _tag(depense.id);
     return depense;
+  }
+
+  @override
+  Future<void> deleteDepense(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.depenses.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
   }
 
   @override
@@ -1490,6 +1912,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.caisseMouvements;
+    list = _visible(list, (e) => e.id);
     if (type != null && type.isNotEmpty) {
       list = list.where((m) => m.type == type).toList();
     }
@@ -1514,6 +1937,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.caisseMouvements.add(mouvement);
+    _tag(mouvement.id);
     return mouvement;
   }
 
@@ -1542,20 +1966,34 @@ class MockApiService implements ApiService {
   Future<RapportFinancier> getRapportFinancier({int? annee}) async {
     await _latence();
     _requireAuth();
-    final parMois = <Map<String, dynamic>>[
-      {
-        'mois': '2026-11',
-        'entrees': _confirmedOf(_churchId)
+    // Avant, un seul mois en dur ('2026-11') et des dépenses globales (toutes
+    // églises) : désormais un mois par ligne pour l'année demandée, filtré
+    // par l'église active.
+    final anneeDemandee = annee ?? DateTime.now().year;
+    final parMois = <Map<String, dynamic>>[];
+    for (var m = 1; m <= 12; m++) {
+      final debut =
+          '$anneeDemandee-${m.toString().padLeft(2, '0')}-01';
+      final finMois = m + 1;
+      final finA = finMois > 12 ? anneeDemandee + 1 : anneeDemandee;
+      final finM = finMois > 12 ? 1 : finMois;
+      final fin = '$finA-${finM.toString().padLeft(2, '0')}-01';
+      final contributionsMois = _confirmedOf(_churchId)
+          .where((c) => _dansPeriode(c.createdAt, debut, fin))
+          .toList();
+      parMois.add({
+        'mois':
+            '$anneeDemandee-${m.toString().padLeft(2, '0')}',
+        'entrees': contributionsMois
             .where((c) => c.type != 'depense')
             .fold<int>(0, (s, c) => s + c.amountFcfa),
-        'depenses': _data.depenses
-            .fold<int>(0, (s, d) => s + d.montantFcfa),
-      },
-    ];
-    final parPoste = _data.postes
+        'depenses': _depensesConfirmees(_churchId, debut: debut, fin: fin),
+      });
+    }
+    final parPoste = _visible(_data.postes, (p) => p.id)
         .map((p) => {
               'poste': p.nom,
-              'montant': _data.depenses
+              'montant': _visible(_data.depenses, (d) => d.id)
                   .where((d) => d.posteId == p.id)
                   .fold<int>(0, (s, d) => s + d.montantFcfa),
             })
@@ -1589,7 +2027,9 @@ class MockApiService implements ApiService {
     }
     return ContributionPage(
       contributions: List.unmodifiable(list),
-      totaux: _totaux(_data.contributionsOf(_churchId)),
+      totaux: _totaux(_data.contributionsOf(_churchId),
+          depensesBudget: _depensesBudget(_churchId),
+          nombreDepensesBudget: _nombreDepensesBudget(_churchId)),
     );
   }
 
@@ -1672,6 +2112,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.prieres;
+    list = _visible(list, (e) => e.id);
     if (statut != null && statut.isNotEmpty) {
       list = list.where((p) => p.statut == statut).toList();
     }
@@ -1699,7 +2140,16 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.prieres.add(demande);
+    _tag(demande.id);
     return demande;
+  }
+
+  @override
+  Future<void> deleteDemandePriere(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.prieres.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
   }
 
   @override
@@ -1727,7 +2177,7 @@ class MockApiService implements ApiService {
   Future<List<MessageInterne>> getMessagesInternes() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.messages);
+    return List.unmodifiable(_visible(_data.messages, (e) => e.id));
   }
 
   @override
@@ -1748,6 +2198,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.messages.add(message);
+    _tag(message.id);
     return message;
   }
 
@@ -1758,6 +2209,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.parcours;
+    list = _visible(list, (e) => e.id);
     if (etape != null && etape.isNotEmpty) {
       list = list.where((p) => p.etape == etape).toList();
     }
@@ -1780,6 +2232,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.parcours.add(parcours);
+    _tag(parcours.id);
     return parcours;
   }
 
@@ -1807,6 +2260,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.visites;
+    list = _visible(list, (e) => e.id);
     if (statut != null && statut.isNotEmpty) {
       list = list.where((v) => v.statut == statut).toList();
     }
@@ -1832,6 +2286,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.visites.add(visite);
+    _tag(visite.id);
     return visite;
   }
 
@@ -1841,6 +2296,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.accompagnements;
+    list = _visible(list, (e) => e.id);
     if (type != null && type.isNotEmpty) {
       list = list.where((a) => a.type == type).toList();
     }
@@ -1867,6 +2323,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.accompagnements.add(accompagnement);
+    _tag(accompagnement.id);
     return accompagnement;
   }
 
@@ -1877,6 +2334,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.serviteurs;
+    list = _visible(list, (e) => e.id);
     if (departementId != null && departementId.isNotEmpty) {
       list = list.where((s) => s.departementId == departementId).toList();
     }
@@ -1901,14 +2359,23 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.serviteurs.add(serviteur);
+    _tag(serviteur.id);
     return serviteur;
+  }
+
+  @override
+  Future<void> deleteServiteur(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.serviteurs.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
   }
 
   @override
   Future<List<PlanningServiteur>> getPlanningServiteurs() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.planning);
+    return List.unmodifiable(_visible(_data.planning, (e) => e.id));
   }
 
   @override
@@ -1930,6 +2397,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.planning.add(item);
+    _tag(item.id);
     return item;
   }
 
@@ -1939,7 +2407,7 @@ class MockApiService implements ApiService {
   Future<List<ClasseEnfant>> getClassesEnfants() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.classesEnfants);
+    return List.unmodifiable(_visible(_data.classesEnfants, (e) => e.id));
   }
 
   @override
@@ -1960,7 +2428,16 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.classesEnfants.add(classe);
+    _tag(classe.id);
     return classe;
+  }
+
+  @override
+  Future<void> deleteClasseEnfant(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.classesEnfants.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
   }
 
   @override
@@ -1969,6 +2446,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.autorisations;
+    list = _visible(list, (e) => e.id);
     if (statut != null && statut.isNotEmpty) {
       list = list.where((a) => a.statut == statut).toList();
     }
@@ -1994,6 +2472,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.autorisations.add(autorisation);
+    _tag(autorisation.id);
     return autorisation;
   }
 
@@ -2022,7 +2501,7 @@ class MockApiService implements ApiService {
   Future<List<ActiviteJeunesse>> getActivitesJeunesse() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.activitesJeunesse);
+    return List.unmodifiable(_visible(_data.activitesJeunesse, (e) => e.id));
   }
 
   @override
@@ -2045,6 +2524,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.activitesJeunesse.add(activite);
+    _tag(activite.id);
     return activite;
   }
 
@@ -2054,7 +2534,7 @@ class MockApiService implements ApiService {
   Future<List<Predication>> getPredications() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.predications);
+    return List.unmodifiable(_visible(_data.predications, (e) => e.id));
   }
 
   @override
@@ -2079,6 +2559,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.predications.add(predication);
+    _tag(predication.id);
     return predication;
   }
 
@@ -2086,7 +2567,7 @@ class MockApiService implements ApiService {
   Future<List<PlanLecture>> getPlansLecture() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.plansLecture);
+    return List.unmodifiable(_visible(_data.plansLecture, (e) => e.id));
   }
 
   @override
@@ -2105,6 +2586,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.plansLecture.add(plan);
+    _tag(plan.id);
     return plan;
   }
 
@@ -2112,7 +2594,7 @@ class MockApiService implements ApiService {
   Future<List<Livre>> getLivres() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.livres);
+    return List.unmodifiable(_visible(_data.livres, (e) => e.id));
   }
 
   @override
@@ -2133,7 +2615,16 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.livres.add(livre);
+    _tag(livre.id);
     return livre;
+  }
+
+  @override
+  Future<void> deleteLivre(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.livres.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
   }
 
   @override
@@ -2141,6 +2632,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.pretsLivres;
+    list = _visible(list, (e) => e.id);
     if (statut != null && statut.isNotEmpty) {
       list = list.where((p) => p.statut == statut).toList();
     }
@@ -2165,6 +2657,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.pretsLivres.add(pret);
+    _tag(pret.id);
     return pret;
   }
 
@@ -2195,7 +2688,7 @@ class MockApiService implements ApiService {
   Future<List<Salle>> getSalles() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.salles);
+    return List.unmodifiable(_visible(_data.salles, (e) => e.id));
   }
 
   @override
@@ -2214,7 +2707,16 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.salles.add(salle);
+    _tag(salle.id);
     return salle;
+  }
+
+  @override
+  Future<void> deleteSalle(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.salles.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
   }
 
   @override
@@ -2222,6 +2724,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.reservationsSalles;
+    list = _visible(list, (e) => e.id);
     if (salleId != null && salleId.isNotEmpty) {
       list = list.where((r) => r.salleId == salleId).toList();
     }
@@ -2249,6 +2752,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.reservationsSalles.add(reservation);
+    _tag(reservation.id);
     return reservation;
   }
 
@@ -2257,6 +2761,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.materiel;
+    list = _visible(list, (e) => e.id);
     if (etat != null && etat.isNotEmpty) {
       list = list.where((m) => m.etat == etat).toList();
     }
@@ -2283,6 +2788,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.materiel.add(item);
+    _tag(item.id);
     return item;
   }
 
@@ -2292,6 +2798,7 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     var list = _data.maintenances;
+    list = _visible(list, (e) => e.id);
     if (materielId != null && materielId.isNotEmpty) {
       list = list.where((m) => m.materielId == materielId).toList();
     }
@@ -2318,6 +2825,7 @@ class MockApiService implements ApiService {
       createdAt: DateTime.now(),
     );
     _data.maintenances.add(maintenance);
+    _tag(maintenance.id);
     return maintenance;
   }
 
@@ -2327,11 +2835,22 @@ class MockApiService implements ApiService {
   Future<StatsGlobales> getStatsGlobales() async {
     await _latence();
     _requireAuth();
+    // Avant, les compteurs « ce mois-ci » étaient des totaux permanents
+    // sans filtre de date, toutes églises confondues : désormais le mois
+    // courant, pour l'église active uniquement.
+    final maintenant = DateTime.now();
+    final moisAncre =
+        '${maintenant.year}-${maintenant.month.toString().padLeft(2, '0')}';
+    final bornes = _bornesPeriode('mois', moisAncre);
+    final debut = bornes.debut;
+    final fin = bornes.fin;
     final membres = _data.membersOf(_churchId);
     final recettes = _confirmedOf(_churchId)
-        .where((c) => c.type != 'depense')
+        .where((c) =>
+            c.type != 'depense' && _dansPeriode(c.createdAt, debut, fin))
         .fold<int>(0, (s, c) => s + c.amountFcfa);
-    final depenses = _data.depenses.fold<int>(0, (s, d) => s + d.montantFcfa);
+    final depenses =
+        _depensesConfirmees(_churchId, debut: debut, fin: fin);
     final reseau = _data.churches
         .where((e) => e.parentChurchId == _churchId)
         .map((e) => RapportSousEglise(
@@ -2347,9 +2866,20 @@ class MockApiService implements ApiService {
       membresActifs: membres.where((m) => m.status != 'inactif').length,
       nouveauxConvertis:
           membres.where((m) => m.status == 'nouveau_converti').length,
-      baptemes: _data.baptemes.length,
-      cultesMois: _data.cultes.length,
-      presencesMois: _data.presences.length,
+      baptemes: _visible(_data.baptemes, (b) => b.id)
+          .where((b) =>
+              b.dateBapteme.compareTo(debut) >= 0 &&
+              b.dateBapteme.compareTo(fin) < 0)
+          .length,
+      cultesMois: _visible(_data.cultes, (c) => c.id)
+          .where((c) =>
+              _dansPeriode(DateTime.tryParse(c.dateHeure), debut, fin))
+          .length,
+      presencesMois: _visible(_data.presences, (p) => p.id)
+          .where((p) =>
+              p.statut == 'present' &&
+              _dansPeriode(p.pointeAt, debut, fin))
+          .length,
       recettesMoisFcfa: recettes,
       depensesMoisFcfa: depenses,
       reseau: reseau,
@@ -2385,8 +2915,18 @@ class MockApiService implements ApiService {
   Future<EgliseParametres> getParametres() async {
     await _latence();
     _requireAuth();
-    return _data.parametres;
+    return _data.parametresByChurch.putIfAbsent(
+        _churchId, () => _defaultParametres());
   }
+
+  /// Paramètres vides à son nom pour une église sans paramètres.
+  EgliseParametres _defaultParametres() => EgliseParametres(
+        egliseNom: _church.name,
+        egliseCode: _church.code,
+        ville: _church.city,
+        devise: _church.devise,
+        fuseauHoraire: _church.fuseauHoraire,
+      );
 
   @override
   Future<EgliseParametres> saveParametres({
@@ -2403,8 +2943,9 @@ class MockApiService implements ApiService {
   }) async {
     await _latence();
     _requireAuth();
-    final p = _data.parametres;
-    _data.parametres = EgliseParametres(
+    final p = _data.parametresByChurch.putIfAbsent(
+        _churchId, () => _defaultParametres());
+    final maj = EgliseParametres(
       adresse: adresse ?? p.adresse,
       ville: ville ?? p.ville,
       telephone: telephone ?? p.telephone,
@@ -2418,14 +2959,15 @@ class MockApiService implements ApiService {
       egliseNom: p.egliseNom,
       egliseCode: p.egliseCode,
     );
-    return _data.parametres;
+    _data.parametresByChurch[_churchId] = maj;
+    return maj;
   }
 
   @override
   Future<List<RoleEglise>> getRoles() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.roles);
+    return List.unmodifiable(_visible(_data.roles, (e) => e.userId));
   }
 
   @override
@@ -2449,7 +2991,7 @@ class MockApiService implements ApiService {
   Future<List<AuditEntree>> getAudit() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.audit);
+    return List.unmodifiable(_visible(_data.audit, (e) => e.id));
   }
 
   // -- Présentation et identité ----------------------------------------------------
@@ -2527,7 +3069,8 @@ class MockApiService implements ApiService {
     if (eglise == null) throw const ApiException('Église introuvable (démo).');
     _churchId = churchId;
     // En démo, l'admin de démonstration gère toutes les églises du réseau.
-    _role = 'admin_eglise';
+    // Le compte plateforme garde son rôle super_admin en changeant d'église.
+    if (_role != 'super_admin') _role = 'admin_eglise';
   }
 
   // -- Paiements --------------------------------------------------------------------
@@ -2622,7 +3165,7 @@ class MockApiService implements ApiService {
   Future<List<EglisePaiement>> getMesPaiements(String churchId) async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.paiements);
+    return List.unmodifiable(_visible(_data.paiements, (e) => e.id));
   }
 
   @override
@@ -2664,6 +3207,7 @@ class MockApiService implements ApiService {
       _data.paiements[existant] = config;
     } else {
       _data.paiements.add(config);
+      _tag(config.id);
     }
     return config;
   }
@@ -2783,6 +3327,12 @@ class MockApiService implements ApiService {
       throw const ApiException(
           'Rapport consolidé réservé à l’église mère (démo).');
     }
+    final maintenant = DateTime.now();
+    final moisAncre = mois ??
+        '${maintenant.year}-${maintenant.month.toString().padLeft(2, '0')}';
+    final bornes = _bornesPeriode(periode, moisAncre);
+    final debut = bornes.debut;
+    final fin = bornes.fin;
     final branches = <RapportDetailBranche>[];
     final eglises = [_church, ..._data.churches.where((e) => e.parentChurchId == _churchId)];
     var entrees = 0;
@@ -2791,14 +3341,23 @@ class MockApiService implements ApiService {
     final totaux = <String, ContributionTotals>{};
     for (var niveau = 0; niveau < eglises.length; niveau++) {
       final eglise = eglises[niveau];
-      final contributions = _confirmedOf(eglise.id);
-      final totauxBranche = _totaux(contributions);
+      final contributions = _confirmedOf(eglise.id)
+          .where((c) => _dansPeriode(c.createdAt, debut, fin))
+          .toList();
+      final depensesBudget =
+          _depensesBudget(eglise.id, debut: debut, fin: fin);
+      final nombreDepensesBudget =
+          _nombreDepensesBudget(eglise.id, debut: debut, fin: fin);
+      final totauxBranche = _totaux(contributions,
+          depensesBudget: depensesBudget,
+          nombreDepensesBudget: nombreDepensesBudget);
       final entreesBranche = contributions
           .where((c) => c.type != 'depense')
           .fold<int>(0, (s, c) => s + c.amountFcfa);
       final depensesBranche = contributions
-          .where((c) => c.type == 'depense')
-          .fold<int>(0, (s, c) => s + c.amountFcfa);
+              .where((c) => c.type == 'depense')
+              .fold<int>(0, (s, c) => s + c.amountFcfa) +
+          depensesBudget;
       entrees += entreesBranche;
       depenses += depensesBranche;
       membres += _chiffres(eglise.id).membresActifs;
@@ -2825,11 +3384,11 @@ class MockApiService implements ApiService {
     }
     return RapportDetailConsolide(
       eglise: _church,
-      periode: const RapportDetailPeriode(
-        type: 'mois',
-        debut: '2026-11-01',
-        fin: '2026-12-01',
-        label: 'Novembre 2026',
+      periode: RapportDetailPeriode(
+        type: periode,
+        debut: debut,
+        fin: fin,
+        label: bornes.label,
       ),
       branches: branches,
       totaux: totaux,
@@ -2844,7 +3403,7 @@ class MockApiService implements ApiService {
   Future<List<Announcement>> getAnnonces() async {
     await _latence();
     _requireAuth();
-    return List.unmodifiable(_data.annonces);
+    return List.unmodifiable(_visible(_data.annonces, (e) => e.id));
   }
 
   @override
@@ -2865,7 +3424,16 @@ class MockApiService implements ApiService {
       egliseNom: _church.name,
     );
     _data.annonces.add(annonce);
+    _tag(annonce.id);
     return annonce;
+  }
+
+  @override
+  Future<void> deleteAnnonce(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.annonces.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
   }
 
   // -- Plateforme --------------------------------------------------------------------

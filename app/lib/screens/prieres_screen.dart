@@ -52,6 +52,22 @@ class _PrieresScreenState extends State<PrieresScreen> {
     });
   }
 
+  Future<void> _deleteDemande(DemandePriere demande) async {
+    final confirmed = await confirmDelete(
+      context,
+      'Supprimer définitivement la demande de prière « ${demande.sujet} » ?',
+    );
+    if (!confirmed) return;
+    if (!mounted) return;
+    try {
+      await context.read<AppState>().api.deleteDemandePriere(demande.id);
+      if (mounted) showSuccess(context, 'Demande de prière supprimée.');
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
   bool _matches(String text) =>
       _query.isEmpty || text.toLowerCase().contains(_query.toLowerCase());
 
@@ -283,9 +299,19 @@ class _PrieresScreenState extends State<PrieresScreen> {
                           '${d.details != null ? ' · ${d.details}' : ''}'
                           ' · ${afficherDateTime(d.createdAt)}',
                         ),
-                        trailing: StatusChip(
-                          label: _demandeLabel(d.statut),
-                          color: _demandeColor(d.statut),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            StatusChip(
+                              label: _demandeLabel(d.statut),
+                              color: _demandeColor(d.statut),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              tooltip: 'Supprimer',
+                              onPressed: () => _deleteDemande(d),
+                            ),
+                          ],
                         ),
                         onTap: () async {
                           String? choix;
@@ -402,7 +428,6 @@ class _PrieresScreenState extends State<PrieresScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Prières & messages'),
-          automaticallyImplyLeading: false,
           bottom: TabBar(
             onTap: (i) => setState(() {
               _tab = i;

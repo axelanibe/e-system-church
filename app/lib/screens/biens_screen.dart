@@ -58,6 +58,22 @@ class _BiensScreenState extends State<BiensScreen> {
     });
   }
 
+  Future<void> _deleteSalle(Salle salle) async {
+    final confirmed = await confirmDelete(
+      context,
+      'Supprimer définitivement la salle « ${salle.nom} » ?',
+    );
+    if (!confirmed) return;
+    if (!mounted) return;
+    try {
+      await context.read<AppState>().api.deleteSalle(salle.id);
+      if (mounted) showSuccess(context, 'Salle supprimée.');
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
   bool _matches(String text) =>
       _query.isEmpty || text.toLowerCase().contains(_query.toLowerCase());
 
@@ -326,6 +342,11 @@ class _BiensScreenState extends State<BiensScreen> {
                                   '${s.capacite != null ? 'Capacité : ${s.capacite}' : 'Capacité non précisée'}'
                                   '${s.description != null ? ' · ${s.description}' : ''}',
                                 ),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  tooltip: 'Supprimer',
+                                  onPressed: () => _deleteSalle(s),
+                                ),
                               )),
                         const SectionTitle(title: 'Réservations'),
                         if (reservations.isEmpty)
@@ -483,7 +504,6 @@ class _BiensScreenState extends State<BiensScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Biens de l’église'),
-          automaticallyImplyLeading: false,
           bottom: TabBar(
             onTap: (i) => setState(() {
               _tab = i;

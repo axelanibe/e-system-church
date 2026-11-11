@@ -79,4 +79,30 @@ export function registerAnnoncesRoutes(app: FastifyInstance, db: Pool) {
       return dbError(reply, e);
     }
   });
+
+  // -- Suppression d'une annonce (admin de l'église propriétaire). ----------
+  app.delete(
+    "/annonces/:id",
+    { preHandler: [requireAuth(db), requireRole("admin_eglise")] },
+    async (req, reply) => {
+      try {
+        const { rows } = await db.query(
+          `DELETE FROM announcements WHERE id = $1 AND church_id = $2 RETURNING id`,
+          [(req.params as { id: string }).id, req.session.churchId],
+        );
+        if (rows.length === 0) {
+          return reply.code(404).send({ error: "not_found", message: "Annonce introuvable." });
+        }
+        await auditLog(db, {
+          churchId: req.session.churchId,
+          userId: req.session.userId,
+          action: "annonce.supprimee",
+          details: { annonce_id: rows[0].id },
+        });
+        return reply.send({ ok: true, id: rows[0].id });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
 }

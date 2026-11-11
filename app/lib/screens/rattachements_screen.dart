@@ -158,7 +158,7 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
                                       TextCapitalization.characters,
                                   decoration: const InputDecoration(
                                     labelText: 'Code d’invitation',
-                                    hintText: 'Ex. ESC-GD2026',
+                                    hintText: 'Ex. GD-PLAT',
                                     border: OutlineInputBorder(),
                                   ),
                                 ),

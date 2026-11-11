@@ -5,6 +5,7 @@ import '../models/announcement.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/dialog_helpers.dart';
 
 /// Annonces : les miennes + celles diffusées par mes églises mères.
 /// Création (admin seulement) avec diffusion à tout le réseau.
@@ -26,6 +27,22 @@ class _AnnoncesScreenState extends State<AnnoncesScreen> {
 
   void _refresh() {
     setState(() => _future = context.read<AppState>().api.getAnnonces());
+  }
+
+  Future<void> _deleteAnnonce(Announcement a) async {
+    final confirmed = await confirmDelete(
+      context,
+      'Supprimer définitivement l’annonce « ${a.title} » ?',
+    );
+    if (!confirmed) return;
+    if (!mounted) return;
+    try {
+      await context.read<AppState>().api.deleteAnnonce(a.id);
+      if (mounted) showSuccess(context, 'Annonce supprimée.');
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
   }
 
   Future<void> _create() async {
@@ -165,17 +182,27 @@ class _AnnoncesScreenState extends State<AnnoncesScreen> {
                         ),
                       ],
                     ),
-                    trailing: a.broadcast
-                        ? const Chip(
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (a.broadcast)
+                          const Chip(
                             label: Text('Réseau'),
                             visualDensity: VisualDensity.compact,
                           )
-                        : (isMine
-                            ? const Chip(
-                                label: Text('Mon église'),
-                                visualDensity: VisualDensity.compact,
-                              )
-                            : null),
+                        else if (isMine)
+                          const Chip(
+                            label: Text('Mon église'),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        if (isMine)
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            tooltip: 'Supprimer',
+                            onPressed: () => _deleteAnnonce(a),
+                          ),
+                      ],
+                    ),
                     isThreeLine: true,
                   ),
                 );

@@ -176,6 +176,92 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
     }
   }
 
+  /// Lien de réinitialisation généré par l'admin (sans SMTP) : la
+  /// personne choisit un nouveau mot de passe avec le lien (valable
+  /// 24 h, usage unique). L'e-mail est saisi ici ; l'appel API a lieu
+  /// dans l'écran, puis le lien est affiché à transmettre.
+  Future<void> _lienReinitialisation() async {
+    final emailController = TextEditingController();
+    final saisie = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Lien de réinitialisation'),
+        content: dialogTextField(
+          controller: emailController,
+          label: 'E-mail du compte',
+          keyboardType: TextInputType.emailAddress,
+          hintText: 'Ex. membre@eglise.ci',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final email = emailController.text.trim();
+              if (email.isEmpty || !email.contains('@')) return;
+              Navigator.of(dialogContext).pop(email);
+            },
+            child: const Text('Générer le lien'),
+          ),
+        ],
+      ),
+    );
+    if (saisie == null) return;
+    if (!mounted) return;
+    try {
+      final lien =
+          await context.read<AppState>().api.adminResetLink(email: saisie);
+      if (!mounted) return;
+      _afficherLienReinitialisation(lien);
+    } catch (e) {
+      if (mounted) {
+        showApiError(
+            context,
+            'Impossible de générer le lien : ${e.toString()} '
+            '(vérifiez que l’e-mail correspond à un compte existant).');
+      }
+    }
+  }
+
+  /// Affiche le lien de réinitialisation à copier et transmettre.
+  void _afficherLienReinitialisation(String lien) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Lien de réinitialisation'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Transmettez ce lien à la personne (WhatsApp, SMS, e-mail). '
+              'Il permet de choisir un nouveau mot de passe et expire '
+              'dans 24 heures (usage unique).',
+            ),
+            const SizedBox(height: 12),
+            SelectableText(lien),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: lien));
+              Navigator.of(dialogContext).pop();
+              showSuccess(context, 'Lien copié.');
+            },
+            child: const Text('Copier le lien'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Affiche le lien d'invitation à copier et transmettre.
   void _afficherLienInvitation(String lien) {
     showDialog<void>(
@@ -553,6 +639,12 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                         onPressed: _inviter,
                         icon: const Icon(Icons.person_add_outlined),
                         label: const Text('Inviter une personne'),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _lienReinitialisation,
+                        icon: const Icon(Icons.key_outlined),
+                        label: const Text('Lien de réinitialisation'),
                       ),
                       const SizedBox(height: 12),
                       FutureBuilder<List<DemandeLiaison>>(

@@ -62,7 +62,7 @@ class _PresencesScreenState extends State<PresencesScreen> {
             matricule: matricule,
             culteId: _culteId,
             statut: 'present',
-            mode: 'scan_qr',
+            mode: 'manuel',
           );
       if (mounted) showSuccess(context, 'Présence pointée.');
       _matriculeController.clear();
@@ -103,7 +103,6 @@ class _PresencesScreenState extends State<PresencesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Présences'),
-        automaticallyImplyLeading: false,
       ),
       body: Column(
         children: [
@@ -183,7 +182,7 @@ class _PresencesScreenState extends State<PresencesScreen> {
                 }
                 final cultes = snapshot.data ?? const <Culte>[];
                 return DropdownButtonFormField<String>(
-                  value: _culteId,
+                  initialValue: _culteId,
                   decoration: const InputDecoration(
                     labelText: 'Culte',
                     border: OutlineInputBorder(),

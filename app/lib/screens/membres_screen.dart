@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../models/member.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/dialog_helpers.dart';
 import 'member_detail_screen.dart';
 import 'member_form_screen.dart';
 
@@ -49,6 +50,22 @@ class _MembresScreenState extends State<MembresScreen> {
 
   void _refresh() {
     setState(() => _future = _load());
+  }
+
+  Future<void> _deleteMember(Member member) async {
+    final confirmed = await confirmDelete(
+      context,
+      'Supprimer définitivement le membre « ${member.fullName} » (${member.matricule}) ?',
+    );
+    if (!confirmed) return;
+    if (!mounted) return;
+    try {
+      await context.read<AppState>().api.deleteMember(member.id);
+      if (mounted) showSuccess(context, 'Membre supprimé.');
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
   }
 
   void _onSearchChanged(String value) {
@@ -197,16 +214,31 @@ class _MembresScreenState extends State<MembresScreen> {
                         title: Text(member.fullName),
                         subtitle: Text(
                             '${member.matricule} · ${member.department ?? '—'}'),
-                        trailing: StatusChip(
-                          label: member.statusLabel,
-                          color: _statusColor(member.status),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            StatusChip(
+                              label: member.statusLabel,
+                              color: _statusColor(member.status),
+                            ),
+                            if (state.canManageMembers)
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: 'Supprimer',
+                                onPressed: () => _deleteMember(member),
+                              ),
+                          ],
                         ),
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                MemberDetailScreen(member: member),
-                          ),
-                        ),
+                        onTap: () async {
+                          final changed =
+                              await Navigator.of(context).push<bool>(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  MemberDetailScreen(member: member),
+                            ),
+                          );
+                          if (changed == true && mounted) _refresh();
+                        },
                       );
                     },
                   ),

@@ -259,21 +259,27 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                   child: _Total(
                     label: 'Entrées',
                     value: formatFcfa(rapport.entreesFcfa),
-                    color: Colors.green,
+                    // Vert primaire (foncé) : le vert vif Colors.green est
+                    // illisible en texte sur fond clair.
+                    color: const Color(0xFF0C5B40),
                   ),
                 ),
                 Expanded(
                   child: _Total(
                     label: 'Dépenses',
                     value: formatFcfa(rapport.depensesFcfa),
-                    color: Colors.red,
+                    // Rouge de la palette : le rouge vif Colors.red est
+                    // illisible en texte sur fond clair.
+                    color: const Color(0xFFB3261E),
                   ),
                 ),
                 Expanded(
                   child: _Total(
                     label: 'Solde',
                     value: formatFcfa(rapport.soldeFcfa),
-                    color: Colors.blue,
+                    // Bleu foncé : le bleu vif Colors.blue est illisible
+                    // en texte sur fond clair.
+                    color: const Color(0xFF1B4F72),
                   ),
                 ),
               ],

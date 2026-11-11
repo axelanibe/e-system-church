@@ -4,13 +4,13 @@
 // - le bandeau « DÉMO — données fictives »,
 // - les identifiants de démonstration pré-remplis,
 // - un bouton « Entrer dans la démo » (compte admin, sans mot de passe
-//   à saisir) et un bouton « Voir l'espace fidèle » (compte membre).
+//   à saisir), un bouton « Voir l'espace fidèle » (compte membre) et un
+//   bouton « Voir l'espace plateforme » (compte super_admin).
 // L'écran réel (`lib/screens/login_screen.dart`) n'est pas modifié.
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
-import '../config/app_theme.dart';
 import '../state/app_state.dart';
 import '../screens/forgot_password_screen.dart';
 import '../screens/register_fidele_screen.dart';
@@ -120,7 +120,7 @@ class _DemoLoginScreenState extends State<DemoLoginScreen> {
                                   ),
                           style: FilledButton.styleFrom(
                             backgroundColor: scheme.secondary,
-                            foregroundColor: AppTheme.bleuNuit,
+                            foregroundColor: const Color(0xFF083D2B),
                           ),
                           child: const Padding(
                             padding: EdgeInsets.symmetric(vertical: 4),
@@ -139,6 +139,16 @@ class _DemoLoginScreenState extends State<DemoLoginScreen> {
                                     password: DemoAccounts.password,
                                   ),
                           child: const Text('Voir l’espace fidèle'),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: _loading
+                              ? null
+                              : () => _login(
+                                    email: DemoAccounts.plateformeEmail,
+                                    password: DemoAccounts.password,
+                                  ),
+                          child: const Text('Voir l’espace plateforme'),
                         ),
                         const SizedBox(height: 8),
                         const Text(

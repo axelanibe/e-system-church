@@ -476,7 +476,6 @@ class _PastoralScreenState extends State<PastoralScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Suivi pastoral'),
-          automaticallyImplyLeading: false,
           bottom: TabBar(
             onTap: (i) => setState(() {
               _tab = i;

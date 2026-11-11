@@ -59,6 +59,23 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
     });
   }
 
+  Future<void> _deleteServiteur(
+      Serviteur serviteur, Map<String, String> noms) async {
+    final confirmed = await confirmDelete(
+      context,
+      'Supprimer définitivement le serviteur « ${noms[serviteur.memberId] ?? serviteur.memberId} » (${serviteur.role}) ?',
+    );
+    if (!confirmed) return;
+    if (!mounted) return;
+    try {
+      await context.read<AppState>().api.deleteServiteur(serviteur.id);
+      if (mounted) showSuccess(context, 'Serviteur supprimé.');
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
   bool _matches(String text) =>
       _query.isEmpty || text.toLowerCase().contains(_query.toLowerCase());
 
@@ -182,7 +199,7 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: DropdownButtonFormField<String?>(
-            value: _departementFilter,
+            initialValue: _departementFilter,
             decoration: const InputDecoration(
               labelText: 'Département',
               border: OutlineInputBorder(),
@@ -256,6 +273,11 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
                       subtitle: Text(
                         '${departementsNoms[s.departementId] ?? '—'} · ${s.role}'
                         '${s.disponibilite != null ? ' · ${s.disponibilite}' : ''}',
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        tooltip: 'Supprimer',
+                        onPressed: () => _deleteServiteur(s, noms),
                       ),
                     );
                   },
@@ -361,7 +383,6 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Serviteurs'),
-          automaticallyImplyLeading: false,
           bottom: TabBar(
             onTap: (i) => setState(() {
               _tab = i;

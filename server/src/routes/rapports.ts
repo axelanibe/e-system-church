@@ -196,6 +196,21 @@ export function registerRapportsRoutes(app: FastifyInstance, db: Pool) {
             totauxReseau[t.type as string].total_fcfa += t.total_fcfa;
             totauxReseau[t.type as string].nombre += t.nombre;
           }
+          // Dépenses du module Budget & caisse (hors refusées) sur la période :
+          // sans elles, le rapport consolidé affichait 0 de dépenses alors que
+          // Budget & caisse en contenait.
+          const { rows: depBudgetRows } = await db.query(
+            `SELECT coalesce(sum(montant_fcfa), 0)::int AS total_fcfa,
+                    count(*)::int AS nombre
+               FROM depenses
+              WHERE church_id = $1 AND statut <> 'refusee'
+                AND date_depense >= $2::date AND date_depense < $3::date`,
+            [b.id, debut, fin],
+          );
+          totaux.depense.total_fcfa += Number(depBudgetRows[0].total_fcfa);
+          totaux.depense.nombre += Number(depBudgetRows[0].nombre);
+          totauxReseau.depense.total_fcfa += Number(depBudgetRows[0].total_fcfa);
+          totauxReseau.depense.nombre += Number(depBudgetRows[0].nombre);
           const entrees =
             totaux.dime.total_fcfa + totaux.offrande.total_fcfa + totaux.don.total_fcfa;
           const depenses = totaux.depense.total_fcfa;

@@ -222,6 +222,54 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
     }
   }
 
+  Future<void> _deletePoste(PosteBudgetaire poste) async {
+    final confirmed = await confirmDelete(
+      context,
+      'Supprimer définitivement le poste budgétaire « ${poste.nom} » ?',
+    );
+    if (!confirmed) return;
+    if (!mounted) return;
+    try {
+      await context.read<AppState>().api.deletePosteBudgetaire(poste.id);
+      if (mounted) showSuccess(context, 'Poste budgétaire supprimé.');
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
+  Future<void> _deleteBudget(Budget budget, String? posteNom) async {
+    final confirmed = await confirmDelete(
+      context,
+      'Supprimer définitivement le budget ${posteNom ?? '—'} (année ${budget.annee}) ?',
+    );
+    if (!confirmed) return;
+    if (!mounted) return;
+    try {
+      await context.read<AppState>().api.deleteBudget(budget.id);
+      if (mounted) showSuccess(context, 'Budget supprimé.');
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
+  Future<void> _deleteDepense(Depense depense) async {
+    final confirmed = await confirmDelete(
+      context,
+      'Supprimer définitivement la dépense « ${depense.motif} » ?',
+    );
+    if (!confirmed) return;
+    if (!mounted) return;
+    try {
+      await context.read<AppState>().api.deleteDepense(depense.id);
+      if (mounted) showSuccess(context, 'Dépense supprimée.');
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
   Future<void> _createMouvement() async {
     final montantController = TextEditingController();
     final motifController = TextEditingController();
@@ -369,9 +417,11 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                                   title: Text(p.nom),
                                   subtitle: Text(
                                       '${p.categorie == 'recette' ? 'Recette' : 'Dépense'}${p.description != null ? ' · ${p.description}' : ''}'),
-                                  trailing: budgetsParPoste[p.id] == null
-                                      ? null
-                                      : Column(
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (budgetsParPoste[p.id] != null)
+                                        Column(
                                           mainAxisAlignment:
                                               MainAxisAlignment.center,
                                           crossAxisAlignment:
@@ -384,6 +434,14 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                                                   ))
                                               .toList(),
                                         ),
+                                      IconButton(
+                                        icon: const Icon(
+                                            Icons.delete_outline),
+                                        tooltip: 'Supprimer',
+                                        onPressed: () => _deletePoste(p),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               )),
                         const SectionTitle(title: 'Budgets'),
@@ -401,10 +459,23 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                               leading: const Icon(Icons.pie_chart_outline),
                               title: Text(poste?.nom ?? 'Poste inconnu'),
                               subtitle: Text('Année ${b.annee}'),
-                              trailing: Text(
-                                formatMontant(b.montantPrevu, state.devise),
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    formatMontant(
+                                        b.montantPrevu, state.devise),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  IconButton(
+                                    icon:
+                                        const Icon(Icons.delete_outline),
+                                    tooltip: 'Supprimer',
+                                    onPressed: () =>
+                                        _deleteBudget(b, poste?.nom),
+                                  ),
+                                ],
                               ),
                             );
                           }),
@@ -514,9 +585,19 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                           '${afficherDate(d.dateDepense)}'
                           '${d.justificatifRef != null ? ' · Justificatif ${d.justificatifRef}' : ''}',
                         ),
-                        trailing: StatusChip(
-                          label: _depenseLabel(d.statut),
-                          color: _depenseColor(d.statut),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            StatusChip(
+                              label: _depenseLabel(d.statut),
+                              color: _depenseColor(d.statut),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              tooltip: 'Supprimer',
+                              onPressed: () => _deleteDepense(d),
+                            ),
+                          ],
                         ),
                         onTap: () async {
                           final actions = <Widget>[];
@@ -884,7 +965,6 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Budget & caisse'),
-          automaticallyImplyLeading: false,
           bottom: TabBar(
             onTap: (i) => setState(() {
               _tab = i;
