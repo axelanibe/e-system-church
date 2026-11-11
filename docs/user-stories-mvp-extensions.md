@@ -38,13 +38,13 @@ Date : 11 novembre 2026.
 - Un don anonyme, sans fiche membre, ne donne pas lieu à attestation.
 - Une attestation émise est figée. Une correction produit une nouvelle attestation qui annule la précédente, et les deux restent tracées dans l'audit.
 - Le membre consulte et télécharge ses attestations depuis l'application, et ne voit que les siennes.
-- La valeur fiscale de l'attestation ne doit être affirmée qu'après validation par un juriste, selon le droit ivoirien.
+- En Côte d'Ivoire, pas de déclaration d'impôt pour les églises, l'attestation sert de reçu justificatif, aucune validation juridique de sa valeur fiscale n'est requise.
 
 ## Questions ouvertes
 
 1. Une église mère peut-elle activer des modules pour ses antennes, ou chaque antenne décide-t-elle seule ?
 2. Les campagnes doivent-elles être visibles publiquement sur l'espace de présentation de l'église ?
-3. Qui valide la valeur juridique des attestations ?
+3. Valeur juridique des attestations : tranchée par Bouf le 11 novembre 2026, en Côte d'Ivoire, pas de déclaration d'impôt pour les églises, l'attestation sert de reçu justificatif, aucune validation juridique de sa valeur fiscale n'est requise.
 
 ## Intégration au dépôt
 

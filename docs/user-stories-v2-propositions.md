@@ -168,7 +168,7 @@ Suite de `docs/user-stories-mvp-extensions.md` (US1 modules activables, US2 camp
 1. Qui valide le contenu et le prix des envois WhatsApp, et quel opérateur ou prestataire est retenu en Côte d'Ivoire ?
 2. La carte dans le portefeuille du téléphone doit-elle être disponible pour toutes les églises, ou seulement pour celles qui l'activent ?
 3. Le repli SMS du mode économique est-il facturé à l'église ou au membre, et avec quel plafond ?
-4. Qui valide la valeur juridique des attestations annuelles de dons, déjà posée en US3 ?
+4. Valeur juridique des attestations annuelles de dons : tranchée par Bouf le 11 novembre 2026, en Côte d'Ivoire, pas de déclaration d'impôt pour les églises, l'attestation sert de reçu justificatif, aucune validation juridique de sa valeur fiscale n'est requise.
 
 ## Intégration au dépôt
 
