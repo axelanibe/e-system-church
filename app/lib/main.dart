@@ -35,26 +35,9 @@ class EsystemApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: ThemeData(
               useMaterial3: true,
-              // Palette d'Axel (10 novembre 2026, tranche Plateforme) :
-              // bleu nuit et or, fond papier. Remplace le vert de
-              // Phoenix (0xFF0E7C5B), sans changer la structure des écrans.
               colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF0B1F3A),
-                primary: const Color(0xFF0B1F3A),
-                secondary: const Color(0xFFD4A72C),
-                tertiary: const Color(0xFF8A6A12),
-                surface: const Color(0xFFF5F6FA),
+                seedColor: const Color(0xFF0E7C5B),
                 brightness: Brightness.light,
-              ),
-              scaffoldBackgroundColor: const Color(0xFFF5F6FA),
-              appBarTheme: const AppBarTheme(
-                backgroundColor: Color(0xFF0B1F3A),
-                foregroundColor: Colors.white,
-              ),
-              floatingActionButtonTheme:
-                  const FloatingActionButtonThemeData(
-                backgroundColor: Color(0xFFD4A72C),
-                foregroundColor: Color(0xFF0B1F3A),
               ),
             ),
             locale: const Locale('fr'),

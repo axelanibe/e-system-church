@@ -5,20 +5,18 @@ import '../models/auth.dart';
 import '../models/church.dart';
 import '../services/api_service.dart';
 import '../services/http_api_service.dart';
-import '../services/mock_api_service.dart';
 import '../services/session_store.dart';
 
-/// État global de l'application : session, église active, mode démo / API.
+/// État global de l'application : session et église active.
 ///
-/// - Mode démo (par défaut) : [MockApiService], données « Grâce Divine ».
-/// - Mode API réelle : [HttpApiService] vers l'URL configurée, jeton JWT
-///   persisté en stockage sécurisé.
+/// Mode API réelle uniquement : [HttpApiService] vers l'URL configurée,
+/// jeton JWT persisté en stockage sécurisé. Aucune donnée de démonstration :
+/// tout vient de l'API, les listes vides restent vides.
 class AppState extends ChangeNotifier {
   final SessionStore _store = SessionStore();
 
   late ApiService _api;
   bool _initialized = false;
-  bool _demoMode = true;
   String _apiBaseUrl = AppConfig.defaultApiBaseUrl;
 
   String? _token;
@@ -28,7 +26,6 @@ class AppState extends ChangeNotifier {
   List<Membership> _eglises = [];
 
   bool get initialized => _initialized;
-  bool get demoMode => _demoMode;
   String get apiBaseUrl => _apiBaseUrl;
   ApiService get api => _api;
 
@@ -37,6 +34,9 @@ class AppState extends ChangeNotifier {
   Church? get church => _church;
   String? get role => _role;
   List<Membership> get eglises => List.unmodifiable(_eglises);
+
+  /// Devise de l'église active (« FCFA » par défaut).
+  String get devise => _church?.devise ?? 'FCFA';
 
   /// L'utilisateur peut gérer les membres (création comprise).
   bool get canManageMembers =>
@@ -55,9 +55,6 @@ class AppState extends ChangeNotifier {
   /// L'utilisateur est admin de son église.
   bool get isAdmin => _role == 'admin_eglise';
 
-  /// L'utilisateur est admin de la plateforme (chiffres globaux seulement).
-  bool get isSuperAdmin => _role == 'super_admin';
-
   String get roleLabel {
     switch (_role) {
       case 'admin_eglise':
@@ -75,18 +72,14 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  ApiService _buildApi() {
-    if (_demoMode) return MockApiService();
-    return HttpApiService(baseUrl: _apiBaseUrl, token: _token);
-  }
+  ApiService _buildApi() => HttpApiService(baseUrl: _apiBaseUrl, token: _token);
 
   /// Chargement initial : réglages persistés, puis restauration de session.
   Future<void> init() async {
-    _demoMode = await _store.readDemoMode();
     _apiBaseUrl = await _store.readApiUrl();
     _api = _buildApi();
     final savedToken = await _store.readToken();
-    if (savedToken != null && !_demoMode) {
+    if (savedToken != null) {
       // Mode API réelle : on tente de restaurer la session.
       _token = savedToken;
       (_api as HttpApiService).setToken(savedToken);
@@ -120,7 +113,7 @@ class AppState extends ChangeNotifier {
   Future<void> login({required String email, required String password}) async {
     final result = await _api.login(email: email, password: password);
     _applyAuth(result);
-    if (!_demoMode) await _store.saveToken(result.token);
+    await _store.saveToken(result.token);
     notifyListeners();
   }
 
@@ -145,7 +138,7 @@ class AppState extends ChangeNotifier {
       parentCode: parentCode,
     );
     _applyAuth(result);
-    if (!_demoMode) await _store.saveToken(result.token);
+    await _store.saveToken(result.token);
     notifyListeners();
     return result;
   }
@@ -155,6 +148,13 @@ class AppState extends ChangeNotifier {
     final me = await _api.me();
     _applyMe(me);
     notifyListeners();
+  }
+
+  /// Bascule l'église active (sélecteur d'église) : le jeton est renouvelé
+  /// par l'API, puis on recharge mon église et mon rôle.
+  Future<void> switchChurch(String churchId) async {
+    await _api.switchChurch(churchId);
+    await refreshMe();
   }
 
   Future<void> logout() async {
@@ -167,23 +167,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Bascule mode démo / API réelle. La session est fermée (les données
-  /// de démo vivent en mémoire et sont réinitialisées).
-  Future<void> setDemoMode(bool value) async {
-    if (value == _demoMode) return;
-    _demoMode = value;
-    await _store.saveDemoMode(value);
-    _token = null;
-    _user = null;
-    _church = null;
-    _role = null;
-    _eglises = [];
-    await _store.clearToken();
-    _api = _buildApi();
-    notifyListeners();
-  }
-
-  /// Change l'URL de l'API (mode API réelle). La session est fermée.
+  /// Change l'URL de l'API. La session est fermée.
   Future<void> setApiBaseUrl(String url) async {
     final cleaned = url.trim().replaceAll(RegExp(r'/+$'), '');
     if (cleaned.isEmpty) return;

@@ -172,7 +172,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Nom de l’église *',
-                      hintText: 'Ex. Grâce Divine — Yopougon',
                       border: OutlineInputBorder(),
                     ),
                     validator: (v) =>

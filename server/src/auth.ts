@@ -57,6 +57,13 @@ export interface ChurchSummary {
   name: string;
   parent_church_id: string | null;
   status: string;
+  /** Module 13 — identité visuelle et présentation. */
+  logo_url?: string | null;
+  couleur_principale?: string | null;
+  devise?: string;
+  fuseau_horaire?: string;
+  description?: string | null;
+  horaires_cultes?: unknown;
 }
 
 export interface Membership {
@@ -101,6 +108,55 @@ const getDummyHash = () =>
 
 function signToken(payload: { sub: string; churchId: string; role: string }, channel: Channel): string {
   return jwt.sign(payload, getJwtSecret(), { expiresIn: SESSION_TTL[channel] });
+}
+
+/**
+ * Module 13 — changement d'église active : émet un nouveau JWT pour une
+ * autre église de l'utilisateur (sélecteur d'église), sans ressaisir le
+ * mot de passe. Le canal (web / mobile) fixe la durée du jeton.
+ */
+export async function issueTokenForChurch(
+  db: Pool,
+  userId: string,
+  churchId: string,
+  channel: Channel = "mobile",
+): Promise<
+  | { ok: true; token: string; church: ChurchSummary & { role: string } }
+  | { ok: false; reason: "invalid_church" }
+> {
+  const { rows } = await db.query(
+    `SELECT cu.role, c.id, c.code, c.name, c.parent_church_id, c.status,
+            c.logo_url, c.couleur_principale, c.devise, c.fuseau_horaire,
+            c.description, c.horaires_cultes
+       FROM church_users cu
+       JOIN churches c ON c.id = cu.church_id
+      WHERE cu.user_id = $1 AND cu.church_id = $2`,
+    [userId, churchId],
+  );
+  if (rows.length === 0) return { ok: false, reason: "invalid_church" };
+  const m = rows[0];
+  const church: ChurchSummary & { role: string } = {
+    id: m.id as string,
+    code: m.code as string,
+    name: m.name as string,
+    parent_church_id: m.parent_church_id as string | null,
+    status: m.status as string,
+    role: m.role as string,
+    logo_url: m.logo_url as string | null,
+    couleur_principale: m.couleur_principale as string | null,
+    devise: m.devise as string,
+    fuseau_horaire: m.fuseau_horaire as string,
+    description: m.description as string | null,
+    horaires_cultes: m.horaires_cultes as unknown,
+  };
+  const token = signToken({ sub: userId, churchId, role: church.role }, channel);
+  await auditLog(db, {
+    churchId,
+    userId,
+    action: "auth.eglise_active_changee",
+    details: { channel },
+  });
+  return { ok: true, token, church };
 }
 
 // ---------------------------------------------------------------------------
@@ -196,7 +252,9 @@ export async function registerChurch(
     const { rows: churchRows } = await client.query<ChurchSummary>(
       `INSERT INTO churches (code, name, city, phone, email, status)
        VALUES ($1, $2, $3, $4, $5, 'active')
-       RETURNING id, code, name, parent_church_id, status`,
+       RETURNING id, code, name, parent_church_id, status,
+                 logo_url, couleur_principale, devise, fuseau_horaire,
+                 description, horaires_cultes`,
       [code, eglise.name, eglise.city, eglise.phone ?? null, eglise.email ?? null],
     );
     const church = churchRows[0];
@@ -273,7 +331,9 @@ export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
   await db.query(`UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = $1`, [user.id]);
 
   const { rows: memberships } = await db.query(
-    `SELECT cu.role, c.id, c.code, c.name, c.parent_church_id, c.status
+    `SELECT cu.role, c.id, c.code, c.name, c.parent_church_id, c.status,
+            c.logo_url, c.couleur_principale, c.devise, c.fuseau_horaire,
+            c.description, c.horaires_cultes
        FROM church_users cu
        JOIN churches c ON c.id = cu.church_id
       WHERE cu.user_id = $1
@@ -288,6 +348,12 @@ export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
       name: m.name as string,
       parent_church_id: m.parent_church_id as string | null,
       status: m.status as string,
+      logo_url: m.logo_url as string | null,
+      couleur_principale: m.couleur_principale as string | null,
+      devise: m.devise as string,
+      fuseau_horaire: m.fuseau_horaire as string,
+      description: m.description as string | null,
+      horaires_cultes: m.horaires_cultes as unknown,
     },
   }));
 

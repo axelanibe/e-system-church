@@ -26,6 +26,12 @@ interface TreeNode {
   city: string | null;
   status: string;
   parent_church_id: string | null;
+  logo_url: string | null;
+  couleur_principale: string | null;
+  devise: string;
+  fuseau_horaire: string;
+  description: string | null;
+  horaires_cultes: unknown;
   membres_actifs: number;
   children: TreeNode[];
 }
@@ -94,10 +100,14 @@ export function registerEglisesRoutes(app: FastifyInstance, db: Pool) {
       // Toute la descendance de l'église de la session (elle comprise).
       const { rows } = await db.query(
         `WITH RECURSIVE arbre AS (
-           SELECT id, code, name, city, status, parent_church_id
+           SELECT id, code, name, city, status, parent_church_id,
+                  logo_url, couleur_principale, devise, fuseau_horaire,
+                  description, horaires_cultes
              FROM churches WHERE id = $1
            UNION ALL
-           SELECT c.id, c.code, c.name, c.city, c.status, c.parent_church_id
+           SELECT c.id, c.code, c.name, c.city, c.status, c.parent_church_id,
+                  c.logo_url, c.couleur_principale, c.devise, c.fuseau_horaire,
+                  c.description, c.horaires_cultes
              FROM churches c
              JOIN arbre a ON c.parent_church_id = a.id
          )
@@ -119,6 +129,12 @@ export function registerEglisesRoutes(app: FastifyInstance, db: Pool) {
           city: r.city as string | null,
           status: r.status as string,
           parent_church_id: r.parent_church_id as string | null,
+          logo_url: r.logo_url as string | null,
+          couleur_principale: r.couleur_principale as string | null,
+          devise: r.devise as string,
+          fuseau_horaire: r.fuseau_horaire as string,
+          description: r.description as string | null,
+          horaires_cultes: r.horaires_cultes as unknown,
           membres_actifs: r.membres_actifs as number,
           children: [],
         });

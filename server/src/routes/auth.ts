@@ -75,7 +75,9 @@ export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
   app.get("/moi/eglise", { preHandler: [requireAuth(db)] }, async (req, reply) => {
     try {
       const { rows: churchRows } = await db.query(
-        `SELECT id, code, name, parent_church_id, city, country, phone, email, status
+        `SELECT id, code, name, parent_church_id, city, country, phone, email, status,
+                logo_url, couleur_principale, devise, fuseau_horaire,
+                description, horaires_cultes
            FROM churches WHERE id = $1`,
         [req.session.churchId],
       );
@@ -89,7 +91,9 @@ export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
 
       // Toutes les églises de l'utilisateur (pour changer d'église active).
       const { rows: memberships } = await db.query(
-        `SELECT cu.role, c.id, c.code, c.name, c.parent_church_id, c.status
+        `SELECT cu.role, c.id, c.code, c.name, c.parent_church_id, c.status,
+                c.logo_url, c.couleur_principale, c.devise, c.fuseau_horaire,
+                c.description, c.horaires_cultes
            FROM church_users cu
            JOIN churches c ON c.id = cu.church_id
           WHERE cu.user_id = $1
@@ -109,6 +113,12 @@ export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
             name: m.name,
             parent_church_id: m.parent_church_id,
             status: m.status,
+            logo_url: m.logo_url,
+            couleur_principale: m.couleur_principale,
+            devise: m.devise,
+            fuseau_horaire: m.fuseau_horaire,
+            description: m.description,
+            horaires_cultes: m.horaires_cultes,
           },
         })),
       });

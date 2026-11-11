@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
-import '../services/mock_data.dart';
 import '../state/app_state.dart';
 import 'register_screen.dart';
 
 /// Écran de connexion : e-mail + mot de passe, JWT stocké en sécurité.
-/// En mode démo, les comptes de démonstration sont proposés en un geste.
+/// La connexion exige un compte réel créé sur le serveur.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -50,15 +49,8 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _loginDemo(Map<String, String> account) async {
-    _emailController.text = account['email']!;
-    _passwordController.text = account['password']!;
-    await _login();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -86,18 +78,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Text(
                     'Centraliser les églises de Côte d’Ivoire',
                     textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Center(
-                    child: Chip(
-                      label: Text(state.demoMode
-                          ? 'Mode démo — aucune donnée réelle'
-                          : 'Mode API réelle — ${state.apiBaseUrl}'),
-                      avatar: Icon(
-                        state.demoMode ? Icons.science_outlined : Icons.cloud_outlined,
-                        size: 18,
-                      ),
-                    ),
                   ),
                   const SizedBox(height: 32),
                   TextFormField(
@@ -175,27 +155,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                     child: const Text('Inscrire mon église'),
                   ),
-                  if (state.demoMode) ...[
-                    const SizedBox(height: 32),
-                    const Divider(),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Comptes de démonstration',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    for (final account in demoAccounts)
-                      Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: const Icon(Icons.person_outline),
-                          title: Text(account['email']!),
-                          subtitle: Text(account['label']!),
-                          trailing: const Icon(Icons.login),
-                          onTap: _loading ? null : () => _loginDemo(account),
-                        ),
-                      ),
-                  ],
                 ],
               ),
             ),

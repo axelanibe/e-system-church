@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
-import '../services/mock_data.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
+import 'mon_eglise_screen.dart';
+import 'parametres_screen.dart';
 
-/// Réglages : bascule **mode démo / mode API réelle**, URL de l'API,
-/// informations de version et déconnexion.
+/// Réglages : URL de l'API réelle, paramètres de l'église, informations
+/// de version et déconnexion. L'application n'affiche que les données
+/// réelles du serveur : aucun mode démo.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -49,8 +51,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
-
     return Scaffold(
       appBar: AppBar(title: const Text('Réglages')),
       body: SingleChildScrollView(
@@ -61,47 +61,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SectionTitle(title: 'Mode de fonctionnement'),
+                const SectionTitle(title: 'Église'),
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SwitchListTile(
-                          title: const Text('Mode démo'),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.tune_outlined),
+                          title: const Text('Paramètres de l’église'),
                           subtitle: const Text(
-                              'Données fictives « Grâce Divine » en mémoire. Aucun serveur requis — idéal pour tester l’application.'),
-                          value: state.demoMode,
-                          onChanged: (value) async {
-                            await context
-                                .read<AppState>()
-                                .setDemoMode(value);
-                            if (context.mounted) {
-                              showSuccess(
-                                context,
-                                value
-                                    ? 'Mode démo activé. Reconnectez-vous avec un compte de démonstration.'
-                                    : 'Mode API réelle activé. Reconnectez-vous.',
-                              );
-                            }
+                              'Coordonnées, paiements mobiles, devise, fuseau horaire, rôles et journal d’audit.'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ParametresScreen(),
+                              ),
+                            );
                           },
                         ),
-                        if (state.demoMode) ...[
-                          const Divider(),
-                          Text('Comptes de démonstration (mot de passe : demo1234)',
-                              style: Theme.of(context).textTheme.titleSmall),
-                          const SizedBox(height: 8),
-                          for (final account in demoAccounts)
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading:
-                                  const Icon(Icons.person_outline, size: 20),
-                              title: Text(account['email']!),
-                              subtitle: Text(account['label']!),
-                              dense: true,
-                            ),
-                        ],
+                        const Divider(),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.church_outlined),
+                          title: const Text('Mon église'),
+                          subtitle: const Text(
+                              'Logo, présentation, horaires des cultes, pasteur et antennes.'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const MonEgliseScreen(),
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -115,24 +111,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         TextField(
                           controller: _urlController,
-                          enabled: !state.demoMode,
                           keyboardType: TextInputType.url,
                           decoration: const InputDecoration(
                             labelText: 'URL de l’API',
-                            hintText: 'Ex. http://localhost:3000',
                             border: OutlineInputBorder(),
                           ),
                         ),
                         const SizedBox(height: 12),
                         FilledButton(
-                          onPressed: (state.demoMode || _saving)
-                              ? null
-                              : _saveUrl,
+                          onPressed: _saving ? null : _saveUrl,
                           child: const Text('Enregistrer l’URL'),
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'L’URL s’applique au mode API réelle. Changer de mode ou d’URL déconnecte la session en cours.',
+                          'Changer l’URL déconnecte la session en cours : reconnectez-vous ensuite avec votre compte réel.',
                           style: TextStyle(fontSize: 12),
                         ),
                       ],

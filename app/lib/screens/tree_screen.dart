@@ -48,7 +48,6 @@ class _TreeScreenState extends State<TreeScreen> {
                   controller: nameController,
                   decoration: const InputDecoration(
                     labelText: 'Nom de la sous-église *',
-                    hintText: 'Ex. Grâce Divine — Koumassi',
                     border: OutlineInputBorder(),
                   ),
                   validator: (v) =>

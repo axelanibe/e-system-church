@@ -130,7 +130,6 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                     controller: _cellController,
                     decoration: const InputDecoration(
                       labelText: 'Cellule / groupe',
-                      hintText: 'Ex. Cellule Plateau Centre',
                       border: OutlineInputBorder(),
                     ),
                   ),

@@ -2,21 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
+import '../widgets/church_avatar.dart';
 import 'annonces_screen.dart';
 import 'dashboard_screen.dart';
-import 'finances_mere_screen.dart';
 import 'finances_screen.dart';
 import 'membres_screen.dart';
-import 'plateforme_screen.dart';
+import 'modules_screen.dart';
+import 'mon_eglise_screen.dart';
 import 'rattachements_screen.dart';
 import 'settings_screen.dart';
-import 'transferts_screen.dart';
 import 'tree_screen.dart';
 
-/// Coquille principale après connexion : navigation entre les 5 écrans du MVP.
+/// Coquille principale après connexion : navigation entre les 6 écrans.
 /// Écrans larges (≥ 900 px) : rail latéral ; écrans étroits : barre inférieure.
-/// Le tiroir donne accès aux demandes de rattachement, aux réglages et à la
-/// déconnexion.
+/// Le tiroir donne accès aux demandes de rattachement, à « Mes églises »
+/// (sélecteur d'église active), à « Mon église », aux réglages et à la
+/// déconnexion. L'AppBar affiche l'identité de l'église active (logo ou
+/// initiales, nom et code) — données réelles de l'API.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -33,6 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'Membres',
     'Finances',
     'Annonces',
+    'Modules',
   ];
 
   Widget _screenFor(int index) {
@@ -47,6 +50,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return const FinancesScreen();
       case 4:
         return const AnnoncesScreen();
+      case 5:
+        return const ModulesScreen();
       default:
         return const DashboardScreen();
     }
@@ -79,18 +84,41 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: Icon(Icons.campaign_outlined),
           selectedIcon: Icon(Icons.campaign),
           label: 'Annonces'),
+      NavigationDestination(
+          icon: Icon(Icons.grid_view_outlined),
+          selectedIcon: Icon(Icons.grid_view),
+          label: 'Modules'),
     ];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titles[_index]),
-        actions: [
-          if (state.demoMode)
-            const Padding(
-              padding: EdgeInsets.only(right: 12),
-              child: Chip(label: Text('DÉMO'), visualDensity: VisualDensity.compact),
+        title: Row(
+          children: [
+            ChurchAvatar(church: church, radius: 18),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    church?.name ?? 'e-System Church',
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  if (church != null)
+                    Text(
+                      church.code,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                ],
+              ),
             ),
-        ],
+            Text(
+              _titles[_index],
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ],
+        ),
       ),
       drawer: Drawer(
         child: ListView(
@@ -104,6 +132,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  ChurchAvatar(church: church, radius: 24),
+                  const SizedBox(height: 8),
                   Text(
                     church?.name ?? 'e-System Church',
                     style: Theme.of(context).textTheme.titleLarge,
@@ -121,6 +151,44 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Text(
+                'MES ÉGLISES',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+            ),
+            for (final membership in state.eglises)
+              ListTile(
+                leading: ChurchAvatar(
+                    church: membership.church, radius: 18),
+                title: Text(membership.church.name),
+                subtitle: Text(
+                    '${membership.church.code} · ${membership.role}'),
+                trailing: membership.church.id == church?.id
+                    ? const Icon(Icons.check, color: Colors.green)
+                    : null,
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  if (membership.church.id != church?.id) {
+                    await context
+                        .read<AppState>()
+                        .switchChurch(membership.church.id);
+                  }
+                },
+              ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.church_outlined),
+              title: const Text('Mon église'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) => const MonEgliseScreen()),
+                );
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.group_add_outlined),
               title: const Text('Demandes de rattachement'),
@@ -132,42 +200,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
-            if (state.isSuperAdmin)
-              ListTile(
-                leading: const Icon(Icons.public_outlined),
-                title: const Text('Plateforme'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const PlateformeScreen()),
-                  );
-                },
-              ),
-            if (state.canManageMembers)
-              ListTile(
-                leading: const Icon(Icons.swap_horiz_outlined),
-                title: const Text('Transferts de membres'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const TransfertsScreen()),
-                  );
-                },
-              ),
-            if (state.isAdmin)
-              ListTile(
-                leading: const Icon(Icons.account_balance_outlined),
-                title: const Text('Finances de la mère'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const FinancesMereScreen()),
-                  );
-                },
-              ),
             ListTile(
               leading: const Icon(Icons.settings_outlined),
               title: const Text('Réglages'),

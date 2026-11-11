@@ -11,12 +11,24 @@ import { getDb } from "./db.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerEglisesRoutes } from "./routes/eglises.js";
 import { registerRattachementsRoutes } from "./routes/rattachements.js";
-import { registerTransfertsRoutes } from "./routes/transferts.js";
 import { registerMembresRoutes } from "./routes/membres.js";
+import { registerMembresComplementRoutes } from "./routes/membres_complement.js";
 import { registerContributionsRoutes } from "./routes/contributions.js";
 import { registerRapportsRoutes } from "./routes/rapports.js";
-import { registerPlateformeRoutes } from "./routes/plateforme.js";
 import { registerAnnoncesRoutes } from "./routes/annonces.js";
+import { registerCultesRoutes } from "./routes/cultes.js";
+import { registerPresencesRoutes } from "./routes/presences.js";
+import { registerFinancesRoutes } from "./routes/finances.js";
+import { registerPrieresRoutes } from "./routes/prieres.js";
+import { registerPastoralRoutes } from "./routes/pastoral.js";
+import { registerServiteursRoutes } from "./routes/serviteurs.js";
+import { registerEnfantsRoutes } from "./routes/enfants.js";
+import { registerMediasRoutes } from "./routes/medias.js";
+import { registerBiensRoutes } from "./routes/biens.js";
+import { registerStatsRoutes } from "./routes/stats.js";
+import { registerParametresRoutes } from "./routes/parametres.js";
+import { registerProfilEgliseRoutes } from "./routes/profil_eglise.js";
+import { registerPaiementsRoutes } from "./routes/paiements.js";
 
 export function buildApp(db: Pool) {
   const app = Fastify({ logger: true });
@@ -30,12 +42,24 @@ export function buildApp(db: Pool) {
   registerAuthRoutes(app, db);
   registerEglisesRoutes(app, db);
   registerRattachementsRoutes(app, db);
-  registerTransfertsRoutes(app, db);
   registerMembresRoutes(app, db);
+  registerMembresComplementRoutes(app, db);
   registerContributionsRoutes(app, db);
   registerRapportsRoutes(app, db);
-  registerPlateformeRoutes(app, db);
   registerAnnoncesRoutes(app, db);
+  registerCultesRoutes(app, db);
+  registerPresencesRoutes(app, db);
+  registerFinancesRoutes(app, db);
+  registerPrieresRoutes(app, db);
+  registerPastoralRoutes(app, db);
+  registerServiteursRoutes(app, db);
+  registerEnfantsRoutes(app, db);
+  registerMediasRoutes(app, db);
+  registerBiensRoutes(app, db);
+  registerStatsRoutes(app, db);
+  registerParametresRoutes(app, db);
+  registerProfilEgliseRoutes(app, db);
+  registerPaiementsRoutes(app, db);
 
   app.setNotFoundHandler((_req, reply) => {
     reply.code(404).send({ error: "not_found", message: "Route inconnue." });
