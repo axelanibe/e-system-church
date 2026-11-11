@@ -6,11 +6,13 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../models/attestation.dart';
+import '../models/annexe.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
 import '../models/campagne.dart';
 import '../models/church.dart';
+import '../models/code_tutelle.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/enfants.dart';
@@ -379,9 +381,17 @@ class HttpApiService implements ApiService {
   }
 
   @override
-  Future<Rattachement> requestRattachement({required String parentCode}) async {
-    final data = await _call('POST', '/rattachements',
-        body: {'parent_code': parentCode});
+  Future<Rattachement> requestRattachement({
+    required String parentCode,
+    String? codeTutelle,
+  }) async {
+    final data = await _call(
+      'POST',
+      '/rattachements',
+      body: codeTutelle != null
+          ? {'code_tutelle': codeTutelle}
+          : {'parent_code': parentCode},
+    );
     // La réponse ne contient pas les champs d'église : on la complète.
     return Rattachement(
       id: data['id'] as String,
@@ -397,6 +407,40 @@ class HttpApiService implements ApiService {
   Future<void> decideRattachement(String id, {required bool accept}) async {
     await _call(
         'POST', '/rattachements/$id/${accept ? 'accepter' : 'refuser'}');
+  }
+
+  // -- Annexes et codes de tutelle (migration 009) -------------------------
+  @override
+  Future<List<Annexe>> getAnnexes({String? q}) async {
+    final data = await _call(
+      'GET',
+      '/annexes',
+      query: q == null || q.isEmpty ? null : {'q': q},
+    );
+    return (data['annexes'] as List<dynamic>)
+        .map((e) => Annexe.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<AnnexeDetail> getAnnexeDetail(String id) async =>
+      AnnexeDetail.fromJson(await _call('GET', '/annexes/$id'));
+
+  @override
+  Future<List<CodeTutelle>> getCodesTutelle() async {
+    final data = await _call('GET', '/codes-tutelle');
+    return (data['codes'] as List<dynamic>)
+        .map((e) => CodeTutelle.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<CodeTutelle> createCodeTutelle() async =>
+      CodeTutelle.fromJson(await _call('POST', '/codes-tutelle'));
+
+  @override
+  Future<void> annulerCodeTutelle(String id) async {
+    await _call('POST', '/codes-tutelle/$id/annuler');
   }
 
   @override

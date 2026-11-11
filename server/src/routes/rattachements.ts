@@ -3,6 +3,7 @@ import type { Pool, PoolClient } from "pg";
 import { z } from "zod";
 import { auditLog } from "../auth.js";
 import { dbError, requireAuth, requireRole, type Session } from "../middleware.js";
+import { MODULES_ACTIVABLES } from "../modules.js";
 
 /**
  * Rattachements : une église demande à rejoindre une mère ; la mère accepte
@@ -11,15 +12,43 @@ import { dbError, requireAuth, requireRole, type Session } from "../middleware.j
  * GET  /rattachements            — demandes reçues (je suis la mère) et émises.
  * POST /rattachements/:id/accepter — décision de la mère (admin de la mère).
  * POST /rattachements/:id/refuser  — décision de la mère (admin de la mère).
+ *
+ * Code de tutelle à usage unique (migration 009) : la demande peut porter
+ * `code_tutelle` (ESC-T-XXXXXX) au lieu du code permanent de la mère.
+ * À l'acceptation, le code passe à `utilise`, automatiquement, et tous les
+ * modules de l'église rattachée sont activés automatiquement (exception à
+ * la règle US1 « la mère ne force pas ses antennes », décidée par Axel
+ * le 11/11/2026 : une église sous tutelle a tous ses modules actifs).
+ * Un deuxième usage du même code est refusé (400 `code_tutelle_invalide`).
+ * Un refus laisse le code `actif`.
  */
+
+/** Active tous les modules activables pour une église (tutelle). */
+export async function activerTousModules(
+  client: PoolClient,
+  churchId: string,
+): Promise<string[]> {
+  const codes = MODULES_ACTIVABLES.map((m) => m.code);
+  for (const code of codes) {
+    await client.query(
+      `INSERT INTO eglise_modules (church_id, module, actif)
+       VALUES ($1, $2, true)
+       ON CONFLICT (church_id, module)
+       DO UPDATE SET actif = true, updated_at = now()`,
+      [churchId, code],
+    );
+  }
+  return codes;
+}
 
 const createSchema = z
   .object({
     parent_code: z.string().min(4).max(20).optional(),
     parent_church_id: z.string().uuid().optional(),
+    code_tutelle: z.string().min(4).max(20).optional(),
   })
-  .refine((d) => d.parent_code ?? d.parent_church_id, {
-    message: "parent_code ou parent_church_id est requis.",
+  .refine((d) => d.parent_code ?? d.parent_church_id ?? d.code_tutelle, {
+    message: "parent_code, parent_church_id ou code_tutelle est requis.",
   });
 
 /**
@@ -54,17 +83,73 @@ export function registerRattachementsRoutes(app: FastifyInstance, db: Pool) {
         });
       }
       try {
-        // Résout la mère (par code d'invitation ou par id).
-        const { rows: parents } = parsed.data.parent_church_id
-          ? await db.query<{ id: string; name: string }>(
-              `SELECT id, name FROM churches WHERE id = $1 AND status = 'active'`,
-              [parsed.data.parent_church_id],
-            )
-          : await db.query<{ id: string; name: string }>(
-              `SELECT id, name FROM churches WHERE code = $1 AND status = 'active'`,
-              [parsed.data.parent_code],
-            );
-        const parent = parents[0];
+        // Résout la mère : par code de tutelle à usage unique, par code
+        // permanent, ou par id.
+        let parent: { id: string; name: string } | undefined;
+        let codeTutelleId: string | null = null;
+        if (parsed.data.code_tutelle) {
+          const { rows: codes } = await db.query<{
+            id: string;
+            church_id: string;
+            status: string;
+          }>(
+            `SELECT id, church_id, status FROM codes_tutelle WHERE code = $1`,
+            [parsed.data.code_tutelle],
+          );
+          const code = codes[0];
+          if (!code) {
+            return reply.code(400).send({
+              error: "code_tutelle_invalide",
+              message: "Ce code de tutelle est inconnu.",
+            });
+          }
+          if (code.status === "utilise") {
+            return reply.code(400).send({
+              error: "code_tutelle_invalide",
+              message: "Ce code de tutelle a déjà été utilisé, il n'est plus valide.",
+            });
+          }
+          if (code.status === "annule") {
+            return reply.code(400).send({
+              error: "code_tutelle_invalide",
+              message: "Ce code de tutelle a été annulé.",
+            });
+          }
+          codeTutelleId = code.id;
+          const { rows: parents } = await db.query<{ id: string; name: string }>(
+            `SELECT id, name FROM churches WHERE id = $1 AND status = 'active'`,
+            [code.church_id],
+          );
+          parent = parents[0];
+          if (!parent) {
+            return reply.code(400).send({
+              error: "invalid_parent",
+              message: "Église mère introuvable ou inactive.",
+            });
+          }
+          const enAttente = await db.query(
+            `SELECT id FROM rattachements
+              WHERE code_tutelle_id = $1 AND status = 'en_attente'`,
+            [codeTutelleId],
+          );
+          if (enAttente.rowCount && enAttente.rowCount > 0) {
+            return reply.code(409).send({
+              error: "duplicate",
+              message: "Ce code est déjà utilisé par une demande en attente.",
+            });
+          }
+        } else {
+          const { rows: parents } = parsed.data.parent_church_id
+            ? await db.query<{ id: string; name: string }>(
+                `SELECT id, name FROM churches WHERE id = $1 AND status = 'active'`,
+                [parsed.data.parent_church_id],
+              )
+            : await db.query<{ id: string; name: string }>(
+                `SELECT id, name FROM churches WHERE code = $1 AND status = 'active'`,
+                [parsed.data.parent_code],
+              );
+          parent = parents[0];
+        }
         if (!parent) {
           return reply.code(400).send({
             error: "invalid_parent",
@@ -96,9 +181,9 @@ export function registerRattachementsRoutes(app: FastifyInstance, db: Pool) {
         }
 
         const { rows } = await db.query(
-          `INSERT INTO rattachements (church_id, parent_church_id, status)
-           VALUES ($1, $2, 'en_attente') RETURNING id, church_id, parent_church_id, status, created_at`,
-          [req.session.churchId, parent.id],
+          `INSERT INTO rattachements (church_id, parent_church_id, status, code_tutelle_id)
+           VALUES ($1, $2, 'en_attente', $3) RETURNING id, church_id, parent_church_id, status, created_at`,
+          [req.session.churchId, parent.id, codeTutelleId],
         );
         await auditLog(db, {
           churchId: req.session.churchId,
@@ -157,7 +242,7 @@ export function registerRattachementsRoutes(app: FastifyInstance, db: Pool) {
       try {
         await client.query("BEGIN");
         const { rows } = await client.query(
-          `SELECT id, church_id, parent_church_id, status
+          `SELECT id, church_id, parent_church_id, status, code_tutelle_id
              FROM rattachements WHERE id = $1 FOR UPDATE`,
           [rattachementId],
         );
@@ -204,6 +289,40 @@ export function registerRattachementsRoutes(app: FastifyInstance, db: Pool) {
             `UPDATE churches SET parent_church_id = $2, updated_at = now() WHERE id = $1`,
             [r.church_id, r.parent_church_id],
           );
+          // Tutelle : tous les modules de l'église rattachée sont activés
+          // automatiquement, sans action de son admin.
+          const modulesActives = await activerTousModules(client, r.church_id as string);
+          await auditLog(client, {
+            churchId: r.church_id as string,
+            userId: session.userId,
+            action: "modules.actives_tutelle",
+            details: { par_mere: r.parent_church_id, modules: modulesActives },
+          });
+          // Code de tutelle à usage unique : il n'est plus valide, tout
+          // de suite, sans action manuelle. Si un autre accept a déjà
+          // consommé le code entre-temps, on annule tout (409).
+          if (r.code_tutelle_id) {
+            const used = await client.query(
+              `UPDATE codes_tutelle
+                  SET status = 'utilise', used_by = $2, used_at = now()
+                WHERE id = $1 AND status = 'actif'`,
+              [r.code_tutelle_id, r.church_id],
+            );
+            if ((used.rowCount ?? 0) === 0) {
+              await client.query("ROLLBACK");
+              reply.code(409).send({
+                error: "code_tutelle_invalide",
+                message: "Ce code de tutelle a déjà été utilisé, il n'est plus valide.",
+              });
+              return;
+            }
+            await auditLog(client, {
+              churchId: session.churchId,
+              userId: session.userId,
+              action: "codes_tutelle.utilise",
+              details: { code_tutelle_id: r.code_tutelle_id, eglise_id: r.church_id },
+            });
+          }
         }
         await auditLog(client, {
           churchId: session.churchId,
