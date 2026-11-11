@@ -1,16 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_theme.dart';
 import '../models/church.dart';
 import '../state/app_state.dart';
 
 /// Avatar de l'église active : logo (NetworkImage) quand l'église en a un,
 /// sinon ses initiales sur fond de sa couleur principale.
+///
+/// Accessibilité (11 novembre 2026) : une église sans couleur, ou avec
+/// une couleur claire comme l'or, avait des initiales blanches sur fond
+/// clair, ratio ~1,5:1, invisibles. Le fond de repli est désormais le
+/// bleu nuit, et la couleur du texte est celle, blanc ou bleu nuit,
+/// dont le contraste avec le fond est le plus fort.
 class ChurchAvatar extends StatelessWidget {
   final Church? church;
   final double radius;
 
   const ChurchAvatar({super.key, required this.church, this.radius = 20});
+
+  /// Contraste WCAG entre deux couleurs.
+  static double _contraste(Color a, Color b) {
+    final l1 = a.computeLuminance();
+    final l2 = b.computeLuminance();
+    final clair = l1 > l2 ? l1 : l2;
+    final sombre = l1 > l2 ? l2 : l1;
+    return (clair + 0.05) / (sombre + 0.05);
+  }
+
+  /// Couleur de texte la plus lisible sur [fond] : blanc ou bleu nuit.
+  /// Ex. sur or #D4A72C, le blanc ne vaut que 2,24:1, le bleu nuit 7,5:1.
+  static Color _couleurTexte(Color fond) =>
+      _contraste(fond, Colors.white) >= _contraste(fond, AppTheme.bleuNuit)
+          ? Colors.white
+          : AppTheme.bleuNuit;
 
   @override
   Widget build(BuildContext context) {
@@ -21,19 +44,21 @@ class ChurchAvatar extends StatelessWidget {
         child: const Icon(Icons.church_outlined),
       );
     }
+    // Fond de repli bleu nuit quand l'église n'a pas de couleur.
+    final fond = c.couleur ?? AppTheme.bleuNuit;
     final logoUrl = c.logoUrl;
     if (logoUrl != null && logoUrl.isNotEmpty) {
       final baseUrl = context.read<AppState>().apiBaseUrl;
       final fullUrl = logoUrl.startsWith('http') ? logoUrl : '$baseUrl$logoUrl';
       return CircleAvatar(
         radius: radius,
-        backgroundColor: c.couleur,
+        backgroundColor: fond,
         backgroundImage: NetworkImage(fullUrl),
         onBackgroundImageError: (_, __) {},
         child: Text(
           c.initiales,
           style: TextStyle(
-            color: Colors.white,
+            color: _couleurTexte(fond),
             fontWeight: FontWeight.bold,
             fontSize: radius * 0.8,
           ),
@@ -42,11 +67,11 @@ class ChurchAvatar extends StatelessWidget {
     }
     return CircleAvatar(
       radius: radius,
-      backgroundColor: c.couleur,
+      backgroundColor: fond,
       child: Text(
         c.initiales,
         style: TextStyle(
-          color: Colors.white,
+          color: _couleurTexte(fond),
           fontWeight: FontWeight.bold,
           fontSize: radius * 0.8,
         ),

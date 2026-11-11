@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/enfants.dart';
@@ -366,14 +367,14 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.check,
-                                        color: Colors.green),
+                                        color: AppTheme.vertFonce),
                                     tooltip: 'Autoriser',
                                     onPressed: () => _setAutorisationStatut(
                                         a, 'autorisee'),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.close,
-                                        color: Colors.red),
+                                        color: AppTheme.rougeErreur),
                                     tooltip: 'Refuser',
                                     onPressed: () => _setAutorisationStatut(
                                         a, 'refusee'),
@@ -387,9 +388,9 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
                                         ? 'Refusée'
                                         : a.statut,
                                 color: a.statut == 'autorisee'
-                                    ? Colors.green
+                                    ? AppTheme.vertFonce
                                     : a.statut == 'refusee'
-                                        ? Colors.red
+                                        ? AppTheme.rougeErreur
                                         : Colors.orange,
                               ),
                       ),

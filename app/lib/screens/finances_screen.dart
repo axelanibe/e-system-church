@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/contribution.dart';
@@ -53,11 +54,11 @@ class _FinancesScreenState extends State<FinancesScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'confirme':
-        return Colors.green;
+        return AppTheme.vertFonce;
       case 'en_attente':
         return Colors.orange;
       case 'annule':
-        return Colors.red;
+        return AppTheme.rougeErreur;
       default:
         return Colors.grey;
     }
@@ -175,8 +176,8 @@ class _FinancesScreenState extends State<FinancesScreen> {
                                       ? Icons.trending_down
                                       : Icons.trending_up,
                                   color: type == 'depense'
-                                      ? Colors.red
-                                      : Colors.green,
+                                      ? AppTheme.rougeErreur
+                                      : AppTheme.vertFonce,
                                 ),
                             ],
                           );

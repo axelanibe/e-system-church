@@ -151,7 +151,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           isDemo
                               ? 'Sans effet en démo : la démo n’utilise pas de serveur, les données sont fictives et locales.'
                               : 'Changer l’URL déconnecte la session en cours : reconnectez-vous ensuite avec votre compte réel.',
-                          style: const TextStyle(fontSize: 12),
+                          style: const TextStyle(fontSize: 14),
                         ),
                       ],
                     ),

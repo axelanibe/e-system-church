@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/member.dart';
@@ -76,9 +77,9 @@ class _PrieresScreenState extends State<PrieresScreen> {
       case 'nouvelle':
         return Colors.orange;
       case 'en_cours':
-        return Colors.blue;
+        return AppTheme.bleuFonce;
       case 'terminee':
-        return Colors.green;
+        return AppTheme.vertFonce;
       default:
         return Colors.grey;
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
+import '../widgets/common_widgets.dart';
 
 /// Inscription en deux choix :
 /// - « Créer une église mère » : l'église naît active, sans mère.
@@ -77,7 +78,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // (AppState notifie, MaterialApp bascule sur HomeScreen).
       Navigator.of(context).pop();
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = messageErreurSimple(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

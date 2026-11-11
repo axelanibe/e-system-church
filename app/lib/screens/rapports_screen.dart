@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../config/app_theme.dart';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -130,14 +131,14 @@ class _RapportsScreenState extends State<RapportsScreen> {
                           value: formatMontant(
                               stats.recettesMoisFcfa, state.devise),
                           icon: Icons.trending_up,
-                          color: Colors.green,
+                          color: AppTheme.vertFonce,
                         ),
                         StatCard(
                           label: 'Dépenses ce mois-ci',
                           value: formatMontant(
                               stats.depensesMoisFcfa, state.devise),
                           icon: Icons.trending_down,
-                          color: Colors.red,
+                          color: AppTheme.rougeErreur,
                         ),
                       ],
                     );
