@@ -9,10 +9,12 @@
 import 'dart:typed_data';
 
 import '../models/attestation.dart';
+import '../models/annexe.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
 import '../models/church.dart';
+import '../models/code_tutelle.dart';
 import '../models/campagne.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
@@ -904,7 +906,10 @@ class MockApiService implements ApiService {
   }
 
   @override
-  Future<Rattachement> requestRattachement({required String parentCode}) async {
+  Future<Rattachement> requestRattachement({
+    required String parentCode,
+    String? codeTutelle,
+  }) async {
     await _latence();
     _requireAuth();
     final parent = _data.churchByCode(parentCode.trim().toUpperCase());
@@ -959,6 +964,46 @@ class MockApiService implements ApiService {
         );
       }
     }
+  }
+
+  // -- Annexes et codes de tutelle (démo : listes vides) --------------------
+  @override
+  Future<List<Annexe>> getAnnexes({String? q}) async {
+    await _latence();
+    _requireAuth();
+    return const [];
+  }
+
+  @override
+  Future<AnnexeDetail> getAnnexeDetail(String id) async {
+    await _latence();
+    _requireAuth();
+    throw const ApiException('Annexe introuvable (démo).');
+  }
+
+  @override
+  Future<List<CodeTutelle>> getCodesTutelle() async {
+    await _latence();
+    _requireAuth();
+    return const [];
+  }
+
+  @override
+  Future<CodeTutelle> createCodeTutelle() async {
+    await _latence();
+    _requireAuth();
+    return CodeTutelle(
+      id: _nextId('code'),
+      code: 'ESC-T-DEMO01',
+      status: 'actif',
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<void> annulerCodeTutelle(String id) async {
+    await _latence();
+    _requireAuth();
   }
 
   @override

@@ -9,6 +9,7 @@ import '../utils/format.dart';
 import '../widgets/church_avatar.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/mere_badge.dart';
+import 'annexes_screen.dart';
 import 'finances_mere_screen.dart';
 import 'mes_eglises_screen.dart';
 import 'plateforme_screen.dart';
@@ -334,6 +335,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           Icons.account_balance_outlined),
                                       label: const Text(
                                           'Voir les finances en détail'),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: FilledButton.icon(
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const AnnexesScreen(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.hub_outlined),
+                                      label: const Text('Voir mes annexes'),
                                     ),
                                   ),
                                 ],

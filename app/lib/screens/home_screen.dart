@@ -5,6 +5,7 @@ import '../models/module_eglise.dart';
 import '../state/app_state.dart';
 import '../widgets/church_avatar.dart';
 import '../widgets/mere_badge.dart';
+import 'annexes_screen.dart';
 import 'annonces_screen.dart';
 import 'dashboard_screen.dart';
 import 'finances_mere_screen.dart';
@@ -276,6 +277,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
+            if (state.isAdmin)
+              ListTile(
+                leading: const Icon(Icons.hub_outlined),
+                title: const Text('Mes annexes'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const AnnexesScreen()),
+                  );
+                },
+              ),
             if (state.isSuperAdmin)
               ListTile(
                 leading: const Icon(Icons.public_outlined),

@@ -48,7 +48,10 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
           .decideRattachement(id, accept: accept);
       if (!mounted) return;
       showSuccess(
-          context, accept ? 'Demande acceptée.' : 'Demande refusée.');
+          context,
+          accept
+              ? 'Demande acceptée. Tous les modules de l’église sont activés.'
+              : 'Demande refusée.');
       await _refresh();
     } catch (e) {
       if (mounted) showApiError(context, e);
@@ -63,10 +66,13 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
     }
     setState(() => _sending = true);
     try {
-      await context
-          .read<AppState>()
-          .api
-          .requestRattachement(parentCode: code);
+      // Code de tutelle ESC-T-… à usage unique, ou code permanent ESC-…
+      // de l'église mère : le serveur distingue les deux.
+      final estTutelle = code.startsWith('ESC-T-');
+      await context.read<AppState>().api.requestRattachement(
+            parentCode: code,
+            codeTutelle: estTutelle ? code : null,
+          );
       if (!mounted) return;
       _codeController.clear();
       showSuccess(context,
@@ -148,7 +154,7 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
                               style: Theme.of(context).textTheme.titleMedium),
                           const SizedBox(height: 8),
                           const Text(
-                              'Saisissez le code d’invitation de l’église mère à rejoindre.'),
+                              'Saisissez le code d’invitation de l’église mère à rejoindre : son code permanent ESC-…, ou un code de tutelle ESC-T-… à usage unique, donné par la mère. Une fois utilisé, le code de tutelle n’est plus valide.'),
                           const SizedBox(height: 12),
                           Row(
                             children: [
@@ -159,7 +165,7 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
                                       TextCapitalization.characters,
                                   decoration: const InputDecoration(
                                     labelText: 'Code d’invitation',
-                                    hintText: 'Ex. GD-PLAT',
+                                    hintText: 'Ex. ESC-T-AB12CD',
                                     border: OutlineInputBorder(),
                                   ),
                                 ),
