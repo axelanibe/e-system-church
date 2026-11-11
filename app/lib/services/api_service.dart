@@ -1,6 +1,7 @@
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
+import '../models/campagne.dart';
 import '../models/church.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
@@ -394,10 +395,29 @@ abstract class ApiService {
     required String paymentMethod,
     String? paymentRef,
     String? memberId,
+    String? campagneId,
     String? note,
   });
 
   Future<Contribution> setContributionStatus(String id, String status);
+
+  // -- Campagnes de collecte (US2) -----------------------------------------
+  Future<List<Campagne>> getCampagnes();
+
+  Future<Campagne> createCampagne({
+    required String nom,
+    required int objectifFcfa,
+    required String dateDebut,
+    required String dateFin,
+    String statut = 'brouillon',
+    bool visibleMembres = false,
+  });
+
+  Future<Campagne> setCampagneStatut(String id, String statut);
+
+  Future<void> cloturerCampagne(String id);
+
+  Future<Contribution> affecterContributionCampagne(String id, String? campagneId);
 
   // -- Communication : prières et messages (module 5) ------------------------
   Future<List<DemandePriere>> getDemandesPriere({String? statut});

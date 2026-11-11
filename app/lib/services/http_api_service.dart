@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
+import '../models/campagne.dart';
 import '../models/church.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
@@ -981,6 +982,7 @@ class HttpApiService implements ApiService {
     required String paymentMethod,
     String? paymentRef,
     String? memberId,
+    String? campagneId,
     String? note,
   }) async {
     final data = await _call('POST', '/contributions', body: {
@@ -989,6 +991,7 @@ class HttpApiService implements ApiService {
       'payment_method': paymentMethod,
       if (paymentRef != null) 'payment_ref': paymentRef,
       if (memberId != null) 'member_id': memberId,
+      if (campagneId != null) 'campagne_id': campagneId,
       if (note != null) 'note': note,
     });
     return Contribution.fromJson(data);
@@ -1002,6 +1005,55 @@ class HttpApiService implements ApiService {
     if (data.containsKey('recu')) {
       return Contribution.fromJson(data['recu'] as Map<String, dynamic>);
     }
+    return getReceipt(id);
+  }
+
+  // -- Campagnes de collecte (US2) ------------------------------------------
+  @override
+  Future<List<Campagne>> getCampagnes() async {
+    final data = await _call('GET', '/campagnes');
+    return (data['campagnes'] as List<dynamic>? ?? [])
+        .map((e) => Campagne.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<Campagne> createCampagne({
+    required String nom,
+    required int objectifFcfa,
+    required String dateDebut,
+    required String dateFin,
+    String statut = 'brouillon',
+    bool visibleMembres = false,
+  }) async {
+    final data = await _call('POST', '/campagnes', body: {
+      'nom': nom,
+      'objectif_fcfa': objectifFcfa,
+      'date_debut': dateDebut,
+      'date_fin': dateFin,
+      'statut': statut,
+      'visible_membres': visibleMembres,
+    });
+    return Campagne.fromJson(data);
+  }
+
+  @override
+  Future<Campagne> setCampagneStatut(String id, String statut) async {
+    final data = await _call('PATCH', '/campagnes/$id', body: {'statut': statut});
+    return Campagne.fromJson(data);
+  }
+
+  @override
+  Future<void> cloturerCampagne(String id) async {
+    await _call('PATCH', '/campagnes/$id/cloturer');
+  }
+
+  @override
+  Future<Contribution> affecterContributionCampagne(
+      String id, String? campagneId) async {
+    await _call('PATCH', '/contributions/$id/campagne',
+        body: {'campagne_id': campagneId});
+    // La réponse est partielle : on relit le reçu complet.
     return getReceipt(id);
   }
 

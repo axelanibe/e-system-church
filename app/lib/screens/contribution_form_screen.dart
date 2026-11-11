@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/campagne.dart';
 import '../models/member.dart';
 import '../models/paiements.dart';
 import '../state/app_state.dart';
@@ -34,6 +35,8 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
   List<EglisePaiement> _moyens = [];
   String? _memberId;
   List<Member> _members = [];
+  String? _campagneId;
+  List<Campagne> _campagnes = [];
   bool _loading = false;
   String? _error;
 
@@ -42,6 +45,22 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
     super.initState();
     _loadMembers();
     _loadMoyens();
+    _loadCampagnes();
+  }
+
+  /// Campagnes actives de l'église, pour affecter ce don (US2). Une
+  /// dépense n'est jamais affectée, et un don payé par un moyen configuré
+  /// ne passe pas par ici : le choix n'est proposé qu'en saisie manuelle.
+  Future<void> _loadCampagnes() async {
+    try {
+      final campagnes = await context.read<AppState>().api.getCampagnes();
+      if (mounted) {
+        setState(() => _campagnes =
+            campagnes.where((c) => c.statut == 'active').toList());
+      }
+    } catch (_) {
+      // La campagne est facultative pour le formulaire.
+    }
   }
 
   Future<void> _loadMembers() async {
@@ -115,6 +134,7 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                   ? null
                   : _refController.text.trim(),
               memberId: _memberId,
+              campagneId: _type == 'depense' ? null : _campagneId,
               note: _noteController.text.trim().isEmpty
                   ? null
                   : _noteController.text.trim(),
@@ -357,6 +377,26 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                     ],
                     onChanged: (v) => setState(() => _memberId = v),
                   ),
+                  if (_type != 'depense' && !_viaMoyenConfigure) ...[
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String?>(
+                      initialValue: _campagneId,
+                      decoration: const InputDecoration(
+                        labelText: 'Campagne (facultatif)',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem(
+                            value: null, child: Text('— Fonds général —')),
+                        for (final c in _campagnes)
+                          DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.nom),
+                          ),
+                      ],
+                      onChanged: (v) => setState(() => _campagneId = v),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _noteController,

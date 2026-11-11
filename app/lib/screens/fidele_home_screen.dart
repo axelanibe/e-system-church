@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/announcement.dart';
+import '../models/campagne.dart';
 import '../models/module_eglise.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
@@ -13,6 +14,7 @@ import '../widgets/change_password_dialog.dart';
 import '../widgets/church_avatar.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/mere_badge.dart';
+import 'campagnes_screen.dart';
 import 'member_detail_screen.dart';
 
 /// Accueil fidèle (rôle `membre`) : mon église, mes annonces, cultes à
@@ -32,6 +34,7 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
   late Future<List<Culte>> _cultesFuture;
   late Future<List<Presence>> _presencesFuture;
   late Future<List<Contribution>> _contributionsFuture;
+  late Future<List<Campagne>> _campagnesFuture;
 
   @override
   void initState() {
@@ -65,6 +68,9 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
         ? api.getMesPresences()
         : Future.value(<Presence>[]);
     _contributionsFuture = api.getMesContributions();
+    // US2 : seules les campagnes dont l'église montre le total arrivent
+    // ici, le serveur filtre le reste.
+    _campagnesFuture = api.getCampagnes();
   }
 
   Future<void> _refresh() async {
@@ -274,6 +280,29 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                 subtitle: Text(
                   '${formatDate(c.createdAt)} · ${c.status}',
                 ),
+              ),
+            ),
+            const SectionTitle(title: 'Campagnes de mon église'),
+            _SectionList<Campagne>(
+              future: _campagnesFuture,
+              emptyIcon: Icons.volunteer_activism_outlined,
+              emptyMessage: 'Aucune campagne visible pour l’instant.',
+              itemBuilder: (c) => ListTile(
+                leading: const Icon(Icons.volunteer_activism_outlined),
+                title: Text(c.nom),
+                subtitle: Text(
+                  c.depasse
+                      ? 'Objectif dépassé : ${formatFcfa(c.totalCollecte)} sur ${formatFcfa(c.objectifFcfa)} (${c.pourcentage} %).'
+                      : '${formatFcfa(c.totalCollecte)} sur ${formatFcfa(c.objectifFcfa)} (${c.pourcentage} %).',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const CampagnesScreen(),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 16),
