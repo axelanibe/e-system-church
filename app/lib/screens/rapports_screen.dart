@@ -131,7 +131,7 @@ class _RapportsScreenState extends State<RapportsScreen> {
                           value: formatMontant(
                               stats.recettesMoisFcfa, state.devise),
                           icon: Icons.trending_up,
-                          color: AppTheme.vertFonce,
+                          color: AppTheme.saugeFonce,
                         ),
                         StatCard(
                           label: 'Dépenses ce mois-ci',

@@ -81,15 +81,18 @@ class _HomeScreenState extends State<HomeScreen> {
     final church = state.church;
     final wide = MediaQuery.of(context).size.width >= 900;
 
+    // Libellés courts, une ligne : « Tableau de bord » et
+    // « Arborescence » se coupaient en deux lignes et sortaient de la
+    // barre sur les photos. Les titres complets restent dans _titles.
     const destinations = [
       NavigationDestination(
           icon: Icon(Icons.dashboard_outlined),
           selectedIcon: Icon(Icons.dashboard),
-          label: 'Tableau de bord'),
+          label: 'Accueil'),
       NavigationDestination(
           icon: Icon(Icons.account_tree_outlined),
           selectedIcon: Icon(Icons.account_tree),
-          label: 'Arborescence'),
+          label: 'Réseau'),
       NavigationDestination(
           icon: Icon(Icons.people_outlined),
           selectedIcon: Icon(Icons.people),
@@ -119,45 +122,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final dests = visibles.map((i) => destinations[i]).toList();
 
     return Scaffold(
+      // AppBar : titre de l'écran seul, une ligne, coupé avec « … ».
+      // L'identité de l'église et le badge « Église mère » ne sont
+      // plus ici : sur les photos, le badge chevauchait le titre
+      // (« Modules », « Tableau de bord ») et le nom de l'église
+      // était coupé par le badge. Ils restent dans le tiroir et dans
+      // la carte de l'église du tableau de bord, dans le corps.
       appBar: AppBar(
-        title: Row(
-          children: [
-            ChurchAvatar(church: church, radius: 18),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    church?.name ?? 'e-System Church',
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  if (church != null)
-                    Row(
-                      children: [
-                        Text(
-                          church.code,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        if (church.isMere) ...[
-                          const SizedBox(width: 8),
-                          const MereBadge(),
-                        ],
-                      ],
-                    ),
-                ],
-              ),
-            ),
-            // Titre de l'écran, coupé avec « … » si la place manque.
-            Flexible(
-              child: Text(
-                _titles[courant],
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-          ],
+        title: Text(
+          _titles[courant],
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
       drawer: Drawer(
@@ -234,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 trailing: membership.church.id == church?.id
-                    ? const Icon(Icons.check, color: AppTheme.vertFonce)
+                    ? const Icon(Icons.check, color: AppTheme.saugeFonce)
                     : null,
                 onTap: () async {
                   Navigator.of(context).pop();

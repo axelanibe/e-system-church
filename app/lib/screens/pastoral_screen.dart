@@ -384,7 +384,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       trailing: StatusChip(
                         label: v.statut,
                         color: v.statut == 'realisee'
-                            ? AppTheme.vertFonce
+                            ? AppTheme.saugeFonce
                             : v.statut == 'annulee'
                                 ? AppTheme.rougeErreur
                                 : Colors.orange,
@@ -456,8 +456,8 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       trailing: StatusChip(
                         label: a.statut,
                         color: a.statut == 'termine'
-                            ? AppTheme.vertFonce
-                            : AppTheme.bleuFonce,
+                            ? AppTheme.saugeFonce
+                            : AppTheme.bleuDoux,
                       ),
                     );
                   },

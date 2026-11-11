@@ -123,11 +123,10 @@ class ModulesScreen extends StatelessWidget {
         .where((m) => m.module == null || state.isModuleActif(m.module!))
         .toList();
 
+    // Pas d'AppBar ici : le titre « Modules » est déjà dans l'AppBar
+    // de HomeScreen. Deux AppBar empilées faisaient la haute bande
+    // sombre des photos, avec le badge par-dessus le titre.
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Modules'),
-        automaticallyImplyLeading: false,
-      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final crossAxisCount = constraints.maxWidth > 600 ? 3 : 2;

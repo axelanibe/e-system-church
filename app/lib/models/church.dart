@@ -19,7 +19,7 @@ class Church {
   /// Logo de l'église (URL, null si aucun logo : on affiche les initiales).
   final String? logoUrl;
 
-  /// Couleur principale de l'église, au format hex (« #0B1F3A »).
+  /// Couleur principale de l'église, au format hex (« #3F5A50 »).
   final String? couleurPrincipale;
 
   /// Devise de l'église (« FCFA », « EUR »…).

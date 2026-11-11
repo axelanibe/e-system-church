@@ -112,6 +112,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             children: [
                               Text(
                                 church?.name ?? '—',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context)
                                     .textTheme
                                     .headlineSmall
@@ -119,7 +121,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                  '${church?.code ?? ''} · ${church?.city ?? ''} · ${state.roleLabel}'),
+                                '${church?.code ?? ''} · ${church?.city ?? ''} · ${state.roleLabel}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                               if (church?.isMere ?? false) ...[
                                 const SizedBox(height: 8),
                                 const Row(
@@ -128,7 +133,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                          'Tête de votre réseau.'),
+                                        'Tête de votre réseau.',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -217,7 +225,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   const NeverScrollableScrollPhysics(),
                               mainAxisSpacing: 12,
                               crossAxisSpacing: 12,
-                              childAspectRatio: 1.6,
+                              // 1,35 au lieu de 1,6 : « Dépenses
+                              // confirmées » sortait de sa carte.
+                              childAspectRatio: 1.35,
                               children: [
                                 StatCard(
                                   label: 'Membres',
@@ -228,7 +238,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   label: 'Entrées confirmées',
                                   value: formatFcfa(entrees),
                                   icon: Icons.trending_up,
-                                  color: AppTheme.vertFonce,
+                                  color: AppTheme.saugeFonce,
                                 ),
                                 StatCard(
                                   label: 'Dépenses confirmées',

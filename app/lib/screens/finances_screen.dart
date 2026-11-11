@@ -56,7 +56,7 @@ class _FinancesScreenState extends State<FinancesScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'confirme':
-        return AppTheme.vertFonce;
+        return AppTheme.saugeFonce;
       case 'en_attente':
         return Colors.orange;
       case 'annule':
@@ -212,7 +212,7 @@ class _FinancesScreenState extends State<FinancesScreen> {
                                       : Icons.trending_up,
                                   color: type == 'depense'
                                       ? AppTheme.rougeErreur
-                                      : AppTheme.vertFonce,
+                                      : AppTheme.saugeFonce,
                                 ),
                             ],
                           );

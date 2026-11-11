@@ -112,21 +112,16 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                 children: [
                   Text(
                     church?.name ?? 'Mon église',
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   if (church != null)
-                    Row(
-                      children: [
-                        Text(
-                          church.code,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        if (church.isMere) ...[
-                          const SizedBox(width: 8),
-                          const MereBadge(),
-                        ],
-                      ],
+                    Text(
+                      church.code,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                 ],
               ),
