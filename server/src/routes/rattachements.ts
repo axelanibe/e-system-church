@@ -152,6 +152,19 @@ export function registerRattachementsRoutes(app: FastifyInstance, db: Pool) {
     reply: FastifyReply,
     accepter: boolean,
   ): Promise<void> {
+    // UUID invalide : 400, pas 500 (la requête SQL `WHERE id = $1` rejette
+    // la valeur et `dbError` la relaie en erreur serveur).
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        rattachementId,
+      )
+    ) {
+      reply.code(400).send({
+        error: "invalid_id",
+        message: "Demande introuvable.",
+      });
+      return;
+    }
     try {
       const client = await db.connect();
       try {

@@ -45,8 +45,13 @@ class HttpApiService implements ApiService {
 
   void setToken(String? token) => _token = token;
 
-  Map<String, String> get _headers => <String, String>{
-        'Content-Type': 'application/json',
+  /// En-têtes : `Content-Type: application/json` seulement quand un corps
+  /// est envoyé. Un POST sans corps (ex. accepter ou refuser un
+  /// rattachement) avec ce content-type arrive corps vide au serveur, et
+  /// Fastify le rejette (« Body cannot be empty when content-type is set
+  /// to 'application/json' »).
+  Map<String, String> _headers({required bool withBody}) => <String, String>{
+        if (withBody) 'Content-Type': 'application/json',
         if (_token != null) 'Authorization': 'Bearer $_token',
       };
 
@@ -59,28 +64,29 @@ class HttpApiService implements ApiService {
   }) async {
     final uri = Uri.parse('$baseUrl$path')
         .replace(queryParameters: query?.isEmpty ?? true ? null : query);
+    final headers = _headers(withBody: body != null);
     http.Response res;
     try {
       switch (method) {
         case 'GET':
           res = await http
-              .get(uri, headers: _headers)
+              .get(uri, headers: headers)
               .timeout(const Duration(seconds: 20));
         case 'POST':
           res = await http
               .post(uri,
-                  headers: _headers,
+                  headers: headers,
                   body: body == null ? null : jsonEncode(body))
               .timeout(const Duration(seconds: 20));
         case 'PATCH':
           res = await http
               .patch(uri,
-                  headers: _headers,
+                  headers: headers,
                   body: body == null ? null : jsonEncode(body))
               .timeout(const Duration(seconds: 20));
         case 'DELETE':
           res = await http
-              .delete(uri, headers: _headers)
+              .delete(uri, headers: headers)
               .timeout(const Duration(seconds: 20));
         default:
           throw const ApiException('Méthode HTTP inconnue.');
@@ -1100,7 +1106,7 @@ class HttpApiService implements ApiService {
     http.Response res;
     try {
       res = await http
-          .get(uri, headers: _headers)
+          .get(uri, headers: _headers(withBody: false))
           .timeout(const Duration(seconds: 20));
     } on TimeoutException {
       throw const ApiException('Le serveur ne répond pas.');
@@ -1556,7 +1562,7 @@ class HttpApiService implements ApiService {
     http.Response res;
     try {
       res = await http
-          .get(uri, headers: _headers)
+          .get(uri, headers: _headers(withBody: false))
           .timeout(const Duration(seconds: 20));
     } on TimeoutException {
       throw const ApiException(
