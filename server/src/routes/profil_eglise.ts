@@ -55,7 +55,7 @@ const profilSchema = z.object({
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, "Couleur au format hexadécimal (#RRVVBB).")
     .optional(),
-  devise: z.string().regex(/^[A-Z]{3}$/, "Devise : code à 3 lettres (FCFA, EUR, USD…).").optional(),
+  devise: z.string().trim().toUpperCase().regex(/^[A-Z]{3,4}$/, "Devise : code de 3 ou 4 lettres (FCFA, XOF, EUR, USD…).").optional(),
   fuseau_horaire: z.string().min(3).max(60).optional(),
   logo_url: z.string().url().max(500).optional(),
   address: z.string().max(300).optional(),
