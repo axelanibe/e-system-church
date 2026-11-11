@@ -28,7 +28,7 @@ jobs:
       - run: flutter --version
       - run: flutter pub get
       - run: flutter analyze
-      - run: flutter build apk --split-per-abi --release
+      - run: flutter build apk --split-per-abi --release --verbose
       - uses: actions/upload-artifact@v4
         with:
           name: e-system-church-apk
