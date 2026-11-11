@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/contribution.dart';
@@ -51,11 +52,11 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'confirme':
-        return Colors.green;
+        return AppTheme.vertFonce;
       case 'en_attente':
         return Colors.orange;
       case 'annule':
-        return Colors.red;
+        return AppTheme.rougeErreur;
       default:
         return Colors.grey;
     }

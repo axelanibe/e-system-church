@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/cultes.dart';
@@ -360,9 +361,9 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
                       trailing: StatusChip(
                         label: p.statut,
                         color: p.statut == 'confirme'
-                            ? Colors.green
+                            ? AppTheme.vertFonce
                             : p.statut == 'absent'
-                                ? Colors.red
+                                ? AppTheme.rougeErreur
                                 : Colors.orange,
                       ),
                     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
+import '../widgets/common_widgets.dart';
 
 /// Mot de passe oublié : l'utilisateur saisit son e-mail. La réponse de
 /// l'API est volontairement générique (pas d'énumération) : le message
@@ -39,7 +40,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           .forgotPassword(email: _emailController.text.trim());
       if (mounted) setState(() => _sent = true);
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = messageErreurSimple(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

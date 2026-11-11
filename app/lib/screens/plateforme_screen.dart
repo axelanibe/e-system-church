@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/plateforme.dart';
@@ -150,14 +151,14 @@ class _PlateformeScreenState extends State<PlateformeScreen> {
                                 value: formatFcfa(
                                     chiffres.totalContributionsFcfa),
                                 icon: Icons.trending_up,
-                                color: Colors.green,
+                                color: AppTheme.vertFonce,
                               ),
                               StatCard(
                                 label: 'Dépenses confirmées',
                                 value:
                                     formatFcfa(chiffres.depensesFcfa),
                                 icon: Icons.trending_down,
-                                color: Colors.red,
+                                color: AppTheme.rougeErreur,
                               ),
                             ],
                           );

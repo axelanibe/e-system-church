@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/paiements.dart';
@@ -305,7 +306,7 @@ class _FournisseurCardState extends State<_FournisseurCard> {
     final statutColor = config == null
         ? scheme.onSurfaceVariant
         : config.actif
-            ? Colors.green
+            ? AppTheme.vertFonce
             : Colors.orange;
     return Card(
       child: Padding(
@@ -389,7 +390,7 @@ class _FournisseurCardState extends State<_FournisseurCard> {
                     style: TextStyle(
                       color: _messageIsError
                           ? scheme.error
-                          : Colors.green,
+                          : AppTheme.vertFonce,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -440,7 +441,7 @@ class _FournisseurCardState extends State<_FournisseurCard> {
               const Text(
                 'Les identifiants sont chiffrés sur le serveur et ne sont '
                 'jamais affichés.',
-                style: TextStyle(fontSize: 12),
+                style: TextStyle(fontSize: 14),
                 textAlign: TextAlign.center,
               ),
             ],

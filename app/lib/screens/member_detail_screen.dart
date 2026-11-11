@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -19,9 +20,9 @@ class MemberDetailScreen extends StatelessWidget {
   Color _statusColor(String status) {
     switch (status) {
       case 'actif':
-        return Colors.green;
+        return AppTheme.vertFonce;
       case 'nouveau_converti':
-        return Colors.blue;
+        return AppTheme.bleuFonce;
       case 'inactif':
         return Colors.grey;
       default:

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/membres_complement.dart';
 import '../state/app_state.dart';
+import '../widgets/common_widgets.dart';
 
 /// Inscription membre par code d'église : « Je suis membre d'une église »
 /// (nom et prénom, e-mail, téléphone, mot de passe, code de l'église).
@@ -66,9 +67,9 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
         // l'accueil fidèle. Rien à faire ici.
         return;
       }
-      setState(() => _error = result.message);
+      setState(() => _error = messageErreurSimple(result.message));
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = messageErreurSimple(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -153,6 +154,10 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Code de l’église (ex. ESC-XXXXXX)',
+                      helperText:
+                          'Demandez le code à votre pasteur ou à un '
+                          'responsable, il ressemble à ESC-XXXXXX.',
+                      helperMaxLines: 2,
                       prefixIcon: Icon(Icons.key_outlined),
                       border: OutlineInputBorder(),
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/member.dart';
@@ -383,9 +384,9 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       trailing: StatusChip(
                         label: v.statut,
                         color: v.statut == 'realisee'
-                            ? Colors.green
+                            ? AppTheme.vertFonce
                             : v.statut == 'annulee'
-                                ? Colors.red
+                                ? AppTheme.rougeErreur
                                 : Colors.orange,
                       ),
                     );
@@ -455,8 +456,8 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       trailing: StatusChip(
                         label: a.statut,
                         color: a.statut == 'termine'
-                            ? Colors.green
-                            : Colors.blue,
+                            ? AppTheme.vertFonce
+                            : AppTheme.bleuFonce,
                       ),
                     );
                   },

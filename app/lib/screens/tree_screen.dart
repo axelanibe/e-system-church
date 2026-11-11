@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/church.dart';
@@ -160,13 +161,13 @@ class _TreeScreenState extends State<TreeScreen> {
                           children: [
                             IconButton(
                               icon: const Icon(Icons.check,
-                                  color: Colors.green),
+                                  color: AppTheme.vertFonce),
                               tooltip: 'Accepter',
                               onPressed: () => _decide(d.id, true),
                             ),
                             IconButton(
                               icon:
-                                  const Icon(Icons.close, color: Colors.red),
+                                  const Icon(Icons.close, color: AppTheme.rougeErreur),
                               tooltip: 'Refuser',
                               onPressed: () => _decide(d.id, false),
                             ),

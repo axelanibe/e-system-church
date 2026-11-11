@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/module_eglise.dart';
@@ -194,7 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: Text(
                 'MES ÉGLISES',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
             for (final membership in state.eglises)
@@ -205,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 subtitle: Text(
                     '${membership.church.code} · ${membership.role}'),
                 trailing: membership.church.id == church?.id
-                    ? const Icon(Icons.check, color: Colors.green)
+                    ? const Icon(Icons.check, color: AppTheme.vertFonce)
                     : null,
                 onTap: () async {
                   Navigator.of(context).pop();

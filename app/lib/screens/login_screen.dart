@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
 import '../state/app_state.dart';
+import '../widgets/common_widgets.dart';
 import 'forgot_password_screen.dart';
 import 'register_fidele_screen.dart';
 import 'register_screen.dart';
@@ -44,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
     } catch (e) {
       if (mounted) {
-        setState(() => _error = e.toString());
+        setState(() => _error = messageErreurSimple(e));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -172,6 +173,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                     child: const Text('Inscrire mon église'),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Pour créer une nouvelle église.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                   const SizedBox(height: 12),
                   OutlinedButton(
                     onPressed: _loading
@@ -182,6 +189,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                     child: const Text('Je suis membre d’une église'),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Pour rejoindre votre église avec son code.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),

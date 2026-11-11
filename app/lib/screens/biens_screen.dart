@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/biens.dart';
@@ -369,8 +370,8 @@ class _BiensScreenState extends State<BiensScreen> {
                                 trailing: StatusChip(
                                   label: r.statut,
                                   color: r.statut == 'annulee'
-                                      ? Colors.red
-                                      : Colors.green,
+                                      ? AppTheme.rougeErreur
+                                      : AppTheme.vertFonce,
                                 ),
                               )),
                         const SizedBox(height: 80),
