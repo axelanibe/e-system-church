@@ -103,21 +103,34 @@ export function registerRapportsRoutes(app: FastifyInstance, db: Pool) {
           [req.session.churchId],
         );
 
+        // La vue renvoie les agrégats `count(*)` / `sum()` (bigint) comme
+        // des chaînes via node-postgres : on normalise en nombres avant
+        // d'envoyer, sinon l'appli plante sur `as num?` (constaté 11/11).
+        const sousEglisesNorm = sousEglises.map((r) => ({
+          eglise_id: r.eglise_id,
+          eglise_nom: r.eglise_nom,
+          niveau: Number(r.niveau),
+          membres_actifs: Number(r.membres_actifs),
+          nombre_contributions: Number(r.nombre_contributions),
+          total_fcfa: Number(r.total_fcfa),
+        }));
+
         const totauxReseau = {
           membres_actifs:
             propres.membres_actifs +
-            sousEglises.reduce((s, r) => s + Number(r.membres_actifs), 0),
+            sousEglisesNorm.reduce((s, r) => s + r.membres_actifs, 0),
           nombre_contributions:
             propres.nombre_contributions +
-            sousEglises.reduce((s, r) => s + Number(r.nombre_contributions), 0),
+            sousEglisesNorm.reduce((s, r) => s + r.nombre_contributions, 0),
           total_fcfa:
-            propres.total_fcfa + sousEglises.reduce((s, r) => s + Number(r.total_fcfa), 0),
+            propres.total_fcfa +
+            sousEglisesNorm.reduce((s, r) => s + r.total_fcfa, 0),
         };
 
         return reply.send({
           eglise: church,
           propre: propres,
-          sous_eglises: sousEglises,
+          sous_eglises: sousEglisesNorm,
           totaux_reseau: totauxReseau,
         });
       } catch (e) {

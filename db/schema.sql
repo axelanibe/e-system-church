@@ -249,11 +249,11 @@ SELECT
     c.id        AS eglise_id,
     c.name      AS eglise_nom,
     d.niveau    AS niveau,
-    (SELECT count(*) FROM members m WHERE m.church_id = c.id AND m.status = 'actif') AS membres_actifs,
-    (SELECT count(*) FROM contributions co
+    (SELECT count(*)::int FROM members m WHERE m.church_id = c.id AND m.status = 'actif') AS membres_actifs,
+    (SELECT count(*)::int FROM contributions co
       WHERE co.church_id = c.id AND co.type IN ('dime','offrande','don')
         AND co.status = 'confirme') AS nombre_contributions,
-    (SELECT coalesce(sum(amount_fcfa), 0) FROM contributions co
+    (SELECT coalesce(sum(amount_fcfa), 0)::int FROM contributions co
       WHERE co.church_id = c.id AND co.type IN ('dime','offrande','don')
         AND co.status = 'confirme') AS total_fcfa
 FROM churches c

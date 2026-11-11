@@ -1,6 +1,18 @@
 import 'church.dart';
 import 'contribution.dart';
 
+/// Lit un entier venant de l'API : PostgreSQL renvoie les `count(*)` et
+/// `sum()` (bigint) comme des chaînes via node-postgres, pas comme des
+/// nombres. Sans ça, `as num?` lève « type 'String' is not a subtype of
+/// type 'num?' » et l'écran Rapports plante (constaté le 11/11 sur Render :
+/// la vue `v_rapports_consolides` ne castait pas ses agrégats en `::int`).
+int _asInt(dynamic value, [int fallback = 0]) {
+  if (value == null) return fallback;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? fallback;
+  return fallback;
+}
+
 /// Chiffres d'une église : membres actifs + contributions confirmées.
 class RapportChiffres {
   final int membresActifs;
@@ -15,10 +27,9 @@ class RapportChiffres {
 
   factory RapportChiffres.fromJson(Map<String, dynamic> json) =>
       RapportChiffres(
-        membresActifs: (json['membres_actifs'] as num?)?.toInt() ?? 0,
-        nombreContributions:
-            (json['nombre_contributions'] as num?)?.toInt() ?? 0,
-        totalFcfa: (json['total_fcfa'] as num?)?.toInt() ?? 0,
+        membresActifs: _asInt(json['membres_actifs']),
+        nombreContributions: _asInt(json['nombre_contributions']),
+        totalFcfa: _asInt(json['total_fcfa']),
       );
 }
 
@@ -44,11 +55,10 @@ class RapportSousEglise {
       RapportSousEglise(
         egliseId: json['eglise_id'] as String,
         egliseNom: json['eglise_nom'] as String,
-        niveau: (json['niveau'] as num?)?.toInt() ?? 1,
-        membresActifs: (json['membres_actifs'] as num?)?.toInt() ?? 0,
-        nombreContributions:
-            (json['nombre_contributions'] as num?)?.toInt() ?? 0,
-        totalFcfa: (json['total_fcfa'] as num?)?.toInt() ?? 0,
+        niveau: _asInt(json['niveau'], 1),
+        membresActifs: _asInt(json['membres_actifs']),
+        nombreContributions: _asInt(json['nombre_contributions']),
+        totalFcfa: _asInt(json['total_fcfa']),
       );
 }
 
@@ -143,12 +153,12 @@ class RapportDetailBranche {
       egliseCode: json['eglise_code'] as String,
       egliseNom: json['eglise_nom'] as String,
       egliseVille: json['eglise_ville'] as String?,
-      niveau: (json['niveau'] as num?)?.toInt() ?? 0,
-      membresActifs: (json['membres_actifs'] as num?)?.toInt() ?? 0,
+      niveau: _asInt(json['niveau']),
+      membresActifs: _asInt(json['membres_actifs']),
       totaux: totaux,
-      entreesFcfa: (json['entrees_fcfa'] as num?)?.toInt() ?? 0,
-      depensesFcfa: (json['depenses_fcfa'] as num?)?.toInt() ?? 0,
-      soldeFcfa: (json['solde_fcfa'] as num?)?.toInt() ?? 0,
+      entreesFcfa: _asInt(json['entrees_fcfa']),
+      depensesFcfa: _asInt(json['depenses_fcfa']),
+      soldeFcfa: _asInt(json['solde_fcfa']),
       transactions: (json['transactions'] as List<dynamic>? ?? [])
           .map((e) => Contribution.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -195,10 +205,10 @@ class RapportDetailConsolide {
           .map((e) => RapportDetailBranche.fromJson(e as Map<String, dynamic>))
           .toList(),
       totaux: totaux,
-      entreesFcfa: (reseau['entrees_fcfa'] as num?)?.toInt() ?? 0,
-      depensesFcfa: (reseau['depenses_fcfa'] as num?)?.toInt() ?? 0,
-      soldeFcfa: (reseau['solde_fcfa'] as num?)?.toInt() ?? 0,
-      membresActifs: (reseau['membres_actifs'] as num?)?.toInt() ?? 0,
+      entreesFcfa: _asInt(reseau['entrees_fcfa']),
+      depensesFcfa: _asInt(reseau['depenses_fcfa']),
+      soldeFcfa: _asInt(reseau['solde_fcfa']),
+      membresActifs: _asInt(reseau['membres_actifs']),
     );
   }
 }
