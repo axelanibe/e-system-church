@@ -249,6 +249,7 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
         matricule: result.matricule,
         message: `Compte créé, votre matricule est ${result.matricule}. Bienvenue !`,
         token: result.token,
+        refresh_token: result.refreshToken,
         user: result.user,
         church: result.church,
         eglises: result.eglises,
