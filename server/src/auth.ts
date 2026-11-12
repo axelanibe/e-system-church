@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomInt } from "node:crypto";
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
 import type { Pool, PoolClient } from "pg";
@@ -183,39 +183,149 @@ export async function issueTokenForChurch(
 // ---------------------------------------------------------------------------
 // Codes et matricules
 // ---------------------------------------------------------------------------
-const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-
-/** Code d'invitation unique par église, ex. ESC-K7M2QX. */
+/**
+ * Code d'invitation unique par église, ex. ESC-0411 : `ESC-` + 4 chiffres.
+ * Les anciens codes (6 caractères alphanumériques, ex. ESC-XZ2SCA)
+ * restent valides : la recherche se fait par valeur exacte, sans
+ * validation de format stricte.
+ */
 export function generateChurchCode(): string {
-  let suffix = "";
-  for (let i = 0; i < 6; i++) suffix += CODE_ALPHABET[randomBytes(1)[0] % CODE_ALPHABET.length];
-  return `ESC-${suffix}`;
+  return `ESC-${String(randomInt(0, 10000)).padStart(4, "0")}`;
 }
 
 /**
- * Code fidèle unique par église, ex. ESC-F-K7M2QX : les membres
+ * Code fidèle unique par église, ex. ESC-F-0411 : les membres
  * l'utilisent pour s'inscrire dans la bonne église (le code désigne une
  * seule église, sans ambiguïté). Préfixe distinct du code de tutelle
  * (`ESC-…`, utilisé par les églises secondaires pour se rattacher).
+ * Les anciens codes fidèles (ex. ESC-F-K7M2QX) restent valides.
  */
 export function generateFideleCode(): string {
-  let suffix = "";
-  for (let i = 0; i < 6; i++) suffix += CODE_ALPHABET[randomBytes(1)[0] % CODE_ALPHABET.length];
-  return `ESC-F-${suffix}`;
+  return `ESC-F-${String(randomInt(0, 10000)).padStart(4, "0")}`;
 }
 
 /**
- * Matricule unique PAR église, séquentiel (M-0001, M-0002…).
- * La contrainte UNIQUE (church_id, matricule) protège des courses :
- * l'appelant réessaie en cas de conflit.
+ * Initiales québécoises d'un nom complet : F = 1re lettre du NOM DE
+ * FAMILLE (dernier mot), G = 1re lettre du PRÉNOM (premier mot), sans
+ * accent, en majuscules (ex. « KATIA CAMARA LAURENT » → { nom: "L",
+ * prenom: "K" }). Un seul mot → prénom X. Aucune lettre latine → XX.
+ * C'est la version transparente du système du permis québécois (la
+ * SAAQ ajoute un code interne de 4 chiffres non officiel, non repris
+ * ici). La règle « +50 au mois pour les femmes » est appliquée via le
+ * champ `sexe` du membre (décision de Bouf, 11 nov. 2026, migration
+ * 011) — voir `dobSegment`.
  */
-export async function generateMatricule(client: Pool | PoolClient, churchId: string): Promise<string> {
-  const { rows } = await client.query<{ n: string }>(
-    `SELECT count(*)::text AS n FROM members WHERE church_id = $1`,
-    [churchId],
+export function quebecInitials(fullName: string): { nom: string; prenom: string } {
+  const mots = fullName
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toUpperCase()
+    .split(/[^A-Z]+/)
+    .filter((m) => m.length > 0);
+  if (mots.length === 0) return { nom: "X", prenom: "X" };
+  const nom = mots[mots.length - 1][0];
+  const prenom = mots.length > 1 ? mots[0][0] : "X";
+  return { nom, prenom };
+}
+
+/**
+ * Sexe normalisé pour le matricule québécois : 'F' ou 'M' (accepte
+ * 'femme', 'féminin', 'homme', 'masculin', avec ou sans accent, en
+ * minuscules ou majuscules) ; toute autre valeur (y compris l'absence)
+ * → null, et le mois de naissance reste alors tel quel.
+ */
+export function normalizeSexe(value: unknown): "F" | "M" | null {
+  if (typeof value !== "string") return null;
+  const v = value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim()
+    .toUpperCase();
+  if (v === "F" || v === "FEMME" || v === "FEMININ") return "F";
+  if (v === "M" || v === "HOMME" || v === "MASCULIN") return "M";
+  return null;
+}
+
+/**
+ * Segment date de naissance du matricule, JJMMAA : jour (2) + mois (2)
+ * + 2 derniers chiffres de l'année, ex. 1968-12-17 → 171268. Règle
+ * québécoise « +50 au mois pour les femmes » (décision de Bouf, 11 nov.
+ * 2026) : femme née en décembre → mois 62, ex. 1968-12-17 → 176268.
+ * Sans date de naissance (champ facultatif) → 000000 ; la séquence
+ * distingue quand même les homonymes.
+ */
+export function dobSegment(birthDate: string | Date | null | undefined, sexe?: unknown): string {
+  if (!birthDate) return "000000";
+  const d = birthDate instanceof Date ? birthDate : new Date(birthDate);
+  if (Number.isNaN(d.getTime())) return "000000";
+  const jj = String(d.getUTCDate()).padStart(2, "0");
+  let mois = d.getUTCMonth() + 1;
+  if (normalizeSexe(sexe) === "F") mois += 50;
+  const mm = String(mois).padStart(2, "0");
+  const aa = String(d.getUTCFullYear() % 100).padStart(2, "0");
+  return `${jj}${mm}${aa}`;
+}
+
+/**
+ * Matricule normalisé (forme canonique) : sans espaces ni tirets, en
+ * majuscules, tirets réinsérés quand le format est reconnu — québécois
+ * M-LA-171268-01, ancien M-KA-0001, ancien M-0001. Sinon, la valeur
+ * dépouillée en majuscules, telle quelle.
+ */
+export function normalizeMatricule(value: string): string {
+  const nu = value.trim().toUpperCase().replace(/[\s-]/g, "");
+  const quebec = /^M([A-Z]{2})([0-9]{6})([0-9]{2})$/.exec(nu);
+  if (quebec) return `M-${quebec[1]}-${quebec[2]}-${quebec[3]}`;
+  const lettres = /^M([A-Z]{2})([0-9]{4})$/.exec(nu);
+  if (lettres) return `M-${lettres[1]}-${lettres[2]}`;
+  const chiffres = /^M([0-9]{4})$/.exec(nu);
+  if (chiffres) return `M-${chiffres[1]}`;
+  return nu;
+}
+
+/**
+ * Matricule unique dans TOUT le système, système du permis du Québec
+ * (version transparente, décision de Bouf, 11 nov. 2026) :
+ * `M-` + initiale du nom de famille + initiale du prénom + `-` +
+ * date de naissance JJMMAA + `-` + 2 chiffres séquentiels, ex.
+ * LAPOINTE ANNE MARIE, née le 17/12/1968 → M-LA-171268-01 (homme) ;
+ * même personne, femme → M-LA-176268-01 (mois 12 + 50 = 62) ;
+ * KATIA CAMARA LAURENT, née le 15/03/1990 → M-LK-150390-01.
+ * La séquence NN (01, 02, …) est le prochain numéro libre pour cette
+ * combinaison (initiales + date de naissance), dans tout le système ;
+ * plafond 99 par combinaison → erreur explicite si épuisé. La date de
+ * naissance devient visible dans le matricule, comme sur un permis
+ * québécois. Les anciens matricules M-XXXX et M-KA-0001 restent
+ * valides et ne bloquent pas les nouveaux. La contrainte UNIQUE
+ * (church_id, matricule) protège des courses dans la même église :
+ * l'appelant réessaie en cas de conflit. Sans changement de schéma,
+ * une course entre deux églises différentes reste théoriquement
+ * possible — la vérification préalable rend le risque négligeable.
+ */
+export async function generateMatricule(
+  client: Pool | PoolClient,
+  fullName: string,
+  birthDate?: string | Date | null,
+  sexe?: unknown,
+): Promise<string> {
+  const { nom, prenom } = quebecInitials(fullName);
+  const dob = dobSegment(birthDate, sexe);
+  const base = `M-${nom}${prenom}-${dob}`;
+  const { rows } = await client.query<{ m: string | null }>(
+    `SELECT max(right(matricule, 2)) AS m FROM members WHERE matricule ~ $1`,
+    [`^${base}-[0-9]{2}$`],
   );
-  const next = Number(rows[0]?.n ?? 0) + 1;
-  return `M-${String(next).padStart(4, "0")}`;
+  const start = Number(rows[0]?.m ?? "0") + 1;
+  for (let i = 0; i < 99; i++) {
+    const seq = start + i;
+    if (seq > 99) break;
+    const matricule = `${base}-${String(seq).padStart(2, "0")}`;
+    const clash = await client.query(`SELECT 1 FROM members WHERE matricule = $1`, [matricule]);
+    if (clash.rowCount === 0) return matricule;
+  }
+  throw new Error(
+    `Aucun numéro de matricule disponible pour ${base} : les 99 séquences sont toutes utilisées.`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -274,19 +384,34 @@ export async function registerChurch(
     // Deux codes uniques (réessai en cas de collision) : le code de
     // tutelle (ESC-…) pour rattacher une sous-église, et le code fidèle
     // (ESC-F-…) pour inscrire les membres dans la bonne église.
+    // 4 chiffres = 10 000 valeurs possibles : 50 tentatives, la
+    // contrainte UNIQUE reste le filet de sécurité.
+    // Garantie de Bouf : un même nombre à 4 chiffres ne sert qu'une seule
+    // fois, dans un seul rôle — le suffixe est vérifié entre les deux
+    // colonnes `code` et `code_fidele` uniquement (les matricules portent
+    // désormais leurs propres initiales + date de naissance,
+    // M-LA-171268-01, et ne croisent plus les codes).
     let code = "";
-    for (let attempt = 0; attempt < 5; attempt++) {
+    for (let attempt = 0; attempt < 50; attempt++) {
       code = generateChurchCode();
-      const clash = await client.query(`SELECT 1 FROM churches WHERE code = $1`, [code]);
+      const clash = await client.query(
+        `SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1`,
+        [code.slice(-4)],
+      );
       if (clash.rowCount === 0) break;
-      if (attempt === 4) throw new Error("Impossible de générer un code d'église unique.");
+      if (attempt === 49) throw new Error("Impossible de générer un code d'église unique.");
     }
     let codeFidele = "";
-    for (let attempt = 0; attempt < 5; attempt++) {
+    for (let attempt = 0; attempt < 50; attempt++) {
       codeFidele = generateFideleCode();
-      const clash = await client.query(`SELECT 1 FROM churches WHERE code_fidele = $1`, [codeFidele]);
-      if (clash.rowCount === 0) break;
-      if (attempt === 4) throw new Error("Impossible de générer un code fidèle unique.");
+      const clash = await client.query(
+        `SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1`,
+        [codeFidele.slice(-4)],
+      );
+      // Même nombre que le code de tutelle généré juste avant pour cette
+      // église (pas encore inséré, donc invisible de la requête ci-dessus).
+      if (clash.rowCount === 0 && codeFidele.slice(-4) !== code.slice(-4)) break;
+      if (attempt === 49) throw new Error("Impossible de générer un code fidèle unique.");
     }
 
     // Inscription libre : l'église naît ACTIVE. Le parent n'est rattaché
@@ -440,6 +565,12 @@ export const inscriptionMembreSchema = z.object({
   mot_de_passe: z.string().min(8).max(256),
   /** Code fidèle de l'église (ESC-F-…), il fait foi : aucune validation. */
   code_eglise: z.string().min(4).max(20),
+  /** Date de naissance (AAAA-MM-JJ), facultative : elle entre dans le
+   * matricule québécois (JJMMAA) ; sans elle, le segment vaut 000000. */
+  birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format AAAA-MM-JJ.").optional(),
+  /** Sexe (M ou F), facultatif : il entre dans le matricule québécois
+   * (règle +50 au mois pour les femmes) ; sans lui, le mois reste tel quel. */
+  sexe: z.string().max(20).optional(),
   /** Département et fonction choisis à l'inscription (facultatifs). */
   department: z.string().min(2).max(120).optional(),
   fonction: z.string().min(2).max(120).optional(),
@@ -464,7 +595,7 @@ export type InscriptionMembreResult =
  * code fidèle de son église à la place du matricule. Le code fidèle
  * (ESC-F-…) désigne une seule église, sans ambiguïté — le code de
  * tutelle (ESC-…) ne sert qu'aux églises qui se rattachent à une mère.
- * Le matricule est attribué automatiquement (unique par église), la fiche
+ * Le matricule est attribué automatiquement (unique dans tout le système), la fiche
  * membre et la carte sont créées tout de suite, le compte est lié
  * immédiatement.
  */
@@ -474,7 +605,8 @@ export async function inscriptionMembreParCode(
 ): Promise<InscriptionMembreResult> {
   const parsed = inscriptionMembreSchema.safeParse(rawInput);
   if (!parsed.success) return { ok: false, reason: "invalid_input" };
-  const { nom_prenom, email, telephone, mot_de_passe, code_eglise, department, fonction, channel } = parsed.data;
+  const { nom_prenom, email, telephone, mot_de_passe, code_eglise, birth_date, sexe, department, fonction, channel } = parsed.data;
+  const sexeNorm = normalizeSexe(sexe);
   const emailNorm = email.toLowerCase();
   const codeNorm = code_eglise.trim().toUpperCase();
   // « Aucun » veut dire sans fonction précise : on ne stocke rien, la
@@ -515,19 +647,21 @@ export async function inscriptionMembreParCode(
     );
     const userId = userRows[0].id;
 
-    // Matricule automatique, unique par église. En cas de course sur le
-    // compteur, la contrainte UNIQUE déclenche un réessai (SAVEPOINT, la
-    // transaction n'est pas perdue).
+    // Matricule automatique (système du permis du Québec :
+    // M-LK-150390-01 pour KATIA CAMARA LAURENT née le 15/03/1990),
+    // unique dans tout le système. En cas de course sur le compteur, la
+    // contrainte UNIQUE déclenche un réessai (SAVEPOINT, la transaction
+    // n'est pas perdue).
     let memberId = "";
     let matricule = "";
     for (let attempt = 0; attempt < 5; attempt++) {
-      matricule = await generateMatricule(client, church.id as string);
+      matricule = await generateMatricule(client, nom_prenom, birth_date ?? null, sexeNorm);
       await client.query("SAVEPOINT matricule");
       try {
         const { rows: memberRows } = await client.query<{ id: string }>(
-          `INSERT INTO members (church_id, user_id, matricule, full_name, phone, email, department, fonction, status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'actif') RETURNING id`,
-          [church.id, userId, matricule, nom_prenom, telephone, emailNorm, department ?? null, fonctionNorm],
+          `INSERT INTO members (church_id, user_id, matricule, full_name, phone, email, birth_date, sexe, department, fonction, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'actif') RETURNING id`,
+          [church.id, userId, matricule, nom_prenom, telephone, emailNorm, birth_date ?? null, sexeNorm, department ?? null, fonctionNorm],
         );
         memberId = memberRows[0].id;
         await client.query("RELEASE SAVEPOINT matricule");

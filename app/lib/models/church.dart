@@ -7,13 +7,13 @@ import 'rattachement.dart';
 class Church {
   final String id;
 
-  /// Code de tutelle (ESC-…) : une église secondaire l'utilise pour se
-  /// rattacher à sa mère.
+  /// Code de tutelle (ESC-…, ex. ESC-0411) : une église secondaire
+  /// l'utilise pour se rattacher à sa mère.
   final String code;
 
-  /// Code fidèle (ESC-F-…) : les membres l'utilisent pour s'inscrire dans
-  /// cette église. Nullable pour compatibilité avec les réponses servies
-  /// avant la migration 010.
+  /// Code fidèle (ESC-F-…, ex. ESC-F-0411) : les membres l'utilisent
+  /// pour s'inscrire dans cette église. Nullable pour compatibilité avec
+  /// les réponses servies avant la migration 010.
   final String? codeFidele;
 
   final String name;

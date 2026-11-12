@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/rattachement.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
+import '../widgets/code_input_formatter.dart';
 import '../widgets/common_widgets.dart';
 
 /// Demandes de rattachement : reçues (je suis la mère sollicitée) et
@@ -154,7 +155,7 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
                               style: Theme.of(context).textTheme.titleMedium),
                           const SizedBox(height: 8),
                           const Text(
-                              'Saisissez le code d’invitation de l’église mère à rejoindre : son code permanent ESC-…, ou un code de tutelle ESC-T-… à usage unique, donné par la mère. Une fois utilisé, le code de tutelle n’est plus valide.'),
+                              'Saisissez le code d’invitation de l’église mère à rejoindre : son code permanent (ex. ESC-0411), ou un code de tutelle ESC-T-… à usage unique, donné par la mère. Une fois utilisé, le code de tutelle n’est plus valide. Le tiret s’ajoute automatiquement : tapez seulement les caractères.'),
                           const SizedBox(height: 12),
                           Row(
                             children: [
@@ -163,9 +164,15 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
                                   controller: _codeController,
                                   textCapitalization:
                                       TextCapitalization.characters,
+                                  inputFormatters: [
+                                    CodeInputFormatter(
+                                        expectedPrefix: 'ESC-'),
+                                  ],
                                   decoration: const InputDecoration(
                                     labelText: 'Code d’invitation',
-                                    hintText: 'Ex. ESC-T-AB12CD',
+                                    hintText: 'Ex. ESC-0411',
+                                    helperText:
+                                        'Le tiret s’ajoute tout seul : tapez seulement les caractères.',
                                     border: OutlineInputBorder(),
                                   ),
                                 ),

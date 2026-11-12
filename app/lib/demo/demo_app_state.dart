@@ -176,6 +176,8 @@ class DemoAppState extends AppState {
     required String telephone,
     required String password,
     required String codeEglise,
+    String? birthDate,
+    String? sexe,
     String? department,
     String? fonction,
   }) async {
@@ -185,6 +187,8 @@ class DemoAppState extends AppState {
       telephone: telephone,
       password: password,
       codeEglise: codeEglise,
+      birthDate: birthDate,
+      sexe: sexe,
       department: department,
       fonction: fonction,
     );

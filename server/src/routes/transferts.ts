@@ -19,11 +19,13 @@ import { dbError, requireAuth, requireRole, type Session } from "../middleware.j
  *  2. L'admin de l'église de départ accepte (ou refuse) : tant qu'il n'a
  *     pas accepté, l'église d'arrivée ne peut pas décider.
  *  3. L'admin de l'église d'arrivée accepte (ou refuse).
- *  4. À la double acceptation, le membre change de church_id et reçoit un
- *     nouveau matricule dans l'église d'arrivée (M-0001…) ; l'ancienne
- *     branche ne le voit plus. Un refus d'un côté, ou une annulation par
- *     l'église de départ tant que la demande est en attente, clôt la
- *     demande sans déplacement. L'historique reste dans audit_logs.
+ *  4. À la double acceptation, le membre change de church_id ; s'il
+ *     portait déjà un matricule québécois (M-LA-171268-01…), il le
+ *     garde, sinon il en reçoit un nouveau au format québécois ;
+ *     l'ancienne branche ne le voit plus. Un refus d'un côté, ou une
+ *     annulation par l'église de départ tant que la demande est en
+ *     attente, clôt la demande sans déplacement. L'historique reste
+ *     dans audit_logs.
  *
  * Isolation stricte : un transfert n'est visible que par ses deux églises
  * (départ et arrivée), filtrées par la church_id de la session.
@@ -343,10 +345,14 @@ export function registerTransfertsRoutes(app: FastifyInstance, db: Pool) {
   }
 
   /**
-   * Déplace le membre vers l'église d'arrivée avec un nouveau matricule
-   * (séquentiel dans l'église d'arrivée). La contrainte UNIQUE
-   * (church_id, matricule) protège des courses : en cas de collision on
-   * régénère après un retour au point de sauvegarde, 3 essais maximum.
+   * Déplace le membre vers l'église d'arrivée. Matricule système du
+   * permis du Québec (M-LA-171268-01 : initiales + date de naissance +
+   * séquence) : si le membre en porte déjà un, il le GARDE (c'est une
+   * identité stable, comme un numéro de permis) ; sinon, il en reçoit
+   * un nouveau au format québécois, avec ses initiales et sa date de
+   * naissance. La contrainte UNIQUE (church_id, matricule) protège des
+   * courses : en cas de collision on régénère après un retour au point
+   * de sauvegarde, 3 essais maximum.
    */
   async function deplacerMembre(
     client: PoolClient,
@@ -356,8 +362,32 @@ export function registerTransfertsRoutes(app: FastifyInstance, db: Pool) {
       eglise_arrivee_id: string;
     },
   ): Promise<string> {
+    const { rows: membreRows } = await client.query<{
+      full_name: string;
+      matricule: string;
+      birth_date: string | null;
+      sexe: string | null;
+    }>(
+      `SELECT full_name, matricule, birth_date, sexe FROM members WHERE id = $1`,
+      [t.membre_id],
+    );
+    const membre = membreRows[0];
+    const fullName = membre?.full_name ?? "";
+    // Déjà au format québécois → on le garde tel quel.
+    if (membre && /^M-[A-Z]{2}-[0-9]{6}-[0-9]{2}$/.test(membre.matricule)) {
+      const { rowCount } = await client.query(
+        `UPDATE members
+            SET church_id = $2, updated_at = now()
+          WHERE id = $1 AND church_id = $3`,
+        [t.membre_id, t.eglise_arrivee_id, t.eglise_depart_id],
+      );
+      if (!rowCount || rowCount === 0) {
+        throw new Error("Le membre n'est plus dans l'église de départ.");
+      }
+      return membre.matricule;
+    }
     for (let attempt = 0; attempt < 3; attempt++) {
-      const matricule = await generateMatricule(client, t.eglise_arrivee_id as string);
+      const matricule = await generateMatricule(client, fullName, membre?.birth_date ?? null, membre?.sexe ?? null);
       await client.query("SAVEPOINT deplacement");
       try {
         const { rowCount } = await client.query(

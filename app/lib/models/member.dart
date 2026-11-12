@@ -1,6 +1,6 @@
 import '../utils/format.dart';
 
-/// Membre d'une église (`members`). Le matricule est unique PAR église.
+/// Membre d'une église (`members`). Le matricule est unique dans tout le système (nouveaux numéros, M-LA-171268-01).
 class Member {
   final String id;
   final String matricule;
@@ -8,6 +8,9 @@ class Member {
   final String? phone;
   final String? email;
   final String? birthDate; // « AAAA-MM-JJ »
+  /// Sexe du membre : 'M' ou 'F' (null = non précisé). Il entre dans le
+  /// matricule québécois (règle +50 au mois pour les femmes).
+  final String? sexe;
   final String? department;
   /// Fonction du membre (libellé « Fonction », catalogue `fonctions`).
   /// Null ou « Aucun » veut dire sans fonction précise.
@@ -26,6 +29,7 @@ class Member {
     this.phone,
     this.email,
     this.birthDate,
+    this.sexe,
     this.department,
     this.fonction,
     this.poste,
@@ -41,6 +45,7 @@ class Member {
         phone: json['phone'] as String?,
         email: json['email'] as String?,
         birthDate: json['birth_date'] as String?,
+        sexe: json['sexe'] as String?,
         department: json['department'] as String?,
         fonction: json['fonction'] as String?,
         poste: json['poste'] as String?,

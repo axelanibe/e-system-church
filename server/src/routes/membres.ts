@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
-import { auditLog, generateMatricule } from "../auth.js";
+import { auditLog, generateMatricule, normalizeMatricule, normalizeSexe } from "../auth.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
 
 /**
@@ -10,7 +10,7 @@ import { dbError, requireAuth, requireRole } from "../middleware.js";
  * GET  /membres/:id — un membre (404 s'il appartient à une autre église).
  * POST /membres     — création (admin_eglise, responsable_culte).
  *                      Le trésorier ne peut PAS créer de membre ; le matricule
- *                      est généré automatiquement (M-0001…) sauf s'il est fourni.
+ *                      est généré automatiquement (M-LA-171268-01…) sauf s'il est fourni.
  * PATCH /membres/:id — modification (le matricule ne change pas).
  * DELETE /membres/:id — suppression (contributions → membre NULL, présences /
  *                      statuts / baptêmes / liens en cascade).
@@ -21,6 +21,8 @@ const createMembreSchema = z.object({
   phone: z.string().min(8).max(30).optional(),
   email: z.string().email().max(254).optional(),
   birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format AAAA-MM-JJ.").optional(),
+  /** Sexe (M ou F), facultatif : règle +50 au mois pour les femmes (matricule québécois). */
+  sexe: z.string().max(20).optional(),
   department: z.string().min(2).max(120).optional(),
   fonction: z.string().min(2).max(120).optional(),
   poste: z.string().min(2).max(120).optional(),
@@ -72,7 +74,7 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
         values,
       );
       const { rows } = await db.query(
-        `SELECT id, church_id, matricule, full_name, phone, email, birth_date,
+        `SELECT id, church_id, matricule, full_name, phone, email, birth_date, sexe,
                 department, fonction, poste, cell_group, status, created_at
            FROM members ${where}
           ORDER BY full_name ASC
@@ -91,7 +93,7 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
     async (req, reply) => {
       try {
         const { rows } = await db.query(
-          `SELECT id, church_id, matricule, full_name, phone, email, birth_date,
+          `SELECT id, church_id, matricule, full_name, phone, email, birth_date, sexe,
                   department, fonction, poste, cell_group, status, created_at
              FROM members WHERE id = $1 AND church_id = $2`,
           [(req.params as { id: string }).id, req.session.churchId],
@@ -116,18 +118,37 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
       });
     }
     const data = parsed.data;
+    const sexeNorm = normalizeSexe(data.sexe);
     try {
-      // Matricule : fourni par le client ou généré (séquentiel par église).
-      // Réessaie en cas de collision (contrainte UNIQUE church_id + matricule).
+      // Matricule fourni par l'admin (normalisé : sans espaces ni
+      // tirets, en majuscules, forme canonique M-LA-171268-01) : il doit
+      // être unique dans tout le système — la chaîne complète ne doit
+      // exister chez aucun membre, quelle que soit l'église. Les anciens
+      // matricules M-XXXX (sans lettres) et M-KA-0001 fournis manuellement
+      // restent valides.
+      const matriculeFourni = data.matricule ? normalizeMatricule(data.matricule) : null;
+      if (matriculeFourni) {
+        const clash = await db.query(`SELECT 1 FROM members WHERE matricule = $1`, [matriculeFourni]);
+        if (clash.rowCount && clash.rowCount > 0) {
+          return reply.code(409).send({
+            error: "matricule_taken",
+            message: "Ce matricule est déjà utilisé par un autre membre.",
+          });
+        }
+      }
+      // Matricule : fourni par le client ou généré (système du permis
+      // du Québec : M-LA-171268-01 — initiales + date de naissance +
+      // séquence, unique dans tout le système). Réessaie en cas de
+      // collision (contrainte UNIQUE church_id + matricule).
       let lastError: unknown = null;
       for (let attempt = 0; attempt < 3; attempt++) {
-        const matricule = data.matricule ?? (await generateMatricule(db, req.session.churchId));
+        const matricule = matriculeFourni ?? (await generateMatricule(db, data.full_name, data.birth_date ?? null, sexeNorm));
         try {
           const { rows } = await db.query(
             `INSERT INTO members
-               (church_id, matricule, full_name, phone, email, birth_date, department, fonction, poste, cell_group, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-             RETURNING id, church_id, matricule, full_name, phone, email, birth_date,
+               (church_id, matricule, full_name, phone, email, birth_date, sexe, department, fonction, poste, cell_group, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+             RETURNING id, church_id, matricule, full_name, phone, email, birth_date, sexe,
                        department, fonction, poste, cell_group, status, created_at`,
             [
               req.session.churchId,
@@ -136,6 +157,7 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
               data.phone ?? null,
               data.email ?? null,
               data.birth_date ?? null,
+              sexeNorm,
               data.department ?? null,
               data.fonction ?? null,
               data.poste ?? null,
@@ -171,6 +193,8 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
     phone: z.string().min(8).max(30).optional(),
     email: z.string().email().max(254).optional(),
     birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format AAAA-MM-JJ.").optional(),
+    /** Sexe (M ou F) : modifiable (correction) — le matricule, lui, ne change pas. */
+    sexe: z.string().max(20).optional(),
     department: z.string().min(2).max(120).optional(),
     fonction: z.string().min(2).max(120).optional(),
     poste: z.string().min(2).max(120).optional(),
@@ -190,7 +214,8 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
         });
       }
       const data = parsed.data as Record<string, unknown>;
-      const keys = ["full_name", "phone", "email", "birth_date", "department", "fonction", "poste", "cell_group", "status"].filter(
+      if (data.sexe !== undefined) data.sexe = normalizeSexe(data.sexe);
+      const keys = ["full_name", "phone", "email", "birth_date", "sexe", "department", "fonction", "poste", "cell_group", "status"].filter(
         (c) => data[c] !== undefined,
       );
       if (keys.length === 0) {
@@ -200,7 +225,7 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
         const sets = keys.map((c, i) => `${c} = $${i + 3}`).join(", ");
         const { rows } = await db.query(
           `UPDATE members SET ${sets} WHERE id = $1 AND church_id = $2
-           RETURNING id, church_id, matricule, full_name, phone, email, birth_date,
+           RETURNING id, church_id, matricule, full_name, phone, email, birth_date, sexe,
                      department, fonction, poste, cell_group, status, created_at`,
           [(req.params as { id: string }).id, req.session.churchId, ...keys.map((c) => data[c])],
         );
