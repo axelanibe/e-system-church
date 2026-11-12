@@ -1,35 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/module_eglise.dart';
 import '../state/app_state.dart';
-import '../widgets/church_avatar.dart';
-import '../widgets/mere_badge.dart';
-import 'annexes_screen.dart';
+import '../widgets/app_bottom_bar.dart';
+import '../widgets/short_drawer.dart';
 import 'annonces_screen.dart';
 import 'dashboard_screen.dart';
-import 'finances_mere_screen.dart';
 import 'finances_screen.dart';
 import 'membres_screen.dart';
-import 'mes_eglises_screen.dart';
-import 'modules_activation_screen.dart';
 import 'modules_screen.dart';
-import 'mon_eglise_screen.dart';
-import 'plateforme_screen.dart';
-import 'rattachements_screen.dart';
-import 'settings_screen.dart';
-import 'transferts_screen.dart';
 import 'tree_screen.dart';
 
 /// Coquille principale après connexion : navigation entre les 6 écrans.
-/// Écrans larges (≥ 900 px) : rail latéral ; écrans étroits : barre inférieure.
-/// Le tiroir donne accès aux demandes de rattachement, à « Changer
-/// d'église » (écran dédié « Mes églises », paginé et cherchable), à
-/// « Mon église », aux réglages et à la déconnexion. Il ne liste plus
-/// les églises : avec plus de 500 branches, la liste complète rendait
-/// le tiroir interminable et repoussait les entrées du menu en bas.
-/// L'AppBar affiche l'identité de l'église active (logo ou
-/// initiales, nom et code) — données réelles de l'API.
+/// Écrans larges (≥ 900 px) : rail latéral ; écrans étroits : barre
+/// inférieure de 5 libellés courts maximum. Les annonces, sixième
+/// entrée, restent accessibles par le tiroir court et par le tableau
+/// de bord : rien n'est supprimé, l'entrée change seulement de place.
+/// L'AppBar montre le titre de l'écran seul, une ligne, coupé avec
+/// « … ». Le tiroir court ne montre que l'église courante, « Changer
+/// d'église » ouvre l'écran dédié « Mes églises » (paginé et
+/// cherchable), et il garde les entrées « Mon église », « Modules de
+/// l'église », « Demandes de rattachement », « Mes annexes »,
+/// « Plateforme », « Transferts de membres » et « Finances de la mère ».
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -41,8 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int _index = 0;
 
   static const _titles = [
-    'Tableau de bord',
-    'Arborescence',
+    'Accueil',
+    'Réseau',
     'Membres',
     'Finances',
     'Annonces',
@@ -82,18 +74,19 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final church = state.church;
     final wide = MediaQuery.of(context).size.width >= 900;
 
+    // Libellés courts, une ligne : « Accueil », « Réseau », « Membres »,
+    // « Finances », « Modules ». Les titres complets restent dans _titles.
     const destinations = [
       NavigationDestination(
           icon: Icon(Icons.dashboard_outlined),
           selectedIcon: Icon(Icons.dashboard),
-          label: 'Tableau de bord'),
+          label: 'Accueil'),
       NavigationDestination(
           icon: Icon(Icons.account_tree_outlined),
           selectedIcon: Icon(Icons.account_tree),
-          label: 'Arborescence'),
+          label: 'Réseau'),
       NavigationDestination(
           icon: Icon(Icons.people_outlined),
           selectedIcon: Icon(Icons.people),
@@ -122,230 +115,25 @@ class _HomeScreenState extends State<HomeScreen> {
     final courant = visibles[_index.clamp(0, visibles.length - 1)];
     final dests = visibles.map((i) => destinations[i]).toList();
 
+    // Barre du bas : 5 libellés maximum. Les annonces (index 4) n'y
+    // figurent pas, elles restent dans le tiroir et le tableau de bord.
+    const barIndices = [0, 1, 2, 3, 5];
+    final barDests =
+        barIndices.map((i) => destinations[i]).toList();
+    final barSelected = barIndices.contains(courant)
+        ? barIndices.indexOf(courant)
+        : 0;
+
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            ChurchAvatar(church: church, radius: 18),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    church?.name ?? 'e-System Church',
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  if (church != null)
-                    Row(
-                      children: [
-                        Text(
-                          church.code,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        if (church.isMere) ...[
-                          const SizedBox(width: 8),
-                          const MereBadge(),
-                        ],
-                      ],
-                    ),
-                ],
-              ),
-            ),
-            // Titre de l'écran, coupé avec « … » si la place manque.
-            Flexible(
-              child: Text(
-                _titles[courant],
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-          ],
+        title: Text(
+          _titles[courant],
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            // En-tête à hauteur libre, pas un DrawerHeader : sa hauteur
-            // fixe faisait déborder le contenu sur le titre
-            // « MES ÉGLISES » quand le nom de l'église tenait sur deux
-            // lignes et que le nom de l'utilisateur était long (photo 1).
-            // Nom, rôle et code sont sur des lignes séparées, coupées
-            // avec « … » si la place manque, jamais superposées.
-            Container(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ChurchAvatar(church: church, radius: 24),
-                  const SizedBox(height: 8),
-                  Text(
-                    church?.name ?? 'e-System Church',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  if (church?.isMere ?? false) ...[
-                    const SizedBox(height: 6),
-                    const MereBadge(),
-                  ],
-                  const SizedBox(height: 4),
-                  Text(
-                    '${church?.code ?? ''} · ${church?.city ?? ''}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    state.user?.fullName ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  Text(
-                    state.roleLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            // Une seule entrée « Changer d'église », avec le nombre
-            // d'églises : la liste complète n'est plus dans le tiroir.
-            // Avec plus de 500 branches, elle rendait le tiroir
-            // interminable et repoussait les entrées du menu en bas.
-            // Le choix se fait dans l'écran dédié « Mes églises »,
-            // paginé (50 par page) et cherchable par nom ou code.
-            ListTile(
-              leading: const Icon(Icons.swap_horiz_outlined),
-              title: const Text('Changer d’église'),
-              subtitle: Text(
-                state.eglises.length == 1
-                    ? '1 église'
-                    : '${state.eglises.length} églises',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const MesEglisesScreen()),
-                );
-              },
-            ),
-            const Divider(),
-            // US1 : l'entrée Mon église disparaît si le module est désactivé.
-            if (state.isModuleActif(CodesModules.monEglise))
-              ListTile(
-                leading: const Icon(Icons.church_outlined),
-                title: const Text('Mon église'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const MonEgliseScreen()),
-                  );
-                },
-              ),
-            if (state.isAdmin)
-              ListTile(
-                leading: const Icon(Icons.toggle_on_outlined),
-                title: const Text('Modules de l’église'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const ModulesActivationScreen()),
-                  );
-                },
-              ),
-            ListTile(
-              leading: const Icon(Icons.group_add_outlined),
-              title: const Text('Demandes de rattachement'),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const RattachementsScreen()),
-                );
-              },
-            ),
-            if (state.isAdmin)
-              ListTile(
-                leading: const Icon(Icons.hub_outlined),
-                title: const Text('Mes annexes'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const AnnexesScreen()),
-                  );
-                },
-              ),
-            if (state.isSuperAdmin)
-              ListTile(
-                leading: const Icon(Icons.public_outlined),
-                title: const Text('Plateforme'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const PlateformeScreen()),
-                  );
-                },
-              ),
-            if (state.canManageMembers)
-              ListTile(
-                leading: const Icon(Icons.swap_horiz_outlined),
-                title: const Text('Transferts de membres'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const TransfertsScreen()),
-                  );
-                },
-              ),
-            if (state.isAdmin)
-              ListTile(
-                leading: const Icon(Icons.account_balance_outlined),
-                title: const Text('Finances de la mère'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const FinancesMereScreen()),
-                  );
-                },
-              ),
-            ListTile(
-              leading: const Icon(Icons.settings_outlined),
-              title: const Text('Réglages'),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                );
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Se déconnecter'),
-              onTap: () async {
-                Navigator.of(context).pop();
-                await context.read<AppState>().logout();
-              },
-            ),
-          ],
-        ),
+      drawer: TiroirCourt(
+        onAller: (i) => setState(() => _index = visibles.indexOf(i)),
       ),
       body: Row(
         children: [
@@ -368,11 +156,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: wide
           ? null
-          : NavigationBar(
-              selectedIndex: visibles.indexOf(courant),
-              onDestinationSelected: (i) =>
-                  setState(() => _index = visibles[i]),
-              destinations: dests,
+          : BarreDuBas(
+              destinations: barDests,
+              selectedIndex: barSelected,
+              onDestinationSelected: (i) => setState(
+                  () => _index = visibles.indexOf(barIndices[i])),
             ),
     );
   }
