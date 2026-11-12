@@ -128,6 +128,8 @@ CREATE TABLE members (
     fonction    TEXT,                              -- ex. Pasteur, Chantre… ; NULL = « Aucun »
     poste       TEXT,                              -- ex. Directeur de département, Collaborateur…
     cell_group  TEXT,                              -- cellule / groupe de maison
+    date_mariage DATE,                             -- migration 019 : US7, NULL tant que non renseignée
+    date_conversion DATE,                         -- migration 019 : US7, NULL tant que non renseignée
     status      member_status NOT NULL DEFAULT 'actif',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -407,7 +409,7 @@ CREATE TABLE IF NOT EXISTS membre_statuts (
     church_id     UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
     member_id     UUID NOT NULL REFERENCES members (id) ON DELETE CASCADE,
     statut        TEXT NOT NULL CHECK (statut IN
-                    ('membre','sympathisant','nouveau_converti','en_formation','suspendu','parti')),
+                    ('membre','sympathisant','nouveau_converti','en_formation','suspendu','parti','ancien')),
     ancien_statut TEXT,
     motif         TEXT,
     change_par    UUID REFERENCES users (id) ON DELETE SET NULL,

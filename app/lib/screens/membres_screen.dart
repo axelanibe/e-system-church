@@ -4,6 +4,7 @@ import '../config/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/anniversaire.dart';
 import '../models/member.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
@@ -31,12 +32,21 @@ class _MembresScreenState extends State<MembresScreen> {
   String _filtreLocal = '';
   String? _statusFilter;
   String? _departmentFilter;
+  List<String>? _departements;
   late Future<MemberPage> _future;
+  late Future<List<Anniversaire>> _anniversairesFuture;
 
   @override
   void initState() {
     super.initState();
     _future = _load();
+    _anniversairesFuture =
+        context.read<AppState>().api.getAnniversaires(jours: 30);
+    context.read<AppState>().api.getDepartements().then((ds) {
+      if (mounted) {
+        setState(() => _departements = ds.map((d) => d.nom).toList());
+      }
+    }).catchError((_) {});
   }
 
   @override
@@ -122,9 +132,86 @@ class _MembresScreenState extends State<MembresScreen> {
         return AppTheme.bleuPresences;
       case 'inactif':
         return Colors.grey;
+      case 'ancien':
+        return AppTheme.orFonce;
       default:
         return Colors.grey;
     }
+  }
+
+  /// Carte des anniversaires proches (30 jours) : la liste seulement,
+  /// aucun message envoyé. Masquée quand il n'y en a aucun.
+  Widget _anniversairesCard() {
+    return FutureBuilder<List<Anniversaire>>(
+      future: _anniversairesFuture,
+      builder: (context, snapshot) {
+        final items = snapshot.data ?? const <Anniversaire>[];
+        if (items.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.cake_outlined),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Anniversaires proches (30 jours)',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ...items.map((a) => ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          child: Text(a.fullName.isNotEmpty
+                              ? a.fullName[0].toUpperCase()
+                              : '?'),
+                        ),
+                        title: Text(a.fullName),
+                        subtitle: Text(
+                            '${a.matricule} · ${a.ageAtteint} ans'),
+                        trailing: Text(
+                          a.joursRestants == 0
+                              ? "Aujourd'hui"
+                              : 'dans ${a.joursRestants} j',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        onTap: () async {
+                          try {
+                            final membre = await context
+                                .read<AppState>()
+                                .api
+                                .getMember(a.id);
+                            if (!context.mounted) return;
+                            final changed =
+                                await Navigator.of(context).push<bool>(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    MemberDetailScreen(member: membre),
+                              ),
+                            );
+                            if (changed == true && mounted) _refresh();
+                          } catch (e) {
+                            if (context.mounted) showApiError(context, e);
+                          }
+                        },
+                      )),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -146,6 +233,7 @@ class _MembresScreenState extends State<MembresScreen> {
               ),
             ),
           ),
+          _anniversairesCard(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             // Retour à la ligne en largeur étroite : en défilement
@@ -159,6 +247,7 @@ class _MembresScreenState extends State<MembresScreen> {
                   'Actif': 'actif',
                   'Nouveau converti': 'nouveau_converti',
                   'Inactif': 'inactif',
+                  'Ancien': 'ancien',
                 }.entries)
                   ChoiceChip(
                     label: Text(entry.key),
@@ -173,19 +262,11 @@ class _MembresScreenState extends State<MembresScreen> {
                 DropdownButton<String?>(
                   value: _departmentFilter,
                   hint: const Text('Département'),
-                  items: const [
-                    DropdownMenuItem(value: null, child: Text('Tous')),
-                    DropdownMenuItem(
-                        value: 'Louange', child: Text('Louange')),
-                    DropdownMenuItem(
-                        value: 'Intercession',
-                        child: Text('Intercession')),
-                    DropdownMenuItem(
-                        value: 'Jeunesse', child: Text('Jeunesse')),
-                    DropdownMenuItem(
-                        value: 'Protocole', child: Text('Protocole')),
-                    DropdownMenuItem(
-                        value: 'Enfants', child: Text('Enfants')),
+                  items: [
+                    const DropdownMenuItem(
+                        value: null, child: Text('Tous')),
+                    for (final d in _departements ?? const <String>[])
+                      DropdownMenuItem(value: d, child: Text(d)),
                   ],
                   onChanged: (value) {
                     setState(() {
@@ -251,8 +332,10 @@ class _MembresScreenState extends State<MembresScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             StatusChip(
-                              label: member.statusLabel,
-                              color: _statusColor(member.status),
+                              label: member.statutAffiche,
+                              color: _statusColor(member.estAncien
+                                  ? 'ancien'
+                                  : member.status),
                             ),
                             if (state.canManageMembers)
                               IconButton(

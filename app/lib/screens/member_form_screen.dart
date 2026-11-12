@@ -27,6 +27,10 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
   final _cellController = TextEditingController();
   String _status = 'actif';
   DateTime? _birthDate;
+  /// Dates d'événements de vie (US7, migration 019) : NULL tant que non
+  /// renseignées, jamais inventées.
+  DateTime? _dateConversion;
+  DateTime? _dateMariage;
   /// Sexe du membre ('M', 'F' ou null = non précisé) : il entre dans le
   /// matricule québécois (règle +50 au mois pour les femmes).
   String? _sexe;
@@ -39,6 +43,8 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
   String? _poste;
   bool _loading = false;
   String? _error;
+  /// Création guidée : 1 Identité, 2 Coordonnées, 3 Église et parcours.
+  int _etape = 0;
 
   bool get _isEditing => widget.member != null;
 
@@ -56,6 +62,12 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
       _birthDate = member.birthDate == null
           ? null
           : DateTime.tryParse(member.birthDate!);
+      _dateConversion = member.dateConversion == null
+          ? null
+          : DateTime.tryParse(member.dateConversion!);
+      _dateMariage = member.dateMariage == null
+          ? null
+          : DateTime.tryParse(member.dateMariage!);
       _sexe = member.sexe;
       _fonction = member.fonction ?? 'Aucun';
       _poste = member.poste;
@@ -86,9 +98,52 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
     if (picked != null) setState(() => _birthDate = picked);
   }
 
-  /// Date au format « AAAA-MM-JJ » attendu par l'API (`birth_date`).
-  String? get _birthDateIso {
-    final d = _birthDate;
+  /// Choix d'une date d'événement de vie (conversion ou mariage) : dans
+  /// le passé seulement, effaçable.
+  Future<void> _choisirDateEvenement(
+      {required String aide,
+      required DateTime? actuelle,
+      required void Function(DateTime?) choisir}) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: actuelle ?? now,
+      firstDate: DateTime(1900),
+      lastDate: now,
+      helpText: aide,
+      cancelText: 'Annuler',
+      confirmText: 'Choisir',
+    );
+    if (picked != null) setState(() => choisir(picked));
+  }
+
+  /// Ligne de choix de date (naissance, conversion, mariage) : libellé,
+  /// valeur affichée, effacement, ouverture du sélecteur au toucher.
+  Widget _ligneDate({
+    required IconData icone,
+    required String libelle,
+    required DateTime? valeur,
+    required VoidCallback onTap,
+    required VoidCallback onEffacer,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icone),
+      title: Text(
+        valeur == null ? '$libelle (optionnel)' : '$libelle : ${formatDate(valeur)}',
+      ),
+      trailing: valeur == null
+          ? const Icon(Icons.calendar_today_outlined)
+          : TextButton(
+              onPressed: onEffacer,
+              child: const Text('Effacer'),
+            ),
+      onTap: onTap,
+    );
+  }
+
+  /// Date au format « AAAA-MM-JJ » attendu par l'API.
+  String? _iso(DateTime? d) {
     if (d == null) return null;
     final month = d.month.toString().padLeft(2, '0');
     final day = d.day.toString().padLeft(2, '0');
@@ -137,7 +192,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
               email: _emailController.text.trim().isEmpty
                   ? null
                   : _emailController.text.trim(),
-              birthDate: _birthDateIso,
+              birthDate: _iso(_birthDate),
               sexe: _sexe,
               department: _departmentController.text.trim().isEmpty
                   ? null
@@ -148,6 +203,8 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                   ? null
                   : _cellController.text.trim(),
               status: _status,
+              dateMariage: _iso(_dateMariage),
+              dateConversion: _iso(_dateConversion),
             );
       } else {
         await context.read<AppState>().api.createMember(
@@ -158,7 +215,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
               email: _emailController.text.trim().isEmpty
                   ? null
                   : _emailController.text.trim(),
-              birthDate: _birthDateIso,
+              birthDate: _iso(_birthDate),
               sexe: _sexe,
               department: _departmentController.text.trim().isEmpty
                   ? null
@@ -169,6 +226,8 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                   ? null
                   : _cellController.text.trim(),
               status: _status,
+              dateMariage: _iso(_dateMariage),
+              dateConversion: _iso(_dateConversion),
             );
       }
       if (mounted) Navigator.of(context).pop(true);
@@ -194,158 +253,274 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextFormField(
-                    controller: _nameController,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Nom complet *',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (v) =>
-                        (v == null || v.trim().length < 2)
-                            ? 'Nom requis.'
-                            : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      labelText: 'Téléphone',
-                      hintText: 'Ex. +225 07 00 00 00',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'E-mail',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (v) {
-                      if (v != null &&
-                          v.trim().isNotEmpty &&
-                          !v.contains('@')) {
-                        return 'E-mail invalide.';
+                  Stepper(
+                    currentStep: _etape,
+                    onStepTapped: (i) => setState(() => _etape = i),
+                    onStepContinue: () {
+                      if (_etape == 0) {
+                        // Seule l'étape Identité bloque : le nom est requis.
+                        if (_nameController.text.trim().length < 2) {
+                          setState(() => _error = 'Nom requis.');
+                          return;
+                        }
+                        setState(() {
+                          _error = null;
+                          _etape = 1;
+                        });
+                      } else if (_etape == 1) {
+                        setState(() => _etape = 2);
+                      } else {
+                        _submit();
                       }
-                      return null;
                     },
-                  ),
-                  const SizedBox(height: 12),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.cake_outlined),
-                    title: Text(
-                      _birthDate == null
-                          ? 'Date de naissance (optionnel)'
-                          : 'Date de naissance : ${formatDate(_birthDate)}',
-                    ),
-                    trailing: _birthDate == null
-                        ? const Icon(Icons.calendar_today_outlined)
-                        : TextButton(
-                            onPressed: () =>
-                                setState(() => _birthDate = null),
-                            child: const Text('Effacer'),
-                          ),
-                    onTap: _choisirDateNaissance,
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: _sexe,
-                    decoration: const InputDecoration(
-                      labelText: 'Sexe (optionnel)',
-                      hintText: 'Non précisé',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                          value: null, child: Text('Non précisé')),
-                      DropdownMenuItem(value: 'F', child: Text('Femme')),
-                      DropdownMenuItem(value: 'M', child: Text('Homme')),
-                    ],
-                    onChanged: (v) => setState(() => _sexe = v),
-                  ),
-                  const SizedBox(height: 12),
-                  if (_departements == null || _departements!.isEmpty)
-                    TextFormField(
-                      controller: _departmentController,
-                      decoration: const InputDecoration(
-                        labelText: 'Département',
-                        hintText: 'Ex. Louange, Jeunesse, Protocole…',
-                        border: OutlineInputBorder(),
+                    onStepCancel: () {
+                      if (_etape > 0) setState(() => _etape -= 1);
+                    },
+                    controlsBuilder: (context, details) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: Row(
+                          children: [
+                            FilledButton(
+                              onPressed:
+                                  _loading ? null : details.onStepContinue,
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 4),
+                                child: _loading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2),
+                                      )
+                                    : Text(_etape == 2
+                                        ? (_isEditing
+                                            ? 'Enregistrer les modifications'
+                                            : 'Ajouter le membre')
+                                        : 'Suivant'),
+                              ),
+                            ),
+                            if (_etape > 0) ...[
+                              const SizedBox(width: 12),
+                              OutlinedButton(
+                                onPressed:
+                                    _loading ? null : details.onStepCancel,
+                                child: const Text('Précédent'),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                    steps: [
+                      Step(
+                        title: const Text('Identité'),
+                        isActive: _etape >= 0,
+                        state: _etape > 0
+                            ? StepState.complete
+                            : StepState.indexed,
+                        content: Column(
+                          children: [
+                            TextFormField(
+                              controller: _nameController,
+                              textInputAction: TextInputAction.next,
+                              decoration: const InputDecoration(
+                                labelText: 'Nom complet *',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (v) =>
+                                  (v == null || v.trim().length < 2)
+                                      ? 'Nom requis.'
+                                      : null,
+                            ),
+                            const SizedBox(height: 12),
+                            _ligneDate(
+                              icone: Icons.cake_outlined,
+                              libelle: 'Date de naissance',
+                              valeur: _birthDate,
+                              onTap: _choisirDateNaissance,
+                              onEffacer: () =>
+                                  setState(() => _birthDate = null),
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<String>(
+                              initialValue: _sexe,
+                              decoration: const InputDecoration(
+                                labelText: 'Sexe (optionnel)',
+                                hintText: 'Non précisé',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                    value: null,
+                                    child: Text('Non précisé')),
+                                DropdownMenuItem(
+                                    value: 'F', child: Text('Femme')),
+                                DropdownMenuItem(
+                                    value: 'M', child: Text('Homme')),
+                              ],
+                              onChanged: (v) => setState(() => _sexe = v),
+                            ),
+                          ],
+                        ),
                       ),
-                    )
-                  else
-                    DropdownButtonFormField<String>(
-                      initialValue: _departementValeur,
-                      decoration: const InputDecoration(
-                        labelText: 'Département',
-                        border: OutlineInputBorder(),
+                      Step(
+                        title: const Text('Coordonnées'),
+                        isActive: _etape >= 1,
+                        state: _etape > 1
+                            ? StepState.complete
+                            : StepState.indexed,
+                        content: Column(
+                          children: [
+                            TextFormField(
+                              controller: _phoneController,
+                              keyboardType: TextInputType.phone,
+                              decoration: const InputDecoration(
+                                labelText: 'Téléphone',
+                                hintText: 'Ex. +225 07 00 00 00',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: const InputDecoration(
+                                labelText: 'E-mail',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (v) {
+                                if (v != null &&
+                                    v.trim().isNotEmpty &&
+                                    !v.contains('@')) {
+                                  return 'E-mail invalide.';
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                      items: _departementChoix
-                          .map((d) => DropdownMenuItem(
-                              value: d, child: Text(d)))
-                          .toList(),
-                      onChanged: (v) => setState(() =>
-                          _departmentController.text = v ?? ''),
-                    ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: _fonction,
-                    decoration: const InputDecoration(
-                      labelText: 'Fonction',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: (_fonctions ?? fonctionsParDefaut)
-                        .map((f) => DropdownMenuItem(
-                            value: f, child: Text(f)))
-                        .toList(),
-                    onChanged: (v) =>
-                        setState(() => _fonction = v ?? 'Aucun'),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String?>(
-                    initialValue: _poste,
-                    decoration: const InputDecoration(
-                      labelText: 'Poste',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: [
-                      const DropdownMenuItem(
-                          value: null, child: Text('Aucun poste')),
-                      ...(_postes ?? postesParDefaut).map((p) =>
-                          DropdownMenuItem(value: p, child: Text(p))),
+                      Step(
+                        title: const Text('Église et parcours'),
+                        isActive: _etape >= 2,
+                        state: StepState.indexed,
+                        content: Column(
+                          children: [
+                            if (_departements == null ||
+                                    _departements!.isEmpty)
+                              TextFormField(
+                                controller: _departmentController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Département',
+                                  hintText:
+                                      'Ex. Louange, Jeunesse, Protocole…',
+                                  border: OutlineInputBorder(),
+                                ),
+                              )
+                            else
+                              DropdownButtonFormField<String>(
+                                initialValue: _departementValeur,
+                                decoration: const InputDecoration(
+                                  labelText: 'Département',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: _departementChoix
+                                    .map((d) => DropdownMenuItem(
+                                        value: d, child: Text(d)))
+                                    .toList(),
+                                onChanged: (v) => setState(() =>
+                                    _departmentController.text = v ?? ''),
+                              ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<String>(
+                              initialValue: _fonction,
+                              decoration: const InputDecoration(
+                                labelText: 'Fonction',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: (_fonctions ?? fonctionsParDefaut)
+                                  .map((f) => DropdownMenuItem(
+                                      value: f, child: Text(f)))
+                                  .toList(),
+                              onChanged: (v) =>
+                                  setState(() => _fonction = v ?? 'Aucun'),
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<String?>(
+                              initialValue: _poste,
+                              decoration: const InputDecoration(
+                                labelText: 'Poste',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: [
+                                const DropdownMenuItem(
+                                    value: null,
+                                    child: Text('Aucun poste')),
+                                ...(_postes ?? postesParDefaut).map((p) =>
+                                    DropdownMenuItem(
+                                        value: p, child: Text(p))),
+                              ],
+                              onChanged: (v) => setState(() => _poste = v),
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _cellController,
+                              decoration: const InputDecoration(
+                                labelText: 'Cellule / groupe',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<String>(
+                              initialValue: _status,
+                              decoration: const InputDecoration(
+                                labelText: 'Statut',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                    value: 'actif', child: Text('Actif')),
+                                DropdownMenuItem(
+                                    value: 'nouveau_converti',
+                                    child: Text('Nouveau converti')),
+                                DropdownMenuItem(
+                                    value: 'inactif',
+                                    child: Text('Inactif')),
+                              ],
+                              onChanged: (v) =>
+                                  setState(() => _status = v ?? 'actif'),
+                            ),
+                            const SizedBox(height: 12),
+                            _ligneDate(
+                              icone: Icons.favorite_outline,
+                              libelle: 'Date de conversion',
+                              valeur: _dateConversion,
+                              onTap: () => _choisirDateEvenement(
+                                aide: 'Date de conversion',
+                                actuelle: _dateConversion,
+                                choisir: (d) => _dateConversion = d,
+                              ),
+                              onEffacer: () =>
+                                  setState(() => _dateConversion = null),
+                            ),
+                            _ligneDate(
+                              icone: Icons.people_outline,
+                              libelle: 'Date de mariage',
+                              valeur: _dateMariage,
+                              onTap: () => _choisirDateEvenement(
+                                aide: 'Date de mariage',
+                                actuelle: _dateMariage,
+                                choisir: (d) => _dateMariage = d,
+                              ),
+                              onEffacer: () =>
+                                  setState(() => _dateMariage = null),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
-                    onChanged: (v) => setState(() => _poste = v),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _cellController,
-                    decoration: const InputDecoration(
-                      labelText: 'Cellule / groupe',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: _status,
-                    decoration: const InputDecoration(
-                      labelText: 'Statut',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                          value: 'actif', child: Text('Actif')),
-                      DropdownMenuItem(
-                          value: 'nouveau_converti',
-                          child: Text('Nouveau converti')),
-                      DropdownMenuItem(
-                          value: 'inactif', child: Text('Inactif')),
-                    ],
-                    onChanged: (v) =>
-                        setState(() => _status = v ?? 'actif'),
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 12),
@@ -356,22 +531,6 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                       textAlign: TextAlign.center,
                     ),
                   ],
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: _loading ? null : _submit,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: _loading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(_isEditing
-                              ? 'Enregistrer les modifications'
-                              : 'Ajouter le membre'),
-                    ),
-                  ),
                 ],
               ),
             ),

@@ -15,8 +15,8 @@ import { dbError, requireAuth, requireRole } from "../middleware.js";
 /**
  * Module 1 — Membres (compléter) : familles, historique des statuts,
  * baptêmes, liens parent-enfant, départements, cellules, affectations.
- * Les statuts riches (sympathisant, en formation, suspendu, parti) vivent
- * dans membre_statuts ; members.status garde l'enum d'origine.
+ * Les statuts riches (sympathisant, en formation, suspendu, parti, ancien)
+ * vivent dans membre_statuts ; members.status garde l'enum d'origine.
  */
 
 const uuid = z.string().uuid();
@@ -25,7 +25,7 @@ const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 /** Nouveau statut riche -> statut simple de members. */
 function toMemberStatus(statut: string): "actif" | "nouveau_converti" | "inactif" {
   if (statut === "nouveau_converti") return "nouveau_converti";
-  if (statut === "suspendu" || statut === "parti") return "inactif";
+  if (statut === "suspendu" || statut === "parti" || statut === "ancien") return "inactif";
   return "actif";
 }
 
@@ -58,7 +58,7 @@ export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) 
     columns: ["member_id", "statut", "ancien_statut", "motif"],
     createSchema: z.object({
       member_id: uuid,
-      statut: z.enum(["membre", "sympathisant", "nouveau_converti", "en_formation", "suspendu", "parti"]),
+      statut: z.enum(["membre", "sympathisant", "nouveau_converti", "en_formation", "suspendu", "parti", "ancien"]),
       ancien_statut: z.string().max(50).optional(),
       motif: z.string().max(500).optional(),
     }),
@@ -303,7 +303,7 @@ export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) 
   // -- Changement de statut d'un membre (écrit l'historique + met à jour
   //    members.status avec le statut simple correspondant). -----------------
   const statutSchema = z.object({
-    statut: z.enum(["membre", "sympathisant", "nouveau_converti", "en_formation", "suspendu", "parti"]),
+    statut: z.enum(["membre", "sympathisant", "nouveau_converti", "en_formation", "suspendu", "parti", "ancien"]),
     motif: z.string().max(500).optional(),
   });
   app.post(

@@ -10,6 +10,7 @@ import 'dart:typed_data';
 
 import '../models/attestation.dart';
 import '../models/annexe.dart';
+import '../models/anniversaire.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
@@ -22,6 +23,7 @@ import '../models/checkin_enfant.dart';
 import '../models/enfants.dart';
 import '../models/fidele.dart';
 import '../models/finances.dart';
+import '../models/frequentation.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
@@ -1323,6 +1325,8 @@ class MockApiService implements ApiService {
     String? poste,
     String? cellGroup,
     String? status,
+    String? dateMariage,
+    String? dateConversion,
   }) async {
     await _latence();
     _requireAuth();
@@ -1341,6 +1345,8 @@ class MockApiService implements ApiService {
       poste: poste,
       cellGroup: cellGroup,
       status: status ?? 'actif',
+      dateMariage: dateMariage,
+      dateConversion: dateConversion,
       createdAt: DateTime.now(),
     );
     _data.membersOf(_churchId).add(membre);
@@ -1358,7 +1364,9 @@ class MockApiService implements ApiService {
       String? fonction,
       String? poste,
       String? cellGroup,
-      String? status}) async {
+      String? status,
+      String? dateMariage,
+      String? dateConversion}) async {
     await _latence();
     _requireAuth();
     final list = _data.membersOf(_churchId);
@@ -1380,6 +1388,10 @@ class MockApiService implements ApiService {
       poste: poste,
       cellGroup: cellGroup,
       status: status ?? ancien.status,
+      statutRiche: ancien.statutRiche,
+      dateMariage: dateMariage,
+      dateConversion: dateConversion,
+      photoUrl: ancien.photoUrl,
       createdAt: ancien.createdAt,
     );
     list[index] = maj;
@@ -1391,6 +1403,73 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     _data.membersOf(_churchId).removeWhere((m) => m.id == id);
+  }
+
+  @override
+  Future<List<Anniversaire>> getAnniversaires({int jours = 30}) async {
+    await _latence();
+    _requireAuth();
+    final maintenant = DateTime.now();
+    final aujourdhui = DateTime(maintenant.year, maintenant.month, maintenant.day);
+    final liste = <Anniversaire>[];
+    for (final m in _data.membersOf(_churchId)) {
+      final naissance = DateTime.tryParse(m.birthDate ?? '');
+      if (naissance == null) continue;
+      var prochain = DateTime(aujourdhui.year, naissance.month, naissance.day);
+      if (prochain.isBefore(aujourdhui)) {
+        prochain = DateTime(aujourdhui.year + 1, naissance.month, naissance.day);
+      }
+      final reste = prochain.difference(aujourdhui).inDays;
+      if (reste <= jours) {
+        liste.add(Anniversaire(
+          id: m.id,
+          fullName: m.fullName,
+          matricule: m.matricule,
+          birthDate: m.birthDate!,
+          prochain: prochain,
+          joursRestants: reste,
+          ageAtteint: prochain.year - naissance.year,
+        ));
+      }
+    }
+    liste.sort((a, b) => a.joursRestants.compareTo(b.joursRestants));
+    return liste;
+  }
+
+  @override
+  Future<Frequentation> getFrequentation(String memberId) async {
+    await _latence();
+    _requireAuth();
+    final cultes = {for (final c in _data.cultes) c.id: c};
+    final evenements = {for (final e in _data.evenements) e.id: e};
+    final items = _data.presences
+        .where((p) => p.memberId == memberId)
+        .map((p) {
+          final culte = p.culteId == null ? null : cultes[p.culteId];
+          final evenement = p.eventId == null ? null : evenements[p.eventId];
+          final dateEvenement = culte?.date ??
+              (evenement == null
+                  ? null
+                  : DateTime.tryParse(evenement.dateDebut)) ??
+              p.pointeAt;
+          return FrequentationItem(
+            id: p.id,
+            statut: p.statut,
+            mode: p.mode,
+            pointeAt: p.pointeAt,
+            titre: culte?.titre ?? evenement?.titre,
+            dateEvenement: dateEvenement,
+            type: p.culteId != null ? 'culte' : 'evenement',
+          );
+        })
+        .toList()
+      ..sort((a, b) => (b.dateEvenement ?? DateTime(1900))
+          .compareTo(a.dateEvenement ?? DateTime(1900)));
+    return Frequentation(
+      total: items.length,
+      presents: items.where((i) => i.statut == 'present').length,
+      items: items,
+    );
   }
 
   // -- Import des fidèles (tranche A, non géré en démo) -----------------------
@@ -1484,9 +1563,13 @@ class MockApiService implements ApiService {
     );
     _data.statuts.add(entree);
     _tag(entree.id);
-    // Le statut « membre » de l'historique correspond à « actif » ici.
-    final nouveauStatut =
-        statut == 'membre' ? 'actif' : statut;
+    // Statut riche -> statut simple, comme le serveur : suspendu, parti et
+    // ancien deviennent « inactif », le détail reste dans statutRiche.
+    final nouveauStatut = statut == 'nouveau_converti'
+        ? 'nouveau_converti'
+        : (statut == 'suspendu' || statut == 'parti' || statut == 'ancien')
+            ? 'inactif'
+            : 'actif';
     final maj = Member(
       id: membre.id,
       matricule: membre.matricule,
@@ -1494,9 +1577,16 @@ class MockApiService implements ApiService {
       phone: membre.phone,
       email: membre.email,
       birthDate: membre.birthDate,
+      sexe: membre.sexe,
       department: membre.department,
+      fonction: membre.fonction,
+      poste: membre.poste,
       cellGroup: membre.cellGroup,
       status: nouveauStatut,
+      statutRiche: statut,
+      dateMariage: membre.dateMariage,
+      dateConversion: membre.dateConversion,
+      photoUrl: membre.photoUrl,
       createdAt: membre.createdAt,
     );
     for (final list in _data.membersByChurch.values) {
