@@ -777,15 +777,40 @@ class MockApiService implements ApiService {
 
   // US3 : pas d'attestations dans le seed démo.
   @override
-  Future<List<Attestation>> getAttestations({int? annee}) async => [];
+  Future<List<Attestation>> getAttestations(
+          {int? annee, String? type}) async =>
+      [];
 
   @override
   Future<List<Attestation>> genererAttestations({required int annee}) async =>
       [];
 
   @override
+  Future<Attestation> emettreAttestation({
+    required String type,
+    required String memberId,
+    required String dateEvenement,
+    String? lieu,
+    String? officiant,
+    String? conjointNom,
+    String? pereNom,
+    String? mereNom,
+    String? parrainNom,
+    String? marraineNom,
+  }) async =>
+      throw UnimplementedError('Attestations non gérées en démo.');
+
+  @override
   Future<Attestation> corrigerAttestation(String id,
-          {required String motif}) async =>
+          {required String motif,
+          String? dateEvenement,
+          String? lieu,
+          String? officiant,
+          String? conjointNom,
+          String? pereNom,
+          String? mereNom,
+          String? parrainNom,
+          String? marraineNom}) async =>
       throw UnimplementedError('Attestations non gérées en démo.');
 
   @override
@@ -1333,6 +1358,33 @@ class MockApiService implements ApiService {
     _requireAuth();
     _data.membersOf(_churchId).removeWhere((m) => m.id == id);
   }
+
+  // -- Import des fidèles (tranche A, non géré en démo) -----------------------
+  @override
+  Future<Uint8List> telechargerModeleImport() async =>
+      throw UnimplementedError('Import non géré en démo.');
+
+  @override
+  Future<Map<String, dynamic>> apercuImport({
+    String? contenuCsv,
+    List<Map<String, String>>? lignes,
+    Map<String, String>? mapping,
+    String? nomFichier,
+  }) async =>
+      throw UnimplementedError('Import non géré en démo.');
+
+  @override
+  Future<Map<String, dynamic>> confirmerImport({
+    String? contenuCsv,
+    List<Map<String, String>>? lignes,
+    Map<String, String>? mapping,
+    String? nomFichier,
+  }) async =>
+      throw UnimplementedError('Import non géré en démo.');
+
+  @override
+  Future<List<Map<String, dynamic>>> historiqueImports() async =>
+      throw UnimplementedError('Import non géré en démo.');
 
   // -- Membres (complément) --------------------------------------------------
 
