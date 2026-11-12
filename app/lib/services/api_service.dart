@@ -839,6 +839,67 @@ abstract class ApiService {
 
   Future<Uint8List> exporterRapportConsolidePdf();
 
+  // -- Plan comptable des dépenses (tranche dépenses prévisibles) ------------
+  /// Les dix catégories comptables globales.
+  Future<List<CategorieDepense>> getCategoriesDepenses();
+
+  /// Crée un poste avec catégorie comptable et marqueur récurrente.
+  Future<PosteBudgetaire> creerPostePlanComptable({
+    required String nom,
+    required String categorie,
+    String? description,
+    String? categorieId,
+    bool estRecurrente = false,
+  });
+
+  /// Change la catégorie comptable et le marqueur récurrente d'un poste.
+  Future<PosteBudgetaire> modifierPostePlanComptable({
+    required String id,
+    String? categorieId,
+    required bool estRecurrente,
+  });
+
+  Future<List<BudgetMensuel>> getBudgetsMensuels(
+      {int? annee, int? mois, String? posteId});
+
+  /// Crée ou remplace le budget mensuel d'un poste.
+  Future<BudgetMensuel> creerBudgetMensuel({
+    required String posteId,
+    required int annee,
+    required int mois,
+    required int montantPrevu,
+  });
+
+  Future<void> supprimerBudgetMensuel(String id);
+
+  /// Crée une dépense avec tous les champs du plan comptable.
+  /// La référence DEP-AAAA-NNNN est générée par le serveur.
+  Future<Depense> creerDepenseComplete({
+    String? posteId,
+    required int montantFcfa,
+    required String motif,
+    String? justificatifRef,
+    String? dateDepense,
+    String? departementId,
+    String? modePaiement,
+    String? fournisseurBeneficiaire,
+    String? responsableDepense,
+    String? responsableAutorisation,
+    String? devise,
+  });
+
+  /// Prévu mensuel contre réel, par catégorie et par poste.
+  Future<SuiviMensuel> getSuiviMensuel(
+      {required int annee, required int mois});
+
+  /// Rapport des dépenses, mensuel (mois donné) ou annuel.
+  Future<RapportPlanComptable> getRapportPlanComptable(
+      {required int annee, int? mois});
+
+  /// Le même rapport en PDF (octets).
+  Future<Uint8List> exporterRapportPlanComptablePdf(
+      {required int annee, int? mois});
+
   // -- Administration : paramètres, rôles, audit (module 12) -----------------
   Future<EgliseParametres> getParametres();
 

@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import { z } from "zod";
 import { auditLog, generateChurchCode, generateFideleCode } from "../auth.js";
 import { dbError, estAnnexe, requireAuth, requireRole } from "../middleware.js";
+import { seedPostesPrevisibles } from "../postes_previsibles.js";
 
 /**
  * Églises : création de sous-églises et arborescence.
@@ -107,6 +108,9 @@ export function registerEglisesRoutes(app: FastifyInstance, db: Pool) {
            VALUES ($1, $2, 'admin_eglise')`,
           [req.session.userId, sub.id],
         );
+
+        // Postes de dépense prévisibles, déjà prêts pour la trésorerie.
+        await seedPostesPrevisibles(client, sub.id);
 
         await auditLog(client, {
           churchId: req.session.churchId,

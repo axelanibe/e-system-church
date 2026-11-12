@@ -2098,6 +2098,124 @@ class HttpApiService implements ApiService {
   Future<Uint8List> exporterRapportConsolidePdf() =>
       _telechargerPdf('/exports/rapports/consolide', {});
 
+  // -- Plan comptable des dépenses (tranche dépenses prévisibles) ------------
+  @override
+  Future<List<CategorieDepense>> getCategoriesDepenses() async => _items(
+      await _call('GET', '/categories-depenses'),
+      CategorieDepense.fromJson);
+
+  @override
+  Future<PosteBudgetaire> creerPostePlanComptable({
+    required String nom,
+    required String categorie,
+    String? description,
+    String? categorieId,
+    bool estRecurrente = false,
+  }) async =>
+      PosteBudgetaire.fromJson(
+          await _call('POST', '/plan-comptable/postes', body: {
+        'nom': nom,
+        'categorie': categorie,
+        if (description != null) 'description': description,
+        if (categorieId != null) 'categorie_id': categorieId,
+        'est_recurrente': estRecurrente,
+      }));
+
+  @override
+  Future<PosteBudgetaire> modifierPostePlanComptable({
+    required String id,
+    String? categorieId,
+    required bool estRecurrente,
+  }) async =>
+      PosteBudgetaire.fromJson(
+          await _call('PATCH', '/plan-comptable/postes/$id', body: {
+        'categorie_id': categorieId,
+        'est_recurrente': estRecurrente,
+      }));
+
+  @override
+  Future<List<BudgetMensuel>> getBudgetsMensuels(
+          {int? annee, int? mois, String? posteId}) async =>
+      _items(
+          await _call('GET', '/budgets-mensuels',
+              query: _q({
+                'annee': annee,
+                'mois': mois,
+                'poste_id': posteId,
+              })),
+          BudgetMensuel.fromJson);
+
+  @override
+  Future<BudgetMensuel> creerBudgetMensuel({
+    required String posteId,
+    required int annee,
+    required int mois,
+    required int montantPrevu,
+  }) async =>
+      BudgetMensuel.fromJson(await _call('POST', '/budgets-mensuels', body: {
+        'poste_id': posteId,
+        'annee': annee,
+        'mois': mois,
+        'montant_prevu': montantPrevu,
+      }));
+
+  @override
+  Future<void> supprimerBudgetMensuel(String id) async {
+    await _call('DELETE', '/budgets-mensuels/$id');
+  }
+
+  @override
+  Future<Depense> creerDepenseComplete({
+    String? posteId,
+    required int montantFcfa,
+    required String motif,
+    String? justificatifRef,
+    String? dateDepense,
+    String? departementId,
+    String? modePaiement,
+    String? fournisseurBeneficiaire,
+    String? responsableDepense,
+    String? responsableAutorisation,
+    String? devise,
+  }) async =>
+      Depense.fromJson(
+          await _call('POST', '/plan-comptable/depenses', body: {
+        if (posteId != null) 'poste_id': posteId,
+        'montant_fcfa': montantFcfa,
+        'motif': motif,
+        if (justificatifRef != null) 'justificatif_ref': justificatifRef,
+        if (dateDepense != null) 'date_depense': dateDepense,
+        if (departementId != null) 'departement_id': departementId,
+        if (modePaiement != null) 'mode_paiement': modePaiement,
+        if (fournisseurBeneficiaire != null)
+          'fournisseur_beneficiaire': fournisseurBeneficiaire,
+        if (responsableDepense != null)
+          'responsable_depense': responsableDepense,
+        if (responsableAutorisation != null)
+          'responsable_autorisation': responsableAutorisation,
+        if (devise != null) 'devise': devise,
+      }));
+
+  @override
+  Future<SuiviMensuel> getSuiviMensuel(
+          {required int annee, required int mois}) async =>
+      SuiviMensuel.fromJson(await _call(
+          'GET', '/plan-comptable/suivi-mensuel',
+          query: _q({'annee': annee, 'mois': mois})));
+
+  @override
+  Future<RapportPlanComptable> getRapportPlanComptable(
+          {required int annee, int? mois}) async =>
+      RapportPlanComptable.fromJson(await _call(
+          'GET', '/plan-comptable/rapport',
+          query: _q({'annee': annee, 'mois': mois})));
+
+  @override
+  Future<Uint8List> exporterRapportPlanComptablePdf(
+          {required int annee, int? mois}) =>
+      _telechargerPdf('/plan-comptable/rapport/pdf',
+          _q({'annee': annee, 'mois': mois}));
+
   // -- Administration : paramètres, rôles, audit (module 12) -----------------
   @override
   Future<EgliseParametres> getParametres() async =>

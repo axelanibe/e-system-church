@@ -1,11 +1,39 @@
 import '../utils/format.dart';
 
+/// Catégorie comptable des dépenses (`categories_depenses`) : dix
+/// catégories globales, identiques pour toutes les églises.
+class CategorieDepense {
+  final String id;
+  final String code; // 01 à 10
+  final String nom;
+  final String? description;
+
+  const CategorieDepense({
+    required this.id,
+    required this.code,
+    required this.nom,
+    this.description,
+  });
+
+  factory CategorieDepense.fromJson(Map<String, dynamic> json) =>
+      CategorieDepense(
+        id: json['id'] as String,
+        code: json['code'] as String,
+        nom: json['nom'] as String,
+        description: json['description'] as String?,
+      );
+
+  String get libelle => '$code · $nom';
+}
+
 /// Poste budgétaire (`postes_budgetaires`).
 class PosteBudgetaire {
   final String id;
   final String nom;
   final String categorie; // recette | depense
   final String? description;
+  final String? categorieId; // catégorie comptable (dépenses seulement)
+  final bool estRecurrente; // dépense récurrente ou ponctuelle
   final DateTime? createdAt;
 
   const PosteBudgetaire({
@@ -13,6 +41,8 @@ class PosteBudgetaire {
     required this.nom,
     required this.categorie,
     this.description,
+    this.categorieId,
+    this.estRecurrente = false,
     this.createdAt,
   });
 
@@ -22,6 +52,36 @@ class PosteBudgetaire {
         nom: json['nom'] as String,
         categorie: json['categorie'] as String,
         description: json['description'] as String?,
+        categorieId: json['categorie_id'] as String?,
+        estRecurrente: json['est_recurrente'] as bool? ?? false,
+        createdAt: parseDate(json['created_at'] as String?),
+      );
+}
+
+/// Budget mensuel d'un poste (`budgets_mensuels`).
+class BudgetMensuel {
+  final String id;
+  final String posteId;
+  final int annee;
+  final int mois;
+  final int montantPrevu;
+  final DateTime? createdAt;
+
+  const BudgetMensuel({
+    required this.id,
+    required this.posteId,
+    required this.annee,
+    required this.mois,
+    required this.montantPrevu,
+    this.createdAt,
+  });
+
+  factory BudgetMensuel.fromJson(Map<String, dynamic> json) => BudgetMensuel(
+        id: json['id'] as String,
+        posteId: json['poste_id'] as String,
+        annee: (json['annee'] as num).toInt(),
+        mois: (json['mois'] as num).toInt(),
+        montantPrevu: (json['montant_prevu'] as num).toInt(),
         createdAt: parseDate(json['created_at'] as String?),
       );
 }
@@ -61,6 +121,13 @@ class Depense {
   final String? justificatifRef;
   final String statut; // soumise | validee_tresorier | validee_pasteur | payee | refusee
   final String? dateDepense; // « AAAA-MM-JJ »
+  final String? reference; // DEP-AAAA-NNNN, auto-générée par le serveur
+  final String? departementId;
+  final String? modePaiement; // especes | wave | orange_money | mtn_money | virement | cheque
+  final String? fournisseurBeneficiaire;
+  final String? responsableDepense;
+  final String? responsableAutorisation;
+  final String? devise; // FCFA par défaut
   final DateTime? createdAt;
 
   const Depense({
@@ -71,6 +138,13 @@ class Depense {
     this.justificatifRef,
     required this.statut,
     this.dateDepense,
+    this.reference,
+    this.departementId,
+    this.modePaiement,
+    this.fournisseurBeneficiaire,
+    this.responsableDepense,
+    this.responsableAutorisation,
+    this.devise,
     this.createdAt,
   });
 
@@ -82,8 +156,38 @@ class Depense {
         justificatifRef: json['justificatif_ref'] as String?,
         statut: json['statut'] as String? ?? 'soumise',
         dateDepense: json['date_depense'] as String?,
+        reference: json['reference'] as String?,
+        departementId: json['departement_id'] as String?,
+        modePaiement: json['mode_paiement'] as String?,
+        fournisseurBeneficiaire:
+            json['fournisseur_beneficiaire'] as String?,
+        responsableDepense: json['responsable_depense'] as String?,
+        responsableAutorisation:
+            json['responsable_autorisation'] as String?,
+        devise: json['devise'] as String?,
         createdAt: parseDate(json['created_at'] as String?),
       );
+
+  static String labelForModePaiement(String? mode) {
+    switch (mode) {
+      case 'especes':
+        return 'Espèces';
+      case 'wave':
+        return 'Wave';
+      case 'orange_money':
+        return 'Orange Money';
+      case 'mtn_money':
+        return 'MTN Mobile Money';
+      case 'virement':
+        return 'Virement';
+      case 'cheque':
+        return 'Chèque';
+      default:
+        return 'Non précisé';
+    }
+  }
+
+  String get modePaiementLabel => labelForModePaiement(modePaiement);
 
   static String labelForStatut(String statut) {
     switch (statut) {
@@ -182,5 +286,124 @@ class RapportFinancier {
         parBranche: (json['par_branche'] as List<dynamic>? ?? [])
             .map((e) => Map<String, dynamic>.from(e as Map))
             .toList(),
+      );
+}
+
+/// Ligne de suivi mensuel : prévu contre réel, par catégorie ou par poste.
+/// Dépassement quand le réel dépasse un budget mensuel défini.
+class SuiviMensuelLigne {
+  final String? posteId;
+  final String? poste;
+  final String? categorieCode;
+  final String? categorieNom;
+  final bool? recurrente;
+  final int prevuFcfa;
+  final int reelFcfa;
+  final bool budgetDefini;
+
+  const SuiviMensuelLigne({
+    this.posteId,
+    this.poste,
+    this.categorieCode,
+    this.categorieNom,
+    this.recurrente,
+    required this.prevuFcfa,
+    required this.reelFcfa,
+    required this.budgetDefini,
+  });
+
+  factory SuiviMensuelLigne.fromJson(Map<String, dynamic> json) =>
+      SuiviMensuelLigne(
+        posteId: json['poste_id'] as String?,
+        poste: json['poste'] as String?,
+        categorieCode: json['categorie_code'] as String?,
+        categorieNom: json['categorie_nom'] as String?,
+        recurrente: json['recurrente'] as bool?,
+        prevuFcfa: (json['prevu_fcfa'] as num?)?.toInt() ?? 0,
+        reelFcfa: (json['reel_fcfa'] as num?)?.toInt() ?? 0,
+        budgetDefini: json['budget_defini'] as bool? ?? false,
+      );
+
+  bool get depassement => budgetDefini && prevuFcfa > 0 && reelFcfa > prevuFcfa;
+
+  String get libelle {
+    if (poste != null) return poste!;
+    if (categorieCode != null) return '$categorieCode · ${categorieNom ?? ''}';
+    return categorieNom ?? '—';
+  }
+}
+
+/// Suivi mensuel (`GET /plan-comptable/suivi-mensuel`).
+class SuiviMensuel {
+  final int annee;
+  final int mois;
+  final List<SuiviMensuelLigne> parCategories;
+  final List<SuiviMensuelLigne> parPostes;
+  final int totalPrevuFcfa;
+  final int totalReelFcfa;
+
+  const SuiviMensuel({
+    required this.annee,
+    required this.mois,
+    required this.parCategories,
+    required this.parPostes,
+    required this.totalPrevuFcfa,
+    required this.totalReelFcfa,
+  });
+
+  factory SuiviMensuel.fromJson(Map<String, dynamic> json) => SuiviMensuel(
+        annee: (json['annee'] as num).toInt(),
+        mois: (json['mois'] as num).toInt(),
+        parCategories: (json['par_categories'] as List<dynamic>? ?? [])
+            .map((e) =>
+                SuiviMensuelLigne.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList(),
+        parPostes: (json['par_postes'] as List<dynamic>? ?? [])
+            .map((e) =>
+                SuiviMensuelLigne.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList(),
+        totalPrevuFcfa: (json['total_prevu_fcfa'] as num?)?.toInt() ?? 0,
+        totalReelFcfa: (json['total_reel_fcfa'] as num?)?.toInt() ?? 0,
+      );
+}
+
+/// Rapport des dépenses (`GET /plan-comptable/rapport`) : mêmes chiffres
+/// que le PDF serveur et que le classeur Excel côté application.
+class RapportPlanComptable {
+  final int annee;
+  final int? mois;
+  final List<SuiviMensuelLigne> parCategories;
+  final List<SuiviMensuelLigne> parPostes;
+  final List<Map<String, dynamic>> depenses;
+  final int totalPrevuFcfa;
+  final int totalReelFcfa;
+
+  const RapportPlanComptable({
+    required this.annee,
+    this.mois,
+    required this.parCategories,
+    required this.parPostes,
+    required this.depenses,
+    required this.totalPrevuFcfa,
+    required this.totalReelFcfa,
+  });
+
+  factory RapportPlanComptable.fromJson(Map<String, dynamic> json) =>
+      RapportPlanComptable(
+        annee: (json['annee'] as num).toInt(),
+        mois: (json['mois'] as num?)?.toInt(),
+        parCategories: (json['par_categories'] as List<dynamic>? ?? [])
+            .map((e) =>
+                SuiviMensuelLigne.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList(),
+        parPostes: (json['par_postes'] as List<dynamic>? ?? [])
+            .map((e) =>
+                SuiviMensuelLigne.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList(),
+        depenses: (json['depenses'] as List<dynamic>? ?? [])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList(),
+        totalPrevuFcfa: (json['total_prevu_fcfa'] as num?)?.toInt() ?? 0,
+        totalReelFcfa: (json['total_reel_fcfa'] as num?)?.toInt() ?? 0,
       );
 }
