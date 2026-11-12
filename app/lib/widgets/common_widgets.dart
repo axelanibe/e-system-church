@@ -46,6 +46,11 @@ String messageErreurSimple(Object error) {
   if (bas.contains('409')) {
     return 'Cette information existe déjà.';
   }
+  if (bas.contains('foreign key') ||
+      bas.contains('violates') ||
+      bas.contains('constraint')) {
+    return 'Impossible de supprimer : cet élément est encore utilisé ailleurs.';
+  }
   if (bas.contains('exception') ||
       bas.contains('error') ||
       bas.contains('failed') ||

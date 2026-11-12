@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
@@ -21,6 +23,7 @@ class AnnexesScreen extends StatefulWidget {
 
 class _AnnexesScreenState extends State<AnnexesScreen> {
   final _recherche = TextEditingController();
+  Timer? _debounce;
   List<Annexe> _annexes = [];
   bool _loading = true;
   String? _error;
@@ -33,6 +36,7 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _recherche.dispose();
     super.dispose();
   }
@@ -57,6 +61,16 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
         _loading = false;
       });
     }
+  }
+
+  /// Recherche en direct, comme sur Membres : temporisation de 400 ms
+  /// puis appel serveur avec la recherche.
+  void _onRechercheChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(
+      const Duration(milliseconds: 400),
+      () => _load(q: value.trim()),
+    );
   }
 
   @override
@@ -89,7 +103,11 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                 prefixIcon: Icon(Icons.search_outlined),
                 border: OutlineInputBorder(),
               ),
-              onSubmitted: (value) => _load(q: value.trim()),
+              onChanged: _onRechercheChanged,
+              onSubmitted: (value) {
+                _debounce?.cancel();
+                _load(q: value.trim());
+              },
             ),
           ),
           Expanded(
@@ -101,10 +119,11 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                         onRetry: () => _load(q: _recherche.text.trim()),
                       )
                     : _annexes.isEmpty
-                        ? const EmptyState(
+                        ? EmptyState(
                             icon: Icons.account_tree_outlined,
-                            message:
-                                'Aucune annexe pour l’instant. Une église se rattache à vous avec votre code permanent ou un code de tutelle, depuis « Demandes de rattachement ».',
+                            message: _recherche.text.trim().isNotEmpty
+                                ? 'Aucune annexe ne correspond à « ${_recherche.text.trim()} ».'
+                                : 'Aucune annexe pour l’instant. Une église se rattache à vous avec votre code permanent ou un code de tutelle, depuis « Demandes de rattachement ».',
                           )
                         : RefreshIndicator(
                             onRefresh: () =>

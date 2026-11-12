@@ -52,22 +52,30 @@ class _HomeScreenState extends State<HomeScreen> {
     null,
   ];
 
-  Widget _screenFor(int index) {
+  /// Chaque écran reçoit une clé liée à l'église active : après une
+  /// bascule d'église, HomeScreen reste monté et les écrans garderaient
+  /// sinon leur Future d'avant (données de l'église précédente). La clé
+  /// changeante recrée l'écran, donc son chargement, sans refaire la
+  /// navigation. Vaut pour les 5 écrans à Future en initState
+  /// (Accueil, Réseau, Membres, Finances, Annonces) ; ModulesScreen est
+  /// sans état et lit déjà l'état courant.
+  Widget _screenFor(int index, String? egliseId) {
+    final cle = ValueKey(egliseId);
     switch (index) {
       case 0:
-        return const DashboardScreen();
+        return DashboardScreen(key: cle);
       case 1:
-        return const TreeScreen();
+        return TreeScreen(key: cle);
       case 2:
-        return const MembresScreen();
+        return MembresScreen(key: cle);
       case 3:
-        return const FinancesScreen();
+        return FinancesScreen(key: cle);
       case 4:
-        return const AnnoncesScreen();
+        return AnnoncesScreen(key: cle);
       case 5:
-        return const ModulesScreen();
+        return ModulesScreen(key: cle);
       default:
-        return const DashboardScreen();
+        return DashboardScreen(key: cle);
     }
   }
 
@@ -151,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ))
                   .toList(),
             ),
-          Expanded(child: _screenFor(courant)),
+          Expanded(child: _screenFor(courant, state.church?.id)),
         ],
       ),
       bottomNavigationBar: wide
