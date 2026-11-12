@@ -749,6 +749,12 @@ class MockApiService implements ApiService {
   }
 
   @override
+  Future<int> getAnnoncesNonLues() async => 0;
+
+  @override
+  Future<void> marquerAnnonceLue(String id) async {}
+
+  @override
   Future<List<Culte>> getMesCultes() async {
     await _latence();
     _requireAuth();

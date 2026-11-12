@@ -7,11 +7,16 @@ class AppUser {
   final String email;
   final String? phone;
 
+  /// Photo du membre lié (migration 018, renvoyée par `GET /moi`) :
+  /// null tant qu'aucune photo n'est fournie.
+  final String? photoUrl;
+
   const AppUser({
     required this.id,
     required this.fullName,
     required this.email,
     this.phone,
+    this.photoUrl,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
@@ -19,6 +24,7 @@ class AppUser {
         fullName: json['full_name'] as String,
         email: json['email'] as String,
         phone: json['phone'] as String?,
+        photoUrl: json['photo_url'] as String?,
       );
 }
 

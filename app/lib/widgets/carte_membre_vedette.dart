@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../config/app_theme.dart';
 import '../models/fidele.dart';
@@ -9,9 +10,11 @@ import 'soft_card.dart';
 
 /// Carte de membre en vedette, en tête de l'espace fidèle : la plus
 /// belle chose de l'écran, comme une carte bancaire dans une application
-/// grand public. Photo ou initiales, nom en grand, matricule, église.
-/// Rien d'inventé : que des données réelles du profil. Le bouton ouvre
-/// la vraie carte de membre, il ne la reconstruit pas.
+/// grand public. Photo ou initiales, nom en grand, matricule, église, QR
+/// en miniature. Rien d'inventé : que des données réelles du profil.
+/// La photo n'apparaît que si elle a été fournie (migration 018),
+/// sinon les initiales. Le bouton ouvre la vraie carte de membre,
+/// il ne la reconstruit pas.
 class CarteMembreVedette extends StatelessWidget {
   final FideleProfil profil;
   final VoidCallback onVoirCarte;
@@ -31,6 +34,12 @@ class CarteMembreVedette extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final church = profil.church;
+    // QR de la carte : CODE_EGLISE:MATRICULE, matricule seul sinon
+    // (même règle que la carte complète).
+    final qrData = profil.matricule != null && church.code.isNotEmpty
+        ? '${church.code}:${profil.matricule}'
+        : (profil.matricule ?? '');
+    final photoUrl = profil.user.photoUrl;
     return SoftCard(
       color: AppTheme.sable,
       child: Column(
@@ -42,14 +51,18 @@ class CarteMembreVedette extends StatelessWidget {
               CircleAvatar(
                 radius: 32,
                 backgroundColor: AppTheme.cypress,
-                child: Text(
-                  _initiales(profil.user.fullName),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                backgroundImage:
+                    photoUrl != null ? NetworkImage(photoUrl) : null,
+                child: photoUrl == null
+                    ? Text(
+                        _initiales(profil.user.fullName),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : null,
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -77,7 +90,21 @@ class CarteMembreVedette extends StatelessWidget {
                   ],
                 ),
               ),
-              ChurchAvatar(church: church, radius: 20),
+              if (qrData.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: QrImageView(
+                    data: qrData,
+                    version: QrVersions.auto,
+                    size: 64,
+                  ),
+                )
+              else
+                ChurchAvatar(church: church, radius: 20),
             ],
           ),
           if (profil.matricule != null) ...[

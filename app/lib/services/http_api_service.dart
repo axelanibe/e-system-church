@@ -319,6 +319,17 @@ class HttpApiService implements ApiService {
   }
 
   @override
+  Future<int> getAnnoncesNonLues() async {
+    final data = await _call('GET', '/moi/annonces');
+    return (data['non_lues'] as num?)?.toInt() ?? 0;
+  }
+
+  @override
+  Future<void> marquerAnnonceLue(String id) async {
+    await _call('POST', '/moi/annonces/$id/lue');
+  }
+
+  @override
   Future<List<Culte>> getMesCultes() async {
     final data = await _call('GET', '/moi/cultes');
     return (data['cultes'] as List<dynamic>? ?? [])

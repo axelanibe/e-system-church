@@ -261,10 +261,10 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
     try {
       const { rows } = await db.query(
         `SELECT u.id, u.full_name, u.email, u.phone, u.member_id,
-                m.matricule,
+                m.matricule, m.photo_url,
                 c.id AS church_id, c.code, c.code_fidele, c.name, c.parent_church_id, c.city,
                 c.country, c.phone AS church_phone, c.email AS church_email,
-                c.status, c.logo_url, c.couleur_principale, c.devise,
+                c.status, c.logo_url, c.banniere_url, c.couleur_principale, c.devise,
                 c.fuseau_horaire, c.description, c.horaires_cultes
            FROM users u
            LEFT JOIN members m ON m.id = u.member_id
@@ -282,6 +282,7 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
           phone: r.phone,
           member_id: r.member_id,
           matricule: r.matricule,
+          photo_url: r.photo_url,
         },
         church: {
           id: r.church_id,
@@ -295,6 +296,7 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
           email: r.church_email,
           status: r.status,
           logo_url: r.logo_url,
+          banniere_url: r.banniere_url,
           couleur_principale: r.couleur_principale,
           devise: r.devise,
           fuseau_horaire: r.fuseau_horaire,
@@ -439,11 +441,14 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
   );
 
   // -- Lectures fidèle (rôle membre, SON église, SES données).
+  // -- Mes annonces, avec le nombre de non lues (table annonces_lectures,
+  //    migration 018 : une ligne par annonce lue, le compteur est calculé).
   app.get(
     "/moi/annonces",
     { preHandler: [requireAuth(db), requireRole("membre")] },
     async (req, reply) => {
       try {
+        const memberId = await memberIdDe(req.session.userId);
         const { rows } = await db.query(
           `WITH RECURSIVE ancetres AS (
              SELECT id, parent_church_id FROM churches WHERE id = $1
@@ -462,7 +467,76 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
             LIMIT 100`,
           [req.session.churchId],
         );
-        return reply.send({ annonces: rows });
+        // Non lues : annonces visibles sans ligne de lecture pour ce membre.
+        // Sans membre lié, toutes les annonces visibles comptent comme non lues.
+        let nonLues = rows.length;
+        if (memberId) {
+          const { rows: compte } = await db.query<{ n: string }>(
+            `WITH RECURSIVE ancetres AS (
+               SELECT id, parent_church_id FROM churches WHERE id = $1
+               UNION ALL
+               SELECT c.id, c.parent_church_id
+                 FROM churches c
+                 JOIN ancetres a ON c.id = a.parent_church_id
+             )
+             SELECT count(*)::text AS n FROM announcements an
+              WHERE (an.church_id = $1
+                 OR (an.church_id IN (SELECT id FROM ancetres) AND an.broadcast = TRUE))
+                AND NOT EXISTS (
+                  SELECT 1 FROM annonces_lectures l
+                   WHERE l.annonce_id = an.id AND l.member_id = $2
+                )`,
+            [req.session.churchId, memberId],
+          );
+          nonLues = Number(compte[0]?.n ?? 0);
+        }
+        return reply.send({ annonces: rows, non_lues: nonLues });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  // -- Marquer une de mes annonces comme lue (idempotente).
+  app.post(
+    "/moi/annonces/:id/lue",
+    { preHandler: [requireAuth(db), requireRole("membre")] },
+    async (req, reply) => {
+      try {
+        const memberId = await memberIdDe(req.session.userId);
+        if (!memberId) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Aucun membre lié à ce compte.",
+          });
+        }
+        const annonceId = (req.params as { id: string }).id;
+        const { rows: visibles } = await db.query(
+          `WITH RECURSIVE ancetres AS (
+             SELECT id, parent_church_id FROM churches WHERE id = $1
+             UNION ALL
+             SELECT c.id, c.parent_church_id
+               FROM churches c
+               JOIN ancetres a ON c.id = a.parent_church_id
+           )
+           SELECT id FROM announcements
+            WHERE id = $2
+              AND (church_id = $1
+                OR (church_id IN (SELECT id FROM ancetres) AND broadcast = TRUE))`,
+          [req.session.churchId, annonceId],
+        );
+        if (visibles.length === 0) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Annonce introuvable dans votre église.",
+          });
+        }
+        await db.query(
+          `INSERT INTO annonces_lectures (annonce_id, member_id)
+           VALUES ($1, $2) ON CONFLICT (annonce_id, member_id) DO NOTHING`,
+          [annonceId, memberId],
+        );
+        return reply.send({ lue: true });
       } catch (e) {
         return dbError(reply, e);
       }
@@ -569,7 +643,8 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
         }
         const { rows: memberRows } = await db.query(
           `SELECT id, church_id, matricule, full_name, phone, email,
-                  birth_date, department, fonction, poste, cell_group, status, created_at
+                  birth_date, department, fonction, poste, cell_group, status, created_at,
+                  photo_url
              FROM members WHERE id = $1 AND church_id = $2`,
           [memberId, req.session.churchId],
         );
@@ -579,7 +654,7 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
         }
         const { rows: churchRows } = await db.query(
           `SELECT id, code, name, parent_church_id, city, country, phone,
-                  email, status, logo_url, couleur_principale, devise,
+                  email, status, logo_url, banniere_url, couleur_principale, devise,
                   fuseau_horaire, description, horaires_cultes
              FROM churches WHERE id = $1`,
           [req.session.churchId],
