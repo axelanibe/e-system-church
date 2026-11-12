@@ -1817,6 +1817,56 @@ class HttpApiService implements ApiService {
     throw ApiException(message, res.statusCode);
   }
 
+  // -- Exports PDF (tranche C) ------------------------------------------------
+  /// Téléchargement d'un PDF brut (octets) : même mécanisme que
+  /// telechargerAttestationPdf (GET + jeton Bearer, ApiException sinon).
+  Future<Uint8List> _telechargerPdf(
+      String path, Map<String, String> query) async {
+    final uri = Uri.parse('$baseUrl$path')
+        .replace(queryParameters: query.isEmpty ? null : query);
+    http.Response res;
+    try {
+      res = await http
+          .get(uri, headers: _headers(withBody: false))
+          .timeout(const Duration(seconds: 20));
+    } on TimeoutException {
+      throw const ApiException('Le serveur ne répond pas.');
+    } on SocketException {
+      throw const ApiException('Impossible de joindre le serveur.');
+    }
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return Uint8List.fromList(res.bodyBytes);
+    }
+    String message = 'Erreur ${res.statusCode}.';
+    try {
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      message = (data['message'] as String?) ?? message;
+    } catch (_) {
+      // Corps non JSON : on garde le message générique.
+    }
+    throw ApiException(message, res.statusCode);
+  }
+
+  @override
+  Future<Uint8List> exporterFinancesDetailPdf(
+          {String? from, String? to}) =>
+      _telechargerPdf(
+          '/exports/finances/detail', _q({'from': from, 'to': to}));
+
+  @override
+  Future<Uint8List> exporterFinancesResumePdf(
+          {String? from, String? to, int? annee}) =>
+      _telechargerPdf('/exports/finances/resume',
+          _q({'from': from, 'to': to, 'annee': annee}));
+
+  @override
+  Future<Uint8List> exporterCultesPdf({String? from, String? to}) =>
+      _telechargerPdf('/exports/cultes', _q({'from': from, 'to': to}));
+
+  @override
+  Future<Uint8List> exporterRapportConsolidePdf() =>
+      _telechargerPdf('/exports/rapports/consolide', {});
+
   // -- Administration : paramètres, rôles, audit (module 12) -----------------
   @override
   Future<EgliseParametres> getParametres() async =>

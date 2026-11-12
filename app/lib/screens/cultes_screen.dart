@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/cultes.dart';
 import '../state/app_state.dart';
@@ -236,6 +237,29 @@ class _CultesScreenState extends State<CultesScreen> {
     );
   }
 
+  /// Export PDF de la liste des cultes avec présences : même mécanisme
+  /// de partage que les attestations (SharePlus). Tous les rôles de
+  /// l'église peuvent l'utiliser, comme la lecture des cultes.
+  Future<void> _exporterCultesPdf() async {
+    try {
+      final bytes =
+          await context.read<AppState>().api.exporterCultesPdf();
+      final fileName =
+          'cultes-${DateTime.now().toIso8601String().substring(0, 10)}.pdf';
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(bytes, name: fileName, mimeType: 'application/pdf'),
+          ],
+          subject: 'Cultes et présences',
+        ),
+      );
+      if (mounted) showSuccess(context, 'Export PDF partagé.');
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
   Widget _cultesTab() {
     return Column(
       children: [
@@ -243,6 +267,17 @@ class _CultesScreenState extends State<CultesScreen> {
           controller: _searchController,
           onChanged: (v) => setState(() => _query = v.trim()),
           label: 'Rechercher un culte',
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              onPressed: _exporterCultesPdf,
+              icon: const Icon(Icons.download_outlined),
+              label: const Text('Exporter en PDF'),
+            ),
+          ),
         ),
         Expanded(
           child: FutureBuilder<List<Culte>>(

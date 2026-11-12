@@ -64,6 +64,30 @@ class _RapportsScreenState extends State<RapportsScreen> {
     }
   }
 
+  /// Export PDF du rapport consolidé (agrégats seulement, admin
+  /// seulement) : même mécanisme de partage que l'export CSV ci-dessus.
+  Future<void> _exporterConsolidePdf() async {
+    try {
+      final bytes = await context
+          .read<AppState>()
+          .api
+          .exporterRapportConsolidePdf();
+      final fileName =
+          'rapport-consolide-${DateTime.now().toIso8601String().substring(0, 10)}.pdf';
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(bytes, name: fileName, mimeType: 'application/pdf'),
+          ],
+          subject: 'Rapport consolidé',
+        ),
+      );
+      if (mounted) showSuccess(context, 'Export PDF partagé.');
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
@@ -183,6 +207,17 @@ class _RapportsScreenState extends State<RapportsScreen> {
                     ),
                   ],
                 ),
+                if (state.isAdmin) ...[
+                  const SectionTitle(title: 'Export PDF'),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: _exporterConsolidePdf,
+                      icon: const Icon(Icons.download_outlined),
+                      label: const Text('Rapport consolidé (PDF)'),
+                    ),
+                  ),
+                ],
               ],
             ),
           );
