@@ -5,6 +5,7 @@ import '../state/app_state.dart';
 import 'church_avatar.dart';
 import 'mere_badge.dart';
 import '../screens/a_propos_screen.dart';
+import '../screens/abonnement_screen.dart';
 import '../screens/annonces_screen.dart';
 import '../screens/annexes_screen.dart';
 import '../screens/mes_eglises_screen.dart';
@@ -152,6 +153,14 @@ class TiroirCourt extends StatelessWidget {
             title: const Text('Réglages'),
             onTap: () => _ouvrir(context, const SettingsScreen()),
           ),
+          if (state.isAdmin)
+            ListTile(
+              leading: const Icon(Icons.payments_outlined),
+              title: const Text('Mon abonnement'),
+              subtitle:
+                  const Text('Plan, durée et renouvellement'),
+              onTap: () => _ouvrir(context, const AbonnementScreen()),
+            ),
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: const Text('À propos de e-System Church'),

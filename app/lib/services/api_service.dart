@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../models/abonnement.dart';
 import '../models/attestation.dart';
 import '../models/annexe.dart';
 import '../models/anniversaire.dart';
@@ -172,6 +173,18 @@ abstract class ApiService {
 
   /// Annuler ma confirmation de présence à un culte (migration 020).
   Future<void> annulerPresenceCulte(String culteId);
+
+  /// Mon abonnement (tranche P3, migration 021) : l'abonnement de mon
+  /// église mère, ou la couverture par la mère si je suis une annexe.
+  Future<Abonnement> getMonAbonnement();
+
+  /// Valider un code promo pour la durée choisie (tranche P3) : la
+  /// réduction dépend du code. Code inconnu, inactif ou hors dates :
+  /// refusé (ApiException).
+  Future<ValidationCodePromo> validerCodePromo({
+    required String code,
+    required int dureeAnnees,
+  });
 
   // -- Églises et arborescence ----------------------------------------------
   Future<TreeResult> getTree();

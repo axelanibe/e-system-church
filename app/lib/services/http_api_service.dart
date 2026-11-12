@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../models/abonnement.dart';
 import '../models/attestation.dart';
 import '../models/annexe.dart';
 import '../models/anniversaire.dart';
@@ -484,6 +485,23 @@ class HttpApiService implements ApiService {
   @override
   Future<void> annulerPresenceCulte(String culteId) async {
     await _call('DELETE', '/moi/cultes/$culteId/present');
+  }
+
+  @override
+  Future<Abonnement> getMonAbonnement() async =>
+      Abonnement.fromJson(await _call('GET', '/moi/abonnement'));
+
+  @override
+  Future<ValidationCodePromo> validerCodePromo({
+    required String code,
+    required int dureeAnnees,
+  }) async {
+    final data = await _call(
+      'POST',
+      '/moi/abonnement/code-promo',
+      body: {'code': code, 'duree_annees': dureeAnnees},
+    );
+    return ValidationCodePromo.fromJson(data);
   }
 
   @override

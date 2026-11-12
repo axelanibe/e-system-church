@@ -38,6 +38,7 @@ import { registerCodesTutelleRoutes } from "./routes/codes_tutelle.js";
 import { registerAnnexesRoutes } from "./routes/annexes.js";
 import { registerCampagnesRoutes } from "./routes/campagnes.js";
 import { registerAttestationsRoutes } from "./routes/attestations.js";
+import { registerAbonnementsRoutes } from "./routes/abonnements.js";
 import { registerNettoyageTestRoutes } from "./routes/nettoyage_test.js";
 import { registerImportMembresRoutes } from "./routes/import_membres.js";
 import { registerExportsPdfRoutes } from "./routes/exports_pdf.js";
@@ -133,6 +134,7 @@ export function buildApp(db: Pool) {
   registerAnnexesRoutes(app, db);
   registerCampagnesRoutes(app, db);
   registerAttestationsRoutes(app, db);
+  registerAbonnementsRoutes(app, db);
   registerNettoyageTestRoutes(app, db);
   registerImportMembresRoutes(app, db);
   registerExportsPdfRoutes(app, db);
