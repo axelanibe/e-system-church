@@ -123,56 +123,53 @@ class _MembresScreenState extends State<MembresScreen> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final entry in <String, String?>{
-                    'Tous': null,
-                    'Actif': 'actif',
-                    'Nouveau converti': 'nouveau_converti',
-                    'Inactif': 'inactif',
-                  }.entries)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: ChoiceChip(
-                        label: Text(entry.key),
-                        selected: _statusFilter == entry.value,
-                        onSelected: (_) {
-                          setState(() {
-                            _statusFilter = entry.value;
-                            _future = _load();
-                          });
-                        },
-                      ),
-                    ),
-                  const SizedBox(width: 8),
-                  DropdownButton<String?>(
-                    value: _departmentFilter,
-                    hint: const Text('Département'),
-                    items: const [
-                      DropdownMenuItem(value: null, child: Text('Tous')),
-                      DropdownMenuItem(
-                          value: 'Louange', child: Text('Louange')),
-                      DropdownMenuItem(
-                          value: 'Intercession',
-                          child: Text('Intercession')),
-                      DropdownMenuItem(
-                          value: 'Jeunesse', child: Text('Jeunesse')),
-                      DropdownMenuItem(
-                          value: 'Protocole', child: Text('Protocole')),
-                      DropdownMenuItem(
-                          value: 'Enfants', child: Text('Enfants')),
-                    ],
-                    onChanged: (value) {
+            // Retour à la ligne en largeur étroite : en défilement
+            // horizontal, le menu « Tous » sortait de l'écran sans indice
+            // de défilement. En large, tout tient sur une seule ligne.
+            child: Wrap(
+              spacing: 8,
+              children: [
+                for (final entry in <String, String?>{
+                  'Tous': null,
+                  'Actif': 'actif',
+                  'Nouveau converti': 'nouveau_converti',
+                  'Inactif': 'inactif',
+                }.entries)
+                  ChoiceChip(
+                    label: Text(entry.key),
+                    selected: _statusFilter == entry.value,
+                    onSelected: (_) {
                       setState(() {
-                        _departmentFilter = value;
+                        _statusFilter = entry.value;
                         _future = _load();
                       });
                     },
                   ),
-                ],
-              ),
+                DropdownButton<String?>(
+                  value: _departmentFilter,
+                  hint: const Text('Département'),
+                  items: const [
+                    DropdownMenuItem(value: null, child: Text('Tous')),
+                    DropdownMenuItem(
+                        value: 'Louange', child: Text('Louange')),
+                    DropdownMenuItem(
+                        value: 'Intercession',
+                        child: Text('Intercession')),
+                    DropdownMenuItem(
+                        value: 'Jeunesse', child: Text('Jeunesse')),
+                    DropdownMenuItem(
+                        value: 'Protocole', child: Text('Protocole')),
+                    DropdownMenuItem(
+                        value: 'Enfants', child: Text('Enfants')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _departmentFilter = value;
+                      _future = _load();
+                    });
+                  },
+                ),
+              ],
             ),
           ),
           Expanded(

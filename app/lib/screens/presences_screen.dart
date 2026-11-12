@@ -227,33 +227,57 @@ class _PresencesScreenState extends State<PresencesScreen> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _matriculeController,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _pointer(),
-                    decoration: const InputDecoration(
-                      labelText: 'Matricule du membre',
-                      prefixIcon: Icon(Icons.qr_code_scanner),
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
+            // En largeur étroite, champ seul sur une ligne, boutons QR et
+            // « Pointer » sur la suivante : la rangée rigide coupait le
+            // bouton QR pris entre le champ et « Pointer ».
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final field = TextField(
+                  controller: _matriculeController,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _pointer(),
+                  decoration: const InputDecoration(
+                    labelText: 'Matricule du membre',
+                    prefixIcon: Icon(Icons.qr_code_scanner),
+                    border: OutlineInputBorder(),
+                    isDense: true,
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.outlined(
+                );
+                final qrButton = IconButton.outlined(
                   onPressed: _scanner,
                   icon: const Icon(Icons.qr_code_scanner),
                   tooltip: 'Scanner une carte',
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
+                );
+                final pointerButton = FilledButton(
                   onPressed: _pointer,
                   child: const Text('Pointer'),
-                ),
-              ],
+                );
+                if (constraints.maxWidth < 480) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      field,
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          qrButton,
+                          const SizedBox(width: 8),
+                          Expanded(child: pointerButton),
+                        ],
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: field),
+                    const SizedBox(width: 8),
+                    qrButton,
+                    const SizedBox(width: 8),
+                    pointerButton,
+                  ],
+                );
+              },
             ),
           ),
           searchField(

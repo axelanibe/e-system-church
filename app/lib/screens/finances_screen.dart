@@ -88,52 +88,46 @@ class _FinancesScreenState extends State<FinancesScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final entry in <String, String?>{
-                    'Tous types': null,
-                    'Dîmes': 'dime',
-                    'Offrandes': 'offrande',
-                    'Dons': 'don',
-                    'Dépenses': 'depense',
-                  }.entries)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: ChoiceChip(
-                        label: Text(entry.key),
-                        selected: _typeFilter == entry.value,
-                        onSelected: (_) {
-                          setState(() {
-                            _typeFilter = entry.value;
-                            _future = _load();
-                          });
-                        },
-                      ),
-                    ),
-                  const SizedBox(width: 8),
-                  for (final entry in <String, String?>{
-                    'Tous statuts': null,
-                    'En attente': 'en_attente',
-                    'Confirmées': 'confirme',
-                    'Annulées': 'annule',
-                  }.entries)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: ChoiceChip(
-                        label: Text(entry.key),
-                        selected: _statusFilter == entry.value,
-                        onSelected: (_) {
-                          setState(() {
-                            _statusFilter = entry.value;
-                            _future = _load();
-                          });
-                        },
-                      ),
-                    ),
-                ],
-              ),
+            // Retour à la ligne en largeur étroite : en défilement
+            // horizontal, la puce « Dépenses » sortait de l'écran sans
+            // indice de défilement. En large, tout tient sur une ligne.
+            child: Wrap(
+              spacing: 8,
+              children: [
+                for (final entry in <String, String?>{
+                  'Tous types': null,
+                  'Dîmes': 'dime',
+                  'Offrandes': 'offrande',
+                  'Dons': 'don',
+                  'Dépenses': 'depense',
+                }.entries)
+                  ChoiceChip(
+                    label: Text(entry.key),
+                    selected: _typeFilter == entry.value,
+                    onSelected: (_) {
+                      setState(() {
+                        _typeFilter = entry.value;
+                        _future = _load();
+                      });
+                    },
+                  ),
+                for (final entry in <String, String?>{
+                  'Tous statuts': null,
+                  'En attente': 'en_attente',
+                  'Confirmées': 'confirme',
+                  'Annulées': 'annule',
+                }.entries)
+                  ChoiceChip(
+                    label: Text(entry.key),
+                    selected: _statusFilter == entry.value,
+                    onSelected: (_) {
+                      setState(() {
+                        _statusFilter = entry.value;
+                        _future = _load();
+                      });
+                    },
+                  ),
+              ],
             ),
           ),
           Expanded(
@@ -153,7 +147,9 @@ class _FinancesScreenState extends State<FinancesScreen> {
                 return RefreshIndicator(
                   onRefresh: () async => _refresh(),
                   child: ListView(
-                    padding: const EdgeInsets.all(16),
+                    // Marge basse pour le bouton flottant « Contribution »,
+                    // qui recouvrait sinon le badge de la dernière ligne.
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                     children: [
                       Card(
                         child: ListTile(
