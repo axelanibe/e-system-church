@@ -26,6 +26,7 @@ import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
 import '../models/module_eglise.dart';
+import '../models/nettoyage_test.dart';
 import '../models/paiements.dart';
 import '../models/parametres.dart';
 import '../models/pastoral.dart';
@@ -660,8 +661,6 @@ class MockApiService implements ApiService {
     required String telephone,
     required String password,
     required String codeEglise,
-    String? birthDate,
-    String? sexe,
     String? department,
     String? fonction,
   }) async {
@@ -684,8 +683,6 @@ class MockApiService implements ApiService {
       fullName: nomPrenom.trim(),
       phone: telephone.trim(),
       email: email.trim().toLowerCase(),
-      birthDate: birthDate,
-      sexe: sexe,
       department: department,
       fonction: fonction == 'Aucun' ? null : fonction,
       status: 'actif',
@@ -1014,6 +1011,21 @@ class MockApiService implements ApiService {
   }
 
   @override
+  Future<NettoyageTestApercu> getNettoyageTestApercu() async {
+    await _latence();
+    _requireAuth();
+    // La démo n'a pas de données TEST : aperçu vide.
+    return const NettoyageTestApercu(elements: []);
+  }
+
+  @override
+  Future<NettoyageTestResultat> executerNettoyageTest() async {
+    await _latence();
+    _requireAuth();
+    return const NettoyageTestResultat(supprimes: []);
+  }
+
+  @override
   Future<TransfertsResult> getTransferts() async {
     await _latence();
     _requireAuth();
@@ -1243,7 +1255,6 @@ class MockApiService implements ApiService {
     String? phone,
     String? email,
     String? birthDate,
-    String? sexe,
     String? department,
     String? fonction,
     String? poste,
@@ -1261,7 +1272,6 @@ class MockApiService implements ApiService {
       phone: phone,
       email: email,
       birthDate: birthDate,
-      sexe: sexe,
       department: department,
       fonction: fonction,
       poste: poste,
@@ -1279,7 +1289,6 @@ class MockApiService implements ApiService {
       String? phone,
       String? email,
       String? birthDate,
-      String? sexe,
       String? department,
       String? fonction,
       String? poste,
@@ -1300,7 +1309,6 @@ class MockApiService implements ApiService {
       phone: phone,
       email: email,
       birthDate: birthDate,
-      sexe: sexe,
       department: department,
       fonction: fonction,
       poste: poste,

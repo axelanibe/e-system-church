@@ -23,6 +23,7 @@ import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
 import '../models/module_eglise.dart';
+import '../models/nettoyage_test.dart';
 import '../models/paiements.dart';
 import '../models/parametres.dart';
 import '../models/pastoral.dart';
@@ -270,8 +271,6 @@ class HttpApiService implements ApiService {
     required String telephone,
     required String password,
     required String codeEglise,
-    String? birthDate,
-    String? sexe,
     String? department,
     String? fonction,
   }) async {
@@ -281,8 +280,6 @@ class HttpApiService implements ApiService {
       'telephone': telephone,
       'mot_de_passe': password,
       'code_eglise': codeEglise,
-      if (birthDate != null) 'birth_date': birthDate,
-      if (sexe != null) 'sexe': sexe,
       if (department != null) 'department': department,
       if (fonction != null) 'fonction': fonction,
       'channel': 'mobile',
@@ -458,6 +455,17 @@ class HttpApiService implements ApiService {
   }
 
   @override
+  Future<NettoyageTestApercu> getNettoyageTestApercu() async =>
+      NettoyageTestApercu.fromJson(
+          await _call('POST', '/admin/nettoyage-test', body: {}));
+
+  @override
+  Future<NettoyageTestResultat> executerNettoyageTest() async =>
+      NettoyageTestResultat.fromJson(await _call(
+          'POST', '/admin/nettoyage-test',
+          body: {'confirmer': true}));
+
+  @override
   Future<TransfertsResult> getTransferts() async {
     final data = await _call('GET', '/transferts');
     List<TransfertMembre> list(String key) =>
@@ -530,7 +538,6 @@ class HttpApiService implements ApiService {
     String? phone,
     String? email,
     String? birthDate,
-    String? sexe,
     String? department,
     String? fonction,
     String? poste,
@@ -542,7 +549,6 @@ class HttpApiService implements ApiService {
       if (phone != null) 'phone': phone,
       if (email != null) 'email': email,
       if (birthDate != null) 'birth_date': birthDate,
-      if (sexe != null) 'sexe': sexe,
       if (department != null) 'department': department,
       if (fonction != null) 'fonction': fonction,
       if (poste != null) 'poste': poste,
@@ -558,7 +564,6 @@ class HttpApiService implements ApiService {
       String? phone,
       String? email,
       String? birthDate,
-      String? sexe,
       String? department,
       String? fonction,
       String? poste,
@@ -569,7 +574,6 @@ class HttpApiService implements ApiService {
       'phone': phone,
       'email': email,
       'birth_date': birthDate,
-      'sexe': sexe,
       'department': department,
       'fonction': fonction,
       'poste': poste,
