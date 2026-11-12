@@ -606,6 +606,8 @@ class MockApiService implements ApiService {
     required String email,
     required String password,
     required String matricule,
+    // Démo : une seule église, le code fidèle est sans effet ici.
+    String? codeFidele,
   }) async {
     await _latence();
     final membre = _findMemberByMatricule(matricule.trim().toUpperCase());

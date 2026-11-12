@@ -29,8 +29,8 @@ for (const f of readdirSync("../db/migrations").sort()) {
 }
 const hash = await argon2.hash("Test1234!");
 const q = async (sql, p = []) => (await db.query(sql, p)).rows;
-const churchA = (await q(`INSERT INTO churches (code,name,status) VALUES ('ESC-TEST-A','Église Test A','active') RETURNING id`))[0].id;
-const churchB = (await q(`INSERT INTO churches (code,name,status) VALUES ('ESC-TEST-B','Église Test B','active') RETURNING id`))[0].id;
+const churchA = (await q(`INSERT INTO churches (code,code_fidele,name,status) VALUES ('ESC-TEST-A','ESC-F-TESTA','Église Test A','active') RETURNING id`))[0].id;
+const churchB = (await q(`INSERT INTO churches (code,code_fidele,name,status) VALUES ('ESC-TEST-B','ESC-F-TESTB','Église Test B','active') RETURNING id`))[0].id;
 await q(`INSERT INTO eglise_modules (church_id,module,actif) VALUES ($1,'enfants',true)`, [churchA]);
 async function user(email, church, role) {
   const u = (await q(`INSERT INTO users (email,password_hash,full_name) VALUES ($1,$2,$3) RETURNING id`, [email, hash, email]))[0].id;

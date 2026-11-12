@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'config/app_config.dart';
@@ -13,6 +14,13 @@ import 'state/app_state.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // Polices Vision : téléchargées à l'exécution et mises en cache par
+  // google_fonts. Le thème ne déclare que les noms de familles, le
+  // chargement démarre ici, avant le premier écran.
+  GoogleFonts.inter();
+  GoogleFonts.plusJakartaSans();
+  GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold);
+  GoogleFonts.jetBrainsMono();
   runApp(const EsystemApp());
 }
 

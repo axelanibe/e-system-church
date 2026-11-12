@@ -88,7 +88,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
   app.get("/moi/eglise", { preHandler: [requireAuth(db)] }, async (req, reply) => {
     try {
       const { rows: churchRows } = await db.query(
-        `SELECT id, code, name, parent_church_id, city, country, phone, email, status,
+        `SELECT id, code, code_fidele, name, parent_church_id, city, country, phone, email, status,
                 logo_url, couleur_principale, devise, fuseau_horaire,
                 description, horaires_cultes
            FROM churches WHERE id = $1`,
@@ -104,7 +104,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
 
       // Toutes les églises de l'utilisateur (pour changer d'église active).
       const { rows: memberships } = await db.query(
-        `SELECT cu.role, c.id, c.code, c.name, c.parent_church_id, c.status,
+        `SELECT cu.role, c.id, c.code, c.code_fidele, c.name, c.parent_church_id, c.status,
                 c.logo_url, c.couleur_principale, c.devise, c.fuseau_horaire,
                 c.description, c.horaires_cultes
            FROM church_users cu
@@ -123,6 +123,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
           church: {
             id: m.id,
             code: m.code,
+            code_fidele: m.code_fidele,
             name: m.name,
             parent_church_id: m.parent_church_id,
             status: m.status,

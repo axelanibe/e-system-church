@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
-import { auditLog, generateChurchCode } from "../auth.js";
+import { auditLog, generateChurchCode, generateFideleCode } from "../auth.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
 import { activerTousModules } from "./rattachements.js";
 
@@ -55,6 +55,7 @@ export function registerEglisesRoutes(app: FastifyInstance, db: Pool) {
       try {
         await client.query("BEGIN");
 
+        // Deux codes uniques : tutelle (ESC-…) et fidèle (ESC-F-…).
         let code = "";
         for (let attempt = 0; attempt < 5; attempt++) {
           code = generateChurchCode();
@@ -62,12 +63,19 @@ export function registerEglisesRoutes(app: FastifyInstance, db: Pool) {
           if (clash.rowCount === 0) break;
           if (attempt === 4) throw new Error("Impossible de générer un code d'église unique.");
         }
+        let codeFidele = "";
+        for (let attempt = 0; attempt < 5; attempt++) {
+          codeFidele = generateFideleCode();
+          const clash = await client.query(`SELECT 1 FROM churches WHERE code_fidele = $1`, [codeFidele]);
+          if (clash.rowCount === 0) break;
+          if (attempt === 4) throw new Error("Impossible de générer un code fidèle unique.");
+        }
 
         const { rows } = await client.query(
-          `INSERT INTO churches (code, name, city, phone, email, parent_church_id, status)
-           VALUES ($1, $2, $3, $4, $5, $6, 'active')
-           RETURNING id, code, name, parent_church_id, city, status`,
-          [code, name, city, phone ?? null, email ?? null, req.session.churchId],
+          `INSERT INTO churches (code, code_fidele, name, city, phone, email, parent_church_id, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')
+           RETURNING id, code, code_fidele, name, parent_church_id, city, status`,
+          [code, codeFidele, name, city, phone ?? null, email ?? null, req.session.churchId],
         );
         const sub = rows[0];
 

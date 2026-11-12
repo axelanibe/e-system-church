@@ -301,6 +301,13 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
     );
   }
 
+  /// Copie un code d'invitation dans le presse-papiers (code fidèle ou
+  /// code de tutelle, à transmettre à un membre ou à une église).
+  void _copierCode(String code) {
+    Clipboard.setData(ClipboardData(text: code));
+    showSuccess(context, 'Code copié : $code');
+  }
+
   /// Module 13 — choisit un logo (PNG/JPG, max 2 Mo), le téléverse et
   /// remplit le champ URL du logo avec l'URL renvoyée. Le champ URL reste
   /// disponible en repli.
@@ -657,6 +664,51 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                                 '${a.code}${a.city != null ? ' · ${a.city}' : ''}'),
                           )),
                     if (state.isAdmin) ...[
+                      const SectionTitle(title: 'Codes d’invitation'),
+                      const Text(
+                        'Le code fidèle permet aux membres de s’inscrire '
+                        'dans votre église ; le code de tutelle permet à '
+                        'une église de se rattacher à la vôtre. Touchez '
+                        'l’icône pour copier le code à transmettre.',
+                      ),
+                      const SizedBox(height: 8),
+                      Card(
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.key_outlined),
+                              title: const Text('Code fidèle'),
+                              subtitle: Text(
+                                state.church?.codeFidele ??
+                                    'Disponible après la prochaine connexion.',
+                              ),
+                              trailing: state.church?.codeFidele == null
+                                  ? null
+                                  : IconButton(
+                                      icon:
+                                          const Icon(Icons.copy_outlined),
+                                      tooltip: 'Copier le code fidèle',
+                                      onPressed: () => _copierCode(
+                                          state.church!.codeFidele!),
+                                    ),
+                            ),
+                            const Divider(height: 1),
+                            ListTile(
+                              leading:
+                                  const Icon(Icons.account_tree_outlined),
+                              title: const Text('Code de tutelle'),
+                              subtitle: Text(state.church?.code ?? ''),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.copy_outlined),
+                                tooltip: 'Copier le code de tutelle',
+                                onPressed: () =>
+                                    _copierCode(state.church!.code),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       const SectionTitle(title: 'Demandes de liaison'),
                       FilledButton.icon(
                         onPressed: _inviter,
@@ -708,7 +760,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                                           children: [
                                             IconButton(
                                               icon: const Icon(Icons.check,
-                                                  color: AppTheme.vertFonce),
+                                                  color: AppTheme.cypress),
                                               tooltip: 'Valider',
                                               onPressed: () =>
                                                   _decider(d, true),
@@ -778,10 +830,12 @@ class _ChoixCouleur extends StatefulWidget {
 
 class _ChoixCouleurState extends State<_ChoixCouleur> {
   static const _choix = <String, String>{
-    'Bleu nuit': '#0B1F3A',
-    'Or foncé': '#8A6A12',
-    'Vert foncé': '#0C5B40',
-    'Bleu foncé': '#1B4F72',
+    'Cyprès': '#1E4D3B',
+    'Cyprès foncé': '#143629',
+    'Terracotta': '#C86D51',
+    'Or ambre': '#B8862D',
+    'Présences': '#2B6CB0',
+    'Cultes': '#6B4C7A',
     'Rouge': '#B3261E',
   };
 
@@ -792,8 +846,8 @@ class _ChoixCouleurState extends State<_ChoixCouleur> {
     super.initState();
     _choisie = widget.controller.text.trim().toUpperCase();
     if (_choisie.isEmpty) {
-      // Pas de couleur : le bleu nuit, comme l'avatar par défaut.
-      _choisie = '#0B1F3A';
+      // Pas de couleur : le cyprès, comme l'avatar par défaut.
+      _choisie = '#1E4D3B';
       widget.controller.text = _choisie;
     }
   }
@@ -801,7 +855,7 @@ class _ChoixCouleurState extends State<_ChoixCouleur> {
   Color _couleur(String hex) {
     final nettoye = hex.replaceFirst('#', '');
     final valeur = int.tryParse('FF$nettoye', radix: 16);
-    return valeur == null ? AppTheme.bleuNuit : Color(valeur);
+    return valeur == null ? AppTheme.cypress : Color(valeur);
   }
 
   @override

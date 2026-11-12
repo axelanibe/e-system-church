@@ -120,7 +120,7 @@ class _DemoLoginScreenState extends State<DemoLoginScreen> {
                                   ),
                           style: FilledButton.styleFrom(
                             backgroundColor: scheme.secondary,
-                            foregroundColor: const Color(0xFF083D2B),
+                            foregroundColor: Colors.white,
                           ),
                           child: const Padding(
                             padding: EdgeInsets.symmetric(vertical: 4),

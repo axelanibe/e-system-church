@@ -139,7 +139,7 @@ class _CampagnesScreenState extends State<CampagnesScreen> {
   Color _statutColor(String statut) {
     switch (statut) {
       case 'active':
-        return AppTheme.vertFonce;
+        return AppTheme.cypress;
       case 'cloturee':
         return Colors.grey;
       default:
@@ -219,7 +219,7 @@ class _CampagnesScreenState extends State<CampagnesScreen> {
                               fontWeight:
                                   c.depasse ? FontWeight.bold : FontWeight.normal,
                               color: c.depasse
-                                  ? AppTheme.vertFonce
+                                  ? AppTheme.cypress
                                   : null,
                             ),
                           ),

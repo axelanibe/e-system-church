@@ -248,11 +248,14 @@ class HttpApiService implements ApiService {
     required String email,
     required String password,
     required String matricule,
+    String? codeFidele,
   }) async {
     final data = await _call('POST', '/auth/inscription-fidele', body: {
       'email': email,
       'mot_de_passe': password,
       'matricule': matricule,
+      if (codeFidele != null && codeFidele.isNotEmpty)
+        'code_fidele': codeFidele,
       'channel': 'mobile',
     });
     final result = FideleInscriptionResult.fromJson(data);

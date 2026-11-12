@@ -13,7 +13,8 @@ CREATE TYPE church_status AS ENUM ('en_attente', 'active', 'suspendue');
 
 CREATE TABLE churches (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code             TEXT NOT NULL UNIQUE,          -- ex. ESC-G-2026, code d'invitation
+    code             TEXT NOT NULL UNIQUE,          -- ex. ESC-G-2026, code d'invitation (tutelle)
+    code_fidele      TEXT NOT NULL UNIQUE,          -- ex. ESC-F-K7M2QX, code fidèle (inscription des membres)
     name             TEXT NOT NULL,                 -- nom réel de l'église
     parent_church_id UUID REFERENCES churches (id) ON DELETE RESTRICT,
     city             TEXT,
@@ -759,7 +760,7 @@ CREATE INDEX IF NOT EXISTS idx_activites_jeunesse_church ON activites_jeunesse (
 -- Check-ins enfants, double QR ECODIM : arrivée jumelée bracelet
 -- parent-enfant, sortie sécurisée par le code enfant, alerte silencieuse
 -- au parent pendant le culte (enregistrement en base, pas de SMS).
--- Miroir de la migration 010.
+-- Miroir de la migration 011.
 DO $$ BEGIN
   CREATE TYPE checkin_enfant_statut AS ENUM ('IN_CLASS', 'CHECKED_OUT');
 EXCEPTION WHEN duplicate_object THEN NULL;

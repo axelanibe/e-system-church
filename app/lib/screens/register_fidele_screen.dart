@@ -5,13 +5,16 @@ import '../models/membres_complement.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 
-/// Inscription membre par code d'église : « Je suis membre d'une église »
-/// (nom et prénom, e-mail, téléphone, mot de passe, code de l'église).
-/// Le code fait foi : aucune validation par l'administrateur, le matricule
-/// est attribué automatiquement, la fiche membre et la carte sont créées
-/// tout de suite, le compte est lié immédiatement et la session démarre.
-/// L'ancien parcours par matricule n'est plus proposé ici (il reste
-/// disponible côté serveur pour les membres déjà fichés).
+/// Inscription membre par code fidèle : « Je suis membre d'une église »
+/// (nom et prénom, e-mail, téléphone, mot de passe, code fidèle de
+/// l'église). Le code fait foi : aucune validation par l'administrateur,
+/// le matricule est attribué automatiquement, la fiche membre et la carte
+/// sont créées tout de suite, le compte est lié immédiatement et la
+/// session démarre. Le code fidèle (ESC-F-…) désigne une seule église,
+/// sans ambiguïté — le code de tutelle (ESC-…) ne sert qu'aux églises
+/// qui se rattachent à une mère. L'ancien parcours par matricule n'est
+/// plus proposé ici (il reste disponible côté serveur pour les membres
+/// déjà fichés).
 class RegisterFideleScreen extends StatefulWidget {
   const RegisterFideleScreen({super.key});
 
@@ -91,10 +94,11 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'Créez votre compte avec le code de votre église. '
-                    'Le code fait foi : aucune validation n’est nécessaire. '
-                    'Votre matricule vous est attribué automatiquement et '
-                    'votre carte de membre est créée tout de suite.',
+                    'Créez votre compte avec le code fidèle de votre '
+                    'église. Le code fait foi : aucune validation n’est '
+                    'nécessaire. Votre matricule vous est attribué '
+                    'automatiquement et votre carte de membre est créée '
+                    'tout de suite.',
                   ),
                   const SizedBox(height: 24),
                   TextFormField(
@@ -153,17 +157,17 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                     textCapitalization: TextCapitalization.characters,
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
-                      labelText: 'Code de l’église (ex. ESC-XXXXXX)',
+                      labelText: 'Code fidèle de l’église (ex. ESC-F-XXXXXX)',
                       helperText:
-                          'Demandez le code à votre pasteur ou à un '
-                          'responsable, il ressemble à ESC-XXXXXX.',
+                          'Demandez le code fidèle à votre pasteur ou à un '
+                          'responsable, il ressemble à ESC-F-XXXXXX.',
                       helperMaxLines: 2,
                       prefixIcon: Icon(Icons.key_outlined),
                       border: OutlineInputBorder(),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().length < 4) {
-                        return 'Saisissez le code de votre église.';
+                        return 'Saisissez le code fidèle de votre église.';
                       }
                       return null;
                     },
