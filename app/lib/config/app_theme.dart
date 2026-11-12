@@ -3,12 +3,11 @@ import 'package:flutter/material.dart';
 /// Thème unique de e-System Church, partagé par l'application réelle
 /// (`lib/main.dart`) et la version démo (`lib/main_demo.dart`).
 ///
-/// Palette Vision Sanctuary Modern, tranchée par Axel le 11 novembre
-/// 2026 : elle remplace la palette soft sauge (#6A8E7F, #1E4D3B,
-/// #FAF7F1, #C9A24B, #2E3440, #6B7280, #52708A). Fond alabaster,
-/// cartes ivory, sable et bordures claires, cyprès profond, terracotta
-/// et or ambre en accents, encre pour le texte. Plus de sauge active
-/// dans le thème, la mention ci-dessus est la seule trace historique.
+/// Palette de l'artefact, tranchée par Axel le 12 novembre 2026 :
+/// bleu nuit #0B1F3A, or #D4A72C, or foncé #8A6A12, fond papier
+/// #F5F6FA. Le rouge ne sert qu'aux erreurs et aux alertes. Elle
+/// remplace la palette Vision (cyprès #1E4D3B, terracotta #C86D51,
+/// alabaster #F7F5F0), abandonnée le 12 novembre 2026.
 /// Typographies : Inter pour le corps, Plus Jakarta Sans pour les
 /// titres, JetBrains Mono pour les codes et matricules. Les familles
 /// sont déclarées ici par leur nom seul, sans appel réseau : les
@@ -17,133 +16,124 @@ import 'package:flutter/material.dart';
 /// puis cache. Les tests restent ainsi verts hors ligne.
 ///
 /// Contrastes vérifiés (WCAG, textes principaux au moins 4,5:1) :
-/// encre #1A1D20 sur alabaster 15,54:1 et sur ivory 16,36:1, cyprès
-/// #1E4D3B sur alabaster 8,84:1 et sur sable 8,16:1, cyprès foncé
-/// #143629 sur alabaster 12,13:1, ardoise #525B65 sur alabaster
-/// 6,33:1, blanc sur cyprès 9,63:1 et sur cyprès foncé 13,21:1,
-/// rouge #B3261E sur alabaster 6,00:1. Cultes #6B4C7A 6,56:1,
-/// Présences #2B6CB0 4,97:1 et Médias #3F51B5 6,31:1 sur alabaster
-/// passent aussi en texte. Prières #B8506A ne vaut que 4,39:1 sur
-/// alabaster : texte sur ivory ou blanc seulement (4,62:1 et 4,78:1).
-/// Terracotta #C86D51 (3,34:1), or ambre #B8862D (2,97:1) et Enfants
-/// #C07A1C (3,19:1) sont des accents, icônes et aplats seulement,
-/// jamais pour du texte.
+/// blanc sur bleu nuit 16,52:1, bleu nuit sur papier 15,30:1, or
+/// foncé sur papier 4,68:1, or sur bleu nuit 7,36:1, bleu nuit sur or
+/// 7,36:1, bleu nuit sur or clair 14,50:1, rouge #B3261E sur papier
+/// 6,05:1, vert foncé #0C5B40 sur papier 7,52:1. Blanc sur or ne vaut
+/// que 2,24:1 : jamais de texte blanc sur or, le texte sur or est
+/// bleu nuit. Cultes #6B4C7A, Présences #2563EB, Prières #B8506A,
+/// Enfants #B45309 et Médias #3730A3 sont des accents de module,
+/// icônes et aplats seulement, jamais pour du texte courant.
 ///
 /// Accessibilité (11 novembre 2026) : taille minimale 14 px, titres
 /// 24 gras, sous-titres 18, corps 16, boutons 48 px de haut, champs
 /// 56 px de haut, pour un doigt et pour des yeux fatigués.
 class AppTheme {
-  /// Fond alabaster, fond des écrans.
-  static const Color fondAlabaster = Color(0xFFF7F5F0);
+  /// Bleu nuit, primaire : AppBar, boutons, texte principal.
+  static const Color bleuNuit = Color(0xFF0B1F3A);
 
-  /// Cartes ivory.
-  static const Color ivoire = Color(0xFFFCFBF8);
+  /// Or, accent : boutons d'action, badge « Église mère », détails.
+  static const Color or = Color(0xFFD4A72C);
 
-  /// Sable, fonds doux (badge « Église mère », indicateurs).
-  static const Color sable = Color(0xFFEFECE4);
+  /// Or foncé, accent secondaire, texte sur papier 4,68:1.
+  static const Color orFonce = Color(0xFF8A6A12);
 
-  /// Bordures claires.
-  static const Color bordure = Color(0xFFE6E2D8);
+  /// Or clair, fonds doux (badge « Église mère », indicateurs).
+  static const Color orClair = Color(0xFFF7F0DA);
 
-  /// Cyprès, primaire : boutons, liens, succès, blanc dessus 9,63:1.
-  static const Color cypress = Color(0xFF1E4D3B);
+  /// Fond papier, fond des écrans.
+  static const Color fondPapier = Color(0xFFF5F6FA);
 
-  /// Cyprès foncé, variante sombre du primaire, blanc dessus 13,21:1.
-  static const Color cypressFonce = Color(0xFF143629);
+  /// Bordures claires, champs et cartes.
+  static const Color bordure = Color(0xFFD9DEE6);
 
-  /// Terracotta, accent chaud, jamais pour du texte.
-  static const Color terracotta = Color(0xFFC86D51);
-
-  /// Or ambre, accent parcimonieux, jamais de texte dessus.
-  static const Color orAmbre = Color(0xFFB8862D);
-
-  /// Texte principal, encre, sur alabaster 15,54:1.
-  static const Color encre = Color(0xFF1A1D20);
-
-  /// Texte secondaire, ardoise, sur alabaster 6,33:1.
-  static const Color ardoise = Color(0xFF525B65);
-
-  /// Rouge, erreurs et alertes seulement, sur alabaster 6,00:1.
+  /// Rouge, erreurs et alertes seulement, sur papier 6,05:1.
   static const Color rougeErreur = Color(0xFFB3261E);
 
-  /// Couleur du module Cultes, texte sur alabaster 6,56:1.
-  static const Color cultes = Color(0xFF6B4C7A);
+  /// Vert foncé lisible sur fond clair (remplace le vert vif).
+  static const Color vertFonce = Color(0xFF0C5B40);
 
-  /// Couleur du module Présences, aussi info, texte 4,97:1.
-  static const Color presences = Color(0xFF2B6CB0);
+  /// Bleu foncé lisible sur fond clair (remplace le bleu vif).
+  static const Color bleuFonce = Color(0xFF1B4F72);
 
-  /// Couleur du module Prières : texte sur ivory ou blanc seulement.
-  static const Color prieres = Color(0xFFB8506A);
+  /// Couleur du module Cultes.
+  static const Color violetCultes = Color(0xFF6B4C7A);
+
+  /// Couleur du module Présences.
+  static const Color bleuPresences = Color(0xFF2563EB);
+
+  /// Couleur du module Prières.
+  static const Color rosePrieres = Color(0xFFB8506A);
 
   /// Couleur du module Enfants : icônes et aplats seulement.
-  static const Color enfants = Color(0xFFC07A1C);
+  static const Color orangeEnfants = Color(0xFFB45309);
 
-  /// Couleur du module Médias, texte sur alabaster 6,31:1.
-  static const Color medias = Color(0xFF3F51B5);
+  /// Couleur du module Médias.
+  static const Color indigoMedias = Color(0xFF3730A3);
 
   /// Style mono pour les codes et matricules.
   static const TextStyle styleCode =
-      TextStyle(fontFamily: 'JetBrainsMono', fontSize: 14, color: encre);
+      TextStyle(fontFamily: 'JetBrainsMono', fontSize: 14, color: bleuNuit);
 
   static ThemeData get theme {
     const titres = TextStyle(
       fontFamily: 'PlusJakartaSans',
       fontWeight: FontWeight.bold,
-      color: encre,
+      color: bleuNuit,
     );
-    const corps = TextStyle(fontFamily: 'Inter', color: encre);
+    const corps = TextStyle(fontFamily: 'Inter', color: bleuNuit);
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: cypress,
-        primary: cypress,
+        seedColor: bleuNuit,
+        primary: bleuNuit,
         onPrimary: Colors.white,
-        secondary: terracotta,
-        tertiary: presences,
-        surface: ivoire,
-        onSurface: encre,
+        secondary: or,
+        tertiary: orFonce,
+        surface: Colors.white,
+        onSurface: bleuNuit,
         error: rougeErreur,
         brightness: Brightness.light,
       ),
-      scaffoldBackgroundColor: fondAlabaster,
+      scaffoldBackgroundColor: fondPapier,
       appBarTheme: const AppBarTheme(
-        backgroundColor: fondAlabaster,
-        foregroundColor: encre,
+        backgroundColor: bleuNuit,
+        foregroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
         titleTextStyle: TextStyle(
           fontFamily: 'PlusJakartaSans',
-          color: encre,
+          color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
       ),
       cardTheme: CardThemeData(
-        color: ivoire,
+        color: Colors.white,
         elevation: 1,
-        shadowColor: const Color(0x1A143629),
+        shadowColor: const Color(0x1A0B1F3A),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: bordure),
         ),
       ),
       navigationBarTheme: const NavigationBarThemeData(
-        backgroundColor: ivoire,
-        indicatorColor: sable,
+        backgroundColor: Colors.white,
+        indicatorColor: orClair,
         labelTextStyle: WidgetStatePropertyAll(
-          TextStyle(fontFamily: 'Inter', fontSize: 11, color: encre),
+          TextStyle(fontFamily: 'Inter', fontSize: 11, color: bleuNuit),
         ),
       ),
       navigationRailTheme: const NavigationRailThemeData(
-        backgroundColor: ivoire,
-        indicatorColor: sable,
+        backgroundColor: Colors.white,
+        indicatorColor: orClair,
       ),
       drawerTheme: const DrawerThemeData(
-        backgroundColor: ivoire,
+        backgroundColor: Colors.white,
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: cypress,
-        foregroundColor: Colors.white,
+        backgroundColor: or,
+        foregroundColor: bleuNuit,
       ),
       // Titres 24 gras, sous-titres 18, corps 16, aide 14, jamais
       // moins de 14. Un nouveau membre doit tout lire sans effort.
@@ -151,28 +141,28 @@ class AppTheme {
         headlineSmall: titres.copyWith(fontSize: 24),
         titleLarge: titres.copyWith(fontSize: 18),
         titleMedium: const TextStyle(
-            fontFamily: 'PlusJakartaSans', fontSize: 18, color: encre),
+            fontFamily: 'PlusJakartaSans', fontSize: 18, color: bleuNuit),
         bodyMedium: corps.copyWith(fontSize: 16),
         bodySmall: const TextStyle(
-            fontFamily: 'Inter', fontSize: 14, color: ardoise),
+            fontFamily: 'Inter', fontSize: 14, color: bleuNuit),
         labelLarge: const TextStyle(
-            fontFamily: 'Inter', fontSize: 14, color: encre),
+            fontFamily: 'Inter', fontSize: 14, color: bleuNuit),
         labelSmall: const TextStyle(
-            fontFamily: 'JetBrainsMono', fontSize: 12, color: ardoise),
+            fontFamily: 'JetBrainsMono', fontSize: 12, color: bleuNuit),
       ),
       // Boutons 48 px de haut, taille minimale pour un doigt.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(48),
-          backgroundColor: cypress,
+          backgroundColor: bleuNuit,
           foregroundColor: Colors.white,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(48),
-          foregroundColor: cypress,
-          side: const BorderSide(color: cypress),
+          foregroundColor: bleuNuit,
+          side: const BorderSide(color: bleuNuit),
         ),
       ),
       // Champs 56 px de haut, coins 16 px, pour un doigt et pour
@@ -180,7 +170,7 @@ class AppTheme {
       inputDecorationTheme: const InputDecorationTheme(
         constraints: BoxConstraints(minHeight: 56),
         filled: true,
-        fillColor: ivoire,
+        fillColor: Colors.white,
         contentPadding:
             EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(

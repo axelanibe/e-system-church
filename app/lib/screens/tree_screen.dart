@@ -184,7 +184,7 @@ class _TreeScreenState extends State<TreeScreen> {
                                     if (result.arbre.isMere)
                                       IconButton(
                                         icon: const Icon(Icons.check,
-                                            color: AppTheme.cypress),
+                                            color: AppTheme.bleuNuit),
                                         tooltip: 'Accepter',
                                         onPressed: () => _decide(d.id, true),
                                       ),
@@ -272,7 +272,7 @@ class _TreeScreenState extends State<TreeScreen> {
           ? FloatingActionButton.extended(
               // Bleu nuit et blanc, bien lisible : l'or du thème sur fond
               // papier paraissait effacé sur la photo 2.
-              backgroundColor: AppTheme.cypress,
+              backgroundColor: AppTheme.bleuNuit,
               foregroundColor: Colors.white,
               onPressed: _addSubChurch,
               icon: const Icon(Icons.add),
@@ -385,7 +385,7 @@ class _TreeNodeTileState extends State<_TreeNodeTile> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.check, color: AppTheme.cypress),
+                : const Icon(Icons.check, color: AppTheme.bleuNuit),
             tooltip: 'Enregistrer',
             onPressed: _saving ? null : _save,
           ),

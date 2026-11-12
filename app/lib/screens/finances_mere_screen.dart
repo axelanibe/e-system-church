@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_theme.dart';
 import '../models/contribution.dart';
 import '../models/rapport.dart';
 import '../state/app_state.dart';
@@ -259,9 +260,9 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                   child: _Total(
                     label: 'Entrées',
                     value: formatFcfa(rapport.entreesFcfa),
-                    // Cyprès : le vert vif Colors.green est
+                    // Bleu nuit : le vert vif Colors.green est
                     // illisible en texte sur fond clair.
-                    color: const Color(0xFF1E4D3B),
+                    color: AppTheme.bleuNuit,
                   ),
                 ),
                 Expanded(
@@ -270,7 +271,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                     value: formatFcfa(rapport.depensesFcfa),
                     // Rouge de la palette : le rouge vif Colors.red est
                     // illisible en texte sur fond clair.
-                    color: const Color(0xFFB3261E),
+                    color: AppTheme.rougeErreur,
                   ),
                 ),
                 Expanded(
@@ -279,7 +280,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                     value: formatFcfa(rapport.soldeFcfa),
                     // Présences : le bleu vif Colors.blue est illisible
                     // en texte sur fond clair.
-                    color: const Color(0xFF2B6CB0),
+                    color: AppTheme.bleuPresences,
                   ),
                 ),
               ],

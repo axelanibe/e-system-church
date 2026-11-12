@@ -760,7 +760,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                                           children: [
                                             IconButton(
                                               icon: const Icon(Icons.check,
-                                                  color: AppTheme.cypress),
+                                                  color: AppTheme.bleuNuit),
                                               tooltip: 'Valider',
                                               onPressed: () =>
                                                   _decider(d, true),
@@ -830,11 +830,11 @@ class _ChoixCouleur extends StatefulWidget {
 
 class _ChoixCouleurState extends State<_ChoixCouleur> {
   static const _choix = <String, String>{
-    'Cyprès': '#1E4D3B',
-    'Cyprès foncé': '#143629',
-    'Terracotta': '#C86D51',
-    'Or ambre': '#B8862D',
-    'Présences': '#2B6CB0',
+    'Bleu nuit': '#0B1F3A',
+    'Bleu nuit profond': '#12294D',
+    'Or': '#D4A72C',
+    'Or foncé': '#8A6A12',
+    'Présences': '#2563EB',
     'Cultes': '#6B4C7A',
     'Rouge': '#B3261E',
   };
@@ -846,8 +846,8 @@ class _ChoixCouleurState extends State<_ChoixCouleur> {
     super.initState();
     _choisie = widget.controller.text.trim().toUpperCase();
     if (_choisie.isEmpty) {
-      // Pas de couleur : le cyprès, comme l'avatar par défaut.
-      _choisie = '#1E4D3B';
+      // Pas de couleur : le bleu nuit, comme l'avatar par défaut.
+      _choisie = '#0B1F3A';
       widget.controller.text = _choisie;
     }
   }
@@ -855,7 +855,7 @@ class _ChoixCouleurState extends State<_ChoixCouleur> {
   Color _couleur(String hex) {
     final nettoye = hex.replaceFirst('#', '');
     final valeur = int.tryParse('FF$nettoye', radix: 16);
-    return valeur == null ? AppTheme.cypress : Color(valeur);
+    return valeur == null ? AppTheme.bleuNuit : Color(valeur);
   }
 
   @override

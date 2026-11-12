@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../config/app_theme.dart';
 
-/// Badge « Église mère » : sable sur fond clair, texte cyprès
-/// foncé (contraste 6,30:1). Jamais dans l'AppBar : il est dans le
+/// Badge « Église mère » : or clair sur fond clair, texte bleu nuit
+/// (contraste 14,50:1). Jamais dans l'AppBar : il est dans le
 /// corps de l'écran, carte de l'église ou tiroir, jamais en superposition
 /// avec un titre. Affiché sur l'accueil, le tableau de bord et dans
 /// Mon église quand l'église active n'a pas de mère.
@@ -13,17 +13,17 @@ class MereBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Chip(
-      avatar: Icon(Icons.church, size: 16, color: AppTheme.cypress),
+      avatar: Icon(Icons.church, size: 16, color: AppTheme.bleuNuit),
       label: Text(
         'Église mère',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          color: AppTheme.cypress,
+          color: AppTheme.bleuNuit,
           fontWeight: FontWeight.bold,
         ),
       ),
-      backgroundColor: AppTheme.sable,
+      backgroundColor: AppTheme.orClair,
       side: BorderSide.none,
       visualDensity: VisualDensity.compact,
     );

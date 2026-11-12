@@ -151,7 +151,7 @@ class _PlateformeScreenState extends State<PlateformeScreen> {
                                 value: formatFcfa(
                                     chiffres.totalContributionsFcfa),
                                 icon: Icons.trending_up,
-                                color: AppTheme.cypress,
+                                color: AppTheme.bleuNuit,
                               ),
                               StatCard(
                                 label: 'Dépenses confirmées',

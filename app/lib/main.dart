@@ -14,7 +14,7 @@ import 'state/app_state.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // Polices Vision : téléchargées à l'exécution et mises en cache par
+  // Polices : téléchargées à l'exécution et mises en cache par
   // google_fonts. Le thème ne déclare que les noms de familles, le
   // chargement démarre ici, avant le premier écran.
   GoogleFonts.inter();

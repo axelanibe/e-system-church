@@ -27,19 +27,19 @@ void main() {
     expect(eglise.isMere, isFalse);
   });
 
-  test('Avatar : texte blanc sur fond sombre, cyprès sur fond clair', () {
+  test('Avatar : texte blanc sur fond sombre, bleu nuit sur fond clair', () {
     expect(
-      ChurchAvatar.texteSur(const Color(0xFF1E4D3B)),
+      ChurchAvatar.texteSur(const Color(0xFF0B1F3A)),
       Colors.white,
     );
-    // Sur or ambre, le blanc (3,24:1) passe devant le cyprès (2,98:1).
+    // Sur or, le bleu nuit (7,36:1) passe devant le blanc (2,24:1).
     expect(
-      ChurchAvatar.texteSur(const Color(0xFFB8862D)),
-      Colors.white,
+      ChurchAvatar.texteSur(const Color(0xFFD4A72C)),
+      const Color(0xFF0B1F3A),
     );
     expect(
-      ChurchAvatar.texteSur(const Color(0xFFEFECE4)),
-      const Color(0xFF1E4D3B),
+      ChurchAvatar.texteSur(const Color(0xFFF7F0DA)),
+      const Color(0xFF0B1F3A),
     );
   });
 

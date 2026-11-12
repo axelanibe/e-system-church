@@ -117,9 +117,9 @@ class _MembresScreenState extends State<MembresScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'actif':
-        return AppTheme.cypress;
+        return AppTheme.bleuNuit;
       case 'nouveau_converti':
-        return AppTheme.presences;
+        return AppTheme.bleuPresences;
       case 'inactif':
         return Colors.grey;
       default:

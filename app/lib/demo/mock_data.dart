@@ -158,7 +158,7 @@ List<Church> _buildChurches() => [
         role: 'admin_eglise',
         devise: 'FCFA',
         fuseauHoraire: 'Africa/Abidjan',
-        couleurPrincipale: '#1E4D3B',
+        couleurPrincipale: '#0B1F3A',
         description:
             'Église mère du réseau Grâce Divine, au Plateau à Abidjan.',
         horairesCultes: [

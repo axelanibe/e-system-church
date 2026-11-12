@@ -54,7 +54,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'confirme':
-        return AppTheme.cypress;
+        return AppTheme.bleuNuit;
       case 'en_attente':
         return Colors.orange;
       case 'annule':

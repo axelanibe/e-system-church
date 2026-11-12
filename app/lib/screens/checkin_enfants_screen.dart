@@ -384,7 +384,7 @@ class _CheckinEnfantsScreenState extends State<CheckinEnfantsScreen> {
                     width: 200,
                     height: 200,
                     decoration: BoxDecoration(
-                      border: Border.all(color: AppTheme.orAmbre, width: 3),
+                      border: Border.all(color: AppTheme.orFonce, width: 3),
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
@@ -397,7 +397,7 @@ class _CheckinEnfantsScreenState extends State<CheckinEnfantsScreen> {
             Text(
               _message!,
               style: TextStyle(
-                color: _succes ? AppTheme.cypress : AppTheme.rougeErreur,
+                color: _succes ? AppTheme.bleuNuit : AppTheme.rougeErreur,
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,

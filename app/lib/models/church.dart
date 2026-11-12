@@ -32,7 +32,7 @@ class Church {
   /// null tant qu'aucune bannière n'est fournie, jamais inventée.
   final String? banniereUrl;
 
-  /// Couleur principale de l'église, au format hex (« #1E4D3B »).
+  /// Couleur principale de l'église, au format hex (« #0B1F3A »).
   final String? couleurPrincipale;
 
   /// Devise de l'église (« FCFA », « EUR »…).

@@ -107,7 +107,7 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
   Widget _transfertTile(TransfertMembre t,
       {required bool aTraiter, required bool emis}) {
     final color = switch (t.status) {
-      'accepte' => AppTheme.cypress,
+      'accepte' => AppTheme.bleuNuit,
       'refuse' || 'annule' => AppTheme.rougeErreur,
       _ => Colors.orange,
     };
@@ -135,7 +135,7 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
             StatusChip(label: t.statusLabel, color: color),
             if (aTraiter) ...[
               IconButton(
-                icon: const Icon(Icons.check, color: AppTheme.cypress),
+                icon: const Icon(Icons.check, color: AppTheme.bleuNuit),
                 tooltip: 'Accepter',
                 onPressed: () => _decide(t.id, true),
               ),

@@ -371,7 +371,7 @@ class _BiensScreenState extends State<BiensScreen> {
                                   label: r.statut,
                                   color: r.statut == 'annulee'
                                       ? AppTheme.rougeErreur
-                                      : AppTheme.cypress,
+                                      : AppTheme.bleuNuit,
                                 ),
                               )),
                         const SizedBox(height: 80),
