@@ -34,11 +34,33 @@ CREATE INDEX idx_churches_status ON churches (status);
 -- Demandes de rattachement : une église demande à rejoindre une mère.
 CREATE TYPE rattachement_status AS ENUM ('en_attente', 'acceptee', 'refusee');
 
+-- Codes de tutelle à usage unique (migration 009) : la mère génère un code
+-- ESC-T-XXXXXX pour une église qui veut se rattacher à elle. À l'acceptation
+-- du rattachement le code passe à `utilise`, automatiquement. Le code
+-- permanent ESC-… de l'église n'est pas touché. Définie avant
+-- `rattachements`, qui y fait référence.
+CREATE TYPE code_tutelle_status AS ENUM ('actif', 'utilise', 'annule');
+
+CREATE TABLE codes_tutelle (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id  UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    code       TEXT NOT NULL UNIQUE,
+    status     code_tutelle_status NOT NULL DEFAULT 'actif',
+    used_by    UUID REFERENCES churches (id) ON DELETE SET NULL,
+    used_at    TIMESTAMPTZ,
+    created_by UUID,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT code_tutelle_format CHECK (code ~ '^ESC-T-[A-Z0-9]{6}$')
+);
+CREATE INDEX idx_codes_tutelle_church ON codes_tutelle (church_id);
+CREATE INDEX idx_codes_tutelle_code ON codes_tutelle (code);
+
 CREATE TABLE rattachements (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     church_id       UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
     parent_church_id UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
     status          rattachement_status NOT NULL DEFAULT 'en_attente',
+    code_tutelle_id UUID REFERENCES codes_tutelle (id) ON DELETE SET NULL,
     decided_by      UUID,                            -- rempli à la décision (voir users)
     decided_at      TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -175,6 +197,27 @@ CREATE TABLE contributions (
 CREATE INDEX idx_contributions_church ON contributions (church_id, created_at);
 CREATE INDEX idx_contributions_type ON contributions (church_id, type, created_at);
 
+-- Campagnes de collecte (US2, migration 007) : objectif FCFA strictement
+-- positif, période, statut brouillon, active ou cloturee. Le total collecté
+-- est la somme des contributions confirmées affectées, calculée à la lecture.
+CREATE TABLE IF NOT EXISTS campagnes (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id       UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    nom             TEXT NOT NULL,
+    objectif_fcfa   INT NOT NULL CHECK (objectif_fcfa > 0),
+    date_debut      DATE NOT NULL,
+    date_fin        DATE NOT NULL,
+    statut          TEXT NOT NULL DEFAULT 'brouillon'
+                    CHECK (statut IN ('brouillon', 'active', 'cloturee')),
+    visible_membres BOOLEAN NOT NULL DEFAULT false,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK (date_fin > date_debut)
+);
+CREATE INDEX IF NOT EXISTS idx_campagnes_church ON campagnes (church_id, statut);
+ALTER TABLE contributions
+  ADD COLUMN IF NOT EXISTS campagne_id UUID REFERENCES campagnes (id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_contributions_campagne ON contributions (campagne_id);
+
 -- ---------------------------------------------------------------------------
 -- Cultes, événements et présences (scan QR par matricule)
 -- ---------------------------------------------------------------------------
@@ -229,6 +272,33 @@ CREATE TABLE audit_logs (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_audit_church ON audit_logs (church_id, created_at);
+
+-- ---------------------------------------------------------------------------
+-- Attestations annuelles de dons (US3) : une attestation émise est figée,
+-- son contenu est copié en JSONB à l'émission. Voir db/migrations/
+-- 008_attestations.sql (même définition, pour les bases existantes).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS attestations (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id      UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    member_id      UUID NOT NULL REFERENCES members (id) ON DELETE CASCADE,
+    annee          INT NOT NULL CHECK (annee BETWEEN 2000 AND 2100),
+    numero         TEXT NOT NULL,
+    total_fcfa     INT NOT NULL CHECK (total_fcfa > 0),
+    nb_dons        INT NOT NULL CHECK (nb_dons > 0),
+    statut         TEXT NOT NULL DEFAULT 'emise' CHECK (statut IN ('emise', 'annulee')),
+    remplace_id    UUID REFERENCES attestations (id) ON DELETE SET NULL,
+    date_emission  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    contenu        JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (church_id, annee, numero)
+);
+CREATE INDEX IF NOT EXISTS idx_attestations_church_annee
+    ON attestations (church_id, annee);
+CREATE INDEX IF NOT EXISTS idx_attestations_member
+    ON attestations (member_id, annee);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_attestations_une_emise
+    ON attestations (church_id, member_id, annee) WHERE statut = 'emise';
 
 -- ---------------------------------------------------------------------------
 -- Vues consolidées pour l'église mère (agrégats uniquement, jamais le détail

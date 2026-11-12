@@ -1,7 +1,13 @@
+import 'dart:typed_data';
+
+import '../models/attestation.dart';
+import '../models/annexe.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
+import '../models/campagne.dart';
 import '../models/church.dart';
+import '../models/code_tutelle.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/enfants.dart';
@@ -132,6 +138,9 @@ abstract class ApiService {
 
   Future<List<Contribution>> getMesContributions();
 
+  /// Mes attestations annuelles de dons (US3, rôle membre, les miennes).
+  Future<List<Attestation>> getMesAttestations();
+
   /// Ma carte de membre (fiche + église).
   Future<MaCarte> getMaCarte();
 
@@ -148,9 +157,25 @@ abstract class ApiService {
   // -- Rattachements ---------------------------------------------------------
   Future<RattachementsResult> getRattachements();
 
-  Future<Rattachement> requestRattachement({required String parentCode});
+  Future<Rattachement> requestRattachement({
+    required String parentCode,
+    String? codeTutelle,
+  });
 
   Future<void> decideRattachement(String id, {required bool accept});
+
+  // -- Annexes et codes de tutelle (migration 009) -------------------------
+  // La mère voit ses annexes sans changer d'église ; les codes de tutelle
+  // ESC-T-… sont à usage unique.
+  Future<List<Annexe>> getAnnexes({String? q});
+
+  Future<AnnexeDetail> getAnnexeDetail(String id);
+
+  Future<List<CodeTutelle>> getCodesTutelle();
+
+  Future<CodeTutelle> createCodeTutelle();
+
+  Future<void> annulerCodeTutelle(String id);
 
   Future<TransfertsResult> getTransferts();
 
@@ -400,10 +425,43 @@ abstract class ApiService {
     required String paymentMethod,
     String? paymentRef,
     String? memberId,
+    String? campagneId,
     String? note,
   });
 
   Future<Contribution> setContributionStatus(String id, String status);
+
+  // -- Campagnes de collecte (US2) -----------------------------------------
+  Future<List<Campagne>> getCampagnes();
+
+  Future<Campagne> createCampagne({
+    required String nom,
+    required int objectifFcfa,
+    required String dateDebut,
+    required String dateFin,
+    String statut = 'brouillon',
+    bool visibleMembres = false,
+  });
+
+  Future<Campagne> setCampagneStatut(String id, String statut);
+
+  Future<void> cloturerCampagne(String id);
+
+  Future<Contribution> affecterContributionCampagne(String id, String? campagneId);
+
+  // -- Attestations annuelles de dons (US3, trésorier / admin) --------------
+  /// Liste de mon église, filtre par année. Génère pour tous les donateurs
+  /// identifiés avec au moins un don confirmé cette année (ne régénère
+  /// pas une attestation émise existante).
+  Future<List<Attestation>> getAttestations({int? annee});
+
+  Future<List<Attestation>> genererAttestations({required int annee});
+
+  /// Nouvelle attestation qui annule l'ancienne (motif obligatoire).
+  Future<Attestation> corrigerAttestation(String id, {required String motif});
+
+  /// PDF de l'attestation (octets bruts, contenu figé).
+  Future<Uint8List> telechargerAttestationPdf(String id);
 
   // -- Communication : prières et messages (module 5) ------------------------
   Future<List<DemandePriere>> getDemandesPriere({String? statut});
@@ -647,6 +705,12 @@ abstract class ApiService {
 
   /// Bascule l'église active (le jeton est renouvelé côté serveur).
   Future<void> switchChurch(String churchId);
+
+  /// Mes églises, paginées + recherche (nom, code, ville) :
+  /// `GET /moi/eglises`, 50 par page par défaut. L'église active est
+  /// en tête de la première page.
+  Future<MesEglisesPage> listerMesEglises(
+      {String? recherche, int page = 1, int limite = 50});
 
   // -- Paiements par pays et clés API (module 14) ---------------------------
   /// Catalogue des fournisseurs pour un pays (`CI`, `SN`, `KE`, `INTL`).

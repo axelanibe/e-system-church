@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import { z } from "zod";
 import { auditLog, generateChurchCode, generateFideleCode } from "../auth.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
+import { activerTousModules } from "./rattachements.js";
 
 /**
  * Églises : création de sous-églises et arborescence.
@@ -84,6 +85,16 @@ export function registerEglisesRoutes(app: FastifyInstance, db: Pool) {
            VALUES ($1, $2, 'admin_eglise')`,
           [req.session.userId, sub.id],
         );
+
+        // Sous-église créée sous tutelle : tous ses modules sont activés
+        // automatiquement, comme après un rattachement accepté.
+        const modulesActives = await activerTousModules(client, sub.id);
+        await auditLog(client, {
+          churchId: sub.id,
+          userId: req.session.userId,
+          action: "modules.actives_tutelle",
+          details: { par_mere: req.session.churchId, modules: modulesActives },
+        });
 
         await auditLog(client, {
           churchId: req.session.churchId,

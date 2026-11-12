@@ -55,7 +55,7 @@ export interface ChurchSummary {
   id: string;
   code: string;
   /** Code fidèle (ESC-F-…) : les membres l'utilisent pour s'inscrire
-   *  dans cette église. Absent des anciennes réponses (avant la 007). */
+   *  dans cette église. Absent des anciennes réponses (avant la 010). */
   code_fidele?: string | null;
   name: string;
   parent_church_id: string | null;

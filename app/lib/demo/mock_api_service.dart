@@ -6,10 +6,16 @@
 // Utilisé uniquement par `lib/main_demo.dart` via `DemoAppState`.
 // L'application réelle (`lib/main.dart`) n'importe jamais ce fichier.
 
+import 'dart:typed_data';
+
+import '../models/attestation.dart';
+import '../models/annexe.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
 import '../models/church.dart';
+import '../models/code_tutelle.dart';
+import '../models/campagne.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/enfants.dart';
@@ -762,6 +768,26 @@ class MockApiService implements ApiService {
   }
 
   @override
+  Future<List<Attestation>> getMesAttestations() async => [];
+
+  // US3 : pas d'attestations dans le seed démo.
+  @override
+  Future<List<Attestation>> getAttestations({int? annee}) async => [];
+
+  @override
+  Future<List<Attestation>> genererAttestations({required int annee}) async =>
+      [];
+
+  @override
+  Future<Attestation> corrigerAttestation(String id,
+          {required String motif}) async =>
+      throw UnimplementedError('Attestations non gérées en démo.');
+
+  @override
+  Future<Uint8List> telechargerAttestationPdf(String id) async =>
+      throw UnimplementedError('Attestations non gérées en démo.');
+
+  @override
   Future<MaCarte> getMaCarte() async {
     await _latence();
     _requireAuth();
@@ -882,7 +908,10 @@ class MockApiService implements ApiService {
   }
 
   @override
-  Future<Rattachement> requestRattachement({required String parentCode}) async {
+  Future<Rattachement> requestRattachement({
+    required String parentCode,
+    String? codeTutelle,
+  }) async {
     await _latence();
     _requireAuth();
     final parent = _data.churchByCode(parentCode.trim().toUpperCase());
@@ -937,6 +966,46 @@ class MockApiService implements ApiService {
         );
       }
     }
+  }
+
+  // -- Annexes et codes de tutelle (démo : listes vides) --------------------
+  @override
+  Future<List<Annexe>> getAnnexes({String? q}) async {
+    await _latence();
+    _requireAuth();
+    return const [];
+  }
+
+  @override
+  Future<AnnexeDetail> getAnnexeDetail(String id) async {
+    await _latence();
+    _requireAuth();
+    throw const ApiException('Annexe introuvable (démo).');
+  }
+
+  @override
+  Future<List<CodeTutelle>> getCodesTutelle() async {
+    await _latence();
+    _requireAuth();
+    return const [];
+  }
+
+  @override
+  Future<CodeTutelle> createCodeTutelle() async {
+    await _latence();
+    _requireAuth();
+    return CodeTutelle(
+      id: _nextId('code'),
+      code: 'ESC-T-DEMO01',
+      status: 'actif',
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<void> annulerCodeTutelle(String id) async {
+    await _latence();
+    _requireAuth();
   }
 
   @override
@@ -2206,6 +2275,7 @@ class MockApiService implements ApiService {
     required String paymentMethod,
     String? paymentRef,
     String? memberId,
+    String? campagneId,
     String? note,
   }) async {
     await _latence();
@@ -2255,6 +2325,43 @@ class MockApiService implements ApiService {
     );
     list[i] = maj;
     return maj;
+  }
+
+  // -- Campagnes de collecte (US2, démo : aucune campagne fictive) -----------
+
+  @override
+  Future<List<Campagne>> getCampagnes() async {
+    await _latence();
+    _requireAuth();
+    return const [];
+  }
+
+  @override
+  Future<Campagne> createCampagne({
+    required String nom,
+    required int objectifFcfa,
+    required String dateDebut,
+    required String dateFin,
+    String statut = 'brouillon',
+    bool visibleMembres = false,
+  }) async {
+    throw const ApiException('Campagnes non disponibles en démo.');
+  }
+
+  @override
+  Future<Campagne> setCampagneStatut(String id, String statut) async {
+    throw const ApiException('Campagnes non disponibles en démo.');
+  }
+
+  @override
+  Future<void> cloturerCampagne(String id) async {
+    throw const ApiException('Campagnes non disponibles en démo.');
+  }
+
+  @override
+  Future<Contribution> affecterContributionCampagne(
+      String id, String? campagneId) async {
+    throw const ApiException('Campagnes non disponibles en démo.');
   }
 
   // -- Communication ---------------------------------------------------------
@@ -3224,6 +3331,32 @@ class MockApiService implements ApiService {
     // En démo, l'admin de démonstration gère toutes les églises du réseau.
     // Le compte plateforme garde son rôle super_admin en changeant d'église.
     if (_role != 'super_admin') _role = 'admin_eglise';
+  }
+
+  @override
+  Future<MesEglisesPage> listerMesEglises(
+      {String? recherche, int page = 1, int limite = 50}) async {
+    await _latence();
+    _requireAuth();
+    final q = recherche?.trim().toLowerCase() ?? '';
+    final toutes = _eglises.where((m) {
+      if (q.isEmpty) return true;
+      final c = m.church;
+      return c.name.toLowerCase().contains(q) ||
+          c.code.toLowerCase().contains(q) ||
+          (c.city ?? '').toLowerCase().contains(q);
+    }).toList();
+    final debut = (page - 1) * limite;
+    final fin = (debut + limite).clamp(0, toutes.length);
+    final tranche =
+        debut >= toutes.length ? <Membership>[] : toutes.sublist(debut, fin);
+    return MesEglisesPage(
+      eglises: tranche,
+      total: toutes.length,
+      page: page,
+      limite: limite,
+      pages: (toutes.length / limite).ceil(),
+    );
   }
 
   // -- Paiements --------------------------------------------------------------------
