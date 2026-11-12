@@ -1,4 +1,5 @@
 import 'package:esystem_church/models/campagne.dart';
+import 'package:esystem_church/utils/format.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -59,5 +60,28 @@ void main() {
     expect(Campagne.labelForStatut('brouillon'), 'Brouillon');
     expect(Campagne.labelForStatut('active'), 'Active');
     expect(Campagne.labelForStatut('cloturee'), 'Clôturée');
+  });
+
+  test('formatDateSeule : minuit UTC ne décale pas le jour (E9)', () {
+    // Le serveur renvoie les dates DATE en minuit UTC ; en heure de
+    // Montréal (UTC−5), `.toLocal()` les faisait tomber la veille.
+    expect(formatDateSeule(DateTime.utc(2026, 11, 11)), '11/11/2026');
+    expect(formatDateSeule(DateTime.utc(2026, 11, 30)), '30/11/2026');
+    expect(formatDateSeule(DateTime(2026, 11, 11)), '11/11/2026');
+    expect(formatDateSeule(null), '—');
+  });
+
+  test('Campagne.fromJson en ISO UTC minuit s\'affiche sans décalage', () {
+    final c = Campagne.fromJson({
+      'id': 'c4',
+      'nom': 'Campagne test',
+      'objectif_fcfa': 100000,
+      'date_debut': '2026-11-11T00:00:00.000Z',
+      'date_fin': '2026-11-30T00:00:00.000Z',
+      'statut': 'active',
+      'total_collecte': 0,
+    });
+    expect(formatDateSeule(c.dateDebut), '11/11/2026');
+    expect(formatDateSeule(c.dateFin), '30/11/2026');
   });
 }

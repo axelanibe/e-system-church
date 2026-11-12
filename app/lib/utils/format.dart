@@ -36,9 +36,25 @@ String formatMontant(int amount, String devise) {
 }
 
 /// 2026-11-10T14:00:00.000Z → « 10/11/2026 ».
+/// Horodatage réel : le passage à l'heure locale est voulu ici.
 String formatDate(DateTime? date) {
   if (date == null) return '—';
   final d = date.toLocal();
+  final day = d.day.toString().padLeft(2, '0');
+  final month = d.month.toString().padLeft(2, '0');
+  return '$day/$month/${d.year}';
+}
+
+/// Date simple (jour calendaire, sans heure) : « 11/11/2026 ».
+/// Contrairement à [formatDate], aucun décalage de fuseau n'est appliqué :
+/// une date renvoyée par le serveur en minuit UTC (« 2026-11-11T00:00:00Z »)
+/// reste le 11/11, même en heure de Montréal (UTC−5) où `.toLocal()`
+/// la ferait tomber au 10/11. À utiliser pour les dates seules
+/// (période de campagne, date de dépense, baptême…), pas pour les
+/// horodatages.
+String formatDateSeule(DateTime? date) {
+  if (date == null) return '—';
+  final d = date.isUtc ? date.toUtc() : date;
   final day = d.day.toString().padLeft(2, '0');
   final month = d.month.toString().padLeft(2, '0');
   return '$day/$month/${d.year}';

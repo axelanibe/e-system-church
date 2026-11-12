@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../utils/format.dart';
+
 /// Champ de saisie standard pour les dialogues de création des modules.
 Widget dialogTextField({
   required TextEditingController controller,
@@ -24,39 +26,91 @@ Widget dialogTextField({
   );
 }
 
-/// Champ de date (AAAA-MM-JJ) avec bouton calendrier qui remplit le champ.
+/// Champ de date avec bouton calendrier qui remplit le champ.
+/// Le champ affiche la date en français (jj/mm/aaaa) ; le [controller]
+/// garde la valeur ISO (AAAA-MM-JJ) attendue par l'API et par les
+/// validations qui comparent les dates entre elles.
 Widget dialogDateField({
   required BuildContext context,
   required TextEditingController controller,
   required String label,
 }) {
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: TextField(
-      controller: controller,
-      keyboardType: TextInputType.datetime,
-      readOnly: true,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        isDense: true,
-        suffixIcon: const Icon(Icons.calendar_today_outlined),
+  return _DialogDateField(controller: controller, label: label);
+}
+
+class _DialogDateField extends StatefulWidget {
+  const _DialogDateField({required this.controller, required this.label});
+
+  final TextEditingController controller;
+  final String label;
+
+  @override
+  State<_DialogDateField> createState() => _DialogDateFieldState();
+}
+
+class _DialogDateFieldState extends State<_DialogDateField> {
+  late final TextEditingController _displayController;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayController =
+        TextEditingController(text: _versFrancais(widget.controller.text));
+  }
+
+  @override
+  void dispose() {
+    _displayController.dispose();
+    super.dispose();
+  }
+
+  /// « 2026-11-11 » → « 11/11/2026 » (texte déjà français ou vide inchangé).
+  static String _versFrancais(String iso) {
+    if (iso.isEmpty) return iso;
+    final parsed = parseDate(iso);
+    return parsed == null ? iso : formatDateSeule(parsed);
+  }
+
+  static String _versIso(DateTime date) =>
+      '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: _displayController,
+        keyboardType: TextInputType.datetime,
+        readOnly: true,
+        decoration: InputDecoration(
+          labelText: widget.label,
+          border: const OutlineInputBorder(),
+          isDense: true,
+          suffixIcon: const Icon(Icons.calendar_today_outlined),
+        ),
+        onTap: () async {
+          final initial = parseDate(widget.controller.text) ?? DateTime.now();
+          final initialDate = initial.isBefore(DateTime(2000))
+              ? DateTime(2000)
+              : initial.isAfter(DateTime(2100))
+                  ? DateTime(2100)
+                  : initial;
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: initialDate,
+            firstDate: DateTime(2000),
+            lastDate: DateTime(2100),
+            locale: const Locale('fr'),
+            helpText: 'Choisir une date',
+          );
+          if (picked != null) {
+            widget.controller.text = _versIso(picked);
+            _displayController.text = formatDateSeule(picked);
+          }
+        },
       ),
-      onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: DateTime.now(),
-          firstDate: DateTime(2000),
-          lastDate: DateTime(2100),
-          locale: const Locale('fr'),
-        );
-        if (picked != null) {
-          controller.text =
-              '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-        }
-      },
-    ),
-  );
+    );
+  }
 }
 
 /// Dialogue de confirmation de suppression. Renvoie vrai si confirmé.

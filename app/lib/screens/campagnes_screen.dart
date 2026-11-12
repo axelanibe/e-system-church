@@ -136,6 +136,39 @@ class _CampagnesScreenState extends State<CampagnesScreen> {
     }
   }
 
+  /// Détail d'une campagne (aucun écran de détail n'existe : dialogue).
+  Future<void> _afficherDetail(Campagne c) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(c.nom),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Statut : ${c.statutLabel}'),
+            const SizedBox(height: 4),
+            Text(
+              'Période : ${formatDateSeule(c.dateDebut)} — ${formatDateSeule(c.dateFin)}',
+            ),
+            const SizedBox(height: 4),
+            Text('Objectif : ${formatFcfa(c.objectifFcfa)}'),
+            Text(
+              'Collecté : ${formatFcfa(c.totalCollecte)} (${c.pourcentage} %)',
+            ),
+            Text('${c.nombreContributions} contribution(s) confirmée(s).'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Color _statutColor(String statut) {
     switch (statut) {
       case 'active':
@@ -151,6 +184,7 @@ class _CampagnesScreenState extends State<CampagnesScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     return Scaffold(
+      appBar: AppBar(title: const Text('Campagnes')),
       body: FutureBuilder<List<Campagne>>(
         future: _future,
         builder: (context, snapshot) {
@@ -177,9 +211,12 @@ class _CampagnesScreenState extends State<CampagnesScreen> {
               children: [
                 for (final c in campagnes)
                   Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () => _afficherDetail(c),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
@@ -202,7 +239,7 @@ class _CampagnesScreenState extends State<CampagnesScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${formatDate(c.dateDebut)} — ${formatDate(c.dateFin)}',
+                            '${formatDateSeule(c.dateDebut)} — ${formatDateSeule(c.dateFin)}',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                           const SizedBox(height: 12),
@@ -250,6 +287,7 @@ class _CampagnesScreenState extends State<CampagnesScreen> {
                       ),
                     ),
                   ),
+                ),
               ],
             ),
           );
