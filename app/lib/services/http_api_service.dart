@@ -15,6 +15,7 @@ import '../models/church.dart';
 import '../models/code_tutelle.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
+import '../models/checkin_enfant.dart';
 import '../models/enfants.dart';
 import '../models/fidele.dart';
 import '../models/finances.dart';
@@ -1425,6 +1426,53 @@ class HttpApiService implements ApiService {
         if (responsableMemberId != null)
           'responsable_member_id': responsableMemberId,
       }));
+
+  @override
+  Future<CheckinEnfant> checkinEnfant({
+    required String enfantMemberId,
+    required String parentMemberId,
+    required String codeParent,
+    required String codeEnfant,
+    String? salle,
+    String? allergie,
+  }) async =>
+      CheckinEnfant.fromJson(
+          await _call('POST', '/checkins-enfants/checkin', body: {
+        'enfant_member_id': enfantMemberId,
+        'parent_member_id': parentMemberId,
+        'code_parent': codeParent,
+        'code_enfant': codeEnfant,
+        if (salle != null) 'salle': salle,
+        if (allergie != null) 'allergie': allergie,
+      }));
+
+  @override
+  Future<CheckinEnfant> sortieEnfant({
+    required String checkinId,
+    required String codeEnfant,
+    required String codeParent,
+  }) async =>
+      CheckinEnfant.fromJson(
+          await _call('POST', '/checkins-enfants/$checkinId/sortie', body: {
+        'code_enfant': codeEnfant,
+        'code_parent': codeParent,
+      }));
+
+  @override
+  Future<CheckinEnfant> alerteCheckinEnfant({
+    required String checkinId,
+    required String message,
+  }) async =>
+      CheckinEnfant.fromJson(await _call(
+          'POST', '/checkins-enfants/$checkinId/alerte',
+          body: {'message': message}));
+
+  @override
+  Future<List<CheckinEnfant>> getCheckinsEnfantsJour({String? salle}) async =>
+      _items(
+          await _call('GET', '/checkins-enfants/jour',
+              query: _q({'salle': salle})),
+          CheckinEnfant.fromJson);
 
   // -- Médias et enseignements (module 9) ------------------------------------
   @override
