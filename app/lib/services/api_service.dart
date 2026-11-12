@@ -807,6 +807,14 @@ abstract class ApiService {
   /// Bascule l'église active (le jeton est renouvelé côté serveur).
   Future<void> switchChurch(String churchId);
 
+  /// Renouvelle la session par le jeton de rafraîchissement (rotation) :
+  /// nouveau JWT + nouveau jeton, sans ressaisir le mot de passe.
+  Future<AuthResult> refresh();
+
+  /// Déconnexion : révoque le jeton de rafraîchissement de cet appareil
+  /// côté serveur (le JWT restant expire seul).
+  Future<void> logout();
+
   /// Mes églises, paginées + recherche (nom, code, ville) :
   /// `GET /moi/eglises`, 50 par page par défaut. L'église active est
   /// en tête de la première page.

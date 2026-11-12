@@ -3495,6 +3495,26 @@ class MockApiService implements ApiService {
   }
 
   @override
+  Future<AuthResult> refresh() async {
+    await _latence();
+    _requireAuth();
+    // En démo, pas de vrai jeton : la session est simplement prolongée.
+    final eglise = _data.churchById(_churchId) ?? _data.plateau;
+    final result = _buildAuth(_user!, eglise, _role ?? 'membre');
+    _applyAuth(result);
+    return result;
+  }
+
+  @override
+  Future<void> logout() async {
+    await _latence();
+    _user = null;
+    _role = null;
+    _churchId = DemoIds.plateau;
+    _eglises = [];
+  }
+
+  @override
   Future<MesEglisesPage> listerMesEglises(
       {String? recherche, int page = 1, int limite = 50}) async {
     await _latence();

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
-import { auditLog, issueTokenForChurch } from "../auth.js";
+import { auditLog, issueTokenForChurch, rotateRefreshTokenForChurch } from "../auth.js";
 import { invalidInput } from "../crud.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
 
@@ -66,6 +66,7 @@ const profilSchema = z.object({
 const egliseActiveSchema = z.object({
   church_id: z.string().uuid(),
   channel: z.enum(["web", "mobile"]).default("mobile"),
+  refresh_token: z.string().min(1).max(256).optional(),
 });
 
 export function registerProfilEgliseRoutes(app: FastifyInstance, db: Pool) {
@@ -255,7 +256,22 @@ export function registerProfilEgliseRoutes(app: FastifyInstance, db: Pool) {
           message: "Cette église ne fait pas partie de vos églises.",
         });
       }
-      return reply.send({ token: result.token, church: result.church });
+      // Le jeton de rafraîchissement suit la nouvelle église active :
+      // sans rotation, un rafraîchissement ultérieur réémettrait un JWT
+      // pour l'ancienne église.
+      const refreshToken = parsed.data.refresh_token
+        ? await rotateRefreshTokenForChurch(
+            db,
+            parsed.data.refresh_token,
+            req.session.userId,
+            parsed.data.church_id,
+          )
+        : null;
+      return reply.send({
+        token: result.token,
+        church: result.church,
+        ...(refreshToken ? { refresh_token: refreshToken } : {}),
+      });
     } catch (e) {
       return dbError(reply, e);
     }

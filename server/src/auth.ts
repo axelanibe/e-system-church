@@ -114,6 +114,7 @@ export type LoginResult =
   | {
       ok: true;
       token: string;
+      refreshToken: string;
       user: { id: string; full_name: string; email: string };
       church: ChurchSummary & { role: string };
       eglises: Membership[];
@@ -386,7 +387,7 @@ export async function registerChurch(
   db: Pool,
   rawInput: unknown,
 ): Promise<
-  | { ok: true; token: string; user: { id: string; full_name: string; email: string }; church: ChurchSummary; rattachement: { id: string; status: string } | null }
+  | { ok: true; token: string; refreshToken: string; user: { id: string; full_name: string; email: string }; church: ChurchSummary; rattachement: { id: string; status: string } | null }
   | { ok: false; reason: "invalid_input" | "email_taken" | "phone_taken" | "invalid_parent_code" }
 > {
   const parsed = registerSchema.safeParse(rawInput);
@@ -513,7 +514,8 @@ export async function registerChurch(
       { sub: user.id, churchId: church.id, role: "admin_eglise", v: 0 },
       channel,
     );
-    return { ok: true, token, user, church, rattachement };
+    const refreshToken = await createRefreshToken(db, user.id, church.id, channel, 0);
+    return { ok: true, token, refreshToken, user, church, rattachement };
   } catch (e) {
     await client.query("ROLLBACK").catch(() => undefined);
     throw e;
@@ -629,6 +631,7 @@ export type InscriptionMembreResult =
   | {
       ok: true;
       token: string;
+      refreshToken: string;
       user: { id: string; full_name: string; email: string };
       church: ChurchSummary & { role: string };
       eglises: Membership[];
@@ -752,6 +755,7 @@ export async function inscriptionMembreParCode(
     return {
       ok: true,
       token: result.token,
+      refreshToken: result.refreshToken,
       user: result.user,
       church: result.church,
       eglises: result.eglises,
@@ -763,6 +767,40 @@ export async function inscriptionMembreParCode(
   } finally {
     client.release();
   }
+}
+
+/** Églises d'un utilisateur, avec son rôle dans chacune (ordre d'arrivée). */
+export async function chargerEglises(
+  db: Pool | PoolClient,
+  userId: string,
+): Promise<Membership[]> {
+  const { rows: memberships } = await db.query(
+    `SELECT cu.role, c.id, c.code, c.code_fidele, c.name, c.parent_church_id, c.status,
+            c.logo_url, c.couleur_principale, c.devise, c.fuseau_horaire,
+            c.description, c.horaires_cultes
+       FROM church_users cu
+       JOIN churches c ON c.id = cu.church_id
+      WHERE cu.user_id = $1
+      ORDER BY cu.created_at ASC`,
+    [userId],
+  );
+  return memberships.map((m) => ({
+    role: m.role as string,
+    church: {
+      id: m.id as string,
+      code: m.code as string,
+      code_fidele: m.code_fidele as string | null,
+      name: m.name as string,
+      parent_church_id: m.parent_church_id as string | null,
+      status: m.status as string,
+      logo_url: m.logo_url as string | null,
+      couleur_principale: m.couleur_principale as string | null,
+      devise: m.devise as string,
+      fuseau_horaire: m.fuseau_horaire as string,
+      description: m.description as string | null,
+      horaires_cultes: m.horaires_cultes as unknown,
+    },
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -807,33 +845,7 @@ export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
 
   await db.query(`UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = $1`, [user.id]);
 
-  const { rows: memberships } = await db.query(
-    `SELECT cu.role, c.id, c.code, c.code_fidele, c.name, c.parent_church_id, c.status,
-            c.logo_url, c.couleur_principale, c.devise, c.fuseau_horaire,
-            c.description, c.horaires_cultes
-       FROM church_users cu
-       JOIN churches c ON c.id = cu.church_id
-      WHERE cu.user_id = $1
-      ORDER BY cu.created_at ASC`,
-    [user.id],
-  );
-  const eglises: Membership[] = memberships.map((m) => ({
-    role: m.role as string,
-    church: {
-      id: m.id as string,
-      code: m.code as string,
-      code_fidele: m.code_fidele as string | null,
-      name: m.name as string,
-      parent_church_id: m.parent_church_id as string | null,
-      status: m.status as string,
-      logo_url: m.logo_url as string | null,
-      couleur_principale: m.couleur_principale as string | null,
-      devise: m.devise as string,
-      fuseau_horaire: m.fuseau_horaire as string,
-      description: m.description as string | null,
-      horaires_cultes: m.horaires_cultes as unknown,
-    },
-  }));
+  const eglises = await chargerEglises(db, user.id as string);
 
   let chosen: Membership | undefined = eglises[0];
   if (church_id) {
@@ -856,6 +868,13 @@ export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
     },
     channel,
   );
+  const refreshToken = await createRefreshToken(
+    db,
+    user.id as string,
+    chosen.church.id,
+    channel,
+    (user.token_version as number) ?? 0,
+  );
   await auditLog(db, {
     churchId: chosen.church.id,
     userId: user.id as string,
@@ -866,6 +885,7 @@ export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
   return {
     ok: true,
     token,
+    refreshToken,
     user: { id: user.id as string, full_name: user.full_name as string, email: user.email as string },
     church: { ...chosen.church, role: chosen.role },
     eglises,
@@ -972,12 +992,174 @@ export async function consumeAuthToken(db: Pool, tokenId: string): Promise<void>
   await db.query(`UPDATE auth_tokens SET used_at = now() WHERE id = $1`, [tokenId]);
 }
 
+// ---------------------------------------------------------------------------
+// Jetons de rafraîchissement (session gardée, migration 014) : un par
+// appareil, 365 jours, rotation à chaque usage. Seul le hash SHA-256 est
+// stocké, jamais le jeton en clair (même principe que `auth_tokens`).
+// ---------------------------------------------------------------------------
+/** Durée de vie d'un jeton de rafraîchissement, renouvelée à chaque rotation. */
+const REFRESH_TTL_JOURS = 365;
+
+/** Crée un jeton de rafraîchissement et le stocke hashé. Renvoie le jeton brut. */
+export async function createRefreshToken(
+  db: Pool | PoolClient,
+  userId: string,
+  churchId: string,
+  channel: Channel,
+  tokenVersion: number,
+): Promise<string> {
+  const raw = randomBytes(32).toString("hex");
+  await db.query(
+    `INSERT INTO refresh_tokens (user_id, token_hash, church_id, channel, token_version, expires_at)
+     VALUES ($1, $2, $3, $4, $5, now() + make_interval(days => $6))`,
+    [userId, hashAuthToken(raw), churchId, channel, tokenVersion, REFRESH_TTL_JOURS],
+  );
+  return raw;
+}
+
+/** Révoque un jeton de rafraîchissement (déconnexion d'un appareil). */
+export async function revokeRefreshToken(db: Pool, rawToken: string, userId: string): Promise<void> {
+  await db.query(`DELETE FROM refresh_tokens WHERE token_hash = $1 AND user_id = $2`, [
+    hashAuthToken(rawToken),
+    userId,
+  ]);
+}
+
+/** Révoque tous les jetons de rafraîchissement d'un utilisateur (tous les appareils). */
+export async function revokeAllRefreshTokens(db: Pool, userId: string): Promise<void> {
+  await db.query(`DELETE FROM refresh_tokens WHERE user_id = $1`, [userId]);
+}
+
+export type RefreshResult =
+  | {
+      ok: true;
+      token: string;
+      refreshToken: string;
+      user: { id: string; full_name: string; email: string };
+      church: ChurchSummary & { role: string };
+      eglises: Membership[];
+    }
+  | { ok: false; reason: "introuvable" | "expire" | "utilise" | "version" | "sans_eglise" };
+
+/**
+ * Renouvelle une session par jeton de rafraîchissement : le jeton présenté
+ * est marqué utilisé et un nouveau jeton est émis (rotation), avec un
+ * nouveau JWT pour la même église. Un jeton déjà utilisé est le signe
+ * d'un vol possible : tous les jetons de l'utilisateur sont révoqués.
+ * La lecture et la rotation se font dans une transaction verrouillée, pour
+ * qu'un même jeton ne serve pas deux fois en parallèle.
+ */
+export async function refreshSession(db: Pool, rawToken: string): Promise<RefreshResult> {
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query(
+      `SELECT rt.id, rt.user_id, rt.church_id, rt.channel, rt.token_version,
+              rt.expires_at, rt.used_at,
+              u.token_version AS version_actuelle, u.full_name, u.email
+         FROM refresh_tokens rt JOIN users u ON u.id = rt.user_id
+        WHERE rt.token_hash = $1 FOR UPDATE`,
+      [hashAuthToken(rawToken)],
+    );
+    const t = rows[0];
+    if (!t) {
+      await client.query("ROLLBACK");
+      return { ok: false, reason: "introuvable" };
+    }
+    const userId = t.user_id as string;
+    if (t.used_at) {
+      await client.query(`DELETE FROM refresh_tokens WHERE user_id = $1`, [userId]);
+      await client.query("COMMIT");
+      return { ok: false, reason: "utilise" };
+    }
+    if (new Date(t.expires_at as string) <= new Date()) {
+      await client.query(`DELETE FROM refresh_tokens WHERE id = $1`, [t.id]);
+      await client.query("COMMIT");
+      return { ok: false, reason: "expire" };
+    }
+    const versionActuelle = (t.version_actuelle as number) ?? 0;
+    if ((t.token_version as number) !== versionActuelle) {
+      await client.query(`DELETE FROM refresh_tokens WHERE id = $1`, [t.id]);
+      await client.query("COMMIT");
+      return { ok: false, reason: "version" };
+    }
+    const eglises = await chargerEglises(client, userId);
+    const chosen = eglises.find((e) => e.church.id === (t.church_id as string)) ?? eglises[0];
+    if (!chosen) {
+      await client.query("ROLLBACK");
+      return { ok: false, reason: "sans_eglise" };
+    }
+    const channel = (t.channel as Channel) ?? "mobile";
+    const refreshToken = await createRefreshToken(client, userId, chosen.church.id, channel, versionActuelle);
+    await client.query(`UPDATE refresh_tokens SET used_at = now() WHERE id = $1`, [t.id]);
+    const token = signToken(
+      { sub: userId, churchId: chosen.church.id, role: chosen.role, v: versionActuelle },
+      channel,
+    );
+    await auditLog(client, {
+      churchId: chosen.church.id,
+      userId,
+      action: "auth.rafraichi",
+      details: { channel },
+    });
+    await client.query("COMMIT");
+    return {
+      ok: true,
+      token,
+      refreshToken,
+      user: { id: userId, full_name: t.full_name as string, email: t.email as string },
+      church: { ...chosen.church, role: chosen.role },
+      eglises,
+    };
+  } catch (e) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Rotation du jeton de rafraîchissement lors d'un changement d'église
+ * active : l'ancien est marqué utilisé, un nouveau est émis pour la
+ * nouvelle église. Renvoie null si le jeton fourni est absent ou invalide.
+ */
+export async function rotateRefreshTokenForChurch(
+  db: Pool,
+  rawToken: string,
+  userId: string,
+  churchId: string,
+): Promise<string | null> {
+  const { rows } = await db.query(
+    `SELECT rt.id, rt.channel, rt.token_version, rt.expires_at, rt.used_at,
+            u.token_version AS version_actuelle
+       FROM refresh_tokens rt JOIN users u ON u.id = rt.user_id
+      WHERE rt.token_hash = $1 AND rt.user_id = $2`,
+    [hashAuthToken(rawToken), userId],
+  );
+  const t = rows[0];
+  if (!t || t.used_at) return null;
+  if (new Date(t.expires_at as string) <= new Date()) return null;
+  const versionActuelle = (t.version_actuelle as number) ?? 0;
+  if ((t.token_version as number) !== versionActuelle) return null;
+  const nouveau = await createRefreshToken(
+    db,
+    userId,
+    churchId,
+    (t.channel as Channel) ?? "mobile",
+    versionActuelle,
+  );
+  await db.query(`UPDATE refresh_tokens SET used_at = now() WHERE id = $1`, [t.id]);
+  return nouveau;
+}
+
 /**
  * Invalide toutes les sessions d'un utilisateur : les JWT émis avant
  * (version `v` inférieure) sont refusés par requireAuth.
  */
 export async function invalidateSessions(db: Pool, userId: string): Promise<void> {
   await db.query(`UPDATE users SET token_version = token_version + 1 WHERE id = $1`, [userId]);
+  await revokeAllRefreshTokens(db, userId);
 }
 
 /**
@@ -993,4 +1175,5 @@ export async function setPassword(db: Pool, userId: string, password: string): P
       WHERE id = $1`,
     [userId, hash],
   );
+  await revokeAllRefreshTokens(db, userId);
 }

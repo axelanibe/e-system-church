@@ -26,6 +26,10 @@ class AppUser {
 /// `{ token, user, church, eglises? }` (register renvoie aussi `rattachement`).
 class AuthResult {
   final String token;
+
+  /// Jeton de rafraîchissement (un par appareil) : renouvelle le JWT sans
+  /// ressaisir le mot de passe. Null pour les anciennes réponses serveur.
+  final String? refreshToken;
   final AppUser user;
   final Church church;
   final List<Membership> eglises;
@@ -36,6 +40,7 @@ class AuthResult {
 
   const AuthResult({
     required this.token,
+    this.refreshToken,
     required this.user,
     required this.church,
     required this.eglises,
@@ -44,6 +49,7 @@ class AuthResult {
 
   factory AuthResult.fromJson(Map<String, dynamic> json) => AuthResult(
         token: json['token'] as String,
+        refreshToken: json['refresh_token'] as String?,
         user: AppUser.fromJson(json['user'] as Map<String, dynamic>),
         church: Church.fromJson(json['church'] as Map<String, dynamic>),
         eglises: (json['eglises'] as List<dynamic>? ?? [])

@@ -218,6 +218,7 @@ class DemoAppState extends AppState {
 
   @override
   Future<void> logout() async {
+    await _demoApi.logout();
     _demoUser = null;
     _demoChurch = null;
     _demoRole = null;
