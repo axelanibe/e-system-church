@@ -30,6 +30,7 @@ import '../models/profil.dart';
 import '../models/plateforme.dart';
 import '../models/transfert.dart';
 import '../models/rapport.dart';
+import '../models/rapport_annexe.dart';
 import '../models/rattachement.dart';
 import '../models/serviteurs.dart';
 import '../models/stats.dart';
@@ -197,6 +198,28 @@ abstract class ApiService {
     String? creneau,
     required String motif,
   });
+
+  /// Tranche P5 — Rapports à mon église mère (migration 023) : mon
+  /// église mère, racine du réseau, avec son adresse e-mail, nulle
+  /// tant qu'elle n'est pas renseignée en base (« À compléter »).
+  Future<EgliseMereContact> getMaMere();
+
+  /// Envoyer un rapport à mon église mère (tranche P5) : le rapport
+  /// est enregistré avec ses chiffres réels, statut
+  /// `en_attente_envoi`. L'envoi par e-mail, en pièce jointe PDF,
+  /// passe par mailer.ts (Lot B) et reste en attente.
+  Future<RapportAnnexe> envoyerRapportAnnexe({
+    required String type,
+    String? message,
+    required int membres,
+    required int recettesFcfa,
+    required int depensesFcfa,
+    required int soldeFcfa,
+  });
+
+  /// Rapports reçus par mon église mère (tranche P5) : ceux envoyés
+  /// par ses églises annexes, le plus récent d'abord.
+  Future<List<RapportAnnexe>> getRapportsRecus();
 
   // -- Églises et arborescence ----------------------------------------------
   Future<TreeResult> getTree();
