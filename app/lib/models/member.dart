@@ -20,6 +20,13 @@ class Member {
   final String? poste;
   final String? cellGroup;
   final String status; // actif | nouveau_converti | inactif
+  /// Dernier statut riche (membre_statuts) : null si aucun changement
+  /// enregistré. « ancien » veut dire ancien membre, distinct d'inactif.
+  final String? statutRiche;
+  /// Dates d'événements de vie (US7, migration 019) : « AAAA-MM-JJ »,
+  /// null tant que non renseignées.
+  final String? dateMariage;
+  final String? dateConversion;
   final DateTime? createdAt;
 
   /// Photo du membre (migration 018) : URL fournie par le membre ou
@@ -39,6 +46,9 @@ class Member {
     this.poste,
     this.cellGroup,
     required this.status,
+    this.statutRiche,
+    this.dateMariage,
+    this.dateConversion,
     this.createdAt,
     this.photoUrl,
   });
@@ -56,6 +66,9 @@ class Member {
         poste: json['poste'] as String?,
         cellGroup: json['cell_group'] as String?,
         status: json['status'] as String? ?? 'actif',
+        statutRiche: json['statut_riche'] as String?,
+        dateMariage: json['date_mariage'] as String?,
+        dateConversion: json['date_conversion'] as String?,
         createdAt: parseDate(json['created_at'] as String?),
         photoUrl: json['photo_url'] as String?,
       );
@@ -68,12 +81,22 @@ class Member {
         return 'Nouveau converti';
       case 'inactif':
         return 'Inactif';
+      case 'ancien':
+        return 'Ancien';
       default:
         return status;
     }
   }
 
   String get statusLabel => labelForStatus(status);
+
+  /// Statut affiché : « Ancien » quand le dernier statut riche est
+  /// « ancien », sinon le statut simple. Un ancien membre est distinct
+  /// d'un membre inactif.
+  String get statutAffiche =>
+      statutRiche == 'ancien' ? 'Ancien' : statusLabel;
+
+  bool get estAncien => statutRiche == 'ancien';
 
   /// Fonction affichée sur le profil et la carte : sans fonction précise
   /// (« Aucun » ou vide), la carte montre « Membre ».

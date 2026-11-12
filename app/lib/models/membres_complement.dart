@@ -69,6 +69,8 @@ class MembreStatut {
         return 'Suspendu';
       case 'parti':
         return 'Parti';
+      case 'ancien':
+        return 'Ancien';
       default:
         return statut;
     }

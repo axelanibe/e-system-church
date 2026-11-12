@@ -6,7 +6,7 @@ import '../models/member.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
-import 'member_complet_screen.dart';
+import 'member_detail_screen.dart';
 
 /// Module 1 — Familles, départements et cellules de l'église.
 /// La fiche complète d'un membre (statuts, baptême, liens) s'ouvre depuis
@@ -411,7 +411,7 @@ class _FamillesScreenState extends State<FamillesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SectionTitle(title: 'Fiche complète d’un membre'),
+              const SectionTitle(title: 'Fiche d’un membre'),
               const Text(
                 'Statuts, baptême, départements, cellules et liens parent-enfant.',
               ),
@@ -437,7 +437,7 @@ class _FamillesScreenState extends State<FamillesScreen> {
                   if (m == null) return;
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => MemberCompletScreen(memberId: m.id),
+                      builder: (_) => MemberDetailScreen(member: m),
                     ),
                   );
                 },

@@ -27,6 +27,9 @@ const createMembreSchema = z.object({
   fonction: z.string().min(2).max(120).optional(),
   poste: z.string().min(2).max(120).optional(),
   cell_group: z.string().min(2).max(120).optional(),
+  /** Dates d'événements de vie (US7, migration 019) : NULL tant que non renseignées. */
+  date_mariage: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format AAAA-MM-JJ.").optional(),
+  date_conversion: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format AAAA-MM-JJ.").optional(),
   status: z.enum(["actif", "nouveau_converti", "inactif"]).default("actif"),
   matricule: z.string().min(1).max(30).optional(),
 });
@@ -34,7 +37,9 @@ const createMembreSchema = z.object({
 const listQuerySchema = z.object({
   q: z.string().max(200).optional(),
   department: z.string().max(120).optional(),
-  status: z.enum(["actif", "nouveau_converti", "inactif"]).optional(),
+  // « ancien » n'est pas dans l'enum simple de members.status : c'est le
+  // dernier statut riche de membre_statuts (tranche T4).
+  status: z.enum(["actif", "nouveau_converti", "inactif", "ancien"]).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -54,31 +59,49 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
     }
     const { q, department, status, limit, offset } = parsed.data;
     try {
-      const conditions = [`church_id = $1`];
+      const conditions = [`m.church_id = $1`];
       const values: unknown[] = [req.session.churchId];
       if (q) {
         values.push(`%${q}%`);
-        conditions.push(`(full_name ILIKE $${values.length} OR matricule ILIKE $${values.length})`);
+        conditions.push(`(m.full_name ILIKE $${values.length} OR m.matricule ILIKE $${values.length})`);
       }
       if (department) {
         values.push(department);
-        conditions.push(`department = $${values.length}`);
+        conditions.push(`m.department = $${values.length}`);
       }
       if (status) {
-        values.push(status);
-        conditions.push(`status = $${values.length}`);
+        if (status === "ancien") {
+          // Dernier statut riche « ancien » (membre_statuts), pas l'enum simple.
+          conditions.push(`dernier.statut = 'ancien'`);
+        } else {
+          values.push(status);
+          conditions.push(`m.status = $${values.length}`);
+        }
       }
       const where = `WHERE ${conditions.join(" AND ")}`;
+      // Dernier statut riche de chaque membre (pour afficher « Ancien »).
+      const from = `FROM members m
+        LEFT JOIN LATERAL (
+          SELECT ms.statut FROM membre_statuts ms
+           WHERE ms.member_id = m.id AND ms.church_id = $1
+           ORDER BY ms.created_at DESC, ms.id DESC LIMIT 1
+        ) dernier ON true`;
       const total = await db.query<{ n: string }>(
-        `SELECT count(*)::text AS n FROM members ${where}`,
+        `SELECT count(*)::text AS n FROM members m
+           LEFT JOIN LATERAL (
+             SELECT ms.statut FROM membre_statuts ms
+              WHERE ms.member_id = m.id AND ms.church_id = $1
+              ORDER BY ms.created_at DESC, ms.id DESC LIMIT 1
+           ) dernier ON true ${where}`,
         values,
       );
       const { rows } = await db.query(
-        `SELECT id, church_id, matricule, full_name, phone, email, birth_date, sexe,
-                department, fonction, poste, cell_group, status, created_at,
-                     photo_url
-           FROM members ${where}
-          ORDER BY full_name ASC
+        `SELECT m.id, m.church_id, m.matricule, m.full_name, m.phone, m.email, m.birth_date, m.sexe,
+                m.department, m.fonction, m.poste, m.cell_group, m.status, m.created_at,
+                m.photo_url, m.date_mariage, m.date_conversion,
+                dernier.statut AS statut_riche
+           ${from} ${where}
+          ORDER BY m.full_name ASC
           LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
         [...values, limit, offset],
       );
@@ -88,16 +111,61 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
     }
   });
 
+  // -- Anniversaires proches : membres dont l'anniversaire tombe dans les
+  //    N jours à venir (30 par défaut, 90 au plus). Aucun message envoyé,
+  //    la liste seulement (tranche T4, le fournisseur SMS n'est pas choisi).
+  app.get(
+    "/membres/anniversaires",
+    { preHandler: [requireAuth(db), requireRole(...READ_ROLES)] },
+    async (req, reply) => {
+      const jours = Math.min(90, Math.max(1, Number((req.query as { jours?: string }).jours ?? 30) || 30));
+      try {
+        const { rows } = await db.query(
+          `WITH anniv AS (
+             SELECT id, full_name, matricule, birth_date,
+               CASE
+                 WHEN (birth_date + ((EXTRACT(YEAR FROM CURRENT_DATE)::int - EXTRACT(YEAR FROM birth_date)::int) || ' years')::interval)::date >= CURRENT_DATE
+                 THEN (birth_date + ((EXTRACT(YEAR FROM CURRENT_DATE)::int - EXTRACT(YEAR FROM birth_date)::int) || ' years')::interval)::date
+                 ELSE (birth_date + ((EXTRACT(YEAR FROM CURRENT_DATE)::int - EXTRACT(YEAR FROM birth_date)::int + 1) || ' years')::interval)::date
+               END AS prochain
+               FROM members
+              WHERE church_id = $1 AND birth_date IS NOT NULL
+           )
+           SELECT id, full_name, matricule, birth_date, prochain,
+                  (prochain - CURRENT_DATE)::int AS jours_restants,
+                  (EXTRACT(YEAR FROM prochain)::int - EXTRACT(YEAR FROM birth_date)::int) AS age_atteint
+             FROM anniv
+            WHERE (prochain - CURRENT_DATE) <= $2
+            ORDER BY jours_restants ASC, full_name ASC
+            LIMIT 200`,
+          [req.session.churchId, jours],
+        );
+        return reply.send({ jours, anniversaires: rows });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
   app.get(
     "/membres/:id",
     { preHandler: [requireAuth(db), requireRole(...READ_ROLES)] },
     async (req, reply) => {
       try {
+        // Dernier statut riche, comme dans la liste : la fiche affiche
+        // « Ancien » même après rechargement du membre seul.
         const { rows } = await db.query(
-          `SELECT id, church_id, matricule, full_name, phone, email, birth_date, sexe,
-                  department, fonction, poste, cell_group, status, created_at,
-                     photo_url
-             FROM members WHERE id = $1 AND church_id = $2`,
+          `SELECT m.id, m.church_id, m.matricule, m.full_name, m.phone, m.email, m.birth_date, m.sexe,
+                  m.department, m.fonction, m.poste, m.cell_group, m.status, m.created_at,
+                  m.photo_url, m.date_mariage, m.date_conversion,
+                  dernier.statut AS statut_riche
+             FROM members m
+             LEFT JOIN LATERAL (
+               SELECT ms.statut FROM membre_statuts ms
+                WHERE ms.member_id = m.id AND ms.church_id = $2
+                ORDER BY ms.created_at DESC, ms.id DESC LIMIT 1
+             ) dernier ON true
+            WHERE m.id = $1 AND m.church_id = $2`,
           [(req.params as { id: string }).id, req.session.churchId],
         );
         if (rows.length === 0) {
@@ -148,11 +216,11 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
         try {
           const { rows } = await db.query(
             `INSERT INTO members
-               (church_id, matricule, full_name, phone, email, birth_date, sexe, department, fonction, poste, cell_group, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+               (church_id, matricule, full_name, phone, email, birth_date, sexe, department, fonction, poste, cell_group, status, date_mariage, date_conversion)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
              RETURNING id, church_id, matricule, full_name, phone, email, birth_date, sexe,
                        department, fonction, poste, cell_group, status, created_at,
-                     photo_url`,
+                       photo_url, date_mariage, date_conversion`,
             [
               req.session.churchId,
               matricule,
@@ -166,6 +234,8 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
               data.poste ?? null,
               data.cell_group ?? null,
               data.status,
+              data.date_mariage ?? null,
+              data.date_conversion ?? null,
             ],
           );
           await auditLog(db, {
@@ -191,19 +261,23 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
   });
 
   // -- Modification d'un membre (le matricule ne change pas). --------------
+  // Les champs sont nullables : l'application envoie explicitement null pour
+  // effacer une valeur (une date par exemple), ce n'est pas une erreur.
   const updateMembreSchema = z.object({
     full_name: z.string().min(2).max(200).optional(),
-    phone: z.string().min(8).max(30).optional(),
-    email: z.string().email().max(254).optional(),
-    birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format AAAA-MM-JJ.").optional(),
+    phone: z.string().min(8).max(30).nullable().optional(),
+    email: z.string().email().max(254).nullable().optional(),
+    birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format AAAA-MM-JJ.").nullable().optional(),
     /** Sexe (M ou F) : modifiable (correction) — le matricule, lui, ne change pas. */
-    sexe: z.string().max(20).optional(),
-    department: z.string().min(2).max(120).optional(),
-    fonction: z.string().min(2).max(120).optional(),
-    poste: z.string().min(2).max(120).optional(),
-    cell_group: z.string().min(2).max(120).optional(),
-    status: z.enum(["actif", "nouveau_converti", "inactif"]).optional(),
-    photo_url: z.string().url().max(500).optional(),
+    sexe: z.string().max(20).nullable().optional(),
+    department: z.string().min(2).max(120).nullable().optional(),
+    fonction: z.string().min(2).max(120).nullable().optional(),
+    poste: z.string().min(2).max(120).nullable().optional(),
+    cell_group: z.string().min(2).max(120).nullable().optional(),
+    status: z.enum(["actif", "nouveau_converti", "inactif"]).nullable().optional(),
+    photo_url: z.string().url().max(500).nullable().optional(),
+    date_mariage: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format AAAA-MM-JJ.").nullable().optional(),
+    date_conversion: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format AAAA-MM-JJ.").nullable().optional(),
   });
   app.patch(
     "/membres/:id",
@@ -219,7 +293,7 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
       }
       const data = parsed.data as Record<string, unknown>;
       if (data.sexe !== undefined) data.sexe = normalizeSexe(data.sexe);
-      const keys = ["full_name", "phone", "email", "birth_date", "sexe", "department", "fonction", "poste", "cell_group", "status", "photo_url"].filter(
+      const keys = ["full_name", "phone", "email", "birth_date", "sexe", "department", "fonction", "poste", "cell_group", "status", "photo_url", "date_mariage", "date_conversion"].filter(
         (c) => data[c] !== undefined,
       );
       if (keys.length === 0) {
@@ -231,7 +305,7 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
           `UPDATE members SET ${sets} WHERE id = $1 AND church_id = $2
            RETURNING id, church_id, matricule, full_name, phone, email, birth_date, sexe,
                      department, fonction, poste, cell_group, status, created_at,
-                     photo_url`,
+                     photo_url, date_mariage, date_conversion`,
           [(req.params as { id: string }).id, req.session.churchId, ...keys.map((c) => data[c])],
         );
         if (rows.length === 0) {

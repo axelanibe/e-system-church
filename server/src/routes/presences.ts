@@ -215,4 +215,41 @@ export function registerPresencesRoutes(app: FastifyInstance, db: Pool) {
       }
     },
   );
+
+  // -- Fréquentation d'un membre (tranche T4) : ses pointages, du plus
+  //    récent au plus ancien, avec le titre et la date du culte ou de
+  //    l'événement. Lecture seule, côté admin (fiche du membre).
+  app.get(
+    "/membres/:id/frequentation",
+    { preHandler: [requireAuth(db), requireRole(...READ_ALL)] },
+    async (req, reply) => {
+      const memberId = (req.params as { id: string }).id;
+      try {
+        const member = await db.query(
+          `SELECT id FROM members WHERE id = $1 AND church_id = $2`,
+          [memberId, req.session.churchId],
+        );
+        if ((member.rowCount ?? 0) === 0) {
+          return reply.code(404).send({ error: "not_found", message: "Membre introuvable." });
+        }
+        const { rows } = await db.query(
+          `SELECT p.id, p.statut, p.mode, p.pointe_at,
+                  COALESCE(c.titre, e.title) AS titre,
+                  COALESCE(c.date_heure, e.starts_at, p.pointe_at) AS date_evenement,
+                  CASE WHEN p.culte_id IS NOT NULL THEN 'culte' ELSE 'evenement' END AS type
+             FROM presences p
+             LEFT JOIN cultes c ON c.id = p.culte_id
+             LEFT JOIN events e ON e.id = p.event_id
+            WHERE p.member_id = $1 AND p.church_id = $2
+            ORDER BY COALESCE(c.date_heure, e.starts_at, p.pointe_at) DESC
+            LIMIT 100`,
+          [memberId, req.session.churchId],
+        );
+        const presents = rows.filter((r) => r.statut === "present").length;
+        return reply.send({ total: rows.length, presents, items: rows });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
 }

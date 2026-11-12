@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/attestation.dart';
 import '../models/annexe.dart';
+import '../models/anniversaire.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
@@ -19,6 +20,7 @@ import '../models/checkin_enfant.dart';
 import '../models/enfants.dart';
 import '../models/fidele.dart';
 import '../models/finances.dart';
+import '../models/frequentation.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
@@ -656,6 +658,8 @@ class HttpApiService implements ApiService {
     String? poste,
     String? cellGroup,
     String? status,
+    String? dateMariage,
+    String? dateConversion,
   }) async {
     final data = await _call('POST', '/membres', body: {
       'full_name': fullName,
@@ -668,6 +672,8 @@ class HttpApiService implements ApiService {
       if (poste != null) 'poste': poste,
       if (cellGroup != null) 'cell_group': cellGroup,
       if (status != null) 'status': status,
+      if (dateMariage != null) 'date_mariage': dateMariage,
+      if (dateConversion != null) 'date_conversion': dateConversion,
     });
     return Member.fromJson(data);
   }
@@ -683,7 +689,9 @@ class HttpApiService implements ApiService {
       String? fonction,
       String? poste,
       String? cellGroup,
-      String? status}) async {
+      String? status,
+      String? dateMariage,
+      String? dateConversion}) async {
     final data = await _call('PATCH', '/membres/$id', body: {
       'full_name': fullName,
       'phone': phone,
@@ -695,6 +703,8 @@ class HttpApiService implements ApiService {
       'poste': poste,
       'cell_group': cellGroup,
       'status': status,
+      'date_mariage': dateMariage,
+      'date_conversion': dateConversion,
     });
     return Member.fromJson(data);
   }
@@ -703,6 +713,20 @@ class HttpApiService implements ApiService {
   Future<void> deleteMember(String id) async {
     await _call('DELETE', '/membres/$id');
   }
+
+  @override
+  Future<List<Anniversaire>> getAnniversaires({int jours = 30}) async {
+    final data = await _call('GET', '/membres/anniversaires',
+        query: {'jours': '$jours'});
+    return (data['anniversaires'] as List<dynamic>? ?? [])
+        .map((e) => Anniversaire.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<Frequentation> getFrequentation(String memberId) async =>
+      Frequentation.fromJson(
+          await _call('GET', '/membres/$memberId/frequentation'));
 
   // -- Import des fidèles (tranche A) ----------------------------------------
   // Section séparée et marquée : modèle, aperçu, confirmation, historique.

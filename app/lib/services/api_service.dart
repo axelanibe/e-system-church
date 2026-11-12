@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import '../models/attestation.dart';
 import '../models/annexe.dart';
+import '../models/anniversaire.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
@@ -14,6 +15,7 @@ import '../models/checkin_enfant.dart';
 import '../models/enfants.dart';
 import '../models/fidele.dart';
 import '../models/finances.dart';
+import '../models/frequentation.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
@@ -224,6 +226,8 @@ abstract class ApiService {
     String? poste,
     String? cellGroup,
     String? status,
+    String? dateMariage,
+    String? dateConversion,
   });
 
   Future<Member> updateMember(String id,
@@ -236,9 +240,18 @@ abstract class ApiService {
       String? fonction,
       String? poste,
       String? cellGroup,
-      String? status});
+      String? status,
+      String? dateMariage,
+      String? dateConversion});
 
   Future<void> deleteMember(String id);
+
+  /// Anniversaires proches (`GET /membres/anniversaires`) : la liste
+  /// seulement, aucun message envoyé (tranche T4).
+  Future<List<Anniversaire>> getAnniversaires({int jours = 30});
+
+  /// Fréquentation d'un membre (`GET /membres/:id/frequentation`).
+  Future<Frequentation> getFrequentation(String memberId);
 
   // -- Import des fidèles (tranche A) ----------------------------------------
   // Modèle CSV, aperçu avant import, confirmation, historique. Les lignes
