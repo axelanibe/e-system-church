@@ -26,8 +26,10 @@ const inscriptionSchema = z.object({
   /**
    * Code fidèle de l'église (ESC-F-…), optionnel : quand il est fourni,
    * la recherche du membre par matricule est restreinte à cette église
-   * (le matricule est unique par église, pas global). Sans lui, on garde
-   * le comportement existant (e-mail concordant, sinon ambiguïté).
+   * (les nouveaux matricules sont uniques dans tout le système ; les
+   * anciens numéros peuvent encore se répéter d'une église à l'autre).
+   * Sans lui, on garde le comportement existant (e-mail concordant,
+   * sinon ambiguïté).
    */
   code_fidele: z.string().min(4).max(20).optional(),
   channel: z.enum(["web", "mobile"]).default("mobile"),
@@ -69,8 +71,9 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
         churchId = churchRows[0].id;
       }
 
-      // Le matricule est unique PAR église : plusieurs membres peuvent le
-      // porter. On préfère celui dont l'e-mail concorde ; sinon, un seul
+      // Le matricule était unique PAR église (anciens numéros) : plusieurs
+      // membres peuvent encore le porter. On préfère celui dont l'e-mail
+      // concorde ; sinon, un seul
       // candidat actif ; sinon, l'inscription est refusée (ambiguïté).
       const { rows: candidats } = await client.query(
         churchId

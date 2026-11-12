@@ -344,9 +344,11 @@ export function registerTransfertsRoutes(app: FastifyInstance, db: Pool) {
 
   /**
    * Déplace le membre vers l'église d'arrivée avec un nouveau matricule
-   * (séquentiel dans l'église d'arrivée). La contrainte UNIQUE
-   * (church_id, matricule) protège des courses : en cas de collision on
-   * régénère après un retour au point de sauvegarde, 3 essais maximum.
+   * (séquentiel dans l'église d'arrivée, unique dans tout le système —
+   * le nombre ne croise aucun code ni aucun autre matricule). La
+   * contrainte UNIQUE (church_id, matricule) protège des courses : en cas
+   * de collision on régénère après un retour au point de sauvegarde,
+   * 3 essais maximum.
    */
   async function deplacerMembre(
     client: PoolClient,

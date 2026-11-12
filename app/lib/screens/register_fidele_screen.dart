@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/membres_complement.dart';
 import '../state/app_state.dart';
+import '../widgets/code_input_formatter.dart';
 import '../widgets/common_widgets.dart';
 
 /// Inscription membre par code fidèle : « Je suis membre d'une église »
@@ -155,12 +156,16 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                   TextFormField(
                     controller: _codeController,
                     textCapitalization: TextCapitalization.characters,
+                    inputFormatters: [
+                      CodeInputFormatter(expectedPrefix: 'ESC-F-'),
+                    ],
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
-                      labelText: 'Code fidèle de l’église (ex. ESC-F-XXXXXX)',
+                      labelText: 'Code fidèle de l’église (ex. ESC-F-0411)',
                       helperText:
                           'Demandez le code fidèle à votre pasteur ou à un '
-                          'responsable, il ressemble à ESC-F-XXXXXX.',
+                          'responsable, il ressemble à ESC-F-0411. Le tiret '
+                          's’ajoute tout seul : tapez seulement les caractères.',
                       helperMaxLines: 2,
                       prefixIcon: Icon(Icons.key_outlined),
                       border: OutlineInputBorder(),

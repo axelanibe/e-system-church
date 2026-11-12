@@ -117,8 +117,29 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
     }
     const data = parsed.data;
     try {
-      // Matricule : fourni par le client ou généré (séquentiel par église).
-      // Réessaie en cas de collision (contrainte UNIQUE church_id + matricule).
+      // Matricule fourni par l'admin : il doit être unique dans tout le
+      // système — ses 4 derniers caractères ne doivent être utilisés nulle
+      // part (matricules, codes d'église, codes fidèles, codes de tutelle).
+      // Règle de Bouf : les nombres à 4 chiffres ne se croisent jamais.
+      if (data.matricule) {
+        const suffix = data.matricule.slice(-4);
+        const clash = await db.query(
+          `SELECT 1 FROM members WHERE right(matricule, 4) = $1
+            UNION ALL SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1
+            UNION ALL SELECT 1 FROM codes_tutelle WHERE right(code, 4) = $1`,
+          [suffix],
+        );
+        if (clash.rowCount && clash.rowCount > 0) {
+          return reply.code(409).send({
+            error: "matricule_taken",
+            message:
+              "Ce numéro de matricule est déjà utilisé (par un membre, un code d'église ou un code de tutelle). Les nombres à 4 chiffres ne se croisent jamais dans le système.",
+          });
+        }
+      }
+      // Matricule : fourni par le client ou généré (séquentiel par église,
+      // unique dans tout le système). Réessaie en cas de collision
+      // (contrainte UNIQUE church_id + matricule).
       let lastError: unknown = null;
       for (let attempt = 0; attempt < 3; attempt++) {
         const matricule = data.matricule ?? (await generateMatricule(db, req.session.churchId));

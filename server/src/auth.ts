@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomInt } from "node:crypto";
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
 import type { Pool, PoolClient } from "pg";
@@ -183,39 +183,56 @@ export async function issueTokenForChurch(
 // ---------------------------------------------------------------------------
 // Codes et matricules
 // ---------------------------------------------------------------------------
-const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-
-/** Code d'invitation unique par église, ex. ESC-K7M2QX. */
+/**
+ * Code d'invitation unique par église, ex. ESC-0411 : `ESC-` + 4 chiffres.
+ * Les anciens codes (6 caractères alphanumériques, ex. ESC-XZ2SCA)
+ * restent valides : la recherche se fait par valeur exacte, sans
+ * validation de format stricte.
+ */
 export function generateChurchCode(): string {
-  let suffix = "";
-  for (let i = 0; i < 6; i++) suffix += CODE_ALPHABET[randomBytes(1)[0] % CODE_ALPHABET.length];
-  return `ESC-${suffix}`;
+  return `ESC-${String(randomInt(0, 10000)).padStart(4, "0")}`;
 }
 
 /**
- * Code fidèle unique par église, ex. ESC-F-K7M2QX : les membres
+ * Code fidèle unique par église, ex. ESC-F-0411 : les membres
  * l'utilisent pour s'inscrire dans la bonne église (le code désigne une
  * seule église, sans ambiguïté). Préfixe distinct du code de tutelle
  * (`ESC-…`, utilisé par les églises secondaires pour se rattacher).
+ * Les anciens codes fidèles (ex. ESC-F-K7M2QX) restent valides.
  */
 export function generateFideleCode(): string {
-  let suffix = "";
-  for (let i = 0; i < 6; i++) suffix += CODE_ALPHABET[randomBytes(1)[0] % CODE_ALPHABET.length];
-  return `ESC-F-${suffix}`;
+  return `ESC-F-${String(randomInt(0, 10000)).padStart(4, "0")}`;
 }
 
 /**
- * Matricule unique PAR église, séquentiel (M-0001, M-0002…).
- * La contrainte UNIQUE (church_id, matricule) protège des courses :
- * l'appelant réessaie en cas de conflit.
+ * Matricule unique dans TOUT le système, séquentiel par église (M-0001, M-0002…).
+ * Point de départ : max + 1 dans l'église ; on saute ensuite tout nombre déjà
+ * utilisé quelque part — n'importe quel matricule (toute église), n'importe
+ * quel suffixe de code d'église, de code fidèle ou de code de tutelle à usage
+ * unique (comparaison sur les 4 derniers caractères). Règle de Bouf : les
+ * nombres à 4 chiffres ne se croisent jamais dans le système.
+ * La contrainte UNIQUE (church_id, matricule) protège des courses dans la
+ * même église : l'appelant réessaie en cas de conflit. Sans changement de
+ * schéma, une course entre deux églises différentes reste théoriquement
+ * possible — la vérification préalable rend le risque négligeable.
  */
 export async function generateMatricule(client: Pool | PoolClient, churchId: string): Promise<string> {
-  const { rows } = await client.query<{ n: string }>(
-    `SELECT count(*)::text AS n FROM members WHERE church_id = $1`,
+  const { rows } = await client.query<{ m: string | null }>(
+    `SELECT max(right(matricule, 4)) AS m FROM members WHERE church_id = $1 AND matricule ~ '^M-[0-9]{4}$'`,
     [churchId],
   );
-  const next = Number(rows[0]?.n ?? 0) + 1;
-  return `M-${String(next).padStart(4, "0")}`;
+  const start = Number(rows[0]?.m ?? "0") + 1;
+  for (let i = 0; i < 10000; i++) {
+    const candidate = String((start + i) % 10000).padStart(4, "0");
+    const clash = await client.query(
+      `SELECT 1 FROM members WHERE right(matricule, 4) = $1
+        UNION ALL SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1
+        UNION ALL SELECT 1 FROM codes_tutelle WHERE right(code, 4) = $1`,
+      [candidate],
+    );
+    if (clash.rowCount === 0) return `M-${candidate}`;
+  }
+  throw new Error("Aucun numéro de matricule disponible : les 10 000 nombres à 4 chiffres sont tous utilisés.");
 }
 
 // ---------------------------------------------------------------------------
@@ -274,19 +291,38 @@ export async function registerChurch(
     // Deux codes uniques (réessai en cas de collision) : le code de
     // tutelle (ESC-…) pour rattacher une sous-église, et le code fidèle
     // (ESC-F-…) pour inscrire les membres dans la bonne église.
+    // 4 chiffres = 10 000 valeurs possibles : 50 tentatives, la
+    // contrainte UNIQUE reste le filet de sécurité.
+    // Garantie de Bouf : un même nombre à 4 chiffres ne sert qu'une seule
+    // fois, dans un seul rôle, dans une seule église — le suffixe est
+    // vérifié partout (codes, codes fidèles, matricules, codes de tutelle
+    // à usage unique), sur les 4 derniers caractères, pour couvrir aussi
+    // les anciens codes.
     let code = "";
-    for (let attempt = 0; attempt < 5; attempt++) {
+    for (let attempt = 0; attempt < 50; attempt++) {
       code = generateChurchCode();
-      const clash = await client.query(`SELECT 1 FROM churches WHERE code = $1`, [code]);
+      const clash = await client.query(
+        `SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1
+          UNION ALL SELECT 1 FROM members WHERE right(matricule, 4) = $1
+          UNION ALL SELECT 1 FROM codes_tutelle WHERE right(code, 4) = $1`,
+        [code.slice(-4)],
+      );
       if (clash.rowCount === 0) break;
-      if (attempt === 4) throw new Error("Impossible de générer un code d'église unique.");
+      if (attempt === 49) throw new Error("Impossible de générer un code d'église unique.");
     }
     let codeFidele = "";
-    for (let attempt = 0; attempt < 5; attempt++) {
+    for (let attempt = 0; attempt < 50; attempt++) {
       codeFidele = generateFideleCode();
-      const clash = await client.query(`SELECT 1 FROM churches WHERE code_fidele = $1`, [codeFidele]);
-      if (clash.rowCount === 0) break;
-      if (attempt === 4) throw new Error("Impossible de générer un code fidèle unique.");
+      const clash = await client.query(
+        `SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1
+          UNION ALL SELECT 1 FROM members WHERE right(matricule, 4) = $1
+          UNION ALL SELECT 1 FROM codes_tutelle WHERE right(code, 4) = $1`,
+        [codeFidele.slice(-4)],
+      );
+      // Même nombre que le code de tutelle généré juste avant pour cette
+      // église (pas encore inséré, donc invisible de la requête ci-dessus).
+      if (clash.rowCount === 0 && codeFidele.slice(-4) !== code.slice(-4)) break;
+      if (attempt === 49) throw new Error("Impossible de générer un code fidèle unique.");
     }
 
     // Inscription libre : l'église naît ACTIVE. Le parent n'est rattaché
@@ -464,7 +500,7 @@ export type InscriptionMembreResult =
  * code fidèle de son église à la place du matricule. Le code fidèle
  * (ESC-F-…) désigne une seule église, sans ambiguïté — le code de
  * tutelle (ESC-…) ne sert qu'aux églises qui se rattachent à une mère.
- * Le matricule est attribué automatiquement (unique par église), la fiche
+ * Le matricule est attribué automatiquement (unique dans tout le système), la fiche
  * membre et la carte sont créées tout de suite, le compte est lié
  * immédiatement.
  */
@@ -515,7 +551,7 @@ export async function inscriptionMembreParCode(
     );
     const userId = userRows[0].id;
 
-    // Matricule automatique, unique par église. En cas de course sur le
+    // Matricule automatique, unique dans tout le système. En cas de course sur le
     // compteur, la contrainte UNIQUE déclenche un réessai (SAVEPOINT, la
     // transaction n'est pas perdue).
     let memberId = "";

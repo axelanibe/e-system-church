@@ -13,8 +13,8 @@ CREATE TYPE church_status AS ENUM ('en_attente', 'active', 'suspendue');
 
 CREATE TABLE churches (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code             TEXT NOT NULL UNIQUE,          -- ex. ESC-G-2026, code d'invitation (tutelle)
-    code_fidele      TEXT NOT NULL UNIQUE,          -- ex. ESC-F-K7M2QX, code fidèle (inscription des membres)
+    code             TEXT NOT NULL UNIQUE,          -- ex. ESC-0411, code d'invitation (tutelle)
+    code_fidele      TEXT NOT NULL UNIQUE,          -- ex. ESC-F-0411, code fidèle (inscription des membres)
     name             TEXT NOT NULL,                 -- nom réel de l'église
     parent_church_id UUID REFERENCES churches (id) ON DELETE RESTRICT,
     city             TEXT,
@@ -118,7 +118,7 @@ CREATE TABLE members (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     church_id   UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
     user_id     UUID REFERENCES users (id) ON DELETE SET NULL,
-    matricule   TEXT NOT NULL,                      -- unique PAR église, pas global
+    matricule   TEXT NOT NULL,                      -- unique dans tout le système (nouveaux numéros)
     full_name   TEXT NOT NULL,
     phone       TEXT,
     email       TEXT,
