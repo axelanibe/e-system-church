@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_theme.dart';
 import '../models/announcement.dart';
+import '../models/attestation.dart';
 import '../models/campagne.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
@@ -20,13 +22,14 @@ import 'mes_attestations_screen.dart';
 
 /// Accueil fidèle (rôle `membre`) : un espace qui donne envie d'ouvrir
 /// l'application, pas une liste de lignes alignées. Une seule colonne
-/// lisible, une belle carte de membre en vedette, un accueil
-/// personnalisé, le prochain culte, les actions principales en gros
-/// boutons, puis ce qui attend le fidèle : annonces, dons, campagnes,
-/// présences. Rien d'inventé : que des données réelles, et des états
-/// vides chaleureux quand il n'y a rien. Aucun écran d'administration
-/// n'est accessible depuis ici : les données viennent des lectures
-/// `/moi/*` (son église, ses propres données).
+/// lisible, une belle carte de membre en vedette avec son QR, un accueil
+/// personnalisé, le prochain culte en carte héro, Mon Parcours, la dîme
+/// validée, les attestations PDF, la prière du jour. Rien d'inventé :
+/// que des données réelles, et des états vides chaleureux quand il n'y a
+/// rien. Aucun écran d'administration n'est accessible depuis ici : les
+/// données viennent des lectures `/moi/*` (son église, ses propres données).
+/// La bannière de l'église ne s'affiche que si l'église en a fourni une
+/// (migration 018), sinon rien, jamais d'image inventée.
 class FideleHomeScreen extends StatefulWidget {
   const FideleHomeScreen({super.key});
 
@@ -37,10 +40,12 @@ class FideleHomeScreen extends StatefulWidget {
 class _FideleHomeScreenState extends State<FideleHomeScreen> {
   late Future<FideleProfil> _profilFuture;
   late Future<List<Announcement>> _annoncesFuture;
+  late Future<int> _nonLuesFuture;
   late Future<List<Culte>> _cultesFuture;
   late Future<List<Presence>> _presencesFuture;
   late Future<List<Contribution>> _contributionsFuture;
   late Future<List<Campagne>> _campagnesFuture;
+  late Future<List<Attestation>> _attestationsFuture;
 
   @override
   void initState() {
@@ -54,6 +59,8 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
     final api = context.read<AppState>().api;
     _profilFuture = api.getMoi();
     _annoncesFuture = api.getMesAnnonces();
+    _nonLuesFuture = api.getAnnoncesNonLues();
+    _attestationsFuture = api.getMesAttestations();
     // « Cultes à venir » : on ne garde que les cultes d'aujourd'hui ou
     // après. Un culte sans date exploitable est gardé plutôt que caché.
     _cultesFuture = api.getMesCultes().then((cultes) {
@@ -77,13 +84,30 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
     setState(_charger);
   }
 
+  Future<void> _marquerLue(Announcement annonce) async {
+    try {
+      await context.read<AppState>().api.marquerAnnonceLue(annonce.id);
+      if (mounted) {
+        setState(() {
+          _nonLuesFuture =
+              context.read<AppState>().api.getAnnoncesNonLues();
+        });
+      }
+    } catch (_) {
+      // Marquer lu est un confort, pas un blocage : on ignore l'échec.
+    }
+  }
+
   Future<void> _voirMaCarte() async {
     try {
       final carte = await context.read<AppState>().api.getMaCarte();
       if (!mounted) return;
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => MemberDetailScreen(member: carte.member),
+          builder: (_) => MemberDetailScreen(
+            member: carte.member,
+            lectureSeule: true,
+          ),
         ),
       );
     } catch (e) {
@@ -184,6 +208,20 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                                 ],
                               ),
                             ),
+                            if (profil.church.banniereUrl != null) ...[
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Image.network(
+                                  profil.church.banniereUrl!,
+                                  height: 140,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) =>
+                                      const SizedBox.shrink(),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
                             CarteMembreVedette(
                               profil: profil,
                               onVoirCarte: _voirMaCarte,
@@ -196,6 +234,28 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                               icon: Icons.description_outlined,
                               secondaire: true,
                               onPressed: _voirMesAttestations,
+                            ),
+                            FutureBuilder<List<Attestation>>(
+                              future: _attestationsFuture,
+                              builder: (context, snapshot) {
+                                final n = snapshot.data?.length ?? 0;
+                                if (snapshot.connectionState ==
+                                        ConnectionState.waiting ||
+                                    n == 0) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Text(
+                                    '$n attestation${n > 1 ? 's' : ''} PDF '
+                                    'disponible${n > 1 ? 's' : ''}.',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                );
+                              },
                             ),
                             const SizedBox(height: 8),
                             const SectionTitle(title: 'Mon profil'),
@@ -232,7 +292,39 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                       _ProchainCulte(future: _cultesFuture),
                     ],
                     ...[
-                      const SectionTitle(title: 'Ce qui vous attend'),
+                      const SectionTitle(title: 'Mon Parcours'),
+                      _ParcoursSection(
+                        presencesFuture: _presencesFuture,
+                        contributionsFuture: _contributionsFuture,
+                      ),
+                    ],
+                    ...[
+                      Row(
+                        children: [
+                          const Expanded(
+                            child:
+                                SectionTitle(title: 'Ce qui vous attend'),
+                          ),
+                          FutureBuilder<int>(
+                            future: _nonLuesFuture,
+                            builder: (context, snapshot) {
+                              final n = snapshot.data ?? 0;
+                              if (n == 0) return const SizedBox.shrink();
+                              return Padding(
+                                padding:
+                                    const EdgeInsets.only(right: 16, top: 12),
+                                child: Chip(
+                                  label: Text(
+                                      '$n non lue${n > 1 ? 's' : ''}'),
+                                  backgroundColor: AppTheme.terracotta,
+                                  labelStyle: const TextStyle(
+                                      color: Colors.white),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                       _SectionList<Announcement>(
                         future: _annoncesFuture,
                         emptyIcon: Icons.campaign_outlined,
@@ -247,6 +339,7 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          onTap: () => _marquerLue(a),
                         ),
                       ),
                     ],
@@ -287,6 +380,22 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                         },
                       ),
                     ),
+                    ...[
+                      const SectionTitle(title: 'Prière du jour'),
+                      FutureBuilder<FideleProfil>(
+                        future: _profilFuture,
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return const SizedBox.shrink();
+                          }
+                          final profil = snapshot.data!;
+                          return _PriereDuJour(
+                            memberId: profil.memberId,
+                            membreNom: profil.user.fullName,
+                          );
+                        },
+                      ),
+                    ],
                     ...[
                       const SectionTitle(title: 'Mes présences'),
                       _SectionList<Presence>(
@@ -396,31 +505,66 @@ class _ProchainCulte extends StatelessWidget {
           );
         }
         final culte = cultes.first;
-        return SoftCard(
+        final theme = Theme.of(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: AppTheme.cypress,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          padding: const EdgeInsets.all(20),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.event_outlined, size: 32),
+              const Icon(Icons.event_outlined,
+                  size: 32, color: Colors.white),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
+                      'PROCHAIN CULTE',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: Colors.white70,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
                       culte.titre,
-                      style: Theme.of(context).textTheme.titleLarge,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 4),
-                    Text(formatDateTime(culte.date)),
-                    if (culte.lieu != null) Text(culte.lieu!),
+                    Text(
+                      formatDateTime(culte.date),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                    if (culte.lieu != null)
+                      Text(
+                        culte.lieu!,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white70,
+                        ),
+                      ),
                     if (culte.orateur != null)
-                      Text('Avec ${culte.orateur}'),
+                      Text(
+                        'Avec ${culte.orateur}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white70,
+                        ),
+                      ),
                     if (culte.theme != null) ...[
                       const SizedBox(height: 4),
                       Text(
                         culte.theme!,
-                        style:
-                            Theme.of(context).textTheme.bodySmall,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.white70,
+                        ),
                       ),
                     ],
                   ],
@@ -464,6 +608,10 @@ class _DonsSection extends StatelessWidget {
         final confirme = dons
             .where((c) => c.status == 'confirme')
             .fold<int>(0, (s, c) => s + c.amountFcfa);
+        final dimeValidee = dons
+            .where((c) => c.type == 'dime' && c.status == 'confirme')
+            .fold<int>(0, (s, c) => s + c.amountFcfa);
+        final aUneDime = dons.any((c) => c.type == 'dime');
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -488,6 +636,14 @@ class _DonsSection extends StatelessWidget {
                           style: Theme.of(context)
                               .textTheme
                               .headlineSmall,
+                        ),
+                        Text(
+                          aUneDime
+                              ? 'Dîme validée : ${formatMontant(dimeValidee, devise)}'
+                              : 'Aucune dîme validée pour l’instant.',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall,
                         ),
                         Text(
                           '${dons.length} don${dons.length > 1 ? 's' : ''} au total',
@@ -520,6 +676,179 @@ class _DonsSection extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// Mon Parcours : ce que le fidèle a réellement vécu dans son église,
+/// sans étape inventée. Nombre de présences, première présence
+/// enregistrée, nombre de dons. Les étapes du parcours des nouveaux
+/// venus (artefact, étape sur 4) n'existent pas en base : elles
+/// arriveront avec la fiche de suivi en T4, on n'invente pas de
+/// progression ici.
+class _ParcoursSection extends StatelessWidget {
+  final Future<List<Presence>> presencesFuture;
+  final Future<List<Contribution>> contributionsFuture;
+
+  const _ParcoursSection({
+    required this.presencesFuture,
+    required this.contributionsFuture,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<List<dynamic>>>(
+      future: Future.wait([presencesFuture, contributionsFuture]),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AppLoading();
+        }
+        if (snapshot.hasError) {
+          return AppError(message: snapshot.error.toString(), onRetry: null);
+        }
+        final presences = (snapshot.data?[0] as List<Presence>? ?? []);
+        final dons = (snapshot.data?[1] as List<Contribution>? ?? []);
+        final dates = presences
+            .map((p) => p.pointeAt)
+            .whereType<DateTime>()
+            .toList()
+          ..sort();
+        return SoftCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.route_outlined, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '${presences.length} présence${presences.length > 1 ? 's' : ''} enregistrée${presences.length > 1 ? 's' : ''}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                ],
+              ),
+              if (dates.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('Première présence : ${formatDate(dates.first)}'),
+              ],
+              const SizedBox(height: 4),
+              Text(
+                  '${dons.length} don${dons.length > 1 ? 's' : ''} au total'),
+              if (presences.isEmpty && dons.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text(
+                      'Votre parcours commence ici : votre première présence et votre premier don apparaîtront ici.'),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Prière du jour : déposer un sujet de prière privé, coché confidentiel
+/// par défaut. Le sujet part par la route existante des demandes de
+/// prière, rattaché au membre quand le compte est lié. Aucun texte de
+/// prière inventé : la Bible reste un emplacement prêt, son texte sera
+/// branché depuis la source fournie par la structure, jamais inventé.
+class _PriereDuJour extends StatefulWidget {
+  final String? memberId;
+  final String membreNom;
+
+  const _PriereDuJour({required this.memberId, required this.membreNom});
+
+  @override
+  State<_PriereDuJour> createState() => _PriereDuJourState();
+}
+
+class _PriereDuJourState extends State<_PriereDuJour> {
+  final _sujetController = TextEditingController();
+  final _detailsController = TextEditingController();
+  var _confidentiel = true;
+  var _envoi = false;
+
+  @override
+  void dispose() {
+    _sujetController.dispose();
+    _detailsController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _deposer() async {
+    final sujet = _sujetController.text.trim();
+    if (sujet.length < 2) {
+      showApiError(context, 'Écrivez votre sujet de prière.');
+      return;
+    }
+    setState(() => _envoi = true);
+    try {
+      await context.read<AppState>().api.createDemandePriere(
+            sujet: sujet,
+            memberId: widget.memberId,
+            demandeurNom: widget.membreNom,
+            details: _detailsController.text.trim().isEmpty
+                ? null
+                : _detailsController.text.trim(),
+            confidentiel: _confidentiel,
+          );
+      if (!mounted) return;
+      _sujetController.clear();
+      _detailsController.clear();
+      showSuccess(context, 'Votre sujet de prière a été déposé.');
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    } finally {
+      if (mounted) setState(() => _envoi = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SoftCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _sujetController,
+            decoration: const InputDecoration(
+              labelText: 'Votre sujet de prière',
+              hintText: 'Par exemple : ma famille, mon travail…',
+            ),
+            maxLength: 300,
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _detailsController,
+            decoration: const InputDecoration(
+              labelText: 'Détails (facultatif)',
+              hintText: 'Quelques mots pour votre pasteur.',
+            ),
+            maxLines: 3,
+          ),
+          SwitchListTile(
+            title: const Text('Sujet confidentiel'),
+            subtitle:
+                const Text('Visible seulement par votre pasteur.'),
+            value: _confidentiel,
+            onChanged: (v) => setState(() => _confidentiel = v),
+          ),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: _envoi ? null : _deposer,
+            icon: const Icon(Icons.favorite_outline),
+            label: Text(_envoi ? 'Envoi…' : 'Déposer mon sujet'),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Bible : emplacement prêt. Le texte sera branché depuis la source fournie par votre église, aucun verset n’est inventé ici.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
     );
   }
 }

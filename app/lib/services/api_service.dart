@@ -139,6 +139,12 @@ abstract class ApiService {
   // -- Lectures fidèle (rôle membre, son église, ses données) ---------------
   Future<List<Announcement>> getMesAnnonces();
 
+  /// Nombre de mes annonces non lues (migration 018).
+  Future<int> getAnnoncesNonLues();
+
+  /// Marquer une de mes annonces comme lue (idempotente).
+  Future<void> marquerAnnonceLue(String id);
+
   Future<List<Culte>> getMesCultes();
 
   Future<List<Presence>> getMesPresences();

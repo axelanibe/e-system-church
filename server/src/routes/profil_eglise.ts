@@ -57,6 +57,9 @@ const profilSchema = z.object({
   devise: z.string().trim().toUpperCase().regex(/^[A-Z]{3,4}$/, "Devise : code de 3 ou 4 lettres (FCFA, XOF, EUR, USD…).").optional(),
   fuseau_horaire: z.string().min(3).max(60).optional(),
   logo_url: z.string().url().max(500).optional(),
+  // Bannière de l'église (migration 018) : emplacement seulement, fournie
+  // par l'église, jamais inventée. URL externe ou /bannieres/ servi plus tard.
+  banniere_url: z.string().url().max(500).optional(),
   address: z.string().max(300).optional(),
   phone: z.string().min(8).max(30).optional(),
   email: z.string().email().max(254).optional(),
@@ -142,7 +145,7 @@ export function registerProfilEgliseRoutes(app: FastifyInstance, db: Pool) {
     try {
       const { rows } = await db.query(
         `SELECT id, code, name, city, country, address, phone, email, status,
-                logo_url, couleur_principale, devise, fuseau_horaire,
+                logo_url, banniere_url, couleur_principale, devise, fuseau_horaire,
                 description, horaires_cultes
            FROM churches WHERE code = $1`,
         [code],
@@ -201,6 +204,7 @@ export function registerProfilEgliseRoutes(app: FastifyInstance, db: Pool) {
         "devise",
         "fuseau_horaire",
         "logo_url",
+        "banniere_url",
         "address",
         "phone",
         "email",
@@ -216,7 +220,7 @@ export function registerProfilEgliseRoutes(app: FastifyInstance, db: Pool) {
         const { rows } = await db.query(
           `UPDATE churches SET ${sets} WHERE id = $1 RETURNING
              id, code, name, city, country, address, phone, email, status,
-             logo_url, couleur_principale, devise, fuseau_horaire,
+             logo_url, banniere_url, couleur_principale, devise, fuseau_horaire,
              description, horaires_cultes`,
           values,
         );

@@ -28,6 +28,10 @@ class Church {
   /// Logo de l'église (URL, null si aucun logo : on affiche les initiales).
   final String? logoUrl;
 
+  /// Bannière de l'église (migration 018) : URL fournie par l'église,
+  /// null tant qu'aucune bannière n'est fournie, jamais inventée.
+  final String? banniereUrl;
+
   /// Couleur principale de l'église, au format hex (« #1E4D3B »).
   final String? couleurPrincipale;
 
@@ -53,6 +57,7 @@ class Church {
     required this.status,
     this.role,
     this.logoUrl,
+    this.banniereUrl,
     this.couleurPrincipale,
     this.devise,
     this.fuseauHoraire,
@@ -70,6 +75,7 @@ class Church {
         status: json['status'] as String? ?? 'active',
         role: json['role'] as String?,
         logoUrl: json['logo_url'] as String?,
+        banniereUrl: json['banniere_url'] as String?,
         couleurPrincipale: json['couleur_principale'] as String?,
         devise: json['devise'] as String?,
         fuseauHoraire: json['fuseau_horaire'] as String?,
@@ -124,6 +130,7 @@ class ChurchNode extends Church {
     required super.status,
     super.role,
     super.logoUrl,
+    super.banniereUrl,
     super.couleurPrincipale,
     super.devise,
     super.fuseauHoraire,
@@ -143,6 +150,7 @@ class ChurchNode extends Church {
         status: json['status'] as String? ?? 'active',
         role: json['role'] as String?,
         logoUrl: json['logo_url'] as String?,
+        banniereUrl: json['banniere_url'] as String?,
         couleurPrincipale: json['couleur_principale'] as String?,
         devise: json['devise'] as String?,
         fuseauHoraire: json['fuseau_horaire'] as String?,

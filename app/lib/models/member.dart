@@ -22,6 +22,10 @@ class Member {
   final String status; // actif | nouveau_converti | inactif
   final DateTime? createdAt;
 
+  /// Photo du membre (migration 018) : URL fournie par le membre ou
+  /// l'église, null tant qu'aucune photo n'est fournie, jamais inventée.
+  final String? photoUrl;
+
   const Member({
     required this.id,
     required this.matricule,
@@ -36,6 +40,7 @@ class Member {
     this.cellGroup,
     required this.status,
     this.createdAt,
+    this.photoUrl,
   });
 
   factory Member.fromJson(Map<String, dynamic> json) => Member(
@@ -52,6 +57,7 @@ class Member {
         cellGroup: json['cell_group'] as String?,
         status: json['status'] as String? ?? 'actif',
         createdAt: parseDate(json['created_at'] as String?),
+        photoUrl: json['photo_url'] as String?,
       );
 
   static String labelForStatus(String status) {
