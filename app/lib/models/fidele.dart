@@ -114,3 +114,48 @@ class MaCarte {
         church: Church.fromJson(json['church'] as Map<String, dynamic>),
       );
 }
+
+/// Message du fil privé du fidèle (`GET /moi/messages`, migration 020) :
+/// écrit par le fidèle (`membre`) ou par son église (`eglise`), dans
+/// l'application, pas par e-mail.
+class MessageFidele {
+  final String id;
+  final String auteur; // membre | eglise
+  final String corps;
+  final DateTime? createdAt;
+
+  const MessageFidele({
+    required this.id,
+    required this.auteur,
+    required this.corps,
+    this.createdAt,
+  });
+
+  factory MessageFidele.fromJson(Map<String, dynamic> json) =>
+      MessageFidele(
+        id: json['id'] as String,
+        auteur: json['auteur'] as String? ?? 'membre',
+        corps: json['corps'] as String? ?? '',
+        createdAt: json['created_at'] == null
+            ? null
+            : DateTime.tryParse(json['created_at'] as String),
+      );
+
+  bool get deMoi => auteur == 'membre';
+}
+
+/// Fil privé du fidèle : nom de l'église destinataire (église mère ou
+/// tutelle) et messages, du plus ancien au plus récent.
+class FilMessages {
+  final String? destinataireNom;
+  final List<MessageFidele> messages;
+
+  const FilMessages({this.destinataireNom, required this.messages});
+
+  factory FilMessages.fromJson(Map<String, dynamic> json) => FilMessages(
+        destinataireNom: json['destinataire_nom'] as String?,
+        messages: (json['messages'] as List<dynamic>? ?? [])
+            .map((e) => MessageFidele.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}

@@ -466,6 +466,27 @@ class HttpApiService implements ApiService {
       MaCarte.fromJson(await _call('GET', '/moi/carte'));
 
   @override
+  Future<FilMessages> getMesMessages() async =>
+      FilMessages.fromJson(await _call('GET', '/moi/messages'));
+
+  @override
+  Future<MessageFidele> envoyerMessageFidele({required String corps}) async {
+    final data = await _call('POST', '/moi/messages', body: {'corps': corps});
+    return MessageFidele.fromJson(
+        data['message'] as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> confirmerPresenceCulte(String culteId) async {
+    await _call('POST', '/moi/cultes/$culteId/present');
+  }
+
+  @override
+  Future<void> annulerPresenceCulte(String culteId) async {
+    await _call('DELETE', '/moi/cultes/$culteId/present');
+  }
+
+  @override
   Future<TreeResult> getTree() async {
     final data = await _call('GET', '/eglises/arbre');
     return TreeResult(

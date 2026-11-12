@@ -23,10 +23,16 @@ class MemberDetailScreen extends StatefulWidget {
   final Member member;
   final bool lectureSeule;
 
+  /// Mode carte seule (tranche P1) : seul le visuel de la carte,
+  /// sans titre, sans paiement ni modification. Le fidèle voit sa
+  /// carte depuis sa coquille, rien d'autre.
+  final bool carteSeule;
+
   const MemberDetailScreen({
     super.key,
     required this.member,
     this.lectureSeule = false,
+    this.carteSeule = false,
   });
 
   @override
@@ -42,15 +48,18 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
   void initState() {
     super.initState();
     _member = widget.member;
-    _completFuture =
-        context.read<AppState>().api.getMembreComplet(widget.member.id);
-    if (!widget.lectureSeule) {
-      _frequentationFuture =
-          context.read<AppState>().api.getFrequentation(widget.member.id);
+    if (!widget.carteSeule) {
+      _completFuture =
+          context.read<AppState>().api.getMembreComplet(widget.member.id);
+      if (!widget.lectureSeule) {
+        _frequentationFuture =
+            context.read<AppState>().api.getFrequentation(widget.member.id);
+      }
     }
   }
 
   void _refresh() {
+    if (widget.carteSeule) return;
     setState(() {
       _completFuture =
           context.read<AppState>().api.getMembreComplet(widget.member.id);
@@ -276,6 +285,19 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
     final qrData = codeEglise != null && codeEglise.isNotEmpty
         ? '$codeEglise:${_member.matricule}'
         : _member.matricule;
+    // Mode carte seule (P1) : seul le visuel de la carte, sans barre,
+    // sans titre, sans paiement ni modification.
+    if (widget.carteSeule) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: _carteVisuelle(context, qrData),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(_member.fullName),
@@ -296,73 +318,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Card(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        CircleAvatar(
-                          radius: 36,
-                          backgroundImage: _member.photoUrl != null
-                              ? NetworkImage(_member.photoUrl!)
-                              : null,
-                          child: _member.photoUrl == null
-                              ? Text(
-                                  _member.fullName.isNotEmpty
-                                      ? _member.fullName[0].toUpperCase()
-                                      : '?',
-                                  style: const TextStyle(fontSize: 32),
-                                )
-                              : null,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _member.fullName,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Carte de membre — ${_member.matricule}',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        StatusChip(
-                          label: _member.statutAffiche,
-                          color: _statusColor(_member.estAncien
-                              ? 'ancien'
-                              : _member.status),
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: QrImageView(
-                            data: qrData,
-                            version: QrVersions.auto,
-                            size: 180,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _member.matricule,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyLarge
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                _carteVisuelle(context, qrData),
                 const SizedBox(height: 16),
                 if (!widget.lectureSeule)
                   OutlinedButton.icon(
@@ -487,6 +443,111 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Visuel de la carte de membre, réutilisé par la fiche complète et
+  /// par la page Carte seule (P1). Photo, nom, matricule, église,
+  /// Membre depuis, QR. Rien d'autre.
+  Widget _carteVisuelle(BuildContext context, String qrData) {
+    final nomEglise = context.read<AppState>().church?.name;
+    return Card(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Text(
+              'CARTE DE MEMBRE',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    letterSpacing: 1.2,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'e-System Church',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppTheme.orFonce,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            CircleAvatar(
+              radius: 36,
+              backgroundImage: _member.photoUrl != null
+                  ? NetworkImage(_member.photoUrl!)
+                  : null,
+              child: _member.photoUrl == null
+                  ? Text(
+                      _member.fullName.isNotEmpty
+                          ? _member.fullName[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(fontSize: 32),
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _member.fullName,
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Carte de membre — ${_member.matricule}',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            if (nomEglise != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                nomEglise,
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+            ],
+            Text(
+              _member.createdAt == null
+                  ? 'Membre depuis — À compléter'
+                  : 'Membre depuis ${formatDate(_member.createdAt)}',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            if (!widget.carteSeule) ...[
+              const SizedBox(height: 8),
+              StatusChip(
+                label: _member.statutAffiche,
+                color: _statusColor(
+                    _member.estAncien ? 'ancien' : _member.status),
+              ),
+            ],
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: QrImageView(
+                data: qrData,
+                version: QrVersions.auto,
+                size: 180,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _member.matricule,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );

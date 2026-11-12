@@ -811,6 +811,40 @@ class MockApiService implements ApiService {
   @override
   Future<List<Attestation>> getMesAttestations() async => [];
 
+  // P1 : fil privé du fidèle et confirmation de présence au culte.
+  // La démo ne garde pas de messages : le fil reste vide.
+  @override
+  Future<FilMessages> getMesMessages() async {
+    await _latence();
+    _requireAuth();
+    return const FilMessages(messages: []);
+  }
+
+  @override
+  Future<MessageFidele> envoyerMessageFidele(
+      {required String corps}) async {
+    await _latence();
+    _requireAuth();
+    return MessageFidele(
+      id: 'demo-msg-${DateTime.now().millisecondsSinceEpoch}',
+      auteur: 'membre',
+      corps: corps,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<void> confirmerPresenceCulte(String culteId) async {
+    await _latence();
+    _requireAuth();
+  }
+
+  @override
+  Future<void> annulerPresenceCulte(String culteId) async {
+    await _latence();
+    _requireAuth();
+  }
+
   // US3 : pas d'attestations dans le seed démo.
   @override
   Future<List<Attestation>> getAttestations(
