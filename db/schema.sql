@@ -33,11 +33,33 @@ CREATE INDEX idx_churches_status ON churches (status);
 -- Demandes de rattachement : une église demande à rejoindre une mère.
 CREATE TYPE rattachement_status AS ENUM ('en_attente', 'acceptee', 'refusee');
 
+-- Codes de tutelle à usage unique (migration 009) : la mère génère un code
+-- ESC-T-XXXXXX pour une église qui veut se rattacher à elle. À l'acceptation
+-- du rattachement le code passe à `utilise`, automatiquement. Le code
+-- permanent ESC-… de l'église n'est pas touché. Définie avant
+-- `rattachements`, qui y fait référence.
+CREATE TYPE code_tutelle_status AS ENUM ('actif', 'utilise', 'annule');
+
+CREATE TABLE codes_tutelle (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id  UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    code       TEXT NOT NULL UNIQUE,
+    status     code_tutelle_status NOT NULL DEFAULT 'actif',
+    used_by    UUID REFERENCES churches (id) ON DELETE SET NULL,
+    used_at    TIMESTAMPTZ,
+    created_by UUID,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT code_tutelle_format CHECK (code ~ '^ESC-T-[A-Z0-9]{6}$')
+);
+CREATE INDEX idx_codes_tutelle_church ON codes_tutelle (church_id);
+CREATE INDEX idx_codes_tutelle_code ON codes_tutelle (code);
+
 CREATE TABLE rattachements (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     church_id       UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
     parent_church_id UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
     status          rattachement_status NOT NULL DEFAULT 'en_attente',
+    code_tutelle_id UUID REFERENCES codes_tutelle (id) ON DELETE SET NULL,
     decided_by      UUID,                            -- rempli à la décision (voir users)
     decided_at      TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),

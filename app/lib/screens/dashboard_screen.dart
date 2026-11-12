@@ -13,8 +13,10 @@ import '../widgets/screen_header.dart';
 import '../widgets/soft_button.dart';
 import '../widgets/soft_card.dart';
 import 'annonces_screen.dart';
+import 'annexes_screen.dart';
 import 'finances_mere_screen.dart';
 import 'membres_screen.dart';
+import 'mes_eglises_screen.dart';
 import 'plateforme_screen.dart';
 
 class _DashboardData {
@@ -107,47 +109,71 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   sousTitre: 'Voici votre église en un coup d’œil.',
                 ),
                 SoftCard(
-                  color: AppTheme.saugeClair,
-                  child: Row(
+                  color: AppTheme.sable,
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ChurchAvatar(church: church, radius: 28),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              church?.name ?? '—',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineSmall,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${church?.code ?? ''} · ${church?.city ?? ''} · ${state.roleLabel}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (church?.isMere ?? false) ...[
-                              const SizedBox(height: 8),
-                              const Row(
-                                children: [
-                                  MereBadge(),
-                                  SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'Tête de votre réseau.',
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ChurchAvatar(church: church, radius: 28),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  church?.name ?? '—',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineSmall,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${church?.code ?? ''} · ${church?.city ?? ''} · ${state.roleLabel}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (church?.isMere ?? false) ...[
+                                  const SizedBox(height: 8),
+                                  const Row(
+                                    children: [
+                                      MereBadge(),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Tête de votre réseau.',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Changer d'église : l'écran dédié « Mes églises »
+                      // est paginé et cherchable, il remplace la liste
+                      // complète qui était dans le tiroir.
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const MesEglisesScreen(),
                               ),
-                            ],
-                          ],
+                            );
+                          },
+                          icon: const Icon(Icons.swap_horiz_outlined),
+                          label: const Text('Changer d’église'),
                         ),
                       ),
                     ],
@@ -288,7 +314,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   label: 'Argent reçu',
                                   value: formatFcfa(entrees),
                                   icon: Icons.trending_up,
-                                  color: AppTheme.saugeFonce,
+                                  color: AppTheme.cypress,
                                   aide: 'Montants confirmés par la '
                                       'structure.',
                                 ),
@@ -371,6 +397,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     );
                                   },
                                 ),
+                                const SizedBox(height: 12),
+                                BoutonAvecAide(
+                                  label: 'Voir mes annexes',
+                                  aide: 'Les églises annexes rattachées à '
+                                      'la vôtre, et leurs codes.',
+                                  icon: Icons.hub_outlined,
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const AnnexesScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
                               ],
                             ),
                           ),
@@ -389,7 +430,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 /// Une étape du guide de première prise en main : numéro dans un rond
-/// sauge, phrase courte, sans jargon.
+/// cyprès, phrase courte, sans jargon.
 class _GuideEtape extends StatelessWidget {
   final String numero;
   final String texte;
@@ -405,7 +446,7 @@ class _GuideEtape extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 14,
-            backgroundColor: AppTheme.saugeFonce,
+            backgroundColor: AppTheme.cypress,
             child: Text(
               numero,
               style: const TextStyle(

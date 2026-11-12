@@ -6,11 +6,13 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../models/attestation.dart';
+import '../models/annexe.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
 import '../models/campagne.dart';
 import '../models/church.dart';
+import '../models/code_tutelle.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/enfants.dart';
@@ -45,8 +47,13 @@ class HttpApiService implements ApiService {
 
   void setToken(String? token) => _token = token;
 
-  Map<String, String> get _headers => <String, String>{
-        'Content-Type': 'application/json',
+  /// En-têtes : `Content-Type: application/json` seulement quand un corps
+  /// est envoyé. Un POST sans corps (ex. accepter ou refuser un
+  /// rattachement) avec ce content-type arrive corps vide au serveur, et
+  /// Fastify le rejette (« Body cannot be empty when content-type is set
+  /// to 'application/json' »).
+  Map<String, String> _headers({required bool withBody}) => <String, String>{
+        if (withBody) 'Content-Type': 'application/json',
         if (_token != null) 'Authorization': 'Bearer $_token',
       };
 
@@ -59,28 +66,29 @@ class HttpApiService implements ApiService {
   }) async {
     final uri = Uri.parse('$baseUrl$path')
         .replace(queryParameters: query?.isEmpty ?? true ? null : query);
+    final headers = _headers(withBody: body != null);
     http.Response res;
     try {
       switch (method) {
         case 'GET':
           res = await http
-              .get(uri, headers: _headers)
+              .get(uri, headers: headers)
               .timeout(const Duration(seconds: 20));
         case 'POST':
           res = await http
               .post(uri,
-                  headers: _headers,
+                  headers: headers,
                   body: body == null ? null : jsonEncode(body))
               .timeout(const Duration(seconds: 20));
         case 'PATCH':
           res = await http
               .patch(uri,
-                  headers: _headers,
+                  headers: headers,
                   body: body == null ? null : jsonEncode(body))
               .timeout(const Duration(seconds: 20));
         case 'DELETE':
           res = await http
-              .delete(uri, headers: _headers)
+              .delete(uri, headers: headers)
               .timeout(const Duration(seconds: 20));
         default:
           throw const ApiException('Méthode HTTP inconnue.');
@@ -379,9 +387,17 @@ class HttpApiService implements ApiService {
   }
 
   @override
-  Future<Rattachement> requestRattachement({required String parentCode}) async {
-    final data = await _call('POST', '/rattachements',
-        body: {'parent_code': parentCode});
+  Future<Rattachement> requestRattachement({
+    required String parentCode,
+    String? codeTutelle,
+  }) async {
+    final data = await _call(
+      'POST',
+      '/rattachements',
+      body: codeTutelle != null
+          ? {'code_tutelle': codeTutelle}
+          : {'parent_code': parentCode},
+    );
     // La réponse ne contient pas les champs d'église : on la complète.
     return Rattachement(
       id: data['id'] as String,
@@ -397,6 +413,40 @@ class HttpApiService implements ApiService {
   Future<void> decideRattachement(String id, {required bool accept}) async {
     await _call(
         'POST', '/rattachements/$id/${accept ? 'accepter' : 'refuser'}');
+  }
+
+  // -- Annexes et codes de tutelle (migration 009) -------------------------
+  @override
+  Future<List<Annexe>> getAnnexes({String? q}) async {
+    final data = await _call(
+      'GET',
+      '/annexes',
+      query: q == null || q.isEmpty ? null : {'q': q},
+    );
+    return (data['annexes'] as List<dynamic>)
+        .map((e) => Annexe.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<AnnexeDetail> getAnnexeDetail(String id) async =>
+      AnnexeDetail.fromJson(await _call('GET', '/annexes/$id'));
+
+  @override
+  Future<List<CodeTutelle>> getCodesTutelle() async {
+    final data = await _call('GET', '/codes-tutelle');
+    return (data['codes'] as List<dynamic>)
+        .map((e) => CodeTutelle.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<CodeTutelle> createCodeTutelle() async =>
+      CodeTutelle.fromJson(await _call('POST', '/codes-tutelle'));
+
+  @override
+  Future<void> annulerCodeTutelle(String id) async {
+    await _call('POST', '/codes-tutelle/$id/annuler');
   }
 
   @override
@@ -1100,7 +1150,7 @@ class HttpApiService implements ApiService {
     http.Response res;
     try {
       res = await http
-          .get(uri, headers: _headers)
+          .get(uri, headers: _headers(withBody: false))
           .timeout(const Duration(seconds: 20));
     } on TimeoutException {
       throw const ApiException('Le serveur ne répond pas.');
@@ -1556,7 +1606,7 @@ class HttpApiService implements ApiService {
     http.Response res;
     try {
       res = await http
-          .get(uri, headers: _headers)
+          .get(uri, headers: _headers(withBody: false))
           .timeout(const Duration(seconds: 20));
     } on TimeoutException {
       throw const ApiException(
@@ -1687,6 +1737,16 @@ class HttpApiService implements ApiService {
     });
     _token = data['token'] as String?;
   }
+
+  @override
+  Future<MesEglisesPage> listerMesEglises(
+          {String? recherche, int page = 1, int limite = 50}) async =>
+      MesEglisesPage.fromJson(await _call('GET', '/moi/eglises', query: {
+        if (recherche != null && recherche.trim().isNotEmpty)
+          'recherche': recherche.trim(),
+        'page': '$page',
+        'limite': '$limite',
+      }));
 
   // -- Paiements par pays et clés API (module 14) ---------------------------
   @override

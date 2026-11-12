@@ -9,6 +9,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'config/app_config.dart';
@@ -22,6 +23,11 @@ import 'state/app_state.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // Polices Vision, comme dans `main.dart`.
+  GoogleFonts.inter();
+  GoogleFonts.plusJakartaSans();
+  GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold);
+  GoogleFonts.jetBrainsMono();
   runApp(const DemoApp());
 }
 
@@ -81,23 +87,23 @@ class DemoApp extends StatelessWidget {
             theme: ThemeData(
               useMaterial3: true,
               colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF0C5B40),
-                primary: const Color(0xFF0C5B40),
-                secondary: const Color(0xFFC9971C),
+                seedColor: const Color(0xFF1E4D3B),
+                primary: const Color(0xFF1E4D3B),
+                secondary: const Color(0xFFC86D51),
                 tertiary: const Color(0xFFB3261E),
-                surface: const Color(0xFFFFFFFF),
+                surface: const Color(0xFFFCFBF8),
                 error: const Color(0xFFB3261E),
                 brightness: Brightness.light,
               ),
-              scaffoldBackgroundColor: const Color(0xFFF2F4F1),
+              scaffoldBackgroundColor: const Color(0xFFF7F5F0),
               appBarTheme: const AppBarTheme(
-                backgroundColor: Color(0xFF0C5B40),
+                backgroundColor: Color(0xFF1E4D3B),
                 foregroundColor: Colors.white,
               ),
               floatingActionButtonTheme:
                   const FloatingActionButtonThemeData(
-                backgroundColor: Color(0xFFC9971C),
-                foregroundColor: Color(0xFF083D2B),
+                backgroundColor: Color(0xFFC86D51),
+                foregroundColor: Colors.white,
               ),
             ),
             locale: const Locale('fr'),

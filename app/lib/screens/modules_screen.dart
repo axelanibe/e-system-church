@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_theme.dart';
 import '../models/module_eglise.dart';
 import '../state/app_state.dart';
 import 'biens_screen.dart';
@@ -37,6 +38,7 @@ class ModulesScreen extends StatelessWidget {
       _ModuleCard(
         icon: Icons.event_outlined,
         module: CodesModules.cultes,
+        couleur: AppTheme.cultes,
         label: 'Cultes',
         description: 'Types de culte, cultes, ordre du culte et événements.',
         screen: CultesScreen(),
@@ -44,6 +46,7 @@ class ModulesScreen extends StatelessWidget {
       _ModuleCard(
         icon: Icons.how_to_reg_outlined,
         module: CodesModules.presences,
+        couleur: AppTheme.presences,
         label: 'Présences',
         description: 'Feuille de présence par culte et statistiques.',
         screen: PresencesScreen(),
@@ -58,6 +61,7 @@ class ModulesScreen extends StatelessWidget {
       _ModuleCard(
         icon: Icons.volunteer_activism_outlined,
         module: CodesModules.prieres,
+        couleur: AppTheme.prieres,
         label: 'Prières & messages',
         description: 'Demandes de prière et messages internes.',
         screen: PrieresScreen(),
@@ -79,6 +83,7 @@ class ModulesScreen extends StatelessWidget {
       _ModuleCard(
         icon: Icons.child_care_outlined,
         module: CodesModules.enfants,
+        couleur: AppTheme.enfants,
         label: 'Enfants & jeunesse',
         description: 'Classes, autorisations de sortie et activités.',
         screen: EnfantsScreen(),
@@ -86,6 +91,7 @@ class ModulesScreen extends StatelessWidget {
       _ModuleCard(
         icon: Icons.mic_outlined,
         module: CodesModules.medias,
+        couleur: AppTheme.medias,
         label: 'Médias & bibliothèque',
         description: 'Prédications, plans de lecture, livres et prêts.',
         screen: MediasScreen(),
@@ -154,7 +160,7 @@ class ModulesScreen extends StatelessWidget {
                       children: [
                         Icon(module.icon,
                             size: 32,
-                            color:
+                            color: module.couleur ??
                                 Theme.of(context).colorScheme.primary),
                         const SizedBox(height: 12),
                         Text(
@@ -187,6 +193,9 @@ class ModulesScreen extends StatelessWidget {
 
 class _ModuleCard {
   final IconData icon;
+
+  /// Couleur Vision du module, pour l'icône seulement (null : primaire).
+  final Color? couleur;
   final String label;
   final String description;
   final Widget screen;
@@ -196,6 +205,7 @@ class _ModuleCard {
 
   const _ModuleCard({
     required this.icon,
+    this.couleur,
     required this.label,
     required this.description,
     required this.screen,

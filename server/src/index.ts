@@ -35,6 +35,8 @@ import { registerProfilEgliseRoutes } from "./routes/profil_eglise.js";
 import { registerPaiementsRoutes } from "./routes/paiements.js";
 import { registerTransfertsRoutes } from "./routes/transferts.js";
 import { registerModulesRoutes } from "./routes/modules.js";
+import { registerCodesTutelleRoutes } from "./routes/codes_tutelle.js";
+import { registerAnnexesRoutes } from "./routes/annexes.js";
 import { registerCampagnesRoutes } from "./routes/campagnes.js";
 import { registerAttestationsRoutes } from "./routes/attestations.js";
 
@@ -77,6 +79,29 @@ export function buildApp(db: Pool) {
     time: new Date().toISOString(),
   }));
 
+  // Corps JSON vide toléré : certains appels POST n'ont pas de corps (ex.
+  // accepter ou refuser un rattachement) ; le client envoyait
+  // `Content-Type: application/json` avec un corps vide, et le parseur
+  // par défaut de Fastify rejette ce cas (« Body cannot be empty when
+  // content-type is set to 'application/json' »). Un corps vide vaut {}.
+  // Les anciennes versions de l'application, déjà installées, envoient
+  // encore ce cas : la tolérance côté serveur les répare sans mise à jour.
+  app.addContentTypeParser(
+    "application/json",
+    { parseAs: "string" },
+    (req, body, done) => {
+      const text = typeof body === "string" ? body : body.toString();
+      if (text === "") return done(null, {});
+      try {
+        done(null, JSON.parse(text));
+      } catch (e) {
+        const err = e as Error & { statusCode?: number };
+        err.statusCode = 400;
+        done(err, undefined);
+      }
+    },
+  );
+
   registerAuthRoutes(app, db);
   registerMotDePasseRoutes(app, db);
   registerFideleRoutes(app, db);
@@ -103,6 +128,8 @@ export function buildApp(db: Pool) {
   registerPaiementsRoutes(app, db);
   registerTransfertsRoutes(app, db);
   registerModulesRoutes(app, db);
+  registerCodesTutelleRoutes(app, db);
+  registerAnnexesRoutes(app, db);
   registerCampagnesRoutes(app, db);
   registerAttestationsRoutes(app, db);
 

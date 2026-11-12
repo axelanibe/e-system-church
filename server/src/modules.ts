@@ -8,6 +8,11 @@ import type { Pool } from "pg";
  * Chaque église décide seule pour elle-même : une église mère ne peut pas
  * forcer l'activation d'un module pour ses antennes (question ouverte du
  * document US1, tranchée ici par la règle la plus simple et la plus sûre).
+ * Exception, décidée par Axel le 11/11/2026 (tutelle) : à l'acceptation
+ * d'un rattachement, ou à la création d'une sous-église par sa mère, tous
+ * les modules de l'église sous tutelle sont activés automatiquement
+ * (`activerTousModules`, routes/rattachements.ts). Une église indépendante
+ * garde le comportement US1 : noyau seul à la création.
  *
  * État stocké dans `eglise_modules` (church_id, module, actif). Absence de
  * ligne = module inactif : à la création d'une église, seuls le noyau est

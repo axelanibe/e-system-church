@@ -12,16 +12,59 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Thème fondation', () {
-    test('palette soft tranchée', () {
-      expect(AppTheme.fondPapier, const Color(0xFFFAF7F1));
-      expect(AppTheme.saugeFonce, const Color(0xFF3F5A50));
-      expect(AppTheme.sauge, const Color(0xFF6A8E7F));
-      expect(AppTheme.saugeClair, const Color(0xFFE4EDE8));
-      expect(AppTheme.orDoux, const Color(0xFFC9A24B));
-      expect(AppTheme.ardoise, const Color(0xFF2E3440));
-      expect(AppTheme.grisDoux, const Color(0xFF6B7280));
+    test('palette Vision Sanctuary Modern tranchée', () {
+      expect(AppTheme.fondAlabaster, const Color(0xFFF7F5F0));
+      expect(AppTheme.ivoire, const Color(0xFFFCFBF8));
+      expect(AppTheme.sable, const Color(0xFFEFECE4));
+      expect(AppTheme.bordure, const Color(0xFFE6E2D8));
+      expect(AppTheme.cypress, const Color(0xFF1E4D3B));
+      expect(AppTheme.cypressFonce, const Color(0xFF143629));
+      expect(AppTheme.terracotta, const Color(0xFFC86D51));
+      expect(AppTheme.orAmbre, const Color(0xFFB8862D));
+      expect(AppTheme.encre, const Color(0xFF1A1D20));
+      expect(AppTheme.ardoise, const Color(0xFF525B65));
       expect(AppTheme.rougeErreur, const Color(0xFFB3261E));
-      expect(AppTheme.bleuDoux, const Color(0xFF52708A));
+      expect(AppTheme.cultes, const Color(0xFF6B4C7A));
+      expect(AppTheme.presences, const Color(0xFF2B6CB0));
+      expect(AppTheme.prieres, const Color(0xFFB8506A));
+      expect(AppTheme.enfants, const Color(0xFFC07A1C));
+      expect(AppTheme.medias, const Color(0xFF3F51B5));
+    });
+
+    test('contrastes des textes principaux au moins 4,5:1', () {
+      double contraste(Color a, Color b) {
+        final l1 = a.computeLuminance();
+        final l2 = b.computeLuminance();
+        final clair = l1 > l2 ? l1 : l2;
+        final sombre = l1 > l2 ? l2 : l1;
+        return (clair + 0.05) / (sombre + 0.05);
+      }
+
+      const fond = AppTheme.fondAlabaster;
+      expect(contraste(AppTheme.encre, fond), greaterThanOrEqualTo(4.5));
+      expect(contraste(AppTheme.cypress, fond), greaterThanOrEqualTo(4.5));
+      expect(
+          contraste(AppTheme.cypressFonce, fond), greaterThanOrEqualTo(4.5));
+      expect(contraste(AppTheme.ardoise, fond), greaterThanOrEqualTo(4.5));
+      expect(contraste(AppTheme.rougeErreur, fond),
+          greaterThanOrEqualTo(4.5));
+      expect(contraste(AppTheme.cultes, fond), greaterThanOrEqualTo(4.5));
+      expect(
+          contraste(AppTheme.presences, fond), greaterThanOrEqualTo(4.5));
+      expect(contraste(AppTheme.medias, fond), greaterThanOrEqualTo(4.5));
+      expect(contraste(Colors.white, AppTheme.cypress),
+          greaterThanOrEqualTo(4.5));
+      expect(contraste(Colors.white, AppTheme.cypressFonce),
+          greaterThanOrEqualTo(4.5));
+    });
+
+    test('typographies : Inter, Plus Jakarta Sans, JetBrains Mono', () {
+      final textes = AppTheme.theme.textTheme;
+      expect(textes.bodyMedium?.fontFamily, contains('Inter'));
+      expect(textes.headlineSmall?.fontFamily, contains('Jakarta'));
+      expect(textes.titleLarge?.fontFamily, contains('Jakarta'));
+      expect(textes.labelSmall?.fontFamily, contains('JetBrainsMono'));
+      expect(AppTheme.styleCode.fontFamily, contains('JetBrainsMono'));
     });
 
     test('typographie : titres 24 gras, sous-titres 18, corps 16, aide 14',

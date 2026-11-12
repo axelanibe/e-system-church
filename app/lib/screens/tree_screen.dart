@@ -179,7 +179,7 @@ class _TreeScreenState extends State<TreeScreen> {
                                   children: [
                                     IconButton(
                                       icon: const Icon(Icons.check,
-                                          color: AppTheme.saugeFonce),
+                                          color: AppTheme.cypress),
                                       tooltip: 'Accepter',
                                       onPressed: () => _decide(d.id, true),
                                     ),
@@ -251,7 +251,7 @@ class _TreeScreenState extends State<TreeScreen> {
           ? FloatingActionButton.extended(
               // Bleu nuit et blanc, bien lisible : l'or du thème sur fond
               // papier paraissait effacé sur la photo 2.
-              backgroundColor: AppTheme.saugeFonce,
+              backgroundColor: AppTheme.cypress,
               foregroundColor: Colors.white,
               onPressed: _addSubChurch,
               icon: const Icon(Icons.add),

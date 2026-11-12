@@ -1,11 +1,13 @@
 import 'dart:typed_data';
 
 import '../models/attestation.dart';
+import '../models/annexe.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
 import '../models/campagne.dart';
 import '../models/church.dart';
+import '../models/code_tutelle.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/enfants.dart';
@@ -149,9 +151,25 @@ abstract class ApiService {
   // -- Rattachements ---------------------------------------------------------
   Future<RattachementsResult> getRattachements();
 
-  Future<Rattachement> requestRattachement({required String parentCode});
+  Future<Rattachement> requestRattachement({
+    required String parentCode,
+    String? codeTutelle,
+  });
 
   Future<void> decideRattachement(String id, {required bool accept});
+
+  // -- Annexes et codes de tutelle (migration 009) -------------------------
+  // La mère voit ses annexes sans changer d'église ; les codes de tutelle
+  // ESC-T-… sont à usage unique.
+  Future<List<Annexe>> getAnnexes({String? q});
+
+  Future<AnnexeDetail> getAnnexeDetail(String id);
+
+  Future<List<CodeTutelle>> getCodesTutelle();
+
+  Future<CodeTutelle> createCodeTutelle();
+
+  Future<void> annulerCodeTutelle(String id);
 
   Future<TransfertsResult> getTransferts();
 
@@ -681,6 +699,12 @@ abstract class ApiService {
 
   /// Bascule l'église active (le jeton est renouvelé côté serveur).
   Future<void> switchChurch(String churchId);
+
+  /// Mes églises, paginées + recherche (nom, code, ville) :
+  /// `GET /moi/eglises`, 50 par page par défaut. L'église active est
+  /// en tête de la première page.
+  Future<MesEglisesPage> listerMesEglises(
+      {String? recherche, int page = 1, int limite = 50});
 
   // -- Paiements par pays et clés API (module 14) ---------------------------
   /// Catalogue des fournisseurs pour un pays (`CI`, `SN`, `KE`, `INTL`).

@@ -90,7 +90,7 @@ class _PresencesScreenState extends State<PresencesScreen> {
   Color _statutColor(String statut) {
     switch (statut) {
       case 'present':
-        return AppTheme.saugeFonce;
+        return AppTheme.presences;
       case 'absent':
         return AppTheme.rougeErreur;
       case 'excuse':
@@ -164,7 +164,7 @@ class _PresencesScreenState extends State<PresencesScreen> {
                           label: 'Présents',
                           value: '${stats.presents}',
                           icon: Icons.check_circle_outline,
-                          color: AppTheme.saugeFonce,
+                          color: AppTheme.presences,
                         ),
                         StatCard(
                           label: 'Absents',

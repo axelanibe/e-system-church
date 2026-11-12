@@ -5,7 +5,8 @@ import '../models/module_eglise.dart';
 import '../state/app_state.dart';
 import 'church_avatar.dart';
 import 'mere_badge.dart';
-import '../screens/choisir_eglise_screen.dart';
+import '../screens/annexes_screen.dart';
+import '../screens/mes_eglises_screen.dart';
 import '../screens/finances_mere_screen.dart';
 import '../screens/modules_activation_screen.dart';
 import '../screens/mon_eglise_screen.dart';
@@ -85,8 +86,9 @@ class TiroirCourt extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.swap_horiz_outlined),
             title: const Text('Changer d’église'),
-            subtitle: const Text('Voir une autre de vos églises'),
-            onTap: () => _ouvrir(context, const ChoisirEgliseScreen()),
+            subtitle: const Text(
+                'Voir une autre de vos églises, par nom ou code'),
+            onTap: () => _ouvrir(context, const MesEglisesScreen()),
           ),
           const Divider(),
           if (state.isModuleActif(CodesModules.annonces))
@@ -121,6 +123,14 @@ class TiroirCourt extends StatelessWidget {
             subtitle: const Text('Personnes qui veulent vous rejoindre'),
             onTap: () => _ouvrir(context, const RattachementsScreen()),
           ),
+          if (state.isAdmin)
+            ListTile(
+              leading: const Icon(Icons.hub_outlined),
+              title: const Text('Mes annexes'),
+              subtitle:
+                  const Text('Églises annexes et leurs codes de tutelle'),
+              onTap: () => _ouvrir(context, const AnnexesScreen()),
+            ),
           if (state.isSuperAdmin)
             ListTile(
               leading: const Icon(Icons.public_outlined),

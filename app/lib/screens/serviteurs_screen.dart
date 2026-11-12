@@ -361,7 +361,7 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
                       trailing: StatusChip(
                         label: p.statut,
                         color: p.statut == 'confirme'
-                            ? AppTheme.saugeFonce
+                            ? AppTheme.cypress
                             : p.statut == 'absent'
                                 ? AppTheme.rougeErreur
                                 : Colors.orange,

@@ -11,14 +11,17 @@ import 'membres_screen.dart';
 import 'modules_screen.dart';
 import 'tree_screen.dart';
 
-/// Coquille principale après connexion : navigation entre les écrans.
+/// Coquille principale après connexion : navigation entre les 6 écrans.
 /// Écrans larges (≥ 900 px) : rail latéral ; écrans étroits : barre
 /// inférieure de 5 libellés courts maximum. Les annonces, sixième
 /// entrée, restent accessibles par le tiroir court et par le tableau
 /// de bord : rien n'est supprimé, l'entrée change seulement de place.
 /// L'AppBar montre le titre de l'écran seul, une ligne, coupé avec
 /// « … ». Le tiroir court ne montre que l'église courante, « Changer
-/// d'église » ouvre un écran dédié.
+/// d'église » ouvre l'écran dédié « Mes églises » (paginé et
+/// cherchable), et il garde les entrées « Mon église », « Modules de
+/// l'église », « Demandes de rattachement », « Mes annexes »,
+/// « Plateforme », « Transferts de membres » et « Finances de la mère ».
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 

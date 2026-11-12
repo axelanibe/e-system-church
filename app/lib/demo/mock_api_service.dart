@@ -9,10 +9,12 @@
 import 'dart:typed_data';
 
 import '../models/attestation.dart';
+import '../models/annexe.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
 import '../models/church.dart';
+import '../models/code_tutelle.dart';
 import '../models/campagne.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
@@ -904,7 +906,10 @@ class MockApiService implements ApiService {
   }
 
   @override
-  Future<Rattachement> requestRattachement({required String parentCode}) async {
+  Future<Rattachement> requestRattachement({
+    required String parentCode,
+    String? codeTutelle,
+  }) async {
     await _latence();
     _requireAuth();
     final parent = _data.churchByCode(parentCode.trim().toUpperCase());
@@ -959,6 +964,46 @@ class MockApiService implements ApiService {
         );
       }
     }
+  }
+
+  // -- Annexes et codes de tutelle (démo : listes vides) --------------------
+  @override
+  Future<List<Annexe>> getAnnexes({String? q}) async {
+    await _latence();
+    _requireAuth();
+    return const [];
+  }
+
+  @override
+  Future<AnnexeDetail> getAnnexeDetail(String id) async {
+    await _latence();
+    _requireAuth();
+    throw const ApiException('Annexe introuvable (démo).');
+  }
+
+  @override
+  Future<List<CodeTutelle>> getCodesTutelle() async {
+    await _latence();
+    _requireAuth();
+    return const [];
+  }
+
+  @override
+  Future<CodeTutelle> createCodeTutelle() async {
+    await _latence();
+    _requireAuth();
+    return CodeTutelle(
+      id: _nextId('code'),
+      code: 'ESC-T-DEMO01',
+      status: 'actif',
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<void> annulerCodeTutelle(String id) async {
+    await _latence();
+    _requireAuth();
   }
 
   @override
@@ -3284,6 +3329,32 @@ class MockApiService implements ApiService {
     // En démo, l'admin de démonstration gère toutes les églises du réseau.
     // Le compte plateforme garde son rôle super_admin en changeant d'église.
     if (_role != 'super_admin') _role = 'admin_eglise';
+  }
+
+  @override
+  Future<MesEglisesPage> listerMesEglises(
+      {String? recherche, int page = 1, int limite = 50}) async {
+    await _latence();
+    _requireAuth();
+    final q = recherche?.trim().toLowerCase() ?? '';
+    final toutes = _eglises.where((m) {
+      if (q.isEmpty) return true;
+      final c = m.church;
+      return c.name.toLowerCase().contains(q) ||
+          c.code.toLowerCase().contains(q) ||
+          (c.city ?? '').toLowerCase().contains(q);
+    }).toList();
+    final debut = (page - 1) * limite;
+    final fin = (debut + limite).clamp(0, toutes.length);
+    final tranche =
+        debut >= toutes.length ? <Membership>[] : toutes.sublist(debut, fin);
+    return MesEglisesPage(
+      eglises: tranche,
+      total: toutes.length,
+      page: page,
+      limite: limite,
+      pages: (toutes.length / limite).ceil(),
+    );
   }
 
   // -- Paiements --------------------------------------------------------------------

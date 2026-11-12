@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// En-tête d'écran : titre 24 gras, une ligne ou retour à la ligne,
-/// jamais coupé par un autre élément, et sous-titre 16 en gris doux qui
+/// jamais coupé par un autre élément, et sous-titre 16 en ardoise qui
 /// dit en une phrase ce que l'écran sert à faire. Un nouveau membre qui
 /// ouvre l'écran sait tout de suite où il est et quoi y faire.
 class EnteteEcran extends StatelessWidget {

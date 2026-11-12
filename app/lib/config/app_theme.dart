@@ -3,143 +3,195 @@ import 'package:flutter/material.dart';
 /// Thème unique de e-System Church, partagé par l'application réelle
 /// (`lib/main.dart`) et la version démo (`lib/main_demo.dart`).
 ///
-/// Palette soft, tranchée par Axel le 11 novembre 2026 (photos du
-/// tableau de bord et des Modules à l'appui) : elle remplace la palette
-/// bleu nuit et or (#0B1F3A, #D4A72C, #8A6A12, #F5F6FA).
-/// Fond papier chaud et doux, cartes blanches, ombres douces, coins
-/// arrondis 16 px. AppBar et tiroir en fond papier, plus de bleu nuit
-/// plein écran, plus d'en-tête sombre.
+/// Palette Vision Sanctuary Modern, tranchée par Axel le 11 novembre
+/// 2026 : elle remplace la palette soft sauge (#6A8E7F, #1E4D3B,
+/// #FAF7F1, #C9A24B, #2E3440, #6B7280, #52708A). Fond alabaster,
+/// cartes ivory, sable et bordures claires, cyprès profond, terracotta
+/// et or ambre en accents, encre pour le texte. Plus de sauge active
+/// dans le thème, la mention ci-dessus est la seule trace historique.
+/// Typographies : Inter pour le corps, Plus Jakarta Sans pour les
+/// titres, JetBrains Mono pour les codes et matricules. Les familles
+/// sont déclarées ici par leur nom seul, sans appel réseau : les
+/// polices sont chargées au démarrage par `main.dart` (et
+/// `main_demo.dart`) via google_fonts, téléchargement à l'exécution
+/// puis cache. Les tests restent ainsi verts hors ligne.
 ///
 /// Contrastes vérifiés (WCAG, textes principaux au moins 4,5:1) :
-/// ardoise #2E3440 sur papier 11,68:1, sauge foncé #3F5A50 sur papier
-/// 7,04:1 et sur blanc 7,53:1, blanc sur sauge foncé 7,53:1, gris doux
-/// #6B7280 sur papier 4,52:1, bleu doux #52708A sur blanc 5,19:1,
-/// rouge doux #B3261E sur blanc 6,54:1. Le bleu doux demandé #5B7A99
-/// ne valait que 4,48:1 sur blanc, il est foncé en #52708A.
-/// La sauge #6A8E7F ne vaut que 3,63:1 sur blanc : icônes et aplats
-/// seulement, jamais pour du texte. L'or doux #C9A24B n'est qu'un
-/// accent parcimonieux : du texte vert foncé dessus ne vaut que
-/// 3,14:1, donc jamais de texte sur or, le badge « Église mère »
-/// est sauge clair sur fond clair, texte vert foncé 6,30:1.
+/// encre #1A1D20 sur alabaster 15,54:1 et sur ivory 16,36:1, cyprès
+/// #1E4D3B sur alabaster 8,84:1 et sur sable 8,16:1, cyprès foncé
+/// #143629 sur alabaster 12,13:1, ardoise #525B65 sur alabaster
+/// 6,33:1, blanc sur cyprès 9,63:1 et sur cyprès foncé 13,21:1,
+/// rouge #B3261E sur alabaster 6,00:1. Cultes #6B4C7A 6,56:1,
+/// Présences #2B6CB0 4,97:1 et Médias #3F51B5 6,31:1 sur alabaster
+/// passent aussi en texte. Prières #B8506A ne vaut que 4,39:1 sur
+/// alabaster : texte sur ivory ou blanc seulement (4,62:1 et 4,78:1).
+/// Terracotta #C86D51 (3,34:1), or ambre #B8862D (2,97:1) et Enfants
+/// #C07A1C (3,19:1) sont des accents, icônes et aplats seulement,
+/// jamais pour du texte.
 ///
 /// Accessibilité (11 novembre 2026) : taille minimale 14 px, titres
 /// 24 gras, sous-titres 18, corps 16, boutons 48 px de haut, champs
 /// 56 px de haut, pour un doigt et pour des yeux fatigués.
 class AppTheme {
-  /// Sauge douce, primaire (aplats et icônes, jamais pour du texte).
-  static const Color sauge = Color(0xFF6A8E7F);
+  /// Fond alabaster, fond des écrans.
+  static const Color fondAlabaster = Color(0xFFF7F5F0);
 
-  /// Sauge foncé, texte et boutons sur fond clair, blanc dessus 7,53:1.
-  static const Color saugeFonce = Color(0xFF3F5A50);
+  /// Cartes ivory.
+  static const Color ivoire = Color(0xFFFCFBF8);
 
-  /// Sauge très clair, fond du badge « Église mère », texte sauge
-  /// foncé dessus 6,30:1.
-  static const Color saugeClair = Color(0xFFE4EDE8);
+  /// Sable, fonds doux (badge « Église mère », indicateurs).
+  static const Color sable = Color(0xFFEFECE4);
 
-  /// Or doux et mat, accent parcimonieux, jamais de texte dessus.
-  static const Color orDoux = Color(0xFFC9A24B);
+  /// Bordures claires.
+  static const Color bordure = Color(0xFFE6E2D8);
 
-  /// Fond papier chaud et doux.
-  static const Color fondPapier = Color(0xFFFAF7F1);
+  /// Cyprès, primaire : boutons, liens, succès, blanc dessus 9,63:1.
+  static const Color cypress = Color(0xFF1E4D3B);
 
-  /// Texte principal, ardoise douce, sur papier 11,68:1.
-  static const Color ardoise = Color(0xFF2E3440);
+  /// Cyprès foncé, variante sombre du primaire, blanc dessus 13,21:1.
+  static const Color cypressFonce = Color(0xFF143629);
 
-  /// Texte secondaire, gris doux, sur papier 4,52:1.
-  static const Color grisDoux = Color(0xFF6B7280);
+  /// Terracotta, accent chaud, jamais pour du texte.
+  static const Color terracotta = Color(0xFFC86D51);
 
-  /// Bleu doux, info, sur blanc 5,19:1.
-  static const Color bleuDoux = Color(0xFF52708A);
+  /// Or ambre, accent parcimonieux, jamais de texte dessus.
+  static const Color orAmbre = Color(0xFFB8862D);
 
-  /// Rouge doux, erreurs et alertes seulement, sur blanc 6,54:1.
+  /// Texte principal, encre, sur alabaster 15,54:1.
+  static const Color encre = Color(0xFF1A1D20);
+
+  /// Texte secondaire, ardoise, sur alabaster 6,33:1.
+  static const Color ardoise = Color(0xFF525B65);
+
+  /// Rouge, erreurs et alertes seulement, sur alabaster 6,00:1.
   static const Color rougeErreur = Color(0xFFB3261E);
 
-  static ThemeData get theme => ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: sauge,
-          primary: saugeFonce,
-          onPrimary: Colors.white,
-          secondary: orDoux,
-          tertiary: bleuDoux,
-          surface: const Color(0xFFFFFFFF),
-          onSurface: ardoise,
-          error: rougeErreur,
-          brightness: Brightness.light,
+  /// Couleur du module Cultes, texte sur alabaster 6,56:1.
+  static const Color cultes = Color(0xFF6B4C7A);
+
+  /// Couleur du module Présences, aussi info, texte 4,97:1.
+  static const Color presences = Color(0xFF2B6CB0);
+
+  /// Couleur du module Prières : texte sur ivory ou blanc seulement.
+  static const Color prieres = Color(0xFFB8506A);
+
+  /// Couleur du module Enfants : icônes et aplats seulement.
+  static const Color enfants = Color(0xFFC07A1C);
+
+  /// Couleur du module Médias, texte sur alabaster 6,31:1.
+  static const Color medias = Color(0xFF3F51B5);
+
+  /// Style mono pour les codes et matricules.
+  static const TextStyle styleCode =
+      TextStyle(fontFamily: 'JetBrainsMono', fontSize: 14, color: encre);
+
+  static ThemeData get theme {
+    const titres = TextStyle(
+      fontFamily: 'PlusJakartaSans',
+      fontWeight: FontWeight.bold,
+      color: encre,
+    );
+    const corps = TextStyle(fontFamily: 'Inter', color: encre);
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: cypress,
+        primary: cypress,
+        onPrimary: Colors.white,
+        secondary: terracotta,
+        tertiary: presences,
+        surface: ivoire,
+        onSurface: encre,
+        error: rougeErreur,
+        brightness: Brightness.light,
+      ),
+      scaffoldBackgroundColor: fondAlabaster,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: fondAlabaster,
+        foregroundColor: encre,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        titleTextStyle: TextStyle(
+          fontFamily: 'PlusJakartaSans',
+          color: encre,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
         ),
-        scaffoldBackgroundColor: fondPapier,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: fondPapier,
-          foregroundColor: ardoise,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          titleTextStyle: TextStyle(
-            color: ardoise,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+      ),
+      cardTheme: CardThemeData(
+        color: ivoire,
+        elevation: 1,
+        shadowColor: const Color(0x1A143629),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: bordure),
         ),
-        cardTheme: CardThemeData(
-          color: Colors.white,
-          elevation: 1,
-          shadowColor: const Color(0x1A3F5A50),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+      ),
+      navigationBarTheme: const NavigationBarThemeData(
+        backgroundColor: ivoire,
+        indicatorColor: sable,
+        labelTextStyle: WidgetStatePropertyAll(
+          TextStyle(fontFamily: 'Inter', fontSize: 11, color: encre),
         ),
-        navigationBarTheme: const NavigationBarThemeData(
-          backgroundColor: Colors.white,
-          indicatorColor: saugeClair,
-          labelTextStyle: WidgetStatePropertyAll(
-            TextStyle(fontSize: 11),
-          ),
-        ),
-        navigationRailTheme: const NavigationRailThemeData(
-          backgroundColor: Colors.white,
-          indicatorColor: saugeClair,
-        ),
-        drawerTheme: const DrawerThemeData(
-          backgroundColor: Colors.white,
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: saugeFonce,
+      ),
+      navigationRailTheme: const NavigationRailThemeData(
+        backgroundColor: ivoire,
+        indicatorColor: sable,
+      ),
+      drawerTheme: const DrawerThemeData(
+        backgroundColor: ivoire,
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: cypress,
+        foregroundColor: Colors.white,
+      ),
+      // Titres 24 gras, sous-titres 18, corps 16, aide 14, jamais
+      // moins de 14. Un nouveau membre doit tout lire sans effort.
+      textTheme: TextTheme(
+        headlineSmall: titres.copyWith(fontSize: 24),
+        titleLarge: titres.copyWith(fontSize: 18),
+        titleMedium: const TextStyle(
+            fontFamily: 'PlusJakartaSans', fontSize: 18, color: encre),
+        bodyMedium: corps.copyWith(fontSize: 16),
+        bodySmall: const TextStyle(
+            fontFamily: 'Inter', fontSize: 14, color: ardoise),
+        labelLarge: const TextStyle(
+            fontFamily: 'Inter', fontSize: 14, color: encre),
+        labelSmall: const TextStyle(
+            fontFamily: 'JetBrainsMono', fontSize: 12, color: ardoise),
+      ),
+      // Boutons 48 px de haut, taille minimale pour un doigt.
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+          backgroundColor: cypress,
           foregroundColor: Colors.white,
         ),
-        // Titres 24 gras, sous-titres 18, corps 16, aide 14, jamais
-        // moins de 14. Un nouveau membre doit tout lire sans effort.
-        textTheme: const TextTheme(
-          headlineSmall: TextStyle(
-              fontSize: 24, fontWeight: FontWeight.bold, color: ardoise),
-          titleLarge: TextStyle(
-              fontSize: 18, fontWeight: FontWeight.bold, color: ardoise),
-          titleMedium: TextStyle(fontSize: 18, color: ardoise),
-          bodyMedium: TextStyle(fontSize: 16, color: ardoise),
-          bodySmall: TextStyle(fontSize: 14, color: grisDoux),
-          labelLarge: TextStyle(fontSize: 14, color: ardoise),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+          foregroundColor: cypress,
+          side: const BorderSide(color: cypress),
         ),
-        // Boutons 48 px de haut, taille minimale pour un doigt.
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
-            backgroundColor: saugeFonce,
-            foregroundColor: Colors.white,
-          ),
+      ),
+      // Champs 56 px de haut, coins 16 px, pour un doigt et pour
+      // des yeux fatigués. Taille minimale 14 px partout.
+      inputDecorationTheme: const InputDecorationTheme(
+        constraints: BoxConstraints(minHeight: 56),
+        filled: true,
+        fillColor: ivoire,
+        contentPadding:
+            EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+          borderSide: BorderSide(color: bordure),
         ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
-            foregroundColor: saugeFonce,
-          ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+          borderSide: BorderSide(color: bordure),
         ),
-        // Champs 56 px de haut, coins 16 px, pour un doigt et pour
-        // des yeux fatigués. Taille minimale 14 px partout.
-        inputDecorationTheme: const InputDecorationTheme(
-          constraints: BoxConstraints(minHeight: 56),
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(16)),
-          ),
-        ),
-      );
+      ),
+    );
+  }
 }

@@ -32,7 +32,7 @@ class CarteMembreVedette extends StatelessWidget {
   Widget build(BuildContext context) {
     final church = profil.church;
     return SoftCard(
-      color: AppTheme.saugeClair,
+      color: AppTheme.sable,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -41,7 +41,7 @@ class CarteMembreVedette extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 32,
-                backgroundColor: AppTheme.saugeFonce,
+                backgroundColor: AppTheme.cypress,
                 child: Text(
                   _initiales(profil.user.fullName),
                   style: const TextStyle(
@@ -85,7 +85,7 @@ class CarteMembreVedette extends StatelessWidget {
             Row(
               children: [
                 const Icon(Icons.badge_outlined,
-                    size: 20, color: AppTheme.saugeFonce),
+                    size: 20, color: AppTheme.cypress),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
