@@ -505,6 +505,28 @@ class HttpApiService implements ApiService {
   }
 
   @override
+  Future<List<RendezVous>> getMesRendezVous() async {
+    final data = await _call('GET', '/moi/rendez-vous');
+    return (data['rendez_vous'] as List<dynamic>? ?? [])
+        .map((e) => RendezVous.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<RendezVous> demanderRendezVous({
+    required String dateSouhaitee,
+    String? creneau,
+    required String motif,
+  }) async {
+    final data = await _call('POST', '/moi/rendez-vous', body: {
+      'date_souhaitee': dateSouhaitee,
+      if (creneau != null) 'creneau': creneau,
+      'motif': motif,
+    });
+    return RendezVous.fromJson(data['rendez_vous'] as Map<String, dynamic>);
+  }
+
+  @override
   Future<TreeResult> getTree() async {
     final data = await _call('GET', '/eglises/arbre');
     return TreeResult(

@@ -186,6 +186,18 @@ abstract class ApiService {
     required int dureeAnnees,
   });
 
+  /// Mes demandes de rendez-vous auprès de mon pasteur (migration 022).
+  Future<List<RendezVous>> getMesRendezVous();
+
+  /// Demander un rendez-vous auprès de mon pasteur (migration 022) :
+  /// date souhaitée au format AAAA-MM-JJ, créneau facultatif,
+  /// motif obligatoire.
+  Future<RendezVous> demanderRendezVous({
+    required String dateSouhaitee,
+    String? creneau,
+    required String motif,
+  });
+
   // -- Églises et arborescence ----------------------------------------------
   Future<TreeResult> getTree();
 

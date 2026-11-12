@@ -825,6 +825,106 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
     },
   );
 
+  // -- Mes demandes de rendez-vous auprès de mon pasteur
+  //    (migration 022) : le fidèle demande, avec la date souhaitée et
+  //    le motif seulement. Les créneaux du pasteur s'afficheront ici
+  //    quand ils seront définis ; la gestion côté admin et le radar
+  //    restent la tranche T6.
+  app.get(
+    "/moi/rendez-vous",
+    { preHandler: [requireAuth(db), requireRole("membre")] },
+    async (req, reply) => {
+      try {
+        const memberId = await memberIdDe(req.session.userId);
+        if (!memberId) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Aucun membre lié à ce compte.",
+          });
+        }
+        const { rows } = await db.query(
+          `SELECT id, date_souhaitee, creneau, motif, statut, created_at
+             FROM rendez_vous
+            WHERE member_id = $1 AND church_id = $2
+            ORDER BY created_at DESC
+            LIMIT 50`,
+          [memberId, req.session.churchId],
+        );
+        return reply.send({ rendez_vous: rows });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  app.post(
+    "/moi/rendez-vous",
+    { preHandler: [requireAuth(db), requireRole("membre")] },
+    async (req, reply) => {
+      const parsed = z
+        .object({
+          date_souhaitee: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide."),
+          creneau: z.string().min(1).max(50).optional(),
+          motif: z.string().min(1).max(1000),
+        })
+        .safeParse(req.body);
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "invalid_input",
+          message: "Choisissez une date et écrivez votre motif.",
+        });
+      }
+      const dateSouhaitee = parsed.data.date_souhaitee;
+      const date = new Date(`${dateSouhaitee}T00:00:00Z`);
+      if (Number.isNaN(date.getTime())) {
+        return reply.code(400).send({
+          error: "invalid_input",
+          message: "Date invalide.",
+        });
+      }
+      const maintenant = new Date();
+      const aujourdHui = new Date(
+        Date.UTC(
+          maintenant.getUTCFullYear(),
+          maintenant.getUTCMonth(),
+          maintenant.getUTCDate(),
+        ),
+      );
+      if (date < aujourdHui) {
+        return reply.code(400).send({
+          error: "invalid_input",
+          message: "La date souhaitée doit être aujourd'hui ou plus tard.",
+        });
+      }
+      try {
+        const memberId = await memberIdDe(req.session.userId);
+        if (!memberId) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Aucun membre lié à ce compte.",
+          });
+        }
+        const { rows } = await db.query(
+          `INSERT INTO rendez_vous (church_id, member_id, date_souhaitee, creneau, motif)
+           VALUES ($1, $2, $3, $4, $5)
+           RETURNING id, date_souhaitee, creneau, motif, statut, created_at`,
+          [
+            req.session.churchId,
+            memberId,
+            dateSouhaitee,
+            parsed.data.creneau?.trim() || null,
+            parsed.data.motif.trim(),
+          ],
+        );
+        return reply.code(201).send({ rendez_vous: rows[0] });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
   // -- Fils des fidèles, côté église (admin seulement) : les fils des
   //    membres de mon église et de ses annexes (récursif), avec le
   //    dernier message. La lecture et la réponse côté admin arrivent

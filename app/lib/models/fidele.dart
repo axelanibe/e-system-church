@@ -115,6 +115,46 @@ class MaCarte {
       );
 }
 
+/// Demande de rendez-vous du fidèle auprès de son pasteur
+/// (`GET` et `POST /moi/rendez-vous`, migration 022) : date souhaitée
+/// au format AAAA-MM-JJ, créneau à compléter, motif. Le statut est
+/// géré par l'église ; la gestion côté admin reste la tranche T6.
+class RendezVous {
+  final String id;
+  final String dateSouhaitee; // AAAA-MM-JJ
+  final String? creneau;
+  final String motif;
+  final String statut; // en_attente | confirme | refuse | annule
+  final DateTime? createdAt;
+
+  const RendezVous({
+    required this.id,
+    required this.dateSouhaitee,
+    this.creneau,
+    required this.motif,
+    this.statut = 'en_attente',
+    this.createdAt,
+  });
+
+  factory RendezVous.fromJson(Map<String, dynamic> json) {
+    final brute = json['date_souhaitee'] as String? ?? '';
+    final date = brute.length >= 10 ? brute.substring(0, 10) : brute;
+    return RendezVous(
+      id: json['id'] as String,
+      dateSouhaitee: date,
+      creneau: json['creneau'] as String?,
+      motif: json['motif'] as String? ?? '',
+      statut: json['statut'] as String? ?? 'en_attente',
+      createdAt: json['created_at'] == null
+          ? null
+          : DateTime.tryParse(json['created_at'] as String),
+    );
+  }
+
+  /// Date souhaitée, sous forme de date locale (sans heure).
+  DateTime? get date => DateTime.tryParse(dateSouhaitee);
+}
+
 /// Message du fil privé du fidèle (`GET /moi/messages`, migration 020) :
 /// écrit par le fidèle (`membre`) ou par son église (`eglise`), dans
 /// l'application, pas par e-mail.
