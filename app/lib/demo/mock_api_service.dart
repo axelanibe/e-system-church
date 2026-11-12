@@ -40,6 +40,7 @@ import '../models/rapport.dart';
 import '../models/rattachement.dart';
 import '../models/serviteurs.dart';
 import '../models/stats.dart';
+import '../models/sycebnl.dart';
 import '../models/transfert.dart';
 import '../services/api_service.dart';
 import 'mock_data.dart';
@@ -3513,6 +3514,23 @@ class MockApiService implements ApiService {
   Future<Uint8List> exporterSycebnlPdf(
           {required String etat, int? annee}) async =>
       throw UnimplementedError('Exports PDF non gérés en démo.');
+
+  @override
+  Future<EtatsSycebnl> getDonneesSycebnl({required int annee}) async {
+    // Même source que l'écran en démo : le rapport financier, dont les
+    // dépenses mensuelles additionnent déjà registre et Budget et caisse.
+    final exercice = await getRapportFinancier(
+      annee: annee,
+      from: '$annee-01-01',
+      to: '$annee-12-31',
+    );
+    final anterieur = await getRapportFinancier(to: '$annee-01-01');
+    return EtatsSycebnl.depuisRapports(
+      annee: annee,
+      exercice: exercice,
+      anterieur: anterieur,
+    );
+  }
 
   // -- Administration --------------------------------------------------------------
 

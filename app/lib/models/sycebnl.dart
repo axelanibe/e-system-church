@@ -2,14 +2,15 @@ import 'finances.dart';
 
 /// États financiers SYCEBNL, système normal (tranche P6).
 ///
-/// Générés depuis la vraie comptabilité, en un clic : les produits et les
-/// charges viennent du rapport financier de l'exercice (contributions
-/// confirmées), la trésorerie d'ouverture vient des exercices antérieurs
-/// (même source, avant le 1er janvier de l'exercice). Aucune donnée
-/// inventée : les lignes sans source dans l'application restent à 0 FCFA.
-/// Les dépenses suivies dans l'onglet Dépenses (table `depenses`,
-/// validation trésorier puis pasteur) ne sont pas reprises ici : les charges
-/// sont celles du registre des contributions, comme dans l'onglet Rapport.
+/// Générés depuis la vraie comptabilité, en un clic. Les charges
+/// additionnent les dépenses confirmées du registre des contributions
+/// (type `depense`) et les dépenses de Budget et caisse hors refusées
+/// (table `depenses`), comme le tableau de bord et les totaux des
+/// contributions. Une même dépense ne se saisit qu'une seule fois.
+/// La trésorerie est l'excédent cumulé de cette comptabilité, la caisse
+/// se tient à part : ses mouvements sont saisis à la main et les
+/// contributions ne l'alimentent pas. Aucune donnée inventée : les lignes
+/// sans source dans l'application restent à 0 FCFA.
 /// Le bilan est équilibré par construction : l'application ne suit ni
 /// immobilisations ni dettes, l'excédent cumulé est donc tenu en trésorerie.
 class EtatsSycebnl {
@@ -18,7 +19,8 @@ class EtatsSycebnl {
   /// Dîmes, offrandes et dons confirmés de l'exercice.
   final int produitsExploitation;
 
-  /// Dépenses confirmées de l'exercice (registre des contributions).
+  /// Dépenses confirmées de l'exercice : registre des contributions
+  /// (type `depense`) et dépenses de Budget et caisse hors refusées.
   final int chargesExploitation;
 
   /// 0 : aucun produit financier suivi dans l'application.
@@ -90,6 +92,34 @@ class EtatsSycebnl {
   int get totalActif => actifImmobilise + actifCirculant + tresorerieActif;
 
   int get totalPassif => fondsPropres + dettes + tresoreriePassif;
+
+  /// Construit les quatre états depuis les sommes de
+  /// GET /exports/sycebnl/donnees : produits et charges de l'exercice,
+  /// trésorerie d'ouverture (exercices antérieurs). Mêmes chiffres que
+  /// l'export PDF, qui lit les mêmes sommes côté serveur.
+  factory EtatsSycebnl.depuisDonnees({
+    required int annee,
+    required int produits,
+    required int charges,
+    required int ouverture,
+  }) {
+    final cloture = ouverture + (produits - charges);
+    return EtatsSycebnl(
+      annee: annee,
+      produitsExploitation: produits,
+      chargesExploitation: charges,
+      produitsFinanciers: 0,
+      chargesFinancieres: 0,
+      actifImmobilise: 0,
+      actifCirculant: 0,
+      tresorerieActif: cloture,
+      fondsPropres: cloture,
+      dettes: 0,
+      tresoreriePassif: 0,
+      notesRedigees: 0,
+      montantsRattaches: 0,
+    );
+  }
 
   /// Construit les quatre états depuis le rapport financier de l'exercice
   /// et celui des exercices antérieurs (avant le 1er janvier).

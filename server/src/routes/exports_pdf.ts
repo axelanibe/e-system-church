@@ -407,10 +407,97 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
   );
 
   // -- SYCEBNL (tranche P6) : un état financier à la fois, généré depuis la
-  //    vraie comptabilité (contributions confirmées de l'exercice et des
-  //    exercices antérieurs). Même générateur PDF que les autres exports,
+  //    vraie comptabilité. Même générateur PDF que les autres exports,
   //    aucun formulaire officiel à remplir : le modèle est construit ici
   //    depuis la norme OHADA. Admin et trésorier seulement.
+  //
+  //    Règle des charges : les charges additionnent les dépenses
+  //    confirmées du registre des contributions (type `depense`) et les
+  //    dépenses de Budget et caisse hors refusées (table `depenses`,
+  //    statut différent de `refusee`). Les deux registres sont
+  //    indépendants, sans lien entre eux : aucun code n'écrit l'un quand
+  //    l'autre change, et la validation d'une dépense n'écrit ni
+  //    contribution ni mouvement de caisse. C'est la même règle que le
+  //    tableau de bord (migration 004, vue v_stats_eglise) et que les
+  //    totaux de GET /contributions. Une même dépense ne se saisit
+  //    qu'une seule fois, dans le registre ou dans Budget et caisse.
+  //    La trésorerie est l'excédent cumulé de cette comptabilité, la
+  //    caisse se tient à part : ses mouvements sont saisis à la main et
+  //    les contributions ne l'alimentent pas.
+  async function sommesSycebnl(db: Pool, churchId: string, year: number) {
+    // Sommes des contributions confirmées, par type, pour l'exercice
+    // puis pour les exercices antérieurs (avant le 1er janvier).
+    const sommesContributions = async (
+      from: string | null,
+      to: string | null,
+    ) => {
+      const conditions = [`c.church_id = $1`, `c.status = 'confirme'`];
+      const values: unknown[] = [churchId];
+      if (from) {
+        values.push(from);
+        conditions.push(`c.created_at >= $${values.length}::date`);
+      }
+      if (to) {
+        values.push(to);
+        conditions.push(
+          `c.created_at < ($${values.length}::date + interval '1 day')`,
+        );
+      }
+      const { rows } = await db.query(
+        `SELECT c.type, coalesce(sum(c.amount_fcfa), 0)::int AS total_fcfa
+           FROM contributions c WHERE ${conditions.join(" AND ")}
+          GROUP BY c.type`,
+        values,
+      );
+      const parType: Record<string, number> = {};
+      for (const r of rows) parType[r.type as string] = r.total_fcfa;
+      return parType;
+    };
+    // Dépenses de Budget et caisse hors refusées, mêmes bornes, sur la
+    // date de la dépense (comme les totaux de GET /contributions).
+    const sommesDepenses = async (from: string | null, to: string | null) => {
+      const conditions = [`church_id = $1`, `statut <> 'refusee'`];
+      const values: unknown[] = [churchId];
+      if (from) {
+        values.push(from);
+        conditions.push(`date_depense >= $${values.length}::date`);
+      }
+      if (to) {
+        values.push(to);
+        conditions.push(
+          `date_depense < ($${values.length}::date + interval '1 day')`,
+        );
+      }
+      const { rows } = await db.query(
+        `SELECT coalesce(sum(montant_fcfa), 0)::int AS total_fcfa
+           FROM depenses WHERE ${conditions.join(" AND ")}`,
+        values,
+      );
+      return Number(rows[0].total_fcfa);
+    };
+    const exercice = await sommesContributions(
+      `${year}-01-01`,
+      `${year}-12-31`,
+    );
+    const anterieur = await sommesContributions(null, `${year - 1}-12-31`);
+    const depensesExercice = await sommesDepenses(
+      `${year}-01-01`,
+      `${year}-12-31`,
+    );
+    const depensesAnterieures = await sommesDepenses(null, `${year - 1}-12-31`);
+    const produits =
+      (exercice.dime ?? 0) + (exercice.offrande ?? 0) + (exercice.don ?? 0);
+    const charges = (exercice.depense ?? 0) + depensesExercice;
+    const resultat = produits - charges;
+    const ouverture =
+      (anterieur.dime ?? 0) +
+      (anterieur.offrande ?? 0) +
+      (anterieur.don ?? 0) -
+      (anterieur.depense ?? 0) -
+      depensesAnterieures;
+    const cloture = ouverture + resultat;
+    return { produits, charges, resultat, ouverture, cloture };
+  }
   const sycebnlQuerySchema = z.object({
     etat: z.enum(["bilan", "compte_resultat", "flux", "notes"]),
     annee: z.coerce.number().int().min(2000).max(2100).optional(),
@@ -428,45 +515,8 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
       const year = annee ?? new Date().getFullYear();
       try {
         const egliseNom = await nomEglise(db, req.session.churchId);
-        // Sommes des contributions confirmées, par type, pour l'exercice
-        // puis pour les exercices antérieurs (avant le 1er janvier).
-        const sommes = async (from: string | null, to: string | null) => {
-          const conditions = [`c.church_id = $1`, `c.status = 'confirme'`];
-          const values: unknown[] = [req.session.churchId];
-          if (from) {
-            values.push(from);
-            conditions.push(`c.created_at >= $${values.length}::date`);
-          }
-          if (to) {
-            values.push(to);
-            conditions.push(
-              `c.created_at < ($${values.length}::date + interval '1 day')`,
-            );
-          }
-          const { rows } = await db.query(
-            `SELECT c.type, coalesce(sum(c.amount_fcfa), 0)::int AS total_fcfa
-               FROM contributions c WHERE ${conditions.join(" AND ")}
-              GROUP BY c.type`,
-            values,
-          );
-          const parType: Record<string, number> = {};
-          for (const r of rows) parType[r.type as string] = r.total_fcfa;
-          return parType;
-        };
-        const exercice = await sommes(`${year}-01-01`, `${year}-12-31`);
-        const anterieur = await sommes(null, `${year - 1}-12-31`);
-        const produits =
-          (exercice.dime ?? 0) +
-          (exercice.offrande ?? 0) +
-          (exercice.don ?? 0);
-        const charges = exercice.depense ?? 0;
-        const resultat = produits - charges;
-        const ouverture =
-          (anterieur.dime ?? 0) +
-          (anterieur.offrande ?? 0) +
-          (anterieur.don ?? 0) -
-          (anterieur.depense ?? 0);
-        const cloture = ouverture + resultat;
+        const { produits, charges, resultat, ouverture, cloture } =
+          await sommesSycebnl(db, req.session.churchId, year);
         const pied =
           "À produire depuis votre comptabilité, aucun formulaire officiel à remplir.";
         const titres: Record<string, string> = {
@@ -597,6 +647,33 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
           details: { etat, annee: year },
         });
         envoyerPdf(reply, pdf, nomFichier(`sycebnl-${etat}`));
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  // -- SYCEBNL, données JSON pour l'écran : mêmes sommes que le PDF, mêmes
+  //    droits (admin et trésorier). L'écran lisait GET /finances/rapport,
+  //    qui exige admin et responsable de culte : le trésorier voyait
+  //    l'écran mais la génération lui répondait 403. Cette route lit les
+  //    données directement, sans passer par /finances/rapport.
+  const sycebnlDonneesQuerySchema = z.object({
+    annee: z.coerce.number().int().min(2000).max(2100).optional(),
+  });
+  app.get(
+    "/exports/sycebnl/donnees",
+    { preHandler: [requireAuth(db), requireRole(...WRITE_FINANCES)] },
+    async (req, reply) => {
+      const parsed = sycebnlDonneesQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        invalidInput(reply, parsed.error);
+        return;
+      }
+      const year = parsed.data.annee ?? new Date().getFullYear();
+      try {
+        const sommes = await sommesSycebnl(db, req.session.churchId, year);
+        return reply.send({ annee: year, ...sommes });
       } catch (e) {
         return dbError(reply, e);
       }

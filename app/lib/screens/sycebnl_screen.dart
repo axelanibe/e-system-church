@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -6,6 +8,7 @@ import '../config/app_theme.dart';
 import '../models/sycebnl.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
+import '../utils/sycebnl_excel.dart';
 import '../widgets/common_widgets.dart';
 
 /// États financiers SYCEBNL (tranche P6) : les quatre états du système
@@ -40,22 +43,15 @@ class _SycebnlScreenState extends State<SycebnlScreen> {
     final annee = _annee;
     setState(() => _chargement = true);
     try {
-      final api = context.read<AppState>().api;
-      final exercice = await api.getRapportFinancier(
-        annee: annee,
-        from: '$annee-01-01',
-        to: '$annee-12-31',
-      );
-      final anterieur = await api.getRapportFinancier(
-        to: '$annee-01-01',
-      );
+      // Mêmes sommes que l'export PDF, lues par GET /exports/sycebnl/donnees
+      // (admin et trésorier), sans passer par GET /finances/rapport, qui
+      // exige admin et responsable de culte et répondait 403 au trésorier.
+      final etats = await context.read<AppState>().api.getDonneesSycebnl(
+            annee: annee,
+          );
       if (!mounted) return;
       setState(() {
-        _etats = EtatsSycebnl.depuisRapports(
-          annee: annee,
-          exercice: exercice,
-          anterieur: anterieur,
-        );
+        _etats = etats;
         _detailsVisibles.clear();
         _chargement = false;
       });
@@ -86,6 +82,28 @@ class _SycebnlScreenState extends State<SycebnlScreen> {
     } catch (e) {
       if (mounted) showApiError(context, e);
     }
+  }
+
+  Future<void> _exporterExcel() async {
+    final etats = _etats;
+    if (etats == null) return;
+    final annee = _annee;
+    final bytes = construireClasseurSycebnl(etats);
+    final nom = 'sycebnl-$annee.xlsx';
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [
+          XFile.fromData(
+            Uint8List.fromList(bytes),
+            name: nom,
+            mimeType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          ),
+        ],
+        subject: 'États financiers SYCEBNL $annee',
+      ),
+    );
+    if (mounted) showSuccess(context, 'Export Excel partagé.');
   }
 
   Widget _ligne(String label, String valeur, {bool gras = false}) {
@@ -218,6 +236,14 @@ class _SycebnlScreenState extends State<SycebnlScreen> {
                       color: AppTheme.bleuNuit,
                     ),
                   ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Les charges additionnent les dépenses confirmées du registre et celles de Budget et caisse, sauf les refusées. Une même dépense ne se saisit qu\'une seule fois.',
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'La trésorerie est l\'excédent cumulé de votre comptabilité, la caisse se tient à part.',
+                  ),
                 ],
               ),
             ),
@@ -255,6 +281,14 @@ class _SycebnlScreenState extends State<SycebnlScreen> {
           ),
           if (etats != null) ...[
             const SectionTitle(title: 'Les quatre états, système normal'),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: _exporterExcel,
+                child: const Text('Exporter en Excel'),
+              ),
+            ),
+            const SizedBox(height: 8),
             _carteEtat(
               id: 'bilan',
               titre: 'Bilan',

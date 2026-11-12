@@ -38,6 +38,7 @@ import '../models/rapport.dart';
 import '../models/rattachement.dart';
 import '../models/serviteurs.dart';
 import '../models/stats.dart';
+import '../models/sycebnl.dart';
 import 'api_service.dart';
 
 /// Client HTTP de l'API e-System Church (`server/` : Fastify + JWT bearer).
@@ -2067,6 +2068,18 @@ class HttpApiService implements ApiService {
           {required String etat, int? annee}) =>
       _telechargerPdf(
           '/exports/sycebnl', _q({'etat': etat, 'annee': annee}));
+
+  @override
+  Future<EtatsSycebnl> getDonneesSycebnl({required int annee}) async {
+    final data = await _call(
+        'GET', '/exports/sycebnl/donnees', query: _q({'annee': annee}));
+    return EtatsSycebnl.depuisDonnees(
+      annee: (data['annee'] as num?)?.toInt() ?? annee,
+      produits: (data['produits'] as num?)?.toInt() ?? 0,
+      charges: (data['charges'] as num?)?.toInt() ?? 0,
+      ouverture: (data['ouverture'] as num?)?.toInt() ?? 0,
+    );
+  }
 
   // -- Administration : paramètres, rôles, audit (module 12) -----------------
   @override

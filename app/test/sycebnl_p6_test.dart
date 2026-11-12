@@ -1,7 +1,9 @@
+import 'package:excel/excel.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:esystem_church/models/finances.dart';
 import 'package:esystem_church/models/sycebnl.dart';
+import 'package:esystem_church/utils/sycebnl_excel.dart';
 
 /// Tranche P6 : export SYCEBNL.
 /// Données EXEMPLE uniquement, jamais de données réelles.
@@ -94,6 +96,101 @@ void main() {
       expect(etats.chargesExploitation, 500000);
       expect(etats.resultatExercice, 2500000);
       expect(etats.totalActif, etats.totalPassif);
+    });
+
+    test(
+        'depuisDonnees : charges avec Budget et caisse, bilan équilibré',
+        () {
+      // EXEMPLE : produits 12 000 000, charges 3 500 000 (3 000 000 du
+      // registre et 500 000 de Budget et caisse), ouverture 3 000 000.
+      final etats = EtatsSycebnl.depuisDonnees(
+        annee: 2026,
+        produits: 12000000,
+        charges: 3500000,
+        ouverture: 3000000,
+      );
+      expect(etats.produitsExploitation, 12000000);
+      expect(etats.chargesExploitation, 3500000);
+      expect(etats.resultatExercice, 8500000);
+      expect(etats.tresorerieOuverture, 3000000);
+      expect(etats.tresorerieCloture, 11500000);
+      expect(etats.totalActif, 11500000);
+      expect(etats.totalPassif, 11500000);
+      expect(etats.totalActif, etats.totalPassif);
+    });
+  });
+
+  group('Classeur Excel SYCEBNL', () {
+    int? valeur(Excel classeur, String feuille, String label) {
+      final lignes = classeur.tables[feuille]?.rows ?? [];
+      for (final ligne in lignes) {
+        if (ligne.length < 2) continue;
+        final texte = (ligne[0]?.value as TextCellValue?)?.value.text;
+        if (texte == label) {
+          final v = ligne[1]?.value;
+          if (v is IntCellValue) return v.value;
+        }
+      }
+      return null;
+    }
+
+    test('un classeur, une feuille par état, mêmes chiffres que l\'écran',
+        () {
+      final etats = EtatsSycebnl.depuisDonnees(
+        annee: 2026,
+        produits: 12000000,
+        charges: 3500000,
+        ouverture: 3000000,
+      );
+      final classeur = Excel.decodeBytes(construireClasseurSycebnl(etats));
+      expect(
+        classeur.tables.keys.toList(),
+        [
+          'Bilan',
+          'Compte de résultat',
+          'Flux de trésorerie',
+          'Notes annexes',
+        ],
+      );
+      expect(valeur(classeur, 'Bilan', 'Total de l\'actif'), 11500000);
+      expect(valeur(classeur, 'Bilan', 'Total du passif'), 11500000);
+      expect(
+        valeur(classeur, 'Compte de résultat', 'Charges d\'exploitation'),
+        3500000,
+      );
+      expect(
+        valeur(
+          classeur,
+          'Compte de résultat',
+          'Résultat de l\'exercice',
+        ),
+        8500000,
+      );
+      expect(
+        valeur(classeur, 'Flux de trésorerie', 'Trésorerie à l\'ouverture'),
+        3000000,
+      );
+      expect(
+        valeur(classeur, 'Flux de trésorerie', 'Trésorerie à la clôture'),
+        11500000,
+      );
+      expect(valeur(classeur, 'Notes annexes', 'Notes rédigées'), 0);
+    });
+
+    test('application vierge : classeur à 0', () {
+      final etats = EtatsSycebnl.depuisDonnees(
+        annee: 2026,
+        produits: 0,
+        charges: 0,
+        ouverture: 0,
+      );
+      final classeur = Excel.decodeBytes(construireClasseurSycebnl(etats));
+      expect(classeur.tables.keys.length, 4);
+      expect(valeur(classeur, 'Bilan', 'Total de l\'actif'), 0);
+      expect(
+        valeur(classeur, 'Compte de résultat', 'Résultat de l\'exercice'),
+        0,
+      );
     });
   });
 }

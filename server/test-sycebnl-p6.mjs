@@ -86,8 +86,12 @@ async function contrib(church, memberId, type, amount, status, date) {
     [church, memberId, type, amount, status, date],
   );
 }
-// Exercice 2026 EXEMPLE : 12 000 000 de produits, 3 000 000 de charges.
-// Exercice 2025 : 5 000 000 de produits, 2 000 000 de charges (ouverture).
+// Exercice 2026 EXEMPLE : 12 000 000 de produits, 3 000 000 de charges
+// du registre, plus 500 000 de Budget et caisse (payée) : charges
+// 3 500 000, résultat 8 500 000. Une dépense refusée de 999 999 ne
+// compte pas. Exercice 2025 : 5 000 000 de produits, 2 000 000 de
+// charges du registre, plus 1 000 000 de Budget et caisse (payée) :
+// ouverture 2 000 000, clôture 10 500 000.
 await contrib(churchA, m1, "dime", 8000000, "confirme", "2026-01-10");
 await contrib(churchA, m1, "offrande", 3000000, "confirme", "2026-02-10");
 await contrib(churchA, m1, "don", 1000000, "confirme", "2026-03-10");
@@ -96,6 +100,15 @@ await contrib(churchA, m1, "don", 999999, "en_attente", "2026-05-10");
 await contrib(churchA, m1, "don", 999999, "annule", "2026-05-11");
 await contrib(churchA, m1, "don", 5000000, "confirme", "2025-06-10");
 await contrib(churchA, m1, "depense", 2000000, "confirme", "2025-09-10");
+async function depense(church, montant, statut, date) {
+  await q(
+    `INSERT INTO depenses (church_id,montant_fcfa,motif,statut,date_depense) VALUES ($1,$2,'Dépense de test',$3,$4)`,
+    [church, montant, statut, date],
+  );
+}
+await depense(churchA, 500000, "payee", "2026-06-15");
+await depense(churchA, 999999, "refusee", "2026-07-01");
+await depense(churchA, 1000000, "payee", "2025-10-05");
 
 async function login(email) {
   const r = await fetch(`${BASE}/auth/login`, {
@@ -160,27 +173,60 @@ try {
       const texte = res.buf.toString("latin1");
       if (etat === "compte_resultat") {
         check(
-          "compte de résultat : 12 000 000 et 3 000 000",
-          texte.includes("12 000 000") && texte.includes("3 000 000"),
+          "compte de résultat : 12 000 000 de produits, 3 500 000 de charges (registre + Budget et caisse, refusée exclue)",
+          texte.includes("12 000 000") && texte.includes("3 500 000"),
         );
         check(
-          "compte de résultat : résultat 9 000 000",
-          texte.includes("9 000 000"),
+          "compte de résultat : résultat 8 500 000",
+          texte.includes("8 500 000"),
         );
       }
       if (etat === "bilan") {
         check(
-          "bilan : total 12 000 000 (ouverture 3 000 000 + résultat 9 000 000)",
-          texte.includes("12 000 000"),
+          "bilan : total 10 500 000 (ouverture 2 000 000 + résultat 8 500 000)",
+          texte.includes("10 500 000"),
         );
       }
       if (etat === "flux") {
         check(
-          "flux : ouverture 3 000 000, clôture 12 000 000",
-          texte.includes("3 000 000") && texte.includes("12 000 000"),
+          "flux : ouverture 2 000 000, clôture 10 500 000",
+          texte.includes("2 000 000") && texte.includes("10 500 000"),
         );
       }
     }
+
+    // Données JSON pour l'écran : mêmes sommes que le PDF, droits
+    // admin et trésorier. Le trésorier n'a pas accès à
+    // GET /finances/rapport (admin et responsable de culte) : c'est
+    // l'écart que cette route ferme.
+    async function donneesSycebnl(annee, jeton) {
+      const r = await fetch(`${BASE}/exports/sycebnl/donnees?annee=${annee}`, {
+        headers: jeton ? { authorization: `Bearer ${jeton}` } : {},
+      });
+      return { statut: r.status, corps: await r.json().catch(() => null) };
+    }
+    const donneesSansJeton = await donneesSycebnl(2026, null);
+    check("données sans jeton = 401", donneesSansJeton.statut === 401);
+    const donneesMembre = await donneesSycebnl(2026, tokMembre);
+    check("données membre = 403", donneesMembre.statut === 403);
+    const donneesTres = await donneesSycebnl(2026, tokTres);
+    check(
+      "données trésorier = 200, charges 3 500 000, ouverture 2 000 000, clôture 10 500 000",
+      donneesTres.statut === 200 &&
+        donneesTres.corps?.charges === 3500000 &&
+        donneesTres.corps?.produits === 12000000 &&
+        donneesTres.corps?.ouverture === 2000000 &&
+        donneesTres.corps?.cloture === 10500000,
+      `statut ${donneesTres.statut} ${JSON.stringify(donneesTres.corps)}`,
+    );
+    const rapportTres = await fetch(`${BASE}/finances/rapport?annee=2026`, {
+      headers: { authorization: `Bearer ${tokTres}` },
+    });
+    check(
+      "GET /finances/rapport trésorier = 403 (écart connu, route fermée)",
+      rapportTres.status === 403,
+      `statut ${rapportTres.status}`,
+    );
   }
 } finally {
   api.kill();
