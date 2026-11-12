@@ -406,6 +406,203 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
     },
   );
 
+  // -- SYCEBNL (tranche P6) : un état financier à la fois, généré depuis la
+  //    vraie comptabilité (contributions confirmées de l'exercice et des
+  //    exercices antérieurs). Même générateur PDF que les autres exports,
+  //    aucun formulaire officiel à remplir : le modèle est construit ici
+  //    depuis la norme OHADA. Admin et trésorier seulement.
+  const sycebnlQuerySchema = z.object({
+    etat: z.enum(["bilan", "compte_resultat", "flux", "notes"]),
+    annee: z.coerce.number().int().min(2000).max(2100).optional(),
+  });
+  app.get(
+    "/exports/sycebnl",
+    { preHandler: [requireAuth(db), requireRole(...WRITE_FINANCES)] },
+    async (req, reply) => {
+      const parsed = sycebnlQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        invalidInput(reply, parsed.error);
+        return;
+      }
+      const { etat, annee } = parsed.data;
+      const year = annee ?? new Date().getFullYear();
+      try {
+        const egliseNom = await nomEglise(db, req.session.churchId);
+        // Sommes des contributions confirmées, par type, pour l'exercice
+        // puis pour les exercices antérieurs (avant le 1er janvier).
+        const sommes = async (from: string | null, to: string | null) => {
+          const conditions = [`c.church_id = $1`, `c.status = 'confirme'`];
+          const values: unknown[] = [req.session.churchId];
+          if (from) {
+            values.push(from);
+            conditions.push(`c.created_at >= $${values.length}::date`);
+          }
+          if (to) {
+            values.push(to);
+            conditions.push(
+              `c.created_at < ($${values.length}::date + interval '1 day')`,
+            );
+          }
+          const { rows } = await db.query(
+            `SELECT c.type, coalesce(sum(c.amount_fcfa), 0)::int AS total_fcfa
+               FROM contributions c WHERE ${conditions.join(" AND ")}
+              GROUP BY c.type`,
+            values,
+          );
+          const parType: Record<string, number> = {};
+          for (const r of rows) parType[r.type as string] = r.total_fcfa;
+          return parType;
+        };
+        const exercice = await sommes(`${year}-01-01`, `${year}-12-31`);
+        const anterieur = await sommes(null, `${year - 1}-12-31`);
+        const produits =
+          (exercice.dime ?? 0) +
+          (exercice.offrande ?? 0) +
+          (exercice.don ?? 0);
+        const charges = exercice.depense ?? 0;
+        const resultat = produits - charges;
+        const ouverture =
+          (anterieur.dime ?? 0) +
+          (anterieur.offrande ?? 0) +
+          (anterieur.don ?? 0) -
+          (anterieur.depense ?? 0);
+        const cloture = ouverture + resultat;
+        const pied =
+          "À produire depuis votre comptabilité, aucun formulaire officiel à remplir.";
+        const titres: Record<string, string> = {
+          bilan: "Bilan SYCEBNL",
+          compte_resultat: "Compte de résultat SYCEBNL",
+          flux: "Tableau des flux de trésorerie SYCEBNL",
+          notes: "Notes annexes SYCEBNL",
+        };
+        const sections: SectionRapport[] =
+          etat === "bilan"
+            ? [
+                {
+                  titre: "Bilan",
+                  colonnes: [
+                    { titre: "Poste", largeur: 330 },
+                    { titre: "Montant", largeur: 165, alignerDroite: true },
+                  ],
+                  lignes: [
+                    ["Actif immobilisé", formaterMontant(0)],
+                    ["Actif circulant", formaterMontant(0)],
+                    ["Trésorerie actif", formaterMontant(cloture)],
+                    ["Fonds propres", formaterMontant(cloture)],
+                    ["Dettes", formaterMontant(0)],
+                    ["Trésorerie passif", formaterMontant(0)],
+                  ],
+                  total: [
+                    "Total de l'actif",
+                    formaterMontant(cloture),
+                  ],
+                  messageVide: "Aucune donnée sur cet exercice.",
+                },
+              ]
+            : etat === "compte_resultat"
+              ? [
+                  {
+                    titre: "Compte de résultat",
+                    colonnes: [
+                      { titre: "Poste", largeur: 330 },
+                      { titre: "Montant", largeur: 165, alignerDroite: true },
+                    ],
+                    lignes: [
+                      ["Produits d'exploitation", formaterMontant(produits)],
+                      ["Charges d'exploitation", formaterMontant(charges)],
+                      ["Produits financiers", formaterMontant(0)],
+                      ["Charges financières", formaterMontant(0)],
+                    ],
+                    total: [
+                      "Résultat de l'exercice",
+                      formaterMontant(resultat),
+                    ],
+                    messageVide: "Aucune donnée sur cet exercice.",
+                  },
+                ]
+              : etat === "flux"
+                ? [
+                    {
+                      titre: "Tableau des flux de trésorerie",
+                      colonnes: [
+                        { titre: "Poste", largeur: 330 },
+                        {
+                          titre: "Montant",
+                          largeur: 165,
+                          alignerDroite: true,
+                        },
+                      ],
+                      lignes: [
+                        [
+                          "Flux des activités opérationnelles",
+                          formaterMontant(resultat),
+                        ],
+                        [
+                          "Flux des activités d'investissement",
+                          formaterMontant(0),
+                        ],
+                        [
+                          "Flux des activités de financement",
+                          formaterMontant(0),
+                        ],
+                        [
+                          "Trésorerie à l'ouverture",
+                          formaterMontant(ouverture),
+                        ],
+                        [
+                          "Trésorerie à la clôture",
+                          formaterMontant(cloture),
+                        ],
+                      ],
+                      total: [
+                        "Variation de trésorerie",
+                        formaterMontant(resultat),
+                      ],
+                      messageVide: "Aucune donnée sur cet exercice.",
+                    },
+                  ]
+                : [
+                    {
+                      titre: "Notes annexes",
+                      colonnes: [
+                        { titre: "Libellé", largeur: 330 },
+                        {
+                          titre: "Montant",
+                          largeur: 165,
+                          alignerDroite: true,
+                        },
+                      ],
+                      lignes: [
+                        ["Notes rédigées", "0"],
+                        ["Montants rattachés", formaterMontant(0)],
+                      ],
+                      messageVide:
+                        "Aucune note pour le moment. Vos notes annexes s'écriront ici, à partir des chiffres de votre comptabilité.",
+                    },
+                  ];
+        const pdf = genererRapportPdf({
+          titre: titres[etat] ?? "État SYCEBNL",
+          egliseNom,
+          lignesMeta: [
+            `Exercice ${year}`,
+            `Émis le ${aujourdhui()}`,
+          ],
+          sections,
+          pied,
+        });
+        await auditLog(db, {
+          churchId: req.session.churchId,
+          userId: req.session.userId,
+          action: "export.pdf.sycebnl",
+          details: { etat, annee: year },
+        });
+        envoyerPdf(reply, pdf, nomFichier(`sycebnl-${etat}`));
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
   // -- Cultes : liste des cultes avec présences. ----------------------------
   app.get(
     "/exports/cultes",

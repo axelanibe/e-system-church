@@ -2467,7 +2467,8 @@ class MockApiService implements ApiService {
   }
 
   @override
-  Future<RapportFinancier> getRapportFinancier({int? annee}) async {
+  Future<RapportFinancier> getRapportFinancier(
+      {int? annee, String? from, String? to}) async {
     await _latence();
     _requireAuth();
     // Avant, un seul mois en dur ('2026-11') et des dépenses globales (toutes
@@ -3506,6 +3507,11 @@ class MockApiService implements ApiService {
 
   @override
   Future<Uint8List> exporterRapportConsolidePdf() async =>
+      throw UnimplementedError('Exports PDF non gérés en démo.');
+
+  @override
+  Future<Uint8List> exporterSycebnlPdf(
+          {required String etat, int? annee}) async =>
       throw UnimplementedError('Exports PDF non gérés en démo.');
 
   // -- Administration --------------------------------------------------------------

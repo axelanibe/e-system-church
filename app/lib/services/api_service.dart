@@ -506,7 +506,8 @@ abstract class ApiService {
 
   Future<CaisseSolde> getCaisseSolde();
 
-  Future<RapportFinancier> getRapportFinancier({int? annee});
+  Future<RapportFinancier> getRapportFinancier(
+      {int? annee, String? from, String? to});
 
   // -- Finances (contributions, existant) ------------------------------------
   Future<ContributionPage> getContributions({String? type, String? status});
@@ -815,6 +816,11 @@ abstract class ApiService {
   Future<Uint8List> exporterCultesPdf({String? from, String? to});
 
   Future<Uint8List> exporterRapportConsolidePdf();
+
+  /// Export PDF d'un état SYCEBNL (`bilan`, `compte_resultat`, `flux` ou
+  /// `notes`), généré depuis la vraie comptabilité (tranche P6).
+  Future<Uint8List> exporterSycebnlPdf(
+      {required String etat, int? annee});
 
   // -- Administration : paramètres, rôles, audit (module 12) -----------------
   Future<EgliseParametres> getParametres();

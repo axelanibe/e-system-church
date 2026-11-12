@@ -1290,9 +1290,10 @@ class HttpApiService implements ApiService {
       CaisseSolde.fromJson(await _call('GET', '/finances/caisse'));
 
   @override
-  Future<RapportFinancier> getRapportFinancier({int? annee}) async =>
+  Future<RapportFinancier> getRapportFinancier(
+          {int? annee, String? from, String? to}) async =>
       RapportFinancier.fromJson(await _call('GET', '/finances/rapport',
-          query: _q({'annee': annee})));
+          query: _q({'annee': annee, 'from': from, 'to': to})));
 
   // -- Contributions (existant) ----------------------------------------------
   @override
@@ -2060,6 +2061,12 @@ class HttpApiService implements ApiService {
   @override
   Future<Uint8List> exporterRapportConsolidePdf() =>
       _telechargerPdf('/exports/rapports/consolide', {});
+
+  @override
+  Future<Uint8List> exporterSycebnlPdf(
+          {required String etat, int? annee}) =>
+      _telechargerPdf(
+          '/exports/sycebnl', _q({'etat': etat, 'annee': annee}));
 
   // -- Administration : paramètres, rôles, audit (module 12) -----------------
   @override
