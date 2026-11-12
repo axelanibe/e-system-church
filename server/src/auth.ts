@@ -205,34 +205,49 @@ export function generateFideleCode(): string {
 }
 
 /**
- * Matricule unique dans TOUT le système, séquentiel par église (M-0001, M-0002…).
- * Point de départ : max + 1 dans l'église ; on saute ensuite tout nombre déjà
- * utilisé quelque part — n'importe quel matricule (toute église), n'importe
- * quel suffixe de code d'église, de code fidèle ou de code de tutelle à usage
- * unique (comparaison sur les 4 derniers caractères). Règle de Bouf : les
- * nombres à 4 chiffres ne se croisent jamais dans le système.
- * La contrainte UNIQUE (church_id, matricule) protège des courses dans la
- * même église : l'appelant réessaie en cas de conflit. Sans changement de
- * schéma, une course entre deux églises différentes reste théoriquement
- * possible — la vérification préalable rend le risque négligeable.
+ * Préfixe d'un matricule : 2 premières lettres A-Z du nom du fidèle,
+ * sans accent, en majuscules (ex. KATIA → KA, Élise → EL). Noms de
+ * moins de 2 lettres complétés avec X (ex. « A » → AX) ; un nom sans
+ * aucune lettre latine donne XX.
  */
-export async function generateMatricule(client: Pool | PoolClient, churchId: string): Promise<string> {
+export function matriculePrefix(fullName: string): string {
+  const lettres = fullName
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "");
+  return (lettres + "XX").slice(0, 2);
+}
+
+/**
+ * Matricule unique dans TOUT le système, ex. M-KA-0001 : `M-` + 2
+ * premières lettres du nom du fidèle + 4 chiffres (décision de Bouf,
+ * 11 nov. 2026 : les lettres ne s'appliquent qu'aux matricules — les
+ * codes d'église ESC-… et fidèles ESC-F-… restent à 4 chiffres purs).
+ * Numéro séquentiel GLOBAL par préfixe : max + 1 parmi tous les
+ * matricules de ce préfixe, toutes églises confondues (plus jamais de
+ * numéro libéré réutilisé) ; rebouclage modulo 10 000, puis erreur
+ * explicite si le préfixe est épuisé. Les anciens matricules M-XXXX
+ * (sans lettres) restent valides et ne bloquent pas les nouveaux.
+ * La contrainte UNIQUE (church_id, matricule) protège des courses dans
+ * la même église : l'appelant réessaie en cas de conflit. Sans
+ * changement de schéma, une course entre deux églises différentes reste
+ * théoriquement possible — la vérification préalable rend le risque
+ * négligeable.
+ */
+export async function generateMatricule(client: Pool | PoolClient, fullName: string): Promise<string> {
+  const prefix = matriculePrefix(fullName);
   const { rows } = await client.query<{ m: string | null }>(
-    `SELECT max(right(matricule, 4)) AS m FROM members WHERE church_id = $1 AND matricule ~ '^M-[0-9]{4}$'`,
-    [churchId],
+    `SELECT max(right(matricule, 4)) AS m FROM members WHERE matricule ~ $1`,
+    [`^M-${prefix}-[0-9]{4}$`],
   );
   const start = Number(rows[0]?.m ?? "0") + 1;
   for (let i = 0; i < 10000; i++) {
-    const candidate = String((start + i) % 10000).padStart(4, "0");
-    const clash = await client.query(
-      `SELECT 1 FROM members WHERE right(matricule, 4) = $1
-        UNION ALL SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1
-        UNION ALL SELECT 1 FROM codes_tutelle WHERE right(code, 4) = $1`,
-      [candidate],
-    );
-    if (clash.rowCount === 0) return `M-${candidate}`;
+    const matricule = `M-${prefix}-${String((start + i) % 10000).padStart(4, "0")}`;
+    const clash = await client.query(`SELECT 1 FROM members WHERE matricule = $1`, [matricule]);
+    if (clash.rowCount === 0) return matricule;
   }
-  throw new Error("Aucun numéro de matricule disponible : les 10 000 nombres à 4 chiffres sont tous utilisés.");
+  throw new Error(`Aucun numéro de matricule disponible pour le préfixe ${prefix} : les 10 000 nombres sont tous utilisés.`);
 }
 
 // ---------------------------------------------------------------------------
@@ -294,17 +309,15 @@ export async function registerChurch(
     // 4 chiffres = 10 000 valeurs possibles : 50 tentatives, la
     // contrainte UNIQUE reste le filet de sécurité.
     // Garantie de Bouf : un même nombre à 4 chiffres ne sert qu'une seule
-    // fois, dans un seul rôle, dans une seule église — le suffixe est
-    // vérifié partout (codes, codes fidèles, matricules, codes de tutelle
-    // à usage unique), sur les 4 derniers caractères, pour couvrir aussi
-    // les anciens codes.
+    // fois, dans un seul rôle — le suffixe est vérifié entre les deux
+    // colonnes `code` et `code_fidele` uniquement (les matricules portent
+    // désormais leurs propres lettres, M-KA-0001, et ne croisent plus
+    // les codes).
     let code = "";
     for (let attempt = 0; attempt < 50; attempt++) {
       code = generateChurchCode();
       const clash = await client.query(
-        `SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1
-          UNION ALL SELECT 1 FROM members WHERE right(matricule, 4) = $1
-          UNION ALL SELECT 1 FROM codes_tutelle WHERE right(code, 4) = $1`,
+        `SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1`,
         [code.slice(-4)],
       );
       if (clash.rowCount === 0) break;
@@ -314,9 +327,7 @@ export async function registerChurch(
     for (let attempt = 0; attempt < 50; attempt++) {
       codeFidele = generateFideleCode();
       const clash = await client.query(
-        `SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1
-          UNION ALL SELECT 1 FROM members WHERE right(matricule, 4) = $1
-          UNION ALL SELECT 1 FROM codes_tutelle WHERE right(code, 4) = $1`,
+        `SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1`,
         [codeFidele.slice(-4)],
       );
       // Même nombre que le code de tutelle généré juste avant pour cette
@@ -551,13 +562,14 @@ export async function inscriptionMembreParCode(
     );
     const userId = userRows[0].id;
 
-    // Matricule automatique, unique dans tout le système. En cas de course sur le
-    // compteur, la contrainte UNIQUE déclenche un réessai (SAVEPOINT, la
-    // transaction n'est pas perdue).
+    // Matricule automatique (M-KA-0001 : 2 lettres du nom + 4 chiffres),
+    // unique dans tout le système. En cas de course sur le compteur, la
+    // contrainte UNIQUE déclenche un réessai (SAVEPOINT, la transaction
+    // n'est pas perdue).
     let memberId = "";
     let matricule = "";
     for (let attempt = 0; attempt < 5; attempt++) {
-      matricule = await generateMatricule(client, church.id as string);
+      matricule = await generateMatricule(client, nom_prenom);
       await client.query("SAVEPOINT matricule");
       try {
         const { rows: memberRows } = await client.query<{ id: string }>(

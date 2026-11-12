@@ -10,7 +10,7 @@ import { dbError, requireAuth, requireRole } from "../middleware.js";
  * GET  /membres/:id — un membre (404 s'il appartient à une autre église).
  * POST /membres     — création (admin_eglise, responsable_culte).
  *                      Le trésorier ne peut PAS créer de membre ; le matricule
- *                      est généré automatiquement (M-0001…) sauf s'il est fourni.
+ *                      est généré automatiquement (M-KA-0001…) sauf s'il est fourni.
  * PATCH /membres/:id — modification (le matricule ne change pas).
  * DELETE /membres/:id — suppression (contributions → membre NULL, présences /
  *                      statuts / baptêmes / liens en cascade).
@@ -117,32 +117,28 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
     }
     const data = parsed.data;
     try {
-      // Matricule fourni par l'admin : il doit être unique dans tout le
-      // système — ses 4 derniers caractères ne doivent être utilisés nulle
-      // part (matricules, codes d'église, codes fidèles, codes de tutelle).
-      // Règle de Bouf : les nombres à 4 chiffres ne se croisent jamais.
-      if (data.matricule) {
-        const suffix = data.matricule.slice(-4);
-        const clash = await db.query(
-          `SELECT 1 FROM members WHERE right(matricule, 4) = $1
-            UNION ALL SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1
-            UNION ALL SELECT 1 FROM codes_tutelle WHERE right(code, 4) = $1`,
-          [suffix],
-        );
+      // Matricule fourni par l'admin (normalisé : sans espaces, en
+      // majuscules) : il doit être unique dans tout le système — la
+      // chaîne complète ne doit exister chez aucun membre, quelle que
+      // soit l'église. Les anciens matricules M-XXXX (sans lettres)
+      // fournis manuellement restent valides.
+      const matriculeFourni = data.matricule ? data.matricule.trim().toUpperCase() : null;
+      if (matriculeFourni) {
+        const clash = await db.query(`SELECT 1 FROM members WHERE matricule = $1`, [matriculeFourni]);
         if (clash.rowCount && clash.rowCount > 0) {
           return reply.code(409).send({
             error: "matricule_taken",
-            message:
-              "Ce numéro de matricule est déjà utilisé (par un membre, un code d'église ou un code de tutelle). Les nombres à 4 chiffres ne se croisent jamais dans le système.",
+            message: "Ce matricule est déjà utilisé par un autre membre.",
           });
         }
       }
-      // Matricule : fourni par le client ou généré (séquentiel par église,
-      // unique dans tout le système). Réessaie en cas de collision
-      // (contrainte UNIQUE church_id + matricule).
+      // Matricule : fourni par le client ou généré (M-KA-0001 : 2 lettres
+      // du nom + 4 chiffres, séquentiel global par préfixe, unique dans
+      // tout le système). Réessaie en cas de collision (contrainte UNIQUE
+      // church_id + matricule).
       let lastError: unknown = null;
       for (let attempt = 0; attempt < 3; attempt++) {
-        const matricule = data.matricule ?? (await generateMatricule(db, req.session.churchId));
+        const matricule = matriculeFourni ?? (await generateMatricule(db, data.full_name));
         try {
           const { rows } = await db.query(
             `INSERT INTO members

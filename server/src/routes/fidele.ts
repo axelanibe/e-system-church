@@ -26,10 +26,10 @@ const inscriptionSchema = z.object({
   /**
    * Code fidèle de l'église (ESC-F-…), optionnel : quand il est fourni,
    * la recherche du membre par matricule est restreinte à cette église
-   * (les nouveaux matricules sont uniques dans tout le système ; les
-   * anciens numéros peuvent encore se répéter d'une église à l'autre).
-   * Sans lui, on garde le comportement existant (e-mail concordant,
-   * sinon ambiguïté).
+   * (les nouveaux matricules, M-KA-0001, sont uniques dans tout le
+   * système ; les anciens numéros M-XXXX peuvent encore se répéter
+   * d'une église à l'autre). Sans lui, on garde le comportement
+   * existant (e-mail concordant, sinon ambiguïté).
    */
   code_fidele: z.string().min(4).max(20).optional(),
   channel: z.enum(["web", "mobile"]).default("mobile"),

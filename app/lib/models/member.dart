@@ -1,6 +1,6 @@
 import '../utils/format.dart';
 
-/// Membre d'une église (`members`). Le matricule est unique dans tout le système (nouveaux numéros).
+/// Membre d'une église (`members`). Le matricule est unique dans tout le système (nouveaux numéros, M-KA-0001).
 class Member {
   final String id;
   final String matricule;

@@ -118,7 +118,7 @@ CREATE TABLE members (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     church_id   UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
     user_id     UUID REFERENCES users (id) ON DELETE SET NULL,
-    matricule   TEXT NOT NULL,                      -- unique dans tout le système (nouveaux numéros)
+    matricule   TEXT NOT NULL,                      -- M-KA-0001 (nouveaux numéros) : unique dans tout le système
     full_name   TEXT NOT NULL,
     phone       TEXT,
     email       TEXT,

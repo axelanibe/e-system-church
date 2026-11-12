@@ -71,7 +71,7 @@ class MemberDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // QR de la carte : CODE_EGLISE:MATRICULE (ex. ESC-0411:M-0001).
+    // QR de la carte : CODE_EGLISE:MATRICULE (ex. ESC-0411:M-KA-0001).
     // Le lecteur accepte aussi les anciennes cartes, matricule seul.
     final codeEglise = context.read<AppState>().church?.code;
     final qrData = codeEglise != null && codeEglise.isNotEmpty

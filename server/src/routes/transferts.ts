@@ -20,7 +20,7 @@ import { dbError, requireAuth, requireRole, type Session } from "../middleware.j
  *     pas accepté, l'église d'arrivée ne peut pas décider.
  *  3. L'admin de l'église d'arrivée accepte (ou refuse).
  *  4. À la double acceptation, le membre change de church_id et reçoit un
- *     nouveau matricule dans l'église d'arrivée (M-0001…) ; l'ancienne
+ *     nouveau matricule dans l'église d'arrivée (M-KA-0001…) ; l'ancienne
  *     branche ne le voit plus. Un refus d'un côté, ou une annulation par
  *     l'église de départ tant que la demande est en attente, clôt la
  *     demande sans déplacement. L'historique reste dans audit_logs.
@@ -344,10 +344,10 @@ export function registerTransfertsRoutes(app: FastifyInstance, db: Pool) {
 
   /**
    * Déplace le membre vers l'église d'arrivée avec un nouveau matricule
-   * (séquentiel dans l'église d'arrivée, unique dans tout le système —
-   * le nombre ne croise aucun code ni aucun autre matricule). La
-   * contrainte UNIQUE (church_id, matricule) protège des courses : en cas
-   * de collision on régénère après un retour au point de sauvegarde,
+   * (M-KA-0001 : 2 lettres du nom du membre + 4 chiffres, séquentiel
+   * global par préfixe, unique dans tout le système). La contrainte
+   * UNIQUE (church_id, matricule) protège des courses : en cas de
+   * collision on régénère après un retour au point de sauvegarde,
    * 3 essais maximum.
    */
   async function deplacerMembre(
@@ -358,8 +358,13 @@ export function registerTransfertsRoutes(app: FastifyInstance, db: Pool) {
       eglise_arrivee_id: string;
     },
   ): Promise<string> {
+    const { rows: nomRows } = await client.query<{ full_name: string }>(
+      `SELECT full_name FROM members WHERE id = $1`,
+      [t.membre_id],
+    );
+    const fullName = nomRows[0]?.full_name ?? "";
     for (let attempt = 0; attempt < 3; attempt++) {
-      const matricule = await generateMatricule(client, t.eglise_arrivee_id as string);
+      const matricule = await generateMatricule(client, fullName);
       await client.query("SAVEPOINT deplacement");
       try {
         const { rowCount } = await client.query(

@@ -58,17 +58,15 @@ export function registerEglisesRoutes(app: FastifyInstance, db: Pool) {
         // Deux codes uniques : tutelle (ESC-…) et fidèle (ESC-F-…).
         // 4 chiffres = 10 000 valeurs possibles : 50 tentatives.
         // Garantie de Bouf : un même nombre à 4 chiffres ne sert qu'une
-        // seule fois, dans un seul rôle, dans une seule église — le
-        // suffixe est vérifié partout (codes, codes fidèles, matricules,
-        // codes de tutelle à usage unique), sur les 4 derniers caractères
-        // (anciens codes compris).
+        // seule fois, dans un seul rôle — le suffixe est vérifié entre
+        // les deux colonnes `code` et `code_fidele` uniquement (les
+        // matricules portent désormais leurs propres lettres, M-KA-0001,
+        // et ne croisent plus les codes).
         let code = "";
         for (let attempt = 0; attempt < 50; attempt++) {
           code = generateChurchCode();
           const clash = await client.query(
-            `SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1
-          UNION ALL SELECT 1 FROM members WHERE right(matricule, 4) = $1
-          UNION ALL SELECT 1 FROM codes_tutelle WHERE right(code, 4) = $1`,
+            `SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1`,
             [code.slice(-4)],
           );
           if (clash.rowCount === 0) break;
@@ -78,9 +76,7 @@ export function registerEglisesRoutes(app: FastifyInstance, db: Pool) {
         for (let attempt = 0; attempt < 50; attempt++) {
           codeFidele = generateFideleCode();
           const clash = await client.query(
-            `SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1
-          UNION ALL SELECT 1 FROM members WHERE right(matricule, 4) = $1
-          UNION ALL SELECT 1 FROM codes_tutelle WHERE right(code, 4) = $1`,
+            `SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1`,
             [codeFidele.slice(-4)],
           );
           // Même nombre que le code de tutelle généré juste avant pour
