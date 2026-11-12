@@ -845,6 +845,27 @@ class MockApiService implements ApiService {
     _requireAuth();
   }
 
+  // P4 : demandes de rendez-vous du fidèle. La démo ne garde rien.
+  @override
+  Future<List<RendezVous>> getMesRendezVous() async => [];
+
+  @override
+  Future<RendezVous> demanderRendezVous({
+    required String dateSouhaitee,
+    String? creneau,
+    required String motif,
+  }) async {
+    await _latence();
+    _requireAuth();
+    return RendezVous(
+      id: 'demo-rdv-${DateTime.now().millisecondsSinceEpoch}',
+      dateSouhaitee: dateSouhaitee,
+      creneau: creneau,
+      motif: motif,
+      createdAt: DateTime.now(),
+    );
+  }
+
   // US3 : pas d'attestations dans le seed démo.
   @override
   Future<List<Attestation>> getAttestations(

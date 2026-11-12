@@ -20,6 +20,7 @@ import 'cotisations_screen.dart';
 import 'journal_screen.dart';
 import 'mes_attestations_screen.dart';
 import 'messages_fidele_screen.dart';
+import 'rendez_vous_screen.dart';
 
 /// Accueil fidèle (tranche P1) : l'espace membre, dans l'ordre de la
 /// projection. Contenu seul, sans Scaffold ni barre : la coquille
@@ -277,6 +278,11 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                         builder: (_) => const MessagesFideleScreen(),
                       ),
                     ),
+                    onRendezVous: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const RendezVousScreen(),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const SectionTitle(title: 'Mon Parcours'),
@@ -359,18 +365,20 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
 }
 
 /// Grille 2 par 2 des accès du fidèle : Ma Bible, Mes cotisations,
-/// Mon journal, Message à mon église.
+/// Mon journal, Message à mon église, Prendre rendez-vous (P4).
 class _GrilleAcces extends StatelessWidget {
   final VoidCallback onBible;
   final VoidCallback onCotisations;
   final VoidCallback onJournal;
   final VoidCallback onMessages;
+  final VoidCallback onRendezVous;
 
   const _GrilleAcces({
     required this.onBible,
     required this.onCotisations,
     required this.onJournal,
     required this.onMessages,
+    required this.onRendezVous,
   });
 
   @override
@@ -406,6 +414,12 @@ class _GrilleAcces extends StatelessWidget {
           titre: 'Message à mon église',
           sousTitre: 'Messagerie privée, dans l’application.',
           onTap: onMessages,
+        ),
+        _TuileAcces(
+          icone: Icons.event_available_outlined,
+          titre: 'Prendre rendez-vous',
+          sousTitre: 'Demander un rendez-vous à votre pasteur.',
+          onTap: onRendezVous,
         ),
       ],
     );
