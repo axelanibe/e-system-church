@@ -11,7 +11,6 @@ import {
   registerCrud,
 } from "../crud.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
-import { requireModule } from "../modules.js";
 
 /**
  * Module 4 — Finances (compléter) : postes budgétaires, budgets annuels,
@@ -34,7 +33,6 @@ const DEPENSE_TRANSITIONS: Record<string, { from: string; roles: string[] }> = {
 export function registerFinancesRoutes(app: FastifyInstance, db: Pool) {
   registerCrud(app, db, {
     base: "/postes-budgetaires",
-    module: "budget",
     table: "postes_budgetaires",
     columns: ["nom", "categorie", "description"],
     createSchema: z.object({
@@ -51,7 +49,6 @@ export function registerFinancesRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/budgets",
-    module: "budget",
     table: "budgets",
     columns: ["poste_id", "annee", "montant_prevu"],
     createSchema: z.object({
@@ -74,7 +71,6 @@ export function registerFinancesRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/depenses",
-    module: "budget",
     table: "depenses",
     columns: ["poste_id", "montant_fcfa", "motif", "justificatif_ref", "statut", "date_depense"],
     createSchema: z.object({
@@ -104,7 +100,7 @@ export function registerFinancesRoutes(app: FastifyInstance, db: Pool) {
   });
   app.patch(
     "/depenses/:id/statut",
-    { preHandler: [requireAuth(db), requireModule(db, "budget"), requireRole(...WRITE_FINANCES)] },
+    { preHandler: [requireAuth(db), requireRole(...WRITE_FINANCES)] },
     async (req, reply) => {
       const parsed = statutSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -153,7 +149,6 @@ export function registerFinancesRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/caisse-mouvements",
-    module: "budget",
     table: "caisse_mouvements",
     columns: ["type", "montant_fcfa", "motif", "reference"],
     createSchema: z.object({
@@ -171,7 +166,7 @@ export function registerFinancesRoutes(app: FastifyInstance, db: Pool) {
   // -- Solde de caisse : entrées − sorties. ----------------------------------
   app.get(
     "/finances/caisse",
-    { preHandler: [requireAuth(db), requireModule(db, "budget"), requireRole(...READ_ALL)] },
+    { preHandler: [requireAuth(db), requireRole(...READ_ALL)] },
     async (req, reply) => {
       try {
         const { rows } = await db.query(
@@ -198,7 +193,7 @@ export function registerFinancesRoutes(app: FastifyInstance, db: Pool) {
   });
   app.get(
     "/finances/rapport",
-    { preHandler: [requireAuth(db), requireModule(db, "budget"), requireRole(...WRITE_STD)] },
+    { preHandler: [requireAuth(db), requireRole(...WRITE_STD)] },
     async (req, reply) => {
       const parsed = rapportQuerySchema.safeParse(req.query);
       if (!parsed.success) {

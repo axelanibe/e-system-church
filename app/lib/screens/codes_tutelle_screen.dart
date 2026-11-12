@@ -60,6 +60,9 @@ class _CodesTutelleScreenState extends State<CodesTutelleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Seule une église mère génère un code : une annexe ne peut pas
+    // avoir d'annexe (règle du 11/11/2026).
+    final estMere = context.watch<AppState>().church?.isMere ?? false;
     return Scaffold(
       appBar: AppBar(title: const Text('Codes de tutelle')),
       body: FutureBuilder(
@@ -87,16 +90,17 @@ class _CodesTutelleScreenState extends State<CodesTutelleScreen> {
                   child: Padding(
                     padding: EdgeInsets.all(16),
                     child: Text(
-                      'Un code de tutelle ESC-T-… ne sert qu’une fois : donnez-le à une église qui veut se rattacher à vous. Dès que la mère accepte la demande, le code n’est plus valide, automatiquement, et tous les modules de l’église rattachée sont activés. Votre code permanent ESC-… reste valable pour les membres et les autres demandes.',
+                      'Un code de tutelle ESC-T-… ne sert qu’une fois : donnez-le à une église qui veut se rattacher à vous. Dès que la mère accepte la demande, le code n’est plus valide, automatiquement, et l’église devient une de vos annexes. Votre code permanent ESC-… reste valable pour les membres et les autres demandes.',
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: _creating ? null : _creer,
-                  icon: const Icon(Icons.add_outlined),
-                  label: const Text('Générer un code de tutelle'),
-                ),
+                if (estMere)
+                  FilledButton.icon(
+                    onPressed: _creating ? null : _creer,
+                    icon: const Icon(Icons.add_outlined),
+                    label: const Text('Générer un code de tutelle'),
+                  ),
                 const SizedBox(height: 16),
                 if (codes.isEmpty)
                   const EmptyState(

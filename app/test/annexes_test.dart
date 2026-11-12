@@ -57,14 +57,16 @@ void main() {
       'modules': [
         {'code': 'membres', 'label': 'Membres', 'noyau': true, 'actif': true},
         {'code': 'cultes', 'label': 'Cultes', 'noyau': false, 'actif': true},
-        {'code': 'medias', 'label': 'Médias', 'noyau': false, 'actif': false},
+        {'code': 'medias', 'label': 'Médias', 'noyau': false, 'actif': true},
       ],
     });
     expect(d.name, 'Annexe');
     expect(d.depensesFcfa, 10000);
     expect(d.cultes, 4);
-    expect(d.modulesActifs, 2);
+    // Tous les modules sont actifs pour toutes les églises (règle
+    // du 11/11/2026) : le détail renvoie `actif: true` partout.
     expect(d.modules.length, 3);
+    expect(d.modules.every((m) => m.actif), isTrue);
   });
 
   test('CodeTutelle.fromJson lit code, statut et église utilisatrice', () {

@@ -3,7 +3,6 @@ import type { Pool } from "pg";
 import { z } from "zod";
 import { auditLog } from "./auth.js";
 import { dbError, requireAuth, requireRole } from "./middleware.js";
-import { requireModule } from "./modules.js";
 
 /**
  * Usine de routes CRUD standard pour les ressources « par église ».
@@ -43,9 +42,6 @@ export interface CrudOptions {
   updateSchema?: z.ZodObject<z.ZodRawShape>;
   readRoles: string[];
   writeRoles: string[];
-  /** Code du module US1 (ex. 'cultes') : si renseigné, chaque route exige
-      que le module soit actif pour l'église (403 `module_desactive`). */
-  module?: string;
   /** Préfixe d'audit, ex. 'famille' → 'famille.cree'. */
   audit: string;
   orderBy?: string;
@@ -118,10 +114,10 @@ function listQueryWithFilters(filters: Record<string, string>) {
 
 export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions): void {
   const orderBy = opts.orderBy ?? "created_at DESC";
-  // US1 : garde du module, après l'authentification, avant le rôle.
-  const moduleGarde = opts.module ? [requireModule(db, opts.module)] : [];
-  const lecture = [requireAuth(db), ...moduleGarde, requireRole(...opts.readRoles)];
-  const ecriture = [requireAuth(db), ...moduleGarde, requireRole(...opts.writeRoles)];
+  // Tous les modules sont actifs pour toutes les églises (règle du
+  // 11/11/2026) : plus aucune garde de module ici.
+  const lecture = [requireAuth(db), requireRole(...opts.readRoles)];
+  const ecriture = [requireAuth(db), requireRole(...opts.writeRoles)];
   const querySchema = listQueryWithFilters(opts.filters ?? {});
   const updateSchema = opts.updateSchema ?? opts.createSchema.partial();
 

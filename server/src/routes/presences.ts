@@ -11,7 +11,6 @@ import {
   registerCrud,
 } from "../crud.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
-import { requireModule } from "../modules.js";
 
 /**
  * Module 3 — Présences : pointage aux cultes et réunions (manuel, liste,
@@ -24,7 +23,6 @@ const uuid = z.string().uuid();
 export function registerPresencesRoutes(app: FastifyInstance, db: Pool) {
   registerCrud(app, db, {
     base: "/presences",
-    module: "presences",
     table: "presences",
     columns: ["event_id", "culte_id", "member_id", "statut", "mode"],
     createSchema: z.object({
@@ -68,7 +66,7 @@ export function registerPresencesRoutes(app: FastifyInstance, db: Pool) {
   });
   app.post(
     "/presences/pointer",
-    { preHandler: [requireAuth(db), requireModule(db, "presences"), requireRole(...WRITE_STD)] },
+    { preHandler: [requireAuth(db), requireRole(...WRITE_STD)] },
     async (req, reply) => {
       const parsed = pointerSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -159,7 +157,7 @@ export function registerPresencesRoutes(app: FastifyInstance, db: Pool) {
   });
   app.get(
     "/presences/stats",
-    { preHandler: [requireAuth(db), requireModule(db, "presences"), requireRole(...READ_ALL)] },
+    { preHandler: [requireAuth(db), requireRole(...READ_ALL)] },
     async (req, reply) => {
       const parsed = statsQuerySchema.safeParse(req.query);
       if (!parsed.success) {

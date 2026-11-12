@@ -2,13 +2,14 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
 import { auditLog, generateChurchCode, generateFideleCode } from "../auth.js";
-import { dbError, requireAuth, requireRole } from "../middleware.js";
-import { activerTousModules } from "./rattachements.js";
+import { dbError, estAnnexe, requireAuth, requireRole } from "../middleware.js";
 
 /**
  * Églises : création de sous-églises et arborescence.
  * POST /eglises        — l'admin de l'église de la session crée une sous-église
- *                        (il en devient l'admin initial).
+ *                        (il en devient l'admin initial). Réservé aux églises
+ *                        mères : une annexe ne peut pas avoir d'annexe (règle
+ *                        du 11/11/2026, 403 `annexe_sans_annexe`).
  * GET  /eglises/arbre  — mon arborescence (mon église + descendances), avec les
  *                        effectifs et les demandes de rattachement en attente.
  */
@@ -51,6 +52,13 @@ export function registerEglisesRoutes(app: FastifyInstance, db: Pool) {
         });
       }
       const { name, city, phone, email } = parsed.data;
+      // Seule une église mère crée une sous-église.
+      if (await estAnnexe(db, req.session.churchId)) {
+        return reply.code(403).send({
+          error: "annexe_sans_annexe",
+          message: "Une église annexe ne peut pas avoir d'église annexe.",
+        });
+      }
       const client = await db.connect();
       try {
         await client.query("BEGIN");
@@ -99,16 +107,6 @@ export function registerEglisesRoutes(app: FastifyInstance, db: Pool) {
            VALUES ($1, $2, 'admin_eglise')`,
           [req.session.userId, sub.id],
         );
-
-        // Sous-église créée sous tutelle : tous ses modules sont activés
-        // automatiquement, comme après un rattachement accepté.
-        const modulesActives = await activerTousModules(client, sub.id);
-        await auditLog(client, {
-          churchId: sub.id,
-          userId: req.session.userId,
-          action: "modules.actives_tutelle",
-          details: { par_mere: req.session.churchId, modules: modulesActives },
-        });
 
         await auditLog(client, {
           churchId: req.session.churchId,

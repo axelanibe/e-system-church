@@ -19,7 +19,6 @@ const uuid = z.string().uuid();
 export function registerBiensRoutes(app: FastifyInstance, db: Pool) {
   registerCrud(app, db, {
     base: "/salles",
-    module: "biens",
     table: "salles",
     columns: ["nom", "capacite", "description"],
     createSchema: z.object({
@@ -35,7 +34,6 @@ export function registerBiensRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/reservations-salles",
-    module: "biens",
     table: "reservations_salles",
     columns: ["salle_id", "titre", "debut", "fin", "reserve_par", "statut"],
     createSchema: z.object({
@@ -70,7 +68,6 @@ export function registerBiensRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/materiel",
-    module: "biens",
     table: "materiel",
     columns: ["nom", "categorie", "quantite", "etat", "responsable_member_id"],
     createSchema: z.object({
@@ -95,7 +92,6 @@ export function registerBiensRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/maintenance-materiel",
-    module: "biens",
     table: "maintenance_materiel",
     columns: ["materiel_id", "date_maintenance", "description", "cout_fcfa", "realise_par"],
     createSchema: z.object({

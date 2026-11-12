@@ -3,7 +3,6 @@ import type { Pool } from "pg";
 import { z } from "zod";
 import { auditLog, hashPassword, inscriptionMembreParCode, login } from "../auth.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
-import { requireModule } from "../modules.js";
 
 /**
  * Modules 15-16 — accès fidèle : inscription par matricule (liaison
@@ -442,7 +441,7 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
   // -- Lectures fidèle (rôle membre, SON église, SES données).
   app.get(
     "/moi/annonces",
-    { preHandler: [requireAuth(db), requireModule(db, "annonces"), requireRole("membre")] },
+    { preHandler: [requireAuth(db), requireRole("membre")] },
     async (req, reply) => {
       try {
         const { rows } = await db.query(
@@ -472,7 +471,7 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
 
   app.get(
     "/moi/cultes",
-    { preHandler: [requireAuth(db), requireModule(db, "cultes"), requireRole("membre")] },
+    { preHandler: [requireAuth(db), requireRole("membre")] },
     async (req, reply) => {
       try {
         const { rows } = await db.query(
@@ -493,7 +492,7 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
 
   app.get(
     "/moi/presences",
-    { preHandler: [requireAuth(db), requireModule(db, "presences"), requireRole("membre")] },
+    { preHandler: [requireAuth(db), requireRole("membre")] },
     async (req, reply) => {
       try {
         const memberId = await memberIdDe(req.session.userId);

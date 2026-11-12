@@ -1,23 +1,15 @@
-import type { FastifyReply, FastifyRequest } from "fastify";
-import type { Pool } from "pg";
-
 /**
- * US1 — Modules activables par église.
+ * Catalogue des modules de l'église.
  *
- * Noyau, toujours actif, jamais désactivable : membres, finances, rapports.
- * Chaque église décide seule pour elle-même : une église mère ne peut pas
- * forcer l'activation d'un module pour ses antennes (question ouverte du
- * document US1, tranchée ici par la règle la plus simple et la plus sûre).
- * Exception, décidée par Axel le 11/11/2026 (tutelle) : à l'acceptation
- * d'un rattachement, ou à la création d'une sous-église par sa mère, tous
- * les modules de l'église sous tutelle sont activés automatiquement
- * (`activerTousModules`, routes/rattachements.ts). Une église indépendante
- * garde le comportement US1 : noyau seul à la création.
+ * Règle décidée par Axel le 11/11/2026 : on ne choisit plus les modules
+ * à afficher, église mère ou annexes, tous les modules sont affichés
+ * pour tous. Le choix d'activation US1 est abandonné : il n'y a plus
+ * d'interrupteur d'activation, plus de garde 403 `module_desactive`,
+ * plus de table `eglise_modules` lue ici (la table reste en base,
+ * inutilisée, une migration pourra la supprimer plus tard).
  *
- * État stocké dans `eglise_modules` (church_id, module, actif). Absence de
- * ligne = module inactif : à la création d'une église, seuls le noyau est
- * actif. Les églises créées avant US1 sont remplies à l'activation par la
- * migration 005 (tout actif), pour ne rien leur couper.
+ * Ce fichier ne garde que le catalogue (codes et libellés), utilisé
+ * par le détail d'une annexe (`routes/annexes.ts`).
  */
 
 export interface ModuleInfo {
@@ -47,41 +39,3 @@ export const MODULES_ACTIVABLES: ModuleInfo[] = [
   { code: "parametres", label: "Paramètres", noyau: false },
   { code: "mon_eglise", label: "Mon église", noyau: false },
 ];
-
-export const TOUS_LES_MODULES: ModuleInfo[] = [...MODULES_NOYAU, ...MODULES_ACTIVABLES];
-
-export function estModuleActivable(code: string): boolean {
-  return MODULES_ACTIVABLES.some((m) => m.code === code);
-}
-
-export function libelleModule(code: string): string {
-  return TOUS_LES_MODULES.find((m) => m.code === code)?.label ?? code;
-}
-
-/** Vrai si le module est actif pour l'église (le noyau l'est toujours). */
-export async function isModuleActif(db: Pool, churchId: string, code: string): Promise<boolean> {
-  if (MODULES_NOYAU.some((m) => m.code === code)) return true;
-  if (!estModuleActivable(code)) return true;
-  const { rows } = await db.query<{ actif: boolean }>(
-    `SELECT actif FROM eglise_modules WHERE church_id = $1 AND module = $2`,
-    [churchId, code],
-  );
-  return rows.length > 0 && rows[0].actif === true;
-}
-
-/**
- * preHandler : exige que le module soit actif pour l'église de la session.
- * Sinon : 403 avec le code `module_desactive`, et la route ne s'exécute pas.
- * À placer APRÈS requireAuth(db) dans le tableau preHandler.
- */
-export function requireModule(db: Pool, code: string) {
-  return async (req: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    const actif = await isModuleActif(db, req.session.churchId, code);
-    if (!actif) {
-      reply.code(403).send({
-        error: "module_desactive",
-        message: `Module « ${libelleModule(code)} » désactivé pour cette église.`,
-      });
-    }
-  };
-}

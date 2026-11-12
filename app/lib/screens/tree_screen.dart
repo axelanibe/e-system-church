@@ -178,12 +178,16 @@ class _TreeScreenState extends State<TreeScreen> {
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.check,
-                                          color: AppTheme.cypress),
-                                      tooltip: 'Accepter',
-                                      onPressed: () => _decide(d.id, true),
-                                    ),
+                                    // Une annexe ne peut pas accepter de
+                                    // rattachement : elle ne peut pas
+                                    // devenir mère. Refuser reste possible.
+                                    if (result.arbre.isMere)
+                                      IconButton(
+                                        icon: const Icon(Icons.check,
+                                            color: AppTheme.cypress),
+                                        tooltip: 'Accepter',
+                                        onPressed: () => _decide(d.id, true),
+                                      ),
                                     IconButton(
                                       icon: const Icon(Icons.close,
                                           color: AppTheme.rougeErreur),
@@ -198,8 +202,12 @@ class _TreeScreenState extends State<TreeScreen> {
                         ],
                         const SectionTitle(title: 'Mon réseau'),
                         Card(
-                          child:
-                              _TreeNodeTile(node: result.arbre, isRoot: true),
+                          child: _TreeNodeTile(
+                            node: result.arbre,
+                            isRoot: true,
+                            canEdit: state.isAdmin,
+                            onRenamed: _refresh,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -216,24 +224,34 @@ class _TreeScreenState extends State<TreeScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Votre réseau, c’est votre église et ses sous-églises.',
+                                    result.arbre.isMere
+                                        ? 'Votre réseau, c’est votre église et ses sous-églises.'
+                                        : 'Votre église est une annexe.',
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleMedium,
                                   ),
                                   const SizedBox(height: 8),
-                                  const Text(
-                                    'Pour l’instant, vous n’avez qu’une seule église. '
-                                    'Créez une sous-église pour une nouvelle antenne : '
-                                    'elle aura son propre code, ses membres et ses finances, '
-                                    'et vous verrez ici ses chiffres avec les vôtres.',
+                                  Text(
+                                    result.arbre.isMere
+                                        ? 'Pour l’instant, vous n’avez qu’une seule église. '
+                                            'Créez une sous-église pour une nouvelle antenne : '
+                                            'elle aura son propre code, ses membres et ses finances, '
+                                            'et vous verrez ici ses chiffres avec les vôtres.'
+                                        : 'Une annexe ne peut pas avoir de sous-église. '
+                                            'Pour organiser la vie de votre église en petits groupes, '
+                                            'créez des cellules dans Familles, onglet Cellules.',
                                   ),
-                                  const SizedBox(height: 16),
-                                  FilledButton.icon(
-                                    onPressed: _addSubChurch,
-                                    icon: const Icon(Icons.add),
-                                    label: const Text('Créer une sous-église'),
-                                  ),
+                                  // Le bouton n'existe que pour une mère.
+                                  if (result.arbre.isMere) ...[
+                                    const SizedBox(height: 16),
+                                    FilledButton.icon(
+                                      onPressed: _addSubChurch,
+                                      icon: const Icon(Icons.add),
+                                      label:
+                                          const Text('Créer une sous-église'),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -248,7 +266,9 @@ class _TreeScreenState extends State<TreeScreen> {
           );
         },
       ),
-      floatingActionButton: state.isAdmin
+      // Le bouton n'existe que pour une église mère : une annexe ne
+      // peut pas créer de sous-église (règle du 11/11/2026).
+      floatingActionButton: state.isAdmin && (state.church?.isMere ?? false)
           ? FloatingActionButton.extended(
               // Bleu nuit et blanc, bien lisible : l'or du thème sur fond
               // papier paraissait effacé sur la photo 2.
@@ -264,54 +284,170 @@ class _TreeScreenState extends State<TreeScreen> {
 }
 
 /// Tuile dépliable d'un nœud de l'arbre.
-class _TreeNodeTile extends StatelessWidget {
+///
+/// Modification directe, en place : le nom de l'église de la session
+/// (la racine) se corrige ici même, sans passer par un autre écran.
+/// L'admin touche le crayon, le nom devient un champ, il valide ou
+/// annule sur place. Les autres nœuds restent en lecture seule.
+class _TreeNodeTile extends StatefulWidget {
   final ChurchNode node;
   final bool isRoot;
+  final bool canEdit;
+  final Future<void> Function() onRenamed;
 
-  const _TreeNodeTile({required this.node, this.isRoot = false});
+  const _TreeNodeTile({
+    required this.node,
+    this.isRoot = false,
+    this.canEdit = false,
+    required this.onRenamed,
+  });
+
+  @override
+  State<_TreeNodeTile> createState() => _TreeNodeTileState();
+}
+
+class _TreeNodeTileState extends State<_TreeNodeTile> {
+  bool _editing = false;
+  bool _saving = false;
+  late final TextEditingController _nameController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.node.name);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final name = _nameController.text.trim();
+    if (name.length < 2) {
+      showApiError(context, 'Le nom doit avoir au moins 2 caractères.');
+      return;
+    }
+    if (name == widget.node.name) {
+      setState(() => _editing = false);
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await context.read<AppState>().api.updateProfil(
+            churchId: widget.node.id,
+            name: name,
+          );
+      if (!mounted) return;
+      setState(() => _editing = false);
+      showSuccess(context, 'Nom modifié.');
+      await widget.onRenamed();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Widget _title() {
+    if (!_editing) {
+      return Text(
+        widget.node.name,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: widget.isRoot
+            ? const TextStyle(fontWeight: FontWeight.bold)
+            : null,
+      );
+    }
+    return TextField(
+      controller: _nameController,
+      autofocus: true,
+      decoration: const InputDecoration(
+        labelText: 'Nom de l’église',
+        border: OutlineInputBorder(),
+        isDense: true,
+      ),
+      onSubmitted: (_) => _save(),
+    );
+  }
+
+  Widget _trailing() {
+    if (_editing) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: _saving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.check, color: AppTheme.cypress),
+            tooltip: 'Enregistrer',
+            onPressed: _saving ? null : _save,
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            tooltip: 'Annuler',
+            onPressed: _saving
+                ? null
+                : () => setState(() {
+                      _editing = false;
+                      _nameController.text = widget.node.name;
+                    }),
+          ),
+        ],
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(pluriel(widget.node.membresActifs, 'membre')),
+        if (widget.isRoot && widget.canEdit)
+          IconButton(
+            icon: const Icon(Icons.edit_outlined, size: 20),
+            tooltip: 'Corriger le nom',
+            onPressed: () => setState(() => _editing = true),
+          ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final tile = ListTile(
-      leading: Icon(
-        node.isMere ? Icons.church : Icons.account_tree_outlined,
-        color: Theme.of(context).colorScheme.primary,
-      ),
-      title: Text(
-        node.name,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: isRoot ? const TextStyle(fontWeight: FontWeight.bold) : null,
-      ),
-      subtitle: Text(
-        '${node.code} · ${node.city ?? ''}',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: Text(pluriel(node.membresActifs, 'membre')),
+    final node = widget.node;
+    final leading = Icon(
+      node.isMere ? Icons.church : Icons.account_tree_outlined,
+      color: Theme.of(context).colorScheme.primary,
     );
-    if (node.children.isEmpty) return tile;
+    final subtitle = Text(
+      '${node.code} · ${node.city ?? ''}',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+    if (node.children.isEmpty) {
+      return ListTile(
+        leading: leading,
+        title: _title(),
+        subtitle: subtitle,
+        trailing: _trailing(),
+      );
+    }
     return ExpansionTile(
-      leading: Icon(
-        node.isMere ? Icons.church : Icons.account_tree_outlined,
-        color: Theme.of(context).colorScheme.primary,
-      ),
-      title: Text(
-        node.name,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: isRoot ? const TextStyle(fontWeight: FontWeight.bold) : null,
-      ),
-      subtitle: Text(
-        '${node.code} · ${node.city ?? ''}',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: Text(pluriel(node.membresActifs, 'membre')),
+      leading: leading,
+      title: _title(),
+      subtitle: subtitle,
+      trailing: _trailing(),
       initiallyExpanded: true,
       childrenPadding: const EdgeInsets.only(left: 24),
       children: node.children
-          .map((child) => _TreeNodeTile(node: child))
+          .map((child) => _TreeNodeTile(
+                node: child,
+                onRenamed: widget.onRenamed,
+              ))
           .toList(),
     );
   }

@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { randomBytes } from "node:crypto";
 import { auditLog } from "../auth.js";
-import { dbError, requireAuth, requireRole } from "../middleware.js";
+import { dbError, estAnnexe, requireAuth, requireRole } from "../middleware.js";
 
 /**
  * Codes de tutelle à usage unique (migration 009).
@@ -16,7 +16,10 @@ import { dbError, requireAuth, requireRole } from "../middleware.js";
  * Le code permanent ESC-… de l'église mère n'est pas touché : il sert
  * toujours à l'inscription des membres et aux demandes par `parent_code`.
  *
- * POST /codes-tutelle            — générer un code (admin_eglise).
+ * Règle du 11/11/2026 : seule une église mère génère un code de tutelle,
+ * une annexe ne peut pas avoir d'annexe (403 `annexe_sans_annexe`).
+ *
+ * POST /codes-tutelle            — générer un code (admin_eglise, mère seulement).
  * GET  /codes-tutelle            — mes codes, avec leur statut.
  * POST /codes-tutelle/:id/annuler — annuler un code encore actif.
  */
@@ -34,6 +37,13 @@ export function registerCodesTutelleRoutes(app: FastifyInstance, db: Pool) {
     "/codes-tutelle",
     { preHandler: [requireAuth(db), requireRole("admin_eglise")] },
     async (req, reply) => {
+      // Seule une église mère génère un code de tutelle.
+      if (await estAnnexe(db, req.session.churchId)) {
+        return reply.code(403).send({
+          error: "annexe_sans_annexe",
+          message: "Une église annexe ne peut pas avoir d'église annexe.",
+        });
+      }
       try {
         let code = "";
         for (let attempt = 0; attempt < 5; attempt++) {

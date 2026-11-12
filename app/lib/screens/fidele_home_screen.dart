@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../models/announcement.dart';
 import '../models/campagne.dart';
-import '../models/module_eglise.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/fidele.dart';
@@ -50,17 +49,14 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
   }
 
   void _charger() {
-    // US1 : on ne charge pas les sections des modules désactivés.
-    final state = context.read<AppState>();
-    final api = state.api;
+    // Tous les modules sont affichés pour toutes les églises (règle
+    // du 11/11/2026) : toutes les sections sont chargées.
+    final api = context.read<AppState>().api;
     _profilFuture = api.getMoi();
-    _annoncesFuture = state.isModuleActif(CodesModules.annonces)
-        ? api.getMesAnnonces()
-        : Future.value(<Announcement>[]);
+    _annoncesFuture = api.getMesAnnonces();
     // « Cultes à venir » : on ne garde que les cultes d'aujourd'hui ou
     // après. Un culte sans date exploitable est gardé plutôt que caché.
-    _cultesFuture = state.isModuleActif(CodesModules.cultes)
-        ? api.getMesCultes().then((cultes) {
+    _cultesFuture = api.getMesCultes().then((cultes) {
       final now = DateTime.now();
       final aujourdHui = DateTime(now.year, now.month, now.day);
       return cultes.where((c) {
@@ -69,11 +65,8 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
         final jour = DateTime(date.year, date.month, date.day);
         return !jour.isBefore(aujourdHui);
       }).toList();
-        })
-        : Future.value(<Culte>[]);
-    _presencesFuture = state.isModuleActif(CodesModules.presences)
-        ? api.getMesPresences()
-        : Future.value(<Presence>[]);
+    });
+    _presencesFuture = api.getMesPresences();
     _contributionsFuture = api.getMesContributions();
     // US2 : seules les campagnes dont l'église montre le total arrivent
     // ici, le serveur filtre le reste.
@@ -234,11 +227,11 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                         );
                       },
                     ),
-                    if (state.isModuleActif(CodesModules.cultes)) ...[
+                    ...[
                       const SectionTitle(title: 'Prochain culte'),
                       _ProchainCulte(future: _cultesFuture),
                     ],
-                    if (state.isModuleActif(CodesModules.annonces)) ...[
+                    ...[
                       const SectionTitle(title: 'Ce qui vous attend'),
                       _SectionList<Announcement>(
                         future: _annoncesFuture,
@@ -294,7 +287,7 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                         },
                       ),
                     ),
-                    if (state.isModuleActif(CodesModules.presences)) ...[
+                    ...[
                       const SectionTitle(title: 'Mes présences'),
                       _SectionList<Presence>(
                         future: _presencesFuture,
