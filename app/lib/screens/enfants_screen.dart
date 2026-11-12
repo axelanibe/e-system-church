@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/enfants.dart';
 import '../models/member.dart';
 import '../state/app_state.dart';
+import 'checkin_enfants_screen.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
@@ -481,6 +482,17 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Enfants & jeunesse'),
+          actions: [
+            IconButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const CheckinEnfantsScreen(),
+                ),
+              ),
+              icon: const Icon(Icons.qr_code_scanner),
+              tooltip: 'Check-in enfants (double QR)',
+            ),
+          ],
           bottom: TabBar(
             onTap: (i) => setState(() {
               _tab = i;

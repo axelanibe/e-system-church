@@ -10,6 +10,7 @@ import '../models/church.dart';
 import '../models/code_tutelle.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
+import '../models/checkin_enfant.dart';
 import '../models/enfants.dart';
 import '../models/fidele.dart';
 import '../models/finances.dart';
@@ -568,6 +569,31 @@ abstract class ApiService {
     String? lieu,
     String? responsableMemberId,
   });
+
+  // -- Check-ins enfants, double QR ECODIM ------------------------------------
+  // Arrivée jumelée (code parent + code enfant), sortie sécurisée par le
+  // code enfant, alerte silencieuse au parent (enregistrement en base).
+  Future<CheckinEnfant> checkinEnfant({
+    required String enfantMemberId,
+    required String parentMemberId,
+    required String codeParent,
+    required String codeEnfant,
+    String? salle,
+    String? allergie,
+  });
+
+  Future<CheckinEnfant> sortieEnfant({
+    required String checkinId,
+    required String codeEnfant,
+    required String codeParent,
+  });
+
+  Future<CheckinEnfant> alerteCheckinEnfant({
+    required String checkinId,
+    required String message,
+  });
+
+  Future<List<CheckinEnfant>> getCheckinsEnfantsJour({String? salle});
 
   // -- Médias et enseignements (module 9) ------------------------------------
   Future<List<Predication>> getPredications();

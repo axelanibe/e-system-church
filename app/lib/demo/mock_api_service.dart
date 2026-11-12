@@ -18,6 +18,7 @@ import '../models/code_tutelle.dart';
 import '../models/campagne.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
+import '../models/checkin_enfant.dart';
 import '../models/enfants.dart';
 import '../models/fidele.dart';
 import '../models/finances.dart';
@@ -2785,6 +2786,44 @@ class MockApiService implements ApiService {
     _data.activitesJeunesse.add(activite);
     _tag(activite.id);
     return activite;
+  }
+
+  // -- Check-ins enfants, double QR ECODIM (repli démo : liste vide, sans effet) --
+
+  @override
+  Future<CheckinEnfant> checkinEnfant({
+    required String enfantMemberId,
+    required String parentMemberId,
+    required String codeParent,
+    required String codeEnfant,
+    String? salle,
+    String? allergie,
+  }) async {
+    throw const ApiException('Check-in enfants non disponible en démo.');
+  }
+
+  @override
+  Future<CheckinEnfant> sortieEnfant({
+    required String checkinId,
+    required String codeEnfant,
+    required String codeParent,
+  }) async {
+    throw const ApiException('Sortie enfants non disponible en démo.');
+  }
+
+  @override
+  Future<CheckinEnfant> alerteCheckinEnfant({
+    required String checkinId,
+    required String message,
+  }) async {
+    throw const ApiException('Alerte silencieuse non disponible en démo.');
+  }
+
+  @override
+  Future<List<CheckinEnfant>> getCheckinsEnfantsJour({String? salle}) async {
+    await _latence();
+    _requireAuth();
+    return const <CheckinEnfant>[];
   }
 
   // -- Médias et enseignements ---------------------------------------------------
