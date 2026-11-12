@@ -12,10 +12,19 @@ import 'member_complet_screen.dart';
 import 'member_form_screen.dart';
 
 /// Fiche d'un membre : matricule, coordonnées, département, cellule, statut.
+/// En [lectureSeule] (le fidèle qui regarde sa propre carte), aucun bouton
+/// de modification ni de suppression : la carte se regarde, elle ne
+/// s'administre pas depuis ici. La photo n'apparaît que si elle a été
+/// fournie (migration 018), sinon les initiales.
 class MemberDetailScreen extends StatelessWidget {
   final Member member;
+  final bool lectureSeule;
 
-  const MemberDetailScreen({super.key, required this.member});
+  const MemberDetailScreen({
+    super.key,
+    required this.member,
+    this.lectureSeule = false,
+  });
 
   Color _statusColor(String status) {
     switch (status) {
@@ -81,11 +90,12 @@ class MemberDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(member.fullName),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: 'Supprimer',
-            onPressed: () => _deleteMember(context),
-          ),
+          if (!lectureSeule)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Supprimer',
+              onPressed: () => _deleteMember(context),
+            ),
         ],
       ),
       body: SingleChildScrollView(
@@ -104,12 +114,17 @@ class MemberDetailScreen extends StatelessWidget {
                       children: [
                         CircleAvatar(
                           radius: 36,
-                          child: Text(
-                            member.fullName.isNotEmpty
-                                ? member.fullName[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(fontSize: 32),
-                          ),
+                          backgroundImage: member.photoUrl != null
+                              ? NetworkImage(member.photoUrl!)
+                              : null,
+                          child: member.photoUrl == null
+                              ? Text(
+                                  member.fullName.isNotEmpty
+                                      ? member.fullName[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(fontSize: 32),
+                                )
+                              : null,
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -157,34 +172,36 @@ class MemberDetailScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            MemberCompletScreen(memberId: member.id),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.badge_outlined),
-                  label: const Text('Voir la fiche complète'),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final changed = await Navigator.of(context).push<bool>(
-                      MaterialPageRoute(
-                        builder: (_) => MemberFormScreen(member: member),
-                      ),
-                    );
-                    if (changed == true && context.mounted) {
-                      Navigator.of(context).pop(true);
-                    }
-                  },
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Modifier'),
-                ),
-                const SizedBox(height: 16),
+                if (!lectureSeule) ...[
+                  FilledButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              MemberCompletScreen(memberId: member.id),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.badge_outlined),
+                    label: const Text('Voir la fiche complète'),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final changed = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute(
+                          builder: (_) => MemberFormScreen(member: member),
+                        ),
+                      );
+                      if (changed == true && context.mounted) {
+                        Navigator.of(context).pop(true);
+                      }
+                    },
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Modifier'),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
