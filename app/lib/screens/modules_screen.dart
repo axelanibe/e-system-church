@@ -32,14 +32,14 @@ class ModulesScreen extends StatelessWidget {
       ),
       _ModuleCard(
         icon: Icons.event_outlined,
-        couleur: AppTheme.cultes,
+        couleur: AppTheme.violetCultes,
         label: 'Cultes',
         description: 'Types de culte, cultes, ordre du culte et événements.',
         screen: CultesScreen(),
       ),
       _ModuleCard(
         icon: Icons.how_to_reg_outlined,
-        couleur: AppTheme.presences,
+        couleur: AppTheme.bleuPresences,
         label: 'Présences',
         description: 'Feuille de présence par culte et statistiques.',
         screen: PresencesScreen(),
@@ -52,7 +52,7 @@ class ModulesScreen extends StatelessWidget {
       ),
       _ModuleCard(
         icon: Icons.volunteer_activism_outlined,
-        couleur: AppTheme.prieres,
+        couleur: AppTheme.rosePrieres,
         label: 'Prières & messages',
         description: 'Demandes de prière et messages internes.',
         screen: PrieresScreen(),
@@ -71,14 +71,14 @@ class ModulesScreen extends StatelessWidget {
       ),
       _ModuleCard(
         icon: Icons.child_care_outlined,
-        couleur: AppTheme.enfants,
+        couleur: AppTheme.orangeEnfants,
         label: 'Enfants & jeunesse',
         description: 'Classes, autorisations de sortie et activités.',
         screen: EnfantsScreen(),
       ),
       _ModuleCard(
         icon: Icons.mic_outlined,
-        couleur: AppTheme.medias,
+        couleur: AppTheme.indigoMedias,
         label: 'Médias & bibliothèque',
         description: 'Prédications, plans de lecture, livres et prêts.',
         screen: MediasScreen(),
@@ -175,7 +175,7 @@ class ModulesScreen extends StatelessWidget {
 class _ModuleCard {
   final IconData icon;
 
-  /// Couleur Vision du module, pour l'icône seulement (null : primaire).
+  /// Couleur du module, pour l'icône seulement (null : primaire).
   final Color? couleur;
   final String label;
   final String description;

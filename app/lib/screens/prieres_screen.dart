@@ -77,9 +77,9 @@ class _PrieresScreenState extends State<PrieresScreen> {
       case 'nouvelle':
         return Colors.orange;
       case 'en_cours':
-        return AppTheme.presences;
+        return AppTheme.bleuPresences;
       case 'terminee':
-        return AppTheme.cypress;
+        return AppTheme.bleuNuit;
       default:
         return Colors.grey;
     }

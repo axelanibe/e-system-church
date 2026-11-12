@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Bouton doux principal : plein largeur, 48 px de haut, cyprès.
+/// Bouton doux principal : plein largeur, 48 px de haut, bleu nuit.
 /// Une seule action évidente par écran : le bouton principal est le
 /// geste à faire, le reste est secondaire.
 class BoutonDoux extends StatelessWidget {
@@ -31,7 +31,7 @@ class BoutonDoux extends StatelessWidget {
   }
 }
 
-/// Bouton doux secondaire : plein largeur, 48 px de haut, contour cyprès.
+/// Bouton doux secondaire : plein largeur, 48 px de haut, contour bleu nuit.
 class BoutonDouxSecondaire extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;

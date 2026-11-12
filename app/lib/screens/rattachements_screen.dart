@@ -88,7 +88,7 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
 
   Widget _rattachementTile(Rattachement r, {required bool isRecue}) {
     final color = switch (r.status) {
-      'acceptee' => AppTheme.cypress,
+      'acceptee' => AppTheme.bleuNuit,
       'refusee' => AppTheme.rougeErreur,
       _ => Colors.orange,
     };
@@ -104,7 +104,7 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
             StatusChip(label: r.statusLabel, color: color),
             if (isRecue && r.status == 'en_attente') ...[
               IconButton(
-                icon: const Icon(Icons.check, color: AppTheme.cypress),
+                icon: const Icon(Icons.check, color: AppTheme.bleuNuit),
                 tooltip: 'Accepter',
                 onPressed: () => _decide(r.id, true),
               ),

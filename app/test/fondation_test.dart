@@ -12,23 +12,21 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Thème fondation', () {
-    test('palette Vision Sanctuary Modern tranchée', () {
-      expect(AppTheme.fondAlabaster, const Color(0xFFF7F5F0));
-      expect(AppTheme.ivoire, const Color(0xFFFCFBF8));
-      expect(AppTheme.sable, const Color(0xFFEFECE4));
-      expect(AppTheme.bordure, const Color(0xFFE6E2D8));
-      expect(AppTheme.cypress, const Color(0xFF1E4D3B));
-      expect(AppTheme.cypressFonce, const Color(0xFF143629));
-      expect(AppTheme.terracotta, const Color(0xFFC86D51));
-      expect(AppTheme.orAmbre, const Color(0xFFB8862D));
-      expect(AppTheme.encre, const Color(0xFF1A1D20));
-      expect(AppTheme.ardoise, const Color(0xFF525B65));
+    test('palette de l\'artefact tranchée', () {
+      expect(AppTheme.fondPapier, const Color(0xFFF5F6FA));
+      expect(AppTheme.bordure, const Color(0xFFD9DEE6));
+      expect(AppTheme.bleuNuit, const Color(0xFF0B1F3A));
+      expect(AppTheme.or, const Color(0xFFD4A72C));
+      expect(AppTheme.orFonce, const Color(0xFF8A6A12));
+      expect(AppTheme.orClair, const Color(0xFFF7F0DA));
       expect(AppTheme.rougeErreur, const Color(0xFFB3261E));
-      expect(AppTheme.cultes, const Color(0xFF6B4C7A));
-      expect(AppTheme.presences, const Color(0xFF2B6CB0));
-      expect(AppTheme.prieres, const Color(0xFFB8506A));
-      expect(AppTheme.enfants, const Color(0xFFC07A1C));
-      expect(AppTheme.medias, const Color(0xFF3F51B5));
+      expect(AppTheme.vertFonce, const Color(0xFF0C5B40));
+      expect(AppTheme.bleuFonce, const Color(0xFF1B4F72));
+      expect(AppTheme.violetCultes, const Color(0xFF6B4C7A));
+      expect(AppTheme.bleuPresences, const Color(0xFF2563EB));
+      expect(AppTheme.rosePrieres, const Color(0xFFB8506A));
+      expect(AppTheme.orangeEnfants, const Color(0xFFB45309));
+      expect(AppTheme.indigoMedias, const Color(0xFF3730A3));
     });
 
     test('contrastes des textes principaux au moins 4,5:1', () {
@@ -40,21 +38,24 @@ void main() {
         return (clair + 0.05) / (sombre + 0.05);
       }
 
-      const fond = AppTheme.fondAlabaster;
-      expect(contraste(AppTheme.encre, fond), greaterThanOrEqualTo(4.5));
-      expect(contraste(AppTheme.cypress, fond), greaterThanOrEqualTo(4.5));
-      expect(
-          contraste(AppTheme.cypressFonce, fond), greaterThanOrEqualTo(4.5));
-      expect(contraste(AppTheme.ardoise, fond), greaterThanOrEqualTo(4.5));
+      const fond = AppTheme.fondPapier;
+      expect(contraste(AppTheme.bleuNuit, fond), greaterThanOrEqualTo(4.5));
+      expect(contraste(AppTheme.orFonce, fond), greaterThanOrEqualTo(4.5));
       expect(contraste(AppTheme.rougeErreur, fond),
           greaterThanOrEqualTo(4.5));
-      expect(contraste(AppTheme.cultes, fond), greaterThanOrEqualTo(4.5));
-      expect(
-          contraste(AppTheme.presences, fond), greaterThanOrEqualTo(4.5));
-      expect(contraste(AppTheme.medias, fond), greaterThanOrEqualTo(4.5));
-      expect(contraste(Colors.white, AppTheme.cypress),
+      expect(contraste(AppTheme.vertFonce, fond),
           greaterThanOrEqualTo(4.5));
-      expect(contraste(Colors.white, AppTheme.cypressFonce),
+      expect(contraste(AppTheme.violetCultes, fond),
+          greaterThanOrEqualTo(4.5));
+      expect(contraste(AppTheme.bleuPresences, fond),
+          greaterThanOrEqualTo(4.5));
+      expect(contraste(AppTheme.indigoMedias, fond),
+          greaterThanOrEqualTo(4.5));
+      expect(contraste(Colors.white, AppTheme.bleuNuit),
+          greaterThanOrEqualTo(4.5));
+      expect(contraste(AppTheme.bleuNuit, AppTheme.or),
+          greaterThanOrEqualTo(4.5));
+      expect(contraste(AppTheme.bleuNuit, AppTheme.orClair),
           greaterThanOrEqualTo(4.5));
     });
 

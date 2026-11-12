@@ -41,7 +41,7 @@ class CarteMembreVedette extends StatelessWidget {
         : (profil.matricule ?? '');
     final photoUrl = profil.user.photoUrl;
     return SoftCard(
-      color: AppTheme.sable,
+      color: AppTheme.orClair,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -50,7 +50,7 @@ class CarteMembreVedette extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 32,
-                backgroundColor: AppTheme.cypress,
+                backgroundColor: AppTheme.bleuNuit,
                 backgroundImage:
                     photoUrl != null ? NetworkImage(photoUrl) : null,
                 child: photoUrl == null
@@ -112,7 +112,7 @@ class CarteMembreVedette extends StatelessWidget {
             Row(
               children: [
                 const Icon(Icons.badge_outlined,
-                    size: 20, color: AppTheme.cypress),
+                    size: 20, color: AppTheme.bleuNuit),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(

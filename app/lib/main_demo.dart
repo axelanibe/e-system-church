@@ -23,7 +23,7 @@ import 'state/app_state.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // Polices Vision, comme dans `main.dart`.
+  // Polices, comme dans `main.dart`.
   GoogleFonts.inter();
   GoogleFonts.plusJakartaSans();
   GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold);
@@ -87,23 +87,23 @@ class DemoApp extends StatelessWidget {
             theme: ThemeData(
               useMaterial3: true,
               colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF1E4D3B),
-                primary: const Color(0xFF1E4D3B),
-                secondary: const Color(0xFFC86D51),
+                seedColor: const Color(0xFF0B1F3A),
+                primary: const Color(0xFF0B1F3A),
+                secondary: const Color(0xFFD4A72C),
                 tertiary: const Color(0xFFB3261E),
-                surface: const Color(0xFFFCFBF8),
+                surface: const Color(0xFFFFFFFF),
                 error: const Color(0xFFB3261E),
                 brightness: Brightness.light,
               ),
-              scaffoldBackgroundColor: const Color(0xFFF7F5F0),
+              scaffoldBackgroundColor: const Color(0xFFF5F6FA),
               appBarTheme: const AppBarTheme(
-                backgroundColor: Color(0xFF1E4D3B),
+                backgroundColor: Color(0xFF0B1F3A),
                 foregroundColor: Colors.white,
               ),
               floatingActionButtonTheme:
                   const FloatingActionButtonThemeData(
-                backgroundColor: Color(0xFFC86D51),
-                foregroundColor: Colors.white,
+                backgroundColor: Color(0xFFD4A72C),
+                foregroundColor: Color(0xFF0B1F3A),
               ),
             ),
             locale: const Locale('fr'),

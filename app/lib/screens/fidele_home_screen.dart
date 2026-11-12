@@ -316,7 +316,7 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                                 child: Chip(
                                   label: Text(
                                       '$n non lue${n > 1 ? 's' : ''}'),
-                                  backgroundColor: AppTheme.terracotta,
+                                  backgroundColor: AppTheme.or,
                                   labelStyle: const TextStyle(
                                       color: Colors.white),
                                 ),
@@ -508,7 +508,7 @@ class _ProchainCulte extends StatelessWidget {
         final theme = Theme.of(context);
         return Container(
           decoration: BoxDecoration(
-            color: AppTheme.cypress,
+            color: AppTheme.bleuNuit,
             borderRadius: BorderRadius.circular(16),
           ),
           padding: const EdgeInsets.all(20),

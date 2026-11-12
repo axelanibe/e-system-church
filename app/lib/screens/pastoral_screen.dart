@@ -384,7 +384,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       trailing: StatusChip(
                         label: v.statut,
                         color: v.statut == 'realisee'
-                            ? AppTheme.cypress
+                            ? AppTheme.bleuNuit
                             : v.statut == 'annulee'
                                 ? AppTheme.rougeErreur
                                 : Colors.orange,
@@ -456,8 +456,8 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       trailing: StatusChip(
                         label: a.statut,
                         color: a.statut == 'termine'
-                            ? AppTheme.cypress
-                            : AppTheme.presences,
+                            ? AppTheme.bleuNuit
+                            : AppTheme.bleuPresences,
                       ),
                     );
                   },

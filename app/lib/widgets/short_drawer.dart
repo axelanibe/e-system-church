@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import 'church_avatar.dart';
 import 'mere_badge.dart';
+import '../screens/annonces_screen.dart';
 import '../screens/annexes_screen.dart';
 import '../screens/mes_eglises_screen.dart';
 import '../screens/finances_mere_screen.dart';
@@ -12,6 +13,7 @@ import '../screens/plateforme_screen.dart';
 import '../screens/rattachements_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/transferts_screen.dart';
+import '../screens/tree_screen.dart';
 
 /// Tiroir court : l'église courante seule, jamais la liste complète.
 /// Pour changer d'église, une seule entrée, « Changer d'église », qui
@@ -19,8 +21,8 @@ import '../screens/transferts_screen.dart';
 /// explication en dessous, pour qu'un nouveau responsable comprenne
 /// où il va avant de toucher.
 class TiroirCourt extends StatelessWidget {
-  /// Aller à un onglet de la barre du bas (0 Accueil, 1 Réseau,
-  /// 2 Membres, 3 Finances, 4 Annonces, 5 Modules).
+  /// Aller à un onglet de la barre du bas (0 Accueil, 1 Membres,
+  /// 2 Finances, 3 Modules).
   final void Function(int index) onAller;
 
   const TiroirCourt({super.key, required this.onAller});
@@ -90,13 +92,16 @@ class TiroirCourt extends StatelessWidget {
           ),
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.account_tree_outlined),
+            title: const Text('Réseau'),
+            subtitle: const Text('Votre église et ses sous-églises'),
+            onTap: () => _ouvrir(context, const TreeScreen()),
+          ),
+          ListTile(
             leading: const Icon(Icons.campaign_outlined),
             title: const Text('Annonces'),
             subtitle: const Text('Messages pour votre église'),
-            onTap: () {
-              Navigator.of(context).pop();
-              onAller(4);
-            },
+            onTap: () => _ouvrir(context, const AnnoncesScreen()),
           ),
           ListTile(
             leading: const Icon(Icons.church_outlined),
