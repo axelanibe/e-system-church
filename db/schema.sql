@@ -13,7 +13,8 @@ CREATE TYPE church_status AS ENUM ('en_attente', 'active', 'suspendue');
 
 CREATE TABLE churches (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code             TEXT NOT NULL UNIQUE,          -- ex. ESC-G-2026, code d'invitation
+    code             TEXT NOT NULL UNIQUE,          -- ex. ESC-G-2026, code d'invitation (tutelle)
+    code_fidele      TEXT NOT NULL UNIQUE,          -- ex. ESC-F-K7M2QX, code fidèle (inscription des membres)
     name             TEXT NOT NULL,                 -- nom réel de l'église
     parent_church_id UUID REFERENCES churches (id) ON DELETE RESTRICT,
     city             TEXT,

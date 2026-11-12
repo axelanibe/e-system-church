@@ -301,6 +301,13 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
     );
   }
 
+  /// Copie un code d'invitation dans le presse-papiers (code fidèle ou
+  /// code de tutelle, à transmettre à un membre ou à une église).
+  void _copierCode(String code) {
+    Clipboard.setData(ClipboardData(text: code));
+    showSuccess(context, 'Code copié : $code');
+  }
+
   /// Module 13 — choisit un logo (PNG/JPG, max 2 Mo), le téléverse et
   /// remplit le champ URL du logo avec l'URL renvoyée. Le champ URL reste
   /// disponible en repli.
@@ -657,6 +664,51 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                                 '${a.code}${a.city != null ? ' · ${a.city}' : ''}'),
                           )),
                     if (state.isAdmin) ...[
+                      const SectionTitle(title: 'Codes d’invitation'),
+                      const Text(
+                        'Le code fidèle permet aux membres de s’inscrire '
+                        'dans votre église ; le code de tutelle permet à '
+                        'une église de se rattacher à la vôtre. Touchez '
+                        'l’icône pour copier le code à transmettre.',
+                      ),
+                      const SizedBox(height: 8),
+                      Card(
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.key_outlined),
+                              title: const Text('Code fidèle'),
+                              subtitle: Text(
+                                state.church?.codeFidele ??
+                                    'Disponible après la prochaine connexion.',
+                              ),
+                              trailing: state.church?.codeFidele == null
+                                  ? null
+                                  : IconButton(
+                                      icon:
+                                          const Icon(Icons.copy_outlined),
+                                      tooltip: 'Copier le code fidèle',
+                                      onPressed: () => _copierCode(
+                                          state.church!.codeFidele!),
+                                    ),
+                            ),
+                            const Divider(height: 1),
+                            ListTile(
+                              leading:
+                                  const Icon(Icons.account_tree_outlined),
+                              title: const Text('Code de tutelle'),
+                              subtitle: Text(state.church?.code ?? ''),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.copy_outlined),
+                                tooltip: 'Copier le code de tutelle',
+                                onPressed: () =>
+                                    _copierCode(state.church!.code),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       const SectionTitle(title: 'Demandes de liaison'),
                       FilledButton.icon(
                         onPressed: _inviter,

@@ -189,7 +189,12 @@ monde, sans confusion possible entre églises.
   Accessible par le code unique de l'église (ex. `GRACE-001`).
 - Contexte toujours visible : chaque écran affiche le logo et le nom
   de l'église active ; sélecteur d'église clair pour les utilisateurs
-  rattachés à plusieurs églises ; code unique affiché partout.
+  rattachés à plusieurs églises ; deux codes uniques par église affichés
+  dans « Mon église » : code de tutelle permanent (`ESC-XXXXXX`, pour rattacher
+  une sous-église par `parent_code`) et code fidèle (`ESC-F-XXXXXX`, pour inscrire les
+  membres dans la bonne église). En plus, la mère peut générer des codes
+  de tutelle à usage unique (`ESC-T-XXXXXX`, un seul usage, à l'acceptation
+  du rattachement — migration 009).
 - Simplicité : navigation par modules avec icônes et libellés clairs,
   tableau de bord simple, recherche partout, parcours guidé à
   l'inscription (existant, 4 étapes), mode démo (existant).
@@ -284,8 +289,11 @@ serveur les récupère seulement au moment d'exécuter un paiement.
 - Inscription fidèle (`POST /auth/inscription-fidele`, e-mail + mot de
   passe + matricule) : trouve le membre actif par matricule (ambiguïté
   possible — le matricule est unique par église, pas global — résolue
-  par l'e-mail concordant, sinon refus explicite). E-mail concordant
-  avec la fiche membre → liaison immédiate + connexion immédiate. Sinon
+  par l'e-mail concordant, sinon refus explicite). Champ optionnel
+  `code_fidele` (ESC-F-…) : quand il est fourni, la recherche du membre
+  est restreinte à l'église de ce code (code inconnu → refus explicite).
+  E-mail concordant avec la fiche membre → liaison immédiate + connexion
+  immédiate. Sinon
   → compte créé sans église + demande en attente dans
   `member_link_requests` (« demande envoyée, l'administrateur de ton
   église doit la valider ») ; connexion impossible avant validation.
