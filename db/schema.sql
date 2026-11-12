@@ -275,6 +275,27 @@ CREATE TABLE audit_logs (
 CREATE INDEX idx_audit_church ON audit_logs (church_id, created_at);
 
 -- ---------------------------------------------------------------------------
+-- Historique des imports de fidèles (tranche A) : un rapport par import
+-- confirmé. Voir db/migrations/015_import_membres.sql (même définition,
+-- pour les bases existantes).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS imports_membres (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id   UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    user_id     UUID REFERENCES users (id) ON DELETE SET NULL,
+    nom_fichier TEXT NOT NULL,
+    total_lignes INTEGER NOT NULL DEFAULT 0,
+    crees       INTEGER NOT NULL DEFAULT 0,
+    ignores     INTEGER NOT NULL DEFAULT 0,
+    erreurs     JSONB NOT NULL DEFAULT '[]'::jsonb,
+    statut      TEXT NOT NULL DEFAULT 'termine'
+                CHECK (statut IN ('termine', 'partiel', 'echoue')),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_imports_membres_church
+    ON imports_membres (church_id, created_at DESC);
+
+-- ---------------------------------------------------------------------------
 -- Attestations annuelles de dons (US3) : une attestation émise est figée,
 -- son contenu est copié en JSONB à l'émission. Voir db/migrations/
 -- 008_attestations.sql (même définition, pour les bases existantes).

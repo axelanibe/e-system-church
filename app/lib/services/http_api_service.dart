@@ -595,6 +595,75 @@ class HttpApiService implements ApiService {
     await _call('DELETE', '/membres/$id');
   }
 
+  // -- Import des fidèles (tranche A) ----------------------------------------
+  // Section séparée et marquée : modèle, aperçu, confirmation, historique.
+  // Le contenu CSV ou les lignes (XLSX lu côté client) partent en JSON,
+  // le serveur n'a pas de support multipart.
+  @override
+  Future<Uint8List> telechargerModeleImport() async =>
+      _getBytes('/import/modele');
+
+  @override
+  Future<Map<String, dynamic>> apercuImport({
+    String? contenuCsv,
+    List<Map<String, String>>? lignes,
+    Map<String, String>? mapping,
+    String? nomFichier,
+  }) async =>
+      _call('POST', '/import/apercu', body: {
+        if (contenuCsv != null) 'contenu_csv': contenuCsv,
+        if (lignes != null) 'lignes': lignes,
+        if (mapping != null) 'mapping': mapping,
+        if (nomFichier != null) 'nom_fichier': nomFichier,
+      });
+
+  @override
+  Future<Map<String, dynamic>> confirmerImport({
+    String? contenuCsv,
+    List<Map<String, String>>? lignes,
+    Map<String, String>? mapping,
+    String? nomFichier,
+  }) async =>
+      _call('POST', '/import/confirmer', body: {
+        if (contenuCsv != null) 'contenu_csv': contenuCsv,
+        if (lignes != null) 'lignes': lignes,
+        if (mapping != null) 'mapping': mapping,
+        if (nomFichier != null) 'nom_fichier': nomFichier,
+      });
+
+  @override
+  Future<List<Map<String, dynamic>>> historiqueImports() async {
+    final data = await _call('GET', '/import/historique');
+    return (data['imports'] as List<dynamic>? ?? [])
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
+  }
+
+  /// GET binaire générique (modèle CSV, comme le PDF d'attestation) :
+  /// octets bruts ou [ApiException] avec le message du serveur.
+  Future<Uint8List> _getBytes(String path) async {
+    final uri = Uri.parse('$baseUrl$path');
+    http.Response res;
+    try {
+      res = await http
+          .get(uri, headers: _headers(withBody: false))
+          .timeout(const Duration(seconds: 20));
+    } on TimeoutException {
+      throw const ApiException('Le serveur ne répond pas.');
+    } on SocketException {
+      throw const ApiException('Impossible de joindre le serveur.');
+    }
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return Uint8List.fromList(res.bodyBytes);
+    }
+    String message = 'Erreur ${res.statusCode}.';
+    try {
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      message = (data['message'] as String?) ?? message;
+    } catch (_) {}
+    throw ApiException(message, res.statusCode);
+  }
+
   // -- Membres (complément, module 1) ----------------------------------------
   @override
   Future<List<Famille>> getFamilles() async =>

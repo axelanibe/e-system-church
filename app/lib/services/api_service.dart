@@ -230,6 +230,27 @@ abstract class ApiService {
 
   Future<void> deleteMember(String id);
 
+  // -- Import des fidèles (tranche A) ----------------------------------------
+  // Modèle CSV, aperçu avant import, confirmation, historique. Les lignes
+  // peuvent venir d'un CSV lu en texte ou d'un XLSX lu côté client.
+  Future<Uint8List> telechargerModeleImport();
+
+  Future<Map<String, dynamic>> apercuImport({
+    String? contenuCsv,
+    List<Map<String, String>>? lignes,
+    Map<String, String>? mapping,
+    String? nomFichier,
+  });
+
+  Future<Map<String, dynamic>> confirmerImport({
+    String? contenuCsv,
+    List<Map<String, String>>? lignes,
+    Map<String, String>? mapping,
+    String? nomFichier,
+  });
+
+  Future<List<Map<String, dynamic>>> historiqueImports();
+
   // -- Membres (complément, module 1) ----------------------------------------
   Future<List<Famille>> getFamilles();
 

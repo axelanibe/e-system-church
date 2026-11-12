@@ -10,6 +10,7 @@ import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
 import 'member_detail_screen.dart';
 import 'member_form_screen.dart';
+import 'import_membres_screen.dart';
 
 /// Liste des membres de mon église : recherche (nom / matricule) et
 /// filtres (département, statut). Le trésorier ne peut pas créer de membre.
@@ -103,6 +104,16 @@ class _MembresScreenState extends State<MembresScreen> {
     }
   }
 
+  Future<void> _openImport() async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const ImportMembresScreen()),
+    );
+    if (changed == true && mounted) {
+      showSuccess(context, 'Import terminé.');
+      _refresh();
+    }
+  }
+
   Color _statusColor(String status) {
     switch (status) {
       case 'actif':
@@ -183,6 +194,12 @@ class _MembresScreenState extends State<MembresScreen> {
                     });
                   },
                 ),
+                if (state.isAdmin)
+                  OutlinedButton.icon(
+                    onPressed: _openImport,
+                    icon: const Icon(Icons.upload_outlined),
+                    label: const Text('Importer'),
+                  ),
               ],
             ),
           ),
