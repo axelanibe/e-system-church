@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/finances.dart';
 import '../state/app_state.dart';
@@ -790,6 +791,42 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
     );
   }
 
+  /// Export PDF des finances pour l'année affichée : le détail couvre
+  /// toute l'année (1er janvier au 31 décembre), le résumé reprend les
+  /// totaux du rapport (par mois, par poste, par branche). Partage par le
+  /// même mécanisme que les attestations (SharePlus). Admin et trésorier
+  /// seulement, le serveur refuse le reste (403).
+  Future<void> _exporterFinancesPdf({required bool detail}) async {
+    final annee =
+        int.tryParse(_anneeController.text.trim()) ?? DateTime.now().year;
+    try {
+      final bytes = detail
+          ? await context.read<AppState>().api.exporterFinancesDetailPdf(
+                from: '$annee-01-01',
+                to: '$annee-12-31',
+              )
+          : await context
+              .read<AppState>()
+              .api
+              .exporterFinancesResumePdf(annee: annee);
+      final nom =
+          detail ? 'finances-detail-$annee.pdf' : 'finances-resume-$annee.pdf';
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(bytes, name: nom, mimeType: 'application/pdf'),
+          ],
+          subject: detail
+              ? 'Détail des finances $annee'
+              : 'Résumé des finances $annee',
+        ),
+      );
+      if (mounted) showSuccess(context, 'Export PDF partagé.');
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
   Widget _rapportTab() {
     final state = context.watch<AppState>();
     return Column(
@@ -826,6 +863,29 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
             ],
           ),
         ),
+        if (state.canManageFinances)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _exporterFinancesPdf(detail: true),
+                    icon: const Icon(Icons.download_outlined),
+                    label: const Text('Détail (PDF)'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _exporterFinancesPdf(detail: false),
+                    icon: const Icon(Icons.download_outlined),
+                    label: const Text('Résumé (PDF)'),
+                  ),
+                ),
+              ],
+            ),
+          ),
         Expanded(
           child: _rapportFuture == null
               ? const EmptyState(

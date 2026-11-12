@@ -24,7 +24,7 @@ export interface AttestationPdfData {
   totalFcfa: number;
 }
 
-function formaterMontant(n: number): string {
+export function formaterMontant(n: number): string {
   return `${String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} FCFA`;
 }
 
@@ -51,6 +51,247 @@ function litteral(texte: string): string {
     else out += String.fromCharCode(b);
   }
   return `(${out})`;
+}
+
+/**
+ * Générateur de rapport générique, multipage (tranche C, exports PDF).
+ * Même technique que l'attestation (PDF minimal sans dépendance, Helvetica,
+ * WinAnsi), mais avec pagination : une section est un tableau avec en-têtes,
+ * lignes et totaux ; quand il n'y a plus de place en bas de page, une
+ * nouvelle page est ouverte et l'en-tête du tableau est répété. Aucune
+ * ligne n'est perdue : l'attestation ci-dessus coupe à une page, ici on
+ * continue tant qu'il y a des lignes.
+ */
+
+export interface ColonneRapport {
+  titre: string;
+  /** Largeur en points ; la somme des colonnes doit tenir dans 495. */
+  largeur: number;
+  alignerDroite?: boolean;
+}
+
+export interface SectionRapport {
+  titre: string;
+  colonnes: ColonneRapport[];
+  /** Cellules déjà formatées (montants en « 12 000 FCFA », dates JJ/MM/AAAA). */
+  lignes: string[][];
+  /** Ligne de totaux (même longueur que les colonnes), ou null. */
+  total?: string[] | null;
+  messageVide?: string;
+}
+
+export interface RapportPdfData {
+  titre: string;
+  egliseNom: string;
+  /** Lignes de contexte sous le titre (période, date d'émission, solde…). */
+  lignesMeta: string[];
+  sections: SectionRapport[];
+  /** Note finale, ex. « Agrégats seulement, aucun détail nominatif. » */
+  pied?: string;
+}
+
+const PAGE_LARGEUR = 595;
+const PAGE_HAUTEUR = 842;
+const MARGE = 50;
+const LARGEUR_UTILE = PAGE_LARGEUR - MARGE * 2;
+const HAUT_PAGE = 792;
+const BAS_PAGE = 60;
+const HAUTEUR_LIGNE = 15;
+
+/** Largeur estimée d'un texte Helvetica : ~0,52 × taille par caractère. */
+function largeurEstimee(texte: string, taille: number): number {
+  return texte.length * taille * 0.52;
+}
+
+/** Tronque un texte pour tenir dans une colonne, avec « ... » si coupé. */
+function tronquer(texte: string, largeurPts: number, taille: number): string {
+  const max = Math.floor((largeurPts - 4) / (taille * 0.52));
+  if (max <= 0) return "";
+  if (texte.length <= max) return texte;
+  if (max <= 3) return texte.slice(0, max);
+  return `${texte.slice(0, max - 3)}...`;
+}
+
+/** Assemble un PDF multipage à partir des flux de contenu de chaque page. */
+function construirePdfMultiPages(pages: string[]): Buffer {
+  const objets: string[] = [
+    `<< /Type /Catalog /Pages 2 0 R >>`,
+    `<< /Type /Pages /Kids [${pages.map((_, i) => `${5 + i * 2} 0 R`).join(" ")}] /Count ${pages.length} >>`,
+    `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>`,
+    `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>`,
+  ];
+  pages.forEach((contenu, i) => {
+    objets.push(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_LARGEUR} ${PAGE_HAUTEUR}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${6 + i * 2} 0 R >>`,
+    );
+    objets.push(
+      `<< /Length ${Buffer.byteLength(contenu)} >>\nstream\n${contenu}\nendstream`,
+    );
+  });
+  const parties: Buffer[] = [Buffer.from("%PDF-1.4\n", "latin1")];
+  const offsets: number[] = [0];
+  let pos = parties[0].length;
+  objets.forEach((o, i) => {
+    offsets.push(pos);
+    const b = Buffer.from(`${i + 1} 0 obj\n${o}\nendobj\n`, "latin1");
+    parties.push(b);
+    pos += b.length;
+  });
+  const xrefPos = pos;
+  let xref = `xref\n0 ${objets.length + 1}\n0000000000 65535 f \n`;
+  for (let i = 1; i <= objets.length; i++) {
+    xref += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`;
+  }
+  xref += `trailer\n<< /Size ${objets.length + 1} /Root 1 0 R >>\nstartxref\n${xrefPos}\n%%EOF`;
+  parties.push(Buffer.from(xref, "latin1"));
+  return Buffer.concat(parties);
+}
+
+export function genererRapportPdf(d: RapportPdfData): Buffer {
+  const pages: string[][] = [[]];
+  let y = HAUT_PAGE;
+
+  const texte = (
+    x: number,
+    yy: number,
+    taille: number,
+    s: string,
+    gras = false,
+  ) => {
+    pages[pages.length - 1].push(
+      `BT /${gras ? "F2" : "F1"} ${taille} Tf ${x} ${yy} Td ${litteral(s)} Tj ET`,
+    );
+  };
+  /** Trait horizontal fin (filet sous un en-tête, au-dessus d'un total). */
+  const filet = (yy: number) => {
+    pages[pages.length - 1].push(
+      `0.5 w ${MARGE} ${yy} m ${MARGE + LARGEUR_UTILE} ${yy} l S`,
+    );
+  };
+  /** Ouvre une nouvelle page ; `repetition` redessine l'en-tête du tableau en cours. */
+  const nouvellePage = (repetition?: () => void) => {
+    pages.push([]);
+    y = HAUT_PAGE;
+    repetition?.();
+  };
+  /** Place sous le titre : assez de place pour `besoin` points, sinon nouvelle page. */
+  const assurerPlace = (besoin: number, repetition?: () => void) => {
+    if (y - besoin < BAS_PAGE) nouvellePage(repetition);
+  };
+
+  texte(MARGE, y, 16, tronquer(d.titre, LARGEUR_UTILE, 16), true);
+  y -= 20;
+  texte(MARGE, y, 11, d.egliseNom);
+  y -= 18;
+  for (const meta of d.lignesMeta) {
+    texte(MARGE, y, 10, tronquer(meta, LARGEUR_UTILE, 10));
+    y -= 15;
+  }
+  y -= 10;
+
+  for (const section of d.sections) {
+    assurerPlace(60);
+    texte(MARGE, y, 13, tronquer(section.titre, LARGEUR_UTILE, 13), true);
+    y -= 20;
+
+    // Positions x des colonnes (largeurs plafonnées à la largeur utile).
+    const largeurs = section.colonnes.map((c) => c.largeur);
+    const totalLargeurs = largeurs.reduce((s, l) => s + l, 0);
+    const facteur =
+      totalLargeurs > LARGEUR_UTILE ? LARGEUR_UTILE / totalLargeurs : 1;
+    const xs: number[] = [];
+    {
+      let x = MARGE;
+      for (const l of largeurs) {
+        xs.push(x);
+        x += l * facteur;
+      }
+    }
+    const dessinerEntete = () => {
+      for (let i = 0; i < section.colonnes.length; i++) {
+        const c = section.colonnes[i];
+        const t = tronquer(c.titre, largeurs[i] * facteur, 10);
+        if (c.alignerDroite) {
+          const xDroite = xs[i] + largeurs[i] * facteur - 2;
+          texte(
+            Math.round(xDroite - largeurEstimee(t, 10)),
+            y,
+            10,
+            t,
+            true,
+          );
+        } else {
+          texte(xs[i], y, 10, t, true);
+        }
+      }
+      y -= 4;
+      filet(y);
+      y -= 12;
+    };
+    const dessinerLigne = (cellules: string[], gras = false) => {
+      for (let i = 0; i < section.colonnes.length; i++) {
+        const c = section.colonnes[i];
+        const t = tronquer(cellules[i] ?? "", largeurs[i] * facteur, 10);
+        if (c.alignerDroite) {
+          const xDroite = xs[i] + largeurs[i] * facteur - 2;
+          texte(
+            Math.round(xDroite - largeurEstimee(t, 10)),
+            y,
+            10,
+            t,
+            gras,
+          );
+        } else {
+          texte(xs[i], y, 10, t, gras);
+        }
+      }
+      y -= HAUTEUR_LIGNE;
+    };
+
+    if (section.lignes.length === 0) {
+      dessinerEntete();
+      texte(
+        MARGE,
+        y,
+        10,
+        section.messageVide ?? "Aucune donnée sur cette période.",
+      );
+      y -= HAUTEUR_LIGNE;
+    } else {
+      dessinerEntete();
+      for (const ligne of section.lignes) {
+        assurerPlace(HAUTEUR_LIGNE, dessinerEntete);
+        dessinerLigne(ligne);
+      }
+      if (section.total) {
+        assurerPlace(HAUTEUR_LIGNE + 6, dessinerEntete);
+        filet(y + 11);
+        dessinerLigne(section.total, true);
+      }
+    }
+    y -= 14;
+  }
+
+  if (d.pied) {
+    assurerPlace(30);
+    texte(MARGE, y, 10, tronquer(d.pied, LARGEUR_UTILE, 10));
+    y -= 15;
+  }
+
+  // Pied de page : numéro « Page i / n » sur chaque page, ajouté à la fin
+  // car le nombre total de pages n'est connu qu'une fois le rapport fini.
+  const totalPages = pages.length;
+  pages.forEach((lignes, i) => {
+    const label = `Page ${i + 1} / ${totalPages}`;
+    lignes.push(
+      `BT /F1 9 Tf ${Math.round(MARGE + LARGEUR_UTILE - largeurEstimee(label, 9))} 35 Td ${litteral(label)} Tj ET`,
+    );
+    lignes.push(
+      `BT /F1 9 Tf ${MARGE} 35 Td ${litteral("E-System Church")} Tj ET`,
+    );
+  });
+
+  return construirePdfMultiPages(pages.map((p) => p.join("\n")));
 }
 
 export function genererAttestationPdf(d: AttestationPdfData): Buffer {
