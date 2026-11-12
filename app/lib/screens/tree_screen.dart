@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/church.dart';
 import '../state/app_state.dart';
+import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 
 /// Arborescence de mon réseau (`GET /eglises/arbre`) : vue dépliable,
@@ -287,7 +288,7 @@ class _TreeNodeTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: Text('${node.membresActifs} membre(s)'),
+      trailing: Text(pluriel(node.membresActifs, 'membre')),
     );
     if (node.children.isEmpty) return tile;
     return ExpansionTile(
@@ -306,7 +307,7 @@ class _TreeNodeTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: Text('${node.membresActifs} membre(s)'),
+      trailing: Text(pluriel(node.membresActifs, 'membre')),
       initiallyExpanded: true,
       childrenPadding: const EdgeInsets.only(left: 24),
       children: node.children

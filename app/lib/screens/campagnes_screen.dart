@@ -224,7 +224,9 @@ class _CampagnesScreenState extends State<CampagnesScreen> {
                             ),
                           ),
                           Text(
-                            '${c.nombreContributions} contribution(s) confirmée(s).',
+                            pluriel(c.nombreContributions,
+                                'contribution confirmée',
+                                'contributions confirmées'),
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                           if (state.canManageFinances &&

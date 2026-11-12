@@ -891,7 +891,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                                       fontWeight: FontWeight.bold),
                                 ),
                                 subtitle:
-                                    Text('$nombre contribution(s)'),
+                                    Text(pluriel(nombre, 'contribution')),
                               );
                             }),
                           const SectionTitle(title: 'Par poste'),
@@ -941,7 +941,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                                     Icons.account_tree_outlined),
                                 title: Text('${b['eglise_nom'] ?? '—'}'),
                                 subtitle: Text(
-                                    '$membres membre(s) actif(s) · $contributions contribution(s)'),
+                                    '${pluriel(membres, 'membre actif', 'membres actifs')} · ${pluriel(contributions, 'contribution')}'),
                                 trailing: Text(
                                   formatMontant(total, state.devise),
                                   style: const TextStyle(

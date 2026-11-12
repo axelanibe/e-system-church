@@ -29,7 +29,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
     _future = context.read<AppState>().api.getReceipt(widget.contributionId);
   }
 
-  Future<void> _setStatus(String status) async {
+  Future<void> _setStatus(String status, bool estDepense) async {
     setState(() => _working = true);
     try {
       final updated = await context
@@ -39,7 +39,9 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       if (!mounted) return;
       showSuccess(
         context,
-        status == 'confirme' ? 'Contribution confirmée.' : 'Contribution annulée.',
+        status == 'confirme'
+            ? (estDepense ? 'Dépense confirmée.' : 'Contribution confirmée.')
+            : (estDepense ? 'Dépense annulée.' : 'Contribution annulée.'),
       );
       setState(() => _future = Future.value(updated));
     } catch (e) {
@@ -173,17 +175,25 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                         state.canManageFinances) ...[
                       const SizedBox(height: 24),
                       FilledButton.icon(
-                        onPressed:
-                            _working ? null : () => _setStatus('confirme'),
+                        onPressed: _working
+                            ? null
+                            : () => _setStatus(
+                                'confirme', c.type == 'depense'),
                         icon: const Icon(Icons.check),
-                        label: const Text('Confirmer la contribution'),
+                        label: Text(c.type == 'depense'
+                            ? 'Confirmer la dépense'
+                            : 'Confirmer la contribution'),
                       ),
                       const SizedBox(height: 12),
                       OutlinedButton.icon(
-                        onPressed:
-                            _working ? null : () => _setStatus('annule'),
+                        onPressed: _working
+                            ? null
+                            : () =>
+                                _setStatus('annule', c.type == 'depense'),
                         icon: const Icon(Icons.close),
-                        label: const Text('Annuler la contribution'),
+                        label: Text(c.type == 'depense'
+                            ? 'Annuler la dépense'
+                            : 'Annuler la contribution'),
                       ),
                     ],
                   ],

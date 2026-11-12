@@ -251,7 +251,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-                '${rapport.membresActifs} membres actifs dans le réseau'),
+                '${pluriel(rapport.membresActifs, 'membre actif', 'membres actifs')} dans le réseau'),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -330,7 +330,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             Text(
-                '${niveauLabel(b.niveau)} · ${b.egliseCode} · ${b.egliseVille ?? ''} · ${b.membresActifs} membres actifs'),
+                '${niveauLabel(b.niveau)} · ${b.egliseCode} · ${b.egliseVille ?? ''} · ${pluriel(b.membresActifs, 'membre actif', 'membres actifs')}'),
             const SizedBox(height: 8),
             LinearProgressIndicator(
               value: maxEntrees == 0 ? 0 : b.entreesFcfa / maxEntrees,
@@ -361,7 +361,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
             Text(
-                '${niveauLabel(b.niveau)} · ${b.egliseCode} · ${b.egliseVille ?? ''} · ${b.membresActifs} membres actifs'),
+                '${niveauLabel(b.niveau)} · ${b.egliseCode} · ${b.egliseVille ?? ''} · ${pluriel(b.membresActifs, 'membre actif', 'membres actifs')}'),
             const SizedBox(height: 8),
             Text(
                 'Solde ${formatFcfa(b.soldeFcfa)} · ${b.transactions.length} transactions confirmées'),

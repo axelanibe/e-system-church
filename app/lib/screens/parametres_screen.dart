@@ -283,6 +283,7 @@ class _ParametresScreenState extends State<ParametresScreen> {
               final items = snapshot.data!
                   .where((a) =>
                       _matches(a.action) ||
+                      _matches(libelleActionAudit(a.action)) ||
                       _matches(a.utilisateur ?? ''))
                   .toList();
               if (items.isEmpty) {
@@ -301,7 +302,7 @@ class _ParametresScreenState extends State<ParametresScreen> {
                       leading: const CircleAvatar(
                         child: Icon(Icons.history),
                       ),
-                      title: Text(a.action),
+                      title: Text(libelleActionAudit(a.action)),
                       subtitle: Text(
                         '${a.utilisateur ?? '—'} · ${afficherDateTime(a.createdAt)}'
                         '${a.details != null ? ' · ${a.details}' : ''}',

@@ -113,3 +113,127 @@ class AuditEntree {
         utilisateur: json['utilisateur'] as String?,
       );
 }
+
+/// Libellé français lisible d'une action du journal d'audit, par exemple
+/// « modules.modifie » → « Module modifié ». Le serveur journalise des
+/// codes, l'écran ne les montre jamais bruts. Repli : le code rendu
+/// lisible (tirets et points remplacés, première lettre en majuscule).
+String libelleActionAudit(String action) {
+  const explicites = <String, String>{
+    'annonce.publiee': 'Annonce publiée',
+    'annonce.supprimee': 'Annonce supprimée',
+    'attestation.corrige': 'Attestation corrigée',
+    'attestation.generee': 'Attestation générée',
+    'auth.eglise_active_changee': 'Église active changée',
+    'auth.invitation_creee': 'Invitation créée',
+    'auth.lien_reinitialisation_genere':
+        'Lien de réinitialisation généré',
+    'auth.login': 'Connexion',
+    'auth.login_failed': 'Échec de connexion',
+    'auth.mot_de_passe_change': 'Mot de passe changé',
+    'auth.mot_de_passe_initialise': 'Mot de passe initialisé',
+    'auth.mot_de_passe_oublie': 'Mot de passe oublié',
+    'auth.mot_de_passe_reinitialise': 'Mot de passe réinitialisé',
+    'campagne.cloturee': 'Campagne clôturée',
+    'campagne.creee': 'Campagne créée',
+    'campagne.modifiee': 'Campagne modifiée',
+    'checkin_enfant.alerte': 'Alerte d’accueil d’enfant',
+    'checkin_enfant.cree': 'Arrivée d’enfant enregistrée',
+    'checkin_enfant.sortie': 'Sortie d’enfant enregistrée',
+    'codes_tutelle.annule': 'Code de tutelle annulé',
+    'codes_tutelle.cree': 'Code de tutelle créé',
+    'codes_tutelle.utilise': 'Code de tutelle utilisé',
+    'contribution.campagne_affectee':
+        'Contribution rattachée à une campagne',
+    'contribution.enregistree': 'Contribution enregistrée',
+    'eglise.inscrite': 'Église inscrite',
+    'eglise.logo_televerse': 'Logo de l’église téléversé',
+    'eglise.profil_modifie': 'Profil de l’église modifié',
+    'eglise.sous_eglise_creee': 'Sous-église créée',
+    'fidele.demande_liaison': 'Demande de liaison de fidèle',
+    'fidele.inscrit_lie': 'Fidèle inscrit et lié',
+    'fidele.inscrit_par_code': 'Fidèle inscrit par code',
+    'membre.cree': 'Membre créé',
+    'membre.modifie': 'Membre modifié',
+    'membre.statut_change': 'Statut de membre changé',
+    'membre.supprime': 'Membre supprimé',
+    'modules.actives_tutelle': 'Modules activés pour une tutelle',
+    'modules.modifie': 'Module modifié',
+    'paiement.configure': 'Moyen de paiement configuré',
+    'paiement.execute': 'Paiement exécuté',
+    'paiement.supprime': 'Moyen de paiement supprimé',
+    'paiement.teste': 'Paiement testé',
+    'parametres.modifies': 'Paramètres modifiés',
+    'plateforme.chiffres_consultes': 'Chiffres de la plateforme consultés',
+    'presence.pointee': 'Présence pointée',
+    'pret_livre.rendu': 'Livre rendu',
+    'rapport.detail_consulte': 'Rapport détaillé consulté',
+    'rattachement.demande': 'Demande de rattachement',
+    'role.modifie': 'Rôle modifié',
+    'transfert.annule': 'Transfert annulé',
+    'transfert.demande': 'Demande de transfert',
+    'transfert.effectue': 'Transfert effectué',
+  };
+  final explicite = explicites[action];
+  if (explicite != null) return explicite;
+  // Actions génériques du CRUD (`<objet>.cree / .modifie / .supprime`) :
+  // nom de l'objet et genre, pour accorder le participe.
+  const noms = <String, (String, bool)>{
+    'accompagnement': ('Accompagnement', false),
+    'activite_jeunesse': ('Activité jeunesse', true),
+    'autorisation_sortie': ('Autorisation de sortie', true),
+    'bapteme': ('Baptême', false),
+    'budget': ('Budget', false),
+    'caisse': ('Caisse', true),
+    'cellule': ('Cellule', true),
+    'classe_enfant': ('Classe d’enfant', true),
+    'culte': ('Culte', false),
+    'culte_type': ('Type de culte', false),
+    'demande_priere': ('Demande de prière', true),
+    'departement': ('Département', false),
+    'depense': ('Dépense', true),
+    'enseignant_classe': ('Enseignant de classe', false),
+    'evenement_special': ('Événement spécial', false),
+    'famille': ('Famille', true),
+    'fonction': ('Fonction', true),
+    'lien_parent_enfant': ('Lien parent-enfant', false),
+    'livre': ('Livre', false),
+    'maintenance_materiel': ('Maintenance du matériel', true),
+    'materiel': ('Matériel', false),
+    'membre_cellule': ('Membre de cellule', false),
+    'membre_departement': ('Membre de département', false),
+    'membre_statut': ('Statut de membre', false),
+    'message_interne': ('Message interne', false),
+    'ordre_culte': ('Ordre du culte', false),
+    'parcours_nouveau': ('Parcours nouveau', false),
+    'plan_lecture': ('Plan de lecture', false),
+    'planning_serviteur': ('Planning de serviteur', false),
+    'poste': ('Poste', false),
+    'poste_budgetaire': ('Poste budgétaire', false),
+    'predication': ('Prédication', true),
+    'presence': ('Présence', true),
+    'pret_livre': ('Prêt de livre', false),
+    'reservation_salle': ('Réservation de salle', true),
+    'salle': ('Salle', true),
+    'serviteur': ('Serviteur', false),
+    'visite_pastorale': ('Visite pastorale', true),
+  };
+  final parties = action.split('.');
+  if (parties.length == 2) {
+    final nom = noms[parties[0]];
+    if (nom != null) {
+      final (label, feminin) = nom;
+      final participe = switch (parties[1]) {
+        'cree' => feminin ? 'créée' : 'créé',
+        'modifie' => feminin ? 'modifiée' : 'modifié',
+        'supprime' => feminin ? 'supprimée' : 'supprimé',
+        _ => parties[1],
+      };
+      return '$label $participe';
+    }
+  }
+  final lisible = action.replaceAll('_', ' ').replaceAll('.', ' — ');
+  return lisible.isEmpty
+      ? action
+      : '${lisible[0].toUpperCase()}${lisible.substring(1)}';
+}
