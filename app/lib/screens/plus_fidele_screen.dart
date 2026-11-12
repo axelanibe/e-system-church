@@ -4,16 +4,19 @@ import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
+import 'a_propos_screen.dart';
 import 'camps_fidele_screen.dart';
 import 'cotisations_screen.dart';
 import 'journal_screen.dart';
 import 'mes_attestations_screen.dart';
 import 'parametres_fidele_screen.dart';
+import 'rendez_vous_screen.dart';
 
-/// Menu Plus du fidèle (tranche P1).
-/// Ordre P1 : Mon journal, Mes cotisations, Mes camps, Mes attestations,
-/// Prière du jour, Sujet de prière privé, Paramètres, Se déconnecter,
-/// Voir l'espace admin. Pas de Prendre rendez-vous (P4), pas d'À propos (P2).
+/// Menu Plus du fidèle (tranches P1, P2, P4).
+/// Ordre de la projection : Prendre rendez-vous, Mon journal,
+/// Mes cotisations, Mes camps, Mes attestations, Prière du jour,
+/// Sujet de prière privé, Paramètres, À propos de e-System Church,
+/// puis Voir l'espace admin et Se déconnecter.
 class PlusFideleScreen extends StatelessWidget {
   /// Appelé pour aller sur l'accueil fidèle (Prière du jour, Sujet de prière).
   final VoidCallback? onAllerAccueil;
@@ -37,6 +40,15 @@ class PlusFideleScreen extends StatelessWidget {
         Card(
           child: Column(
             children: [
+              _LigneMenu(
+                icone: Icons.event_available_outlined,
+                titre: 'Prendre rendez-vous',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const RendezVousScreen(),
+                  ),
+                ),
+              ),
               _LigneMenu(
                 icone: Icons.edit_outlined,
                 titre: 'Mon journal',
@@ -105,6 +117,15 @@ class PlusFideleScreen extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const ParametresFideleScreen(),
+                  ),
+                ),
+              ),
+              _LigneMenu(
+                icone: Icons.info_outline,
+                titre: 'À propos de e-System Church',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AProposScreen(),
                   ),
                 ),
               ),
