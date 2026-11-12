@@ -461,15 +461,41 @@ abstract class ApiService {
   Future<Contribution> affecterContributionCampagne(String id, String? campagneId);
 
   // -- Attestations annuelles de dons (US3, trésorier / admin) --------------
-  /// Liste de mon église, filtre par année. Génère pour tous les donateurs
-  /// identifiés avec au moins un don confirmé cette année (ne régénère
-  /// pas une attestation émise existante).
-  Future<List<Attestation>> getAttestations({int? annee});
+  /// Liste de mon église, filtres par année et par type. Génère pour tous
+  /// les donateurs identifiés avec au moins un don confirmé cette année
+  /// (ne régénère pas une attestation émise existante).
+  Future<List<Attestation>> getAttestations({int? annee, String? type});
 
   Future<List<Attestation>> genererAttestations({required int annee});
 
+  /// Émet une attestation d'événement (mariage, naissance, baptême)
+  /// pour un membre : la date de l'événement est obligatoire, lieu,
+  /// officiant et champs propres au type sont facultatifs.
+  Future<Attestation> emettreAttestation({
+    required String type,
+    required String memberId,
+    required String dateEvenement,
+    String? lieu,
+    String? officiant,
+    String? conjointNom,
+    String? pereNom,
+    String? mereNom,
+    String? parrainNom,
+    String? marraineNom,
+  });
+
   /// Nouvelle attestation qui annule l'ancienne (motif obligatoire).
-  Future<Attestation> corrigerAttestation(String id, {required String motif});
+  /// Pour un événement, seuls les champs fournis changent.
+  Future<Attestation> corrigerAttestation(String id,
+      {required String motif,
+      String? dateEvenement,
+      String? lieu,
+      String? officiant,
+      String? conjointNom,
+      String? pereNom,
+      String? mereNom,
+      String? parrainNom,
+      String? marraineNom});
 
   /// PDF de l'attestation (octets bruts, contenu figé).
   Future<Uint8List> telechargerAttestationPdf(String id);

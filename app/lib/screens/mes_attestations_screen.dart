@@ -7,8 +7,9 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 
-/// US3 — Mes attestations annuelles de dons (membre) : liste par année,
-/// téléchargement du PDF. Le membre ne voit que les siennes.
+/// US3 + tranche B — Mes attestations (membre) : liste par année, tous
+/// types (dons, mariage, naissance, baptême), téléchargement du PDF.
+/// Le membre ne voit que les siennes.
 class MesAttestationsScreen extends StatefulWidget {
   const MesAttestationsScreen({super.key});
 
@@ -78,17 +79,20 @@ class _MesAttestationsScreenState extends State<MesAttestationsScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                const Text(
-                  'Reçu justificatif seulement, sans valeur fiscale en Côte d’Ivoire.',
-                  style: TextStyle(fontSize: 12),
-                ),
-                const SizedBox(height: 12),
+                if (items.any((a) => a.estDon))
+                  const Text(
+                    'Reçu justificatif seulement, sans valeur fiscale en Côte d’Ivoire.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                if (items.any((a) => a.estDon)) const SizedBox(height: 12),
                 ...items.map((a) => Card(
                       child: ListTile(
                         leading: const Icon(Icons.description_outlined),
-                        title: Text('${a.annee} — ${formatFcfa(a.totalFcfa)}'),
+                        title: Text(a.estDon && a.totalFcfa != null
+                            ? '${a.annee} — ${formatFcfa(a.totalFcfa!)}'
+                            : '${a.libelle} — ${a.annee}'),
                         subtitle: Text(
-                            '${a.numero} · ${pluriel(a.nbDons, 'don')} · ${formatDate(a.dateEmission)}'),
+                            '${a.numero}${a.estDon && a.nbDons != null ? ' · ${pluriel(a.nbDons!, 'don')}' : ''} · ${formatDate(a.dateEmission)}'),
                         trailing: IconButton(
                           icon: const Icon(Icons.download_outlined),
                           tooltip: 'Télécharger le PDF',
