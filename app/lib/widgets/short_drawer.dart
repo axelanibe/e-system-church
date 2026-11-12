@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import 'church_avatar.dart';
 import 'mere_badge.dart';
+import '../screens/a_propos_screen.dart';
 import '../screens/annonces_screen.dart';
 import '../screens/annexes_screen.dart';
 import '../screens/mes_eglises_screen.dart';
@@ -150,6 +151,11 @@ class TiroirCourt extends StatelessWidget {
             leading: const Icon(Icons.settings_outlined),
             title: const Text('Réglages'),
             onTap: () => _ouvrir(context, const SettingsScreen()),
+          ),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('À propos de e-System Church'),
+            onTap: () => _ouvrir(context, const AProposScreen()),
           ),
           const Divider(),
           ListTile(
