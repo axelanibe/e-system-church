@@ -22,6 +22,8 @@ import 'finances_mere_screen.dart';
 import 'member_form_screen.dart';
 import 'mes_eglises_screen.dart';
 import 'plateforme_screen.dart';
+import 'rapports_mere_screen.dart';
+import 'rapports_recus_screen.dart';
 import 'tree_screen.dart';
 
 class _DashboardData {
@@ -534,6 +536,85 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     },
                                   ),
                                 ],
+                              ],
+                            ),
+                          ),
+                        ],
+                        // Tranche P5 : rapports à mon église mère, pour
+                        // une annexe ; rapports reçus, pour une mère.
+                        // Textes repris mot pour mot de la projection.
+                        if (state.isAdmin &&
+                            !(church?.isMere ?? false)) ...[
+                          const SectionTitle(title: 'Mon église mère'),
+                          SoftCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Rapports à mon église mère',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium,
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Contactez votre église mère et envoyez '
+                                  'vos rapports par e-mail, directement '
+                                  'depuis votre espace.',
+                                ),
+                                const SizedBox(height: 12),
+                                BoutonAvecAide(
+                                  label: 'Ouvrir les rapports',
+                                  aide: 'Vos rapports à votre église mère, '
+                                      'par e-mail, en pièce jointe PDF.',
+                                  icon: Icons.email_outlined,
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const RapportsMereScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        if (state.isAdmin &&
+                            (church?.isMere ?? false)) ...[
+                          const SectionTitle(title: 'Mes églises annexes'),
+                          SoftCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Rapports reçus',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium,
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Lisez les rapports envoyés par vos '
+                                  'églises annexes.',
+                                ),
+                                const SizedBox(height: 12),
+                                BoutonAvecAide(
+                                  label: 'Ouvrir les rapports reçus',
+                                  aide: 'Les rapports de vos églises '
+                                      'annexes, qui arrivent aussi par '
+                                      'e-mail.',
+                                  icon: Icons.inbox_outlined,
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const RapportsRecusScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
                               ],
                             ),
                           ),

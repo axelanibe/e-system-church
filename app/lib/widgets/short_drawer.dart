@@ -12,6 +12,7 @@ import '../screens/mes_eglises_screen.dart';
 import '../screens/finances_mere_screen.dart';
 import '../screens/mon_eglise_screen.dart';
 import '../screens/plateforme_screen.dart';
+import '../screens/rapports_mere_screen.dart';
 import '../screens/rattachements_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/transferts_screen.dart';
@@ -160,6 +161,18 @@ class TiroirCourt extends StatelessWidget {
               subtitle:
                   const Text('Plan, durée et renouvellement'),
               onTap: () => _ouvrir(context, const AbonnementScreen()),
+            ),
+          // Tranche P5 : rapports à mon église mère. Une annexe
+          // seulement : une église mère n'a pas de mère à qui envoyer
+          // ses rapports, elle lit les siens dans « Rapports reçus »
+          // sur son accueil.
+          if (state.isAdmin && !(church?.isMere ?? false))
+            ListTile(
+              leading: const Icon(Icons.email_outlined),
+              title: const Text('Rapports à mon église mère'),
+              subtitle:
+                  const Text('Envoyez vos rapports à votre église mère'),
+              onTap: () => _ouvrir(context, const RapportsMereScreen()),
             ),
           ListTile(
             leading: const Icon(Icons.info_outline),

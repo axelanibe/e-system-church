@@ -35,6 +35,7 @@ import '../models/profil.dart';
 import '../models/plateforme.dart';
 import '../models/transfert.dart';
 import '../models/rapport.dart';
+import '../models/rapport_annexe.dart';
 import '../models/rattachement.dart';
 import '../models/serviteurs.dart';
 import '../models/stats.dart';
@@ -502,6 +503,42 @@ class HttpApiService implements ApiService {
       body: {'code': code, 'duree_annees': dureeAnnees},
     );
     return ValidationCodePromo.fromJson(data);
+  }
+
+  @override
+  Future<EgliseMereContact> getMaMere() async =>
+      EgliseMereContact.fromJson(await _call('GET', '/moi/eglise-mere'));
+
+  @override
+  Future<RapportAnnexe> envoyerRapportAnnexe({
+    required String type,
+    String? message,
+    required int membres,
+    required int recettesFcfa,
+    required int depensesFcfa,
+    required int soldeFcfa,
+  }) async {
+    final data = await _call(
+      'POST',
+      '/moi/rapports-annexe',
+      body: {
+        'type': type,
+        'message': message,
+        'membres': membres,
+        'recettes_fcfa': recettesFcfa,
+        'depenses_fcfa': depensesFcfa,
+        'solde_fcfa': soldeFcfa,
+      },
+    );
+    return RapportAnnexe.fromJson(data);
+  }
+
+  @override
+  Future<List<RapportAnnexe>> getRapportsRecus() async {
+    final data = await _call('GET', '/moi/rapports-annexe/recus');
+    return (data as List<dynamic>)
+        .map((e) => RapportAnnexe.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   @override
