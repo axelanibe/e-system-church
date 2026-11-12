@@ -37,6 +37,7 @@ import '../models/presences.dart';
 import '../models/prieres.dart';
 import '../models/profil.dart';
 import '../models/rapport.dart';
+import '../models/rapport_annexe.dart';
 import '../models/rattachement.dart';
 import '../models/serviteurs.dart';
 import '../models/stats.dart';
@@ -892,6 +893,50 @@ class MockApiService implements ApiService {
       motif: motif,
       createdAt: DateTime.now(),
     );
+  }
+
+  // P5 : rapports à mon église mère, en démo. L'église mère n'a pas
+  // d'adresse e-mail (« À compléter »), aucun rapport reçu, et
+  // l'envoi enregistre le rapport en attente d'envoi par e-mail.
+  @override
+  Future<EgliseMereContact> getMaMere() async {
+    await _latence();
+    _requireAuth();
+    return const EgliseMereContact(
+      id: 'mere-demo',
+      nom: 'Église mère',
+      email: null,
+    );
+  }
+
+  @override
+  Future<RapportAnnexe> envoyerRapportAnnexe({
+    required String type,
+    String? message,
+    required int membres,
+    required int recettesFcfa,
+    required int depensesFcfa,
+    required int soldeFcfa,
+  }) async {
+    await _latence();
+    _requireAuth();
+    return RapportAnnexe(
+      id: 'rapport-demo',
+      type: type,
+      message: message,
+      membres: membres,
+      recettesFcfa: recettesFcfa,
+      depensesFcfa: depensesFcfa,
+      soldeFcfa: soldeFcfa,
+      statut: 'en_attente_envoi',
+    );
+  }
+
+  @override
+  Future<List<RapportAnnexe>> getRapportsRecus() async {
+    await _latence();
+    _requireAuth();
+    return const [];
   }
 
   // US3 : pas d'attestations dans le seed démo.
