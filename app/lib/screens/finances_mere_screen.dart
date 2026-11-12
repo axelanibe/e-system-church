@@ -73,8 +73,8 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
 
   String _csv(RapportDetailConsolide rapport) {
     final lignes = <String>[
-      'Rapport finances mere;${rapport.eglise.name};${rapport.periode.label}',
-      'Branche;Niveau;Code;Ville;Membres actifs;Dimes FCFA;Offrandes FCFA;Dons FCFA;Depenses FCFA;Entrees FCFA;Solde FCFA',
+      'Rapport finances mère;${rapport.eglise.name};${rapport.periode.label}',
+      'Branche;Niveau;Code;Ville;Membres actifs;Dîmes FCFA;Offrandes FCFA;Dons FCFA;Dépenses FCFA;Entrées FCFA;Solde FCFA',
     ];
     for (final b in rapport.branches) {
       lignes.add([
@@ -92,9 +92,9 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
       ].join(';'));
     }
     lignes.add(
-        'Total reseau;;;;${rapport.membresActifs};${rapport.totaux['dime']?.totalFcfa ?? 0};${rapport.totaux['offrande']?.totalFcfa ?? 0};${rapport.totaux['don']?.totalFcfa ?? 0};${rapport.totaux['depense']?.totalFcfa ?? 0};${rapport.entreesFcfa};${rapport.soldeFcfa}');
+        'Total réseau;;;;${rapport.membresActifs};${rapport.totaux['dime']?.totalFcfa ?? 0};${rapport.totaux['offrande']?.totalFcfa ?? 0};${rapport.totaux['don']?.totalFcfa ?? 0};${rapport.totaux['depense']?.totalFcfa ?? 0};${rapport.entreesFcfa};${rapport.soldeFcfa}');
     lignes.add('');
-    lignes.add('Transactions confirmees;Branche;Type;Montant FCFA;Moyen;Reference;Membre;Date');
+    lignes.add('Transactions confirmées;Branche;Type;Montant FCFA;Moyen;Référence;Membre;Date');
     for (final b in rapport.branches) {
       for (final t in b.transactions) {
         lignes.add([
