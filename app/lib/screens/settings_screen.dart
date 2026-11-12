@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
+import '../models/nettoyage_test.dart';
 import '../state/app_state.dart';
 import '../widgets/change_password_dialog.dart';
 import '../widgets/common_widgets.dart';
@@ -21,6 +22,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _urlController;
   bool _saving = false;
+  bool _nettoyageEnCours = false;
 
   @override
   void initState() {
@@ -50,11 +52,99 @@ class _SettingsScreenState extends State<SettingsScreen> {
         'URL de l’API enregistrée. Vous avez été déconnecté(e) : reconnectez-vous.');
   }
 
+  /// Nettoyage des données TEST : aperçu, puis confirmation nommant le
+  /// nombre d'éléments, puis suppression. Admin d'église seulement.
+  Future<void> _nettoyerTest() async {
+    final api = context.read<AppState>().api;
+    setState(() => _nettoyageEnCours = true);
+    NettoyageTestApercu apercu;
+    try {
+      apercu = await api.getNettoyageTestApercu();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _nettoyageEnCours = false);
+      showApiError(context, e);
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _nettoyageEnCours = false);
+    if (apercu.total == 0) {
+      showSuccess(context, 'Aucune donnée TEST à supprimer.');
+      return;
+    }
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer les données TEST ?'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${apercu.total} éléments marqués TEST seront supprimés définitivement :',
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final e in apercu.elements)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text('• ${e.label}',
+                            style: const TextStyle(fontSize: 14)),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Seules les données marquées TEST de votre église et de ses annexes sont concernées. Aucune vraie donnée n’est touchée.',
+                style: TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Supprimer ${apercu.total} éléments',
+              style:
+                  TextStyle(color: Theme.of(ctx).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirme != true || !mounted) return;
+    setState(() => _nettoyageEnCours = true);
+    try {
+      final resultat = await api.executerNettoyageTest();
+      if (!mounted) return;
+      setState(() => _nettoyageEnCours = false);
+      showSuccess(context,
+          '${resultat.total} éléments TEST supprimés.');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _nettoyageEnCours = false);
+      showApiError(context, e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // En démo, l'URL d'API est 'demo' et DemoAppState.setApiBaseUrl est
     // sans effet (aucun serveur) : le champ et le bouton sont désactivés.
     final isDemo = context.watch<AppState>().apiBaseUrl == 'demo';
+    final isAdmin = context.watch<AppState>().isAdmin;
     return Scaffold(
       appBar: AppBar(title: const Text('Réglages')),
       body: SingleChildScrollView(
@@ -125,6 +215,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ),
+                if (isAdmin) ...[
+                  const SectionTitle(title: 'Données TEST'),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.cleaning_services_outlined),
+                            title: const Text('Nettoyer les données TEST'),
+                            subtitle: const Text(
+                                'Supprime les données marquées TEST de votre église et de ses annexes (membre, contributions, campagne, attestation, transfert, sous-église). L’aperçu s’affiche avant toute suppression.'),
+                            trailing: _nettoyageEnCours
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.chevron_right),
+                            onTap: _nettoyageEnCours ? null : _nettoyerTest,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 const SectionTitle(title: 'API réelle'),
                 Card(
                   child: Padding(

@@ -18,6 +18,7 @@ import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
 import '../models/module_eglise.dart';
+import '../models/nettoyage_test.dart';
 import '../models/paiements.dart';
 import '../models/parametres.dart';
 import '../models/pastoral.dart';
@@ -98,8 +99,7 @@ abstract class ApiService {
   /// Ancien parcours, conservé côté serveur ; l'écran n'y renvoie plus.
   /// `codeFidele` (optionnel) restreint la recherche du matricule à
   /// l'église de ce code, pour éviter l'inscription dans la mauvaise
-  /// église (les nouveaux matricules, M-LA-171268-01, sont uniques dans tout
-  /// le système).
+  /// église (le matricule est unique par église, pas global).
   Future<FideleInscriptionResult> registerFidele({
     required String email,
     required String password,
@@ -110,17 +110,14 @@ abstract class ApiService {
   /// Inscription membre par code fidèle, sans validation : le code fait
   /// foi, le matricule est attribué automatiquement, la fiche membre et
   /// la carte sont créées tout de suite, le compte est lié immédiatement.
-  /// `codeEglise` est le code fidèle de l'église (ESC-F-…, ex. ESC-F-0411),
-  /// pas le code de tutelle (ESC-…, ex. ESC-0411, réservé aux églises qui
-  /// se rattachent).
+  /// `codeEglise` est le code fidèle de l'église (ESC-F-…), pas le code
+  /// de tutelle (ESC-…, réservé aux églises qui se rattachent).
   Future<FideleInscriptionResult> registerMembreParCode({
     required String nomPrenom,
     required String email,
     required String telephone,
     required String password,
     required String codeEglise,
-    String? birthDate,
-    String? sexe,
     String? department,
     String? fonction,
   });
@@ -182,6 +179,12 @@ abstract class ApiService {
 
   Future<void> annulerCodeTutelle(String id);
 
+  /// Nettoyage des données TEST : aperçu puis suppression confirmée.
+  /// Admin d'église seulement, côté serveur.
+  Future<NettoyageTestApercu> getNettoyageTestApercu();
+
+  Future<NettoyageTestResultat> executerNettoyageTest();
+
   Future<TransfertsResult> getTransferts();
 
   Future<TransfertMembre> requestTransfert({
@@ -204,7 +207,6 @@ abstract class ApiService {
     String? phone,
     String? email,
     String? birthDate,
-    String? sexe,
     String? department,
     String? fonction,
     String? poste,
@@ -217,7 +219,6 @@ abstract class ApiService {
       String? phone,
       String? email,
       String? birthDate,
-      String? sexe,
       String? department,
       String? fonction,
       String? poste,
