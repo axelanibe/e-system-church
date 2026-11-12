@@ -8,6 +8,7 @@
 
 import 'dart:typed_data';
 
+import '../models/abonnement.dart';
 import '../models/attestation.dart';
 import '../models/annexe.dart';
 import '../models/anniversaire.dart';
@@ -843,6 +844,33 @@ class MockApiService implements ApiService {
   Future<void> annulerPresenceCulte(String culteId) async {
     await _latence();
     _requireAuth();
+  }
+
+  // P3 : abonnement vierge en démo, sans ligne en base : statut Actif,
+  // plan annuel, expiration à compléter, comme dans la projection.
+  // Aucun code promo n'existe en démo, tout code est refusé.
+  @override
+  Future<Abonnement> getMonAbonnement() async {
+    await _latence();
+    _requireAuth();
+    return const Abonnement(
+      estAnnexe: false,
+      statut: 'actif',
+      plan: 'annuel',
+      montantFcfa: 200000,
+      essaiJours: 30,
+      lectureSeule: false,
+    );
+  }
+
+  @override
+  Future<ValidationCodePromo> validerCodePromo({
+    required String code,
+    required int dureeAnnees,
+  }) async {
+    await _latence();
+    _requireAuth();
+    throw const ApiException('Code promo invalide.');
   }
 
   // US3 : pas d'attestations dans le seed démo.
