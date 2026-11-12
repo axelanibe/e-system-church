@@ -159,6 +159,20 @@ abstract class ApiService {
   /// Ma carte de membre (fiche + église).
   Future<MaCarte> getMaCarte();
 
+  /// Mon fil de messages avec mon église mère ou ma tutelle
+  /// (migration 020) : conversation privée, dans l'application.
+  Future<FilMessages> getMesMessages();
+
+  /// Écrire un message à mon église mère ou à ma tutelle (migration 020).
+  Future<MessageFidele> envoyerMessageFidele({required String corps});
+
+  /// « Je serai présent » au prochain culte (migration 020) : annonce
+  /// de présence, sans pointage.
+  Future<void> confirmerPresenceCulte(String culteId);
+
+  /// Annuler ma confirmation de présence à un culte (migration 020).
+  Future<void> annulerPresenceCulte(String culteId);
+
   // -- Églises et arborescence ----------------------------------------------
   Future<TreeResult> getTree();
 

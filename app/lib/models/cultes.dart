@@ -44,6 +44,9 @@ class Culte {
   final String? orateur;
   final String? theme;
   final DateTime? createdAt;
+  /// Le fidèle a confirmé sa présence à ce culte (« Je serai présent »,
+  /// table culte_rsvp, migration 020). Faux sans confirmation.
+  final bool seraiPresent;
 
   const Culte({
     required this.id,
@@ -54,6 +57,7 @@ class Culte {
     this.orateur,
     this.theme,
     this.createdAt,
+    this.seraiPresent = false,
   });
 
   factory Culte.fromJson(Map<String, dynamic> json) => Culte(
@@ -65,6 +69,7 @@ class Culte {
         orateur: json['orateur'] as String?,
         theme: json['theme'] as String?,
         createdAt: parseDate(json['created_at'] as String?),
+        seraiPresent: json['serai_present'] as bool? ?? false,
       );
 
   DateTime? get date => parseDate(dateHeure);

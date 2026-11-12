@@ -27,6 +27,9 @@ class Member {
   /// null tant que non renseignées.
   final String? dateMariage;
   final String? dateConversion;
+  /// Date de baptême (table `baptemes`, renvoyée par `GET /moi/carte`,
+  /// migration 020) : « AAAA-MM-JJ », null tant que non renseignée.
+  final String? baptemeDate;
   final DateTime? createdAt;
 
   /// Photo du membre (migration 018) : URL fournie par le membre ou
@@ -49,6 +52,7 @@ class Member {
     this.statutRiche,
     this.dateMariage,
     this.dateConversion,
+    this.baptemeDate,
     this.createdAt,
     this.photoUrl,
   });
@@ -69,6 +73,7 @@ class Member {
         statutRiche: json['statut_riche'] as String?,
         dateMariage: json['date_mariage'] as String?,
         dateConversion: json['date_conversion'] as String?,
+        baptemeDate: json['bapteme_date'] as String?,
         createdAt: parseDate(json['created_at'] as String?),
         photoUrl: json['photo_url'] as String?,
       );

@@ -229,6 +229,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                // Tranche P1 : aperçu de l'espace fidèle, pour voir
+                // l'application comme un fidèle la voit. Aperçu local
+                // seulement : ni la session ni le rôle ne changent.
+                SoftCard(
+                  color: AppTheme.orClair,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Démonstration des deux espaces',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Le fidèle a sa propre interface, avec sa '
+                        'navigation à lui. Touchez le bouton pour la voir.',
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () => context
+                              .read<AppState>()
+                              .entrerApercuFidele(),
+                          icon: const Icon(Icons.visibility_outlined),
+                          label: const Text('Voir l’espace fidèle'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
                 if (state.isSuperAdmin)
                   SoftCard(
                     child: Column(

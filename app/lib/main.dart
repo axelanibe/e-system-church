@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 
 import 'config/app_config.dart';
 import 'config/app_theme.dart';
-import 'screens/fidele_home_screen.dart';
+import 'screens/fidele_shell.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/reset_password_screen.dart';
@@ -58,8 +58,11 @@ class EsystemApp extends StatelessWidget {
               home = const LoginScreen();
             }
           } else {
-            home = state.isMembre
-                ? const FideleHomeScreen()
+            // Coquille fidèle (tranche P1) : le fidèle a sa propre
+            // navigation. L'admin peut aussi la regarder en aperçu
+            // (« Voir l'espace fidèle »), sans changer de session.
+            home = (state.isMembre || state.apercuFidele)
+                ? const FideleShell()
                 : const HomeScreen();
           }
           return MaterialApp(

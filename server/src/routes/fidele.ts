@@ -551,16 +551,88 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
     { preHandler: [requireAuth(db), requireRole("membre")] },
     async (req, reply) => {
       try {
+        // `serai_present` : le fidèle a confirmé sa présence à ce culte
+        // (table culte_rsvp, migration 020). Sans membre lié, faux partout.
+        const memberId = await memberIdDe(req.session.userId);
         const { rows } = await db.query(
           `SELECT id, church_id, culte_type_id, titre, date_heure, lieu,
-                  orateur, theme, created_at
+                  orateur, theme, created_at,
+                  (r.id IS NOT NULL) AS serai_present
              FROM cultes
+             LEFT JOIN culte_rsvp r
+               ON r.culte_id = cultes.id AND r.member_id = $2
             WHERE church_id = $1 AND date_heure >= now()
             ORDER BY date_heure ASC
             LIMIT 50`,
-          [req.session.churchId],
+          [req.session.churchId, memberId],
         );
         return reply.send({ cultes: rows });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  // -- « Je serai présent » au prochain culte (migration 020) : simple
+  //    annonce de présence, idempotente. Ne crée pas une présence
+  //    pointée (le pointage reste T5) et ne compte pas dans les
+  //    statistiques de présence.
+  app.post(
+    "/moi/cultes/:id/present",
+    { preHandler: [requireAuth(db), requireRole("membre")] },
+    async (req, reply) => {
+      try {
+        const memberId = await memberIdDe(req.session.userId);
+        if (!memberId) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Aucun membre lié à ce compte.",
+          });
+        }
+        const culteId = (req.params as { id: string }).id;
+        const { rows: cultes } = await db.query(
+          `SELECT id FROM cultes
+            WHERE id = $1 AND church_id = $2 AND date_heure >= now()`,
+          [culteId, req.session.churchId],
+        );
+        if (cultes.length === 0) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Culte introuvable ou déjà passé dans votre église.",
+          });
+        }
+        await db.query(
+          `INSERT INTO culte_rsvp (church_id, culte_id, member_id)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (member_id, culte_id) DO NOTHING`,
+          [req.session.churchId, culteId, memberId],
+        );
+        return reply.send({ present: true });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  app.delete(
+    "/moi/cultes/:id/present",
+    { preHandler: [requireAuth(db), requireRole("membre")] },
+    async (req, reply) => {
+      try {
+        const memberId = await memberIdDe(req.session.userId);
+        if (!memberId) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Aucun membre lié à ce compte.",
+          });
+        }
+        const culteId = (req.params as { id: string }).id;
+        await db.query(
+          `DELETE FROM culte_rsvp
+            WHERE culte_id = $1 AND member_id = $2 AND church_id = $3`,
+          [culteId, memberId, req.session.churchId],
+        );
+        return reply.send({ present: false });
       } catch (e) {
         return dbError(reply, e);
       }
@@ -647,7 +719,10 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
         const { rows: memberRows } = await db.query(
           `SELECT id, church_id, matricule, full_name, phone, email,
                   birth_date, department, fonction, poste, cell_group, status, created_at,
-                  photo_url
+                  photo_url,
+                  (SELECT b.date_bapteme FROM baptemes b
+                    WHERE b.member_id = members.id
+                    ORDER BY b.date_bapteme DESC LIMIT 1) AS bapteme_date
              FROM members WHERE id = $1 AND church_id = $2`,
           [memberId, req.session.churchId],
         );
@@ -663,6 +738,167 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
           [req.session.churchId],
         );
         return reply.send({ member, church: churchRows[0] });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  // -- Mon fil de messages avec mon église mère ou ma tutelle
+  //    (migration 020) : conversation privée, dans l'application, pas
+  //    par e-mail. Le fidèle écrit, l'église répond depuis son espace.
+  app.get(
+    "/moi/messages",
+    { preHandler: [requireAuth(db), requireRole("membre")] },
+    async (req, reply) => {
+      try {
+        const memberId = await memberIdDe(req.session.userId);
+        if (!memberId) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Aucun membre lié à ce compte.",
+          });
+        }
+        // Destinataire affiché : l'église mère (premier ancêtre) ou
+        // mon église si elle n'a pas de mère.
+        const { rows: dest } = await db.query(
+          `WITH RECURSIVE ancetres AS (
+             SELECT id, parent_church_id, name FROM churches WHERE id = $1
+             UNION ALL
+             SELECT c.id, c.parent_church_id, c.name
+               FROM churches c
+               JOIN ancetres a ON c.id = a.parent_church_id
+           )
+           SELECT name FROM ancetres
+            WHERE parent_church_id IS NULL LIMIT 1`,
+          [req.session.churchId],
+        );
+        const { rows } = await db.query(
+          `SELECT id, auteur, corps, created_at
+             FROM messages_fidele
+            WHERE member_id = $1 AND church_id = $2
+            ORDER BY created_at ASC
+            LIMIT 200`,
+          [memberId, req.session.churchId],
+        );
+        return reply.send({
+          destinataire_nom: dest[0]?.name ?? null,
+          messages: rows,
+        });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  app.post(
+    "/moi/messages",
+    { preHandler: [requireAuth(db), requireRole("membre")] },
+    async (req, reply) => {
+      const parsed = z
+        .object({ corps: z.string().min(1).max(5000) })
+        .safeParse(req.body);
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "invalid_input",
+          message: "Écrivez votre message.",
+        });
+      }
+      try {
+        const memberId = await memberIdDe(req.session.userId);
+        if (!memberId) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Aucun membre lié à ce compte.",
+          });
+        }
+        const { rows } = await db.query(
+          `INSERT INTO messages_fidele (church_id, member_id, auteur, corps)
+           VALUES ($1, $2, 'membre', $3)
+           RETURNING id, auteur, corps, created_at`,
+          [req.session.churchId, memberId, parsed.data.corps.trim()],
+        );
+        return reply.code(201).send({ message: rows[0] });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  // -- Fils des fidèles, côté église (admin seulement) : les fils des
+  //    membres de mon église et de ses annexes (récursif), avec le
+  //    dernier message. La lecture et la réponse côté admin arrivent
+  //    avec l'écran dédié ; les routes sont prêtes.
+  app.get(
+    "/messages-fidele",
+    { preHandler: [requireAuth(db), requireRole("admin_eglise")] },
+    async (req, reply) => {
+      try {
+        const { rows } = await db.query(
+          `WITH RECURSIVE descendants AS (
+             SELECT id FROM churches WHERE id = $1
+             UNION ALL
+             SELECT c.id FROM churches c
+               JOIN descendants d ON c.parent_church_id = d.id
+           )
+           SELECT mf.member_id, m.full_name AS membre_nom,
+                  m.matricule AS membre_matricule,
+                  count(*)::int AS nombre,
+                  max(mf.created_at) AS dernier_at
+             FROM messages_fidele mf
+             JOIN members m ON m.id = mf.member_id
+            WHERE mf.church_id IN (SELECT id FROM descendants)
+            GROUP BY mf.member_id, m.full_name, m.matricule
+            ORDER BY dernier_at DESC`,
+          [req.session.churchId],
+        );
+        return reply.send({ fils: rows });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  app.post(
+    "/messages-fidele/:memberId",
+    { preHandler: [requireAuth(db), requireRole("admin_eglise")] },
+    async (req, reply) => {
+      const parsed = z
+        .object({ corps: z.string().min(1).max(5000) })
+        .safeParse(req.body);
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "invalid_input",
+          message: "Écrivez votre message.",
+        });
+      }
+      try {
+        const memberId = (req.params as { memberId: string }).memberId;
+        const { rows: membres } = await db.query(
+          `WITH RECURSIVE descendants AS (
+             SELECT id FROM churches WHERE id = $1
+             UNION ALL
+             SELECT c.id FROM churches c
+               JOIN descendants d ON c.parent_church_id = d.id
+           )
+           SELECT id, church_id FROM members
+            WHERE id = $2 AND church_id IN (SELECT id FROM descendants)`,
+          [req.session.churchId, memberId],
+        );
+        const membre = membres[0];
+        if (!membre) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Membre introuvable dans votre église ou ses annexes.",
+          });
+        }
+        const { rows } = await db.query(
+          `INSERT INTO messages_fidele (church_id, member_id, auteur, corps)
+           VALUES ($1, $2, 'eglise', $3)
+           RETURNING id, auteur, corps, created_at`,
+          [membre.church_id, memberId, parsed.data.corps.trim()],
+        );
+        return reply.code(201).send({ message: rows[0] });
       } catch (e) {
         return dbError(reply, e);
       }
