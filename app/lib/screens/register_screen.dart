@@ -8,6 +8,14 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 
+/// Validation du téléphone facultatif : vide accepté, sinon au moins
+/// 8 caractères. Le serveur normalise le numéro (0… → +225…).
+String? validerTelephoneFacultatif(String? v) {
+  if (v == null || v.trim().isEmpty) return null;
+  if (v.trim().length < 8) return 'Téléphone invalide (8 caractères minimum).';
+  return null;
+}
+
 /// Inscription en deux choix :
 /// - « Créer une église mère » : l'église naît active, sans mère.
 /// - « Rejoindre une église mère » : code d'invitation de la mère ;
@@ -29,6 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _parentCodeController = TextEditingController();
   final _adminNameController = TextEditingController();
   final _adminEmailController = TextEditingController();
+  final _adminPhoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _passwordConfirmController = TextEditingController();
 
@@ -49,6 +58,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _parentCodeController.dispose();
     _adminNameController.dispose();
     _adminEmailController.dispose();
+    _adminPhoneController.dispose();
     _passwordController.dispose();
     _passwordConfirmController.dispose();
     super.dispose();
@@ -100,6 +110,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 : _churchPhoneController.text.trim(),
             adminName: _adminNameController.text.trim(),
             adminEmail: _adminEmailController.text.trim(),
+            adminPhone: _adminPhoneController.text.trim().isEmpty
+                ? null
+                : _adminPhoneController.text.trim(),
             password: _passwordController.text,
             parentCode: _joinMother
                 ? _parentCodeController.text.trim().toUpperCase()
@@ -335,6 +348,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       if (!v.contains('@')) return 'E-mail invalide.';
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _adminPhoneController,
+                    keyboardType: TextInputType.phone,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Téléphone de l’administrateur',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: validerTelephoneFacultatif,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(

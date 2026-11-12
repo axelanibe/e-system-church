@@ -115,8 +115,10 @@ class DemoAppState extends AppState {
   }
 
   @override
-  Future<void> login({required String email, required String password}) async {
-    final result = await _demoApi.login(email: email, password: password);
+  Future<void> login(
+      {required String identifiant, required String password}) async {
+    final result =
+        await _demoApi.login(identifiant: identifiant, password: password);
     _applyAuth(result);
     notifyListeners();
   }
@@ -129,6 +131,7 @@ class DemoAppState extends AppState {
     String? churchEmail,
     required String adminName,
     required String adminEmail,
+    String? adminPhone,
     required String password,
     String? parentCode,
     String? logoBase64,
@@ -141,6 +144,7 @@ class DemoAppState extends AppState {
       churchEmail: churchEmail,
       adminName: adminName,
       adminEmail: adminEmail,
+      adminPhone: adminPhone,
       password: password,
       parentCode: parentCode,
       logoBase64: logoBase64,

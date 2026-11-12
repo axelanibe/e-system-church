@@ -239,7 +239,9 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
             ? "Nom, e-mail, téléphone, mot de passe (8 caractères minimum) ou code fidèle invalide."
             : result.reason === "invalid_code"
               ? "Code fidèle invalide. Vérifiez le code fidèle donné par votre église."
-              : "Cet e-mail est déjà utilisé.";
+              : result.reason === "phone_taken"
+                ? "Ce numéro de téléphone est déjà utilisé."
+                : "Cet e-mail est déjà utilisé.";
         return reply.code(status).send({ error: result.reason, message });
       }
       return reply.code(201).send({

@@ -47,7 +47,10 @@ class ApiException implements Exception {
 /// interface. Les listes vides restent vides : l'écran affiche un état vide.
 abstract class ApiService {
   // -- Authentification -----------------------------------------------------
-  Future<AuthResult> login({required String email, required String password});
+  /// Connexion par e-mail ou par téléphone : `identifiant` est l'un ou
+  /// l'autre, le mot de passe est le même dans les deux cas.
+  Future<AuthResult> login(
+      {required String identifiant, required String password});
 
   Future<AuthResult> register({
     required String churchName,
@@ -56,6 +59,7 @@ abstract class ApiService {
     String? churchEmail,
     required String adminName,
     required String adminEmail,
+    String? adminPhone,
     required String password,
     String? parentCode,
     // Logo choisi à l'inscription (facultatif) : téléversé après la

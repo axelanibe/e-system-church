@@ -142,6 +142,9 @@ CREATE INDEX idx_members_name ON members (church_id, full_name);
 ALTER TABLE users ADD CONSTRAINT fk_users_member
   FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE SET NULL;
 ALTER TABLE users ADD CONSTRAINT users_member_id_unique UNIQUE (member_id);
+-- Connexion par téléphone (migration 012) : un numéro = un compte, les
+-- NULL restent libres (comptes sans téléphone, inscrits par e-mail seul).
+ALTER TABLE users ADD CONSTRAINT users_phone_unique UNIQUE (phone);
 
 -- ---------------------------------------------------------------------------
 -- Mot de passe et accès fidèle (modules 15-16) : jetons à usage unique et

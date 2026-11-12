@@ -49,7 +49,7 @@ class _DemoLoginScreenState extends State<DemoLoginScreen> {
     });
     try {
       await context.read<AppState>().login(
-            email: email ?? _emailController.text.trim(),
+            identifiant: email ?? _emailController.text.trim(),
             password: password ?? _passwordController.text,
           );
     } catch (e) {
