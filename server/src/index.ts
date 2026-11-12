@@ -34,7 +34,6 @@ import { registerParametresRoutes } from "./routes/parametres.js";
 import { registerProfilEgliseRoutes } from "./routes/profil_eglise.js";
 import { registerPaiementsRoutes } from "./routes/paiements.js";
 import { registerTransfertsRoutes } from "./routes/transferts.js";
-import { registerModulesRoutes } from "./routes/modules.js";
 import { registerCodesTutelleRoutes } from "./routes/codes_tutelle.js";
 import { registerAnnexesRoutes } from "./routes/annexes.js";
 import { registerCampagnesRoutes } from "./routes/campagnes.js";
@@ -128,7 +127,6 @@ export function buildApp(db: Pool) {
   registerProfilEgliseRoutes(app, db);
   registerPaiementsRoutes(app, db);
   registerTransfertsRoutes(app, db);
-  registerModulesRoutes(app, db);
   registerCodesTutelleRoutes(app, db);
   registerAnnexesRoutes(app, db);
   registerCampagnesRoutes(app, db);

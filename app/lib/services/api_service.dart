@@ -17,7 +17,6 @@ import '../models/finances.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
-import '../models/module_eglise.dart';
 import '../models/nettoyage_test.dart';
 import '../models/paiements.dart';
 import '../models/parametres.dart';
@@ -795,17 +794,6 @@ abstract class ApiService {
     required String successUrl,
     required String errorUrl,
     String? note,
-  });
-
-  // -- Modules activables par église (US1) ----------------------------------
-  /// Modules de l'église active : noyau toujours actif + modules activables
-  /// avec leur état. Lecture pour tous les rôles de l'église.
-  Future<List<ModuleEglise>> getModules();
-
-  /// Active ou désactive un module (admin_eglise seulement, journalisé).
-  Future<ModuleEglise> setModule({
-    required String code,
-    required bool actif,
   });
 
   // -- Rapports et annonces --------------------------------------------------

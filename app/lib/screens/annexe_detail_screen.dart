@@ -47,8 +47,6 @@ class _AnnexeDetailScreenState extends State<AnnexeDetailScreen> {
             );
           }
           final d = snapshot.data!;
-          final actifs = d.modules.where((m) => m.actif).toList();
-          final inactifs = d.modules.where((m) => !m.actif).toList();
           return RefreshIndicator(
             onRefresh: () async {
               setState(() => _future = context
@@ -77,7 +75,7 @@ class _AnnexeDetailScreenState extends State<AnnexeDetailScreen> {
                         Text('${d.code} · ${d.city ?? ''}'),
                         const SizedBox(height: 4),
                         Text(
-                          'Modules actifs : ${d.modulesActifs} sur ${d.modules.length}',
+                          'Modules : ${d.modules.length}, tous actifs',
                         ),
                       ],
                     ),
@@ -132,25 +130,17 @@ class _AnnexeDetailScreenState extends State<AnnexeDetailScreen> {
                   ],
                 ),
                 const SectionTitle(title: 'Modules de l’annexe'),
-                if (actifs.isEmpty)
-                  const Text('Aucun module actif.')
+                if (d.modules.isEmpty)
+                  const Text('Aucun module.')
                 else
-                  ...actifs.map((m) => ListTile(
+                  ...d.modules.map((m) => ListTile(
                         leading: const Icon(Icons.check_circle_outlined,
                             color: AppTheme.cypress),
                         title: Text(m.label),
                         subtitle: m.noyau
                             ? const Text('Noyau, toujours actif')
-                            : const Text('Activé automatiquement à la tutelle'),
+                            : const Text('Toujours actif'),
                       )),
-                if (inactifs.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  const Text('Inactifs :'),
-                  ...inactifs.map((m) => ListTile(
-                        leading: const Icon(Icons.circle_outlined),
-                        title: Text(m.label),
-                      )),
-                ],
               ],
             ),
           );

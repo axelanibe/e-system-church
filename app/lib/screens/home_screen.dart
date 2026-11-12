@@ -41,17 +41,6 @@ class _HomeScreenState extends State<HomeScreen> {
     'Modules',
   ];
 
-  /// Code du module US1 par destination, ou null (toujours visible). Seules
-  /// les annonces sont un module activable dans cette navigation.
-  static const List<String?> _modules = [
-    null,
-    null,
-    null,
-    null,
-    'annonces',
-    null,
-  ];
-
   /// Chaque écran reçoit une clé liée à l'église active : après une
   /// bascule d'église, HomeScreen reste monté et les écrans garderaient
   /// sinon leur Future d'avant (données de l'église précédente). La clé
@@ -113,15 +102,9 @@ class _HomeScreenState extends State<HomeScreen> {
           label: 'Modules'),
     ];
 
-    // US1 : les destinations des modules désactivés disparaissent de la
-    // navigation. `courant` est la destination réelle affichée.
-    final visibles = <int>[];
-    for (var i = 0; i < _titles.length; i++) {
-      final code = _modules[i];
-      if (code == null || state.isModuleActif(code)) visibles.add(i);
-    }
-    final courant = visibles[_index.clamp(0, visibles.length - 1)];
-    final dests = visibles.map((i) => destinations[i]).toList();
+    // Tous les modules sont affichés pour toutes les églises (règle
+    // du 11/11/2026) : plus de destination masquée.
+    final courant = _index.clamp(0, _titles.length - 1);
 
     // Barre du bas : 5 libellés maximum. Les annonces (index 4) n'y
     // figurent pas, elles restent dans le tiroir et le tableau de bord.
@@ -141,17 +124,16 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       drawer: TiroirCourt(
-        onAller: (i) => setState(() => _index = visibles.indexOf(i)),
+        onAller: (i) => setState(() => _index = i),
       ),
       body: Row(
         children: [
           if (wide)
             NavigationRail(
-              selectedIndex: visibles.indexOf(courant),
-              onDestinationSelected: (i) =>
-                  setState(() => _index = visibles[i]),
+              selectedIndex: courant,
+              onDestinationSelected: (i) => setState(() => _index = i),
               labelType: NavigationRailLabelType.all,
-              destinations: dests
+              destinations: destinations
                   .map((d) => NavigationRailDestination(
                         icon: d.icon,
                         selectedIcon: d.selectedIcon,
@@ -167,8 +149,8 @@ class _HomeScreenState extends State<HomeScreen> {
           : BarreDuBas(
               destinations: barDests,
               selectedIndex: barSelected,
-              onDestinationSelected: (i) => setState(
-                  () => _index = visibles.indexOf(barIndices[i])),
+              onDestinationSelected: (i) =>
+                  setState(() => _index = barIndices[i]),
             ),
     );
   }

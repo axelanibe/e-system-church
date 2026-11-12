@@ -2,8 +2,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Pool, PoolClient } from "pg";
 import { z } from "zod";
 import { auditLog } from "../auth.js";
-import { dbError, requireAuth, requireRole, type Session } from "../middleware.js";
-import { MODULES_ACTIVABLES } from "../modules.js";
+import { dbError, estAnnexe, requireAuth, requireRole, type Session } from "../middleware.js";
 
 /**
  * Rattachements : une église demande à rejoindre une mère ; la mère accepte
@@ -15,31 +14,16 @@ import { MODULES_ACTIVABLES } from "../modules.js";
  *
  * Code de tutelle à usage unique (migration 009) : la demande peut porter
  * `code_tutelle` (ESC-T-XXXXXX) au lieu du code permanent de la mère.
- * À l'acceptation, le code passe à `utilise`, automatiquement, et tous les
- * modules de l'église rattachée sont activés automatiquement (exception à
- * la règle US1 « la mère ne force pas ses antennes », décidée par Axel
- * le 11/11/2026 : une église sous tutelle a tous ses modules actifs).
+ * À l'acceptation, le code passe à `utilise`, automatiquement.
  * Un deuxième usage du même code est refusé (400 `code_tutelle_invalide`).
  * Un refus laisse le code `actif`.
+ *
+ * Règle décidée par Axel le 11/11/2026 : une église annexe ne peut pas
+ * avoir d'église annexe. La mère visée par une demande ne peut donc pas
+ * être une annexe (403 `annexe_sans_annexe`), et une annexe ne peut pas
+ * accepter une demande (403 aussi) : seule une église mère reçoit des
+ * rattachements.
  */
-
-/** Active tous les modules activables pour une église (tutelle). */
-export async function activerTousModules(
-  client: PoolClient,
-  churchId: string,
-): Promise<string[]> {
-  const codes = MODULES_ACTIVABLES.map((m) => m.code);
-  for (const code of codes) {
-    await client.query(
-      `INSERT INTO eglise_modules (church_id, module, actif)
-       VALUES ($1, $2, true)
-       ON CONFLICT (church_id, module)
-       DO UPDATE SET actif = true, updated_at = now()`,
-      [churchId, code],
-    );
-  }
-  return codes;
-}
 
 const createSchema = z
   .object({
@@ -154,6 +138,15 @@ export function registerRattachementsRoutes(app: FastifyInstance, db: Pool) {
           return reply.code(400).send({
             error: "invalid_parent",
             message: "Église mère introuvable ou inactive.",
+          });
+        }
+        // Une annexe ne peut pas être une mère : on ne peut pas se
+        // rattacher à elle, ni par son code permanent ni par un code
+        // de tutelle.
+        if (await estAnnexe(db, parent.id)) {
+          return reply.code(403).send({
+            error: "annexe_sans_annexe",
+            message: "Une église annexe ne peut pas avoir d'église annexe.",
           });
         }
         if (parent.id === req.session.churchId) {
@@ -273,6 +266,16 @@ export function registerRattachementsRoutes(app: FastifyInstance, db: Pool) {
           });
           return;
         }
+        // Une annexe ne peut pas accepter de rattachement : elle ne
+        // peut pas devenir mère. Refuser reste possible.
+        if (accepter && (await estAnnexe(client, session.churchId))) {
+          await client.query("ROLLBACK");
+          reply.code(403).send({
+            error: "annexe_sans_annexe",
+            message: "Une église annexe ne peut pas avoir d'église annexe.",
+          });
+          return;
+        }
         if (r.status !== "en_attente") {
           await client.query("ROLLBACK");
           reply.code(409).send({
@@ -302,15 +305,6 @@ export function registerRattachementsRoutes(app: FastifyInstance, db: Pool) {
             `UPDATE churches SET parent_church_id = $2, updated_at = now() WHERE id = $1`,
             [r.church_id, r.parent_church_id],
           );
-          // Tutelle : tous les modules de l'église rattachée sont activés
-          // automatiquement, sans action de son admin.
-          const modulesActives = await activerTousModules(client, r.church_id as string);
-          await auditLog(client, {
-            churchId: r.church_id as string,
-            userId: session.userId,
-            action: "modules.actives_tutelle",
-            details: { par_mere: r.parent_church_id, modules: modulesActives },
-          });
           // Code de tutelle à usage unique : il n'est plus valide, tout
           // de suite, sans action manuelle. Si un autre accept a déjà
           // consommé le code entre-temps, on annule tout (409).

@@ -11,7 +11,6 @@ import {
   registerCrud,
 } from "../crud.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
-import { requireModule } from "../modules.js";
 
 /**
  * Module 8 — Enfants et jeunesse : école du dimanche (classes par âge,
@@ -24,7 +23,6 @@ const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 export function registerEnfantsRoutes(app: FastifyInstance, db: Pool) {
   registerCrud(app, db, {
     base: "/classes-enfants",
-    module: "enfants",
     table: "classes_enfants",
     columns: ["nom", "age_min", "age_max", "salle"],
     createSchema: z.object({
@@ -41,7 +39,6 @@ export function registerEnfantsRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/enseignants-classes",
-    module: "enfants",
     table: "enseignants_classes",
     columns: ["classe_id", "member_id", "role"],
     createSchema: z.object({
@@ -66,7 +63,6 @@ export function registerEnfantsRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/autorisations-sorties",
-    module: "enfants",
     table: "autorisations_sorties",
     columns: ["enfant_member_id", "parent_member_id", "activite", "date_sortie", "statut"],
     createSchema: z.object({
@@ -94,7 +90,6 @@ export function registerEnfantsRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/activites-jeunesse",
-    module: "enfants",
     table: "activites_jeunesse",
     columns: ["titre", "description", "date_activite", "lieu", "responsable_member_id"],
     createSchema: z.object({
@@ -123,8 +118,8 @@ export function registerEnfantsRoutes(app: FastifyInstance, db: Pool) {
   // Sortie sécurisée : même code enfant, présenté par le même parent.
   // Alerte silencieuse : enregistrement en base seulement, pas de SMS ni
   // de notification push (canal SMS = Lot B).
-  const lecture = [requireAuth(db), requireModule(db, "enfants"), requireRole(...READ_ALL)];
-  const ecriture = [requireAuth(db), requireModule(db, "enfants"), requireRole(...WRITE_STD)];
+  const lecture = [requireAuth(db), requireRole(...READ_ALL)];
+  const ecriture = [requireAuth(db), requireRole(...WRITE_STD)];
   const codeEnfantRe = /^KIDS-[A-Z0-9]{4}$/;
 
   /** Matricule parent depuis un QR de bracelet : `CODE_EGLISE:MATRICULE` ou matricule seul. */

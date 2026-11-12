@@ -8,7 +8,6 @@ import { z } from "zod";
 import { auditLog, issueTokenForChurch } from "../auth.js";
 import { invalidInput } from "../crud.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
-import { requireModule } from "../modules.js";
 
 /**
  * Module 13 — Identité visuelle, présentation et simplicité.
@@ -73,7 +72,7 @@ export function registerProfilEgliseRoutes(app: FastifyInstance, db: Pool) {
   // -- Téléversement du logo de MON église (admin seulement). ---------------
   app.post(
     "/eglises/:id/logo",
-    { preHandler: [requireAuth(db), requireModule(db, "mon_eglise"), requireRole("admin_eglise")] },
+    { preHandler: [requireAuth(db), requireRole("admin_eglise")] },
     async (req, reply) => {
       const churchId = (req.params as { id: string }).id;
       if (churchId !== req.session.churchId) {
@@ -178,7 +177,7 @@ export function registerProfilEgliseRoutes(app: FastifyInstance, db: Pool) {
   // -- Mise à jour du profil de MON église (admin seulement). ---------------
   app.patch(
     "/eglises/:id/profil",
-    { preHandler: [requireAuth(db), requireModule(db, "mon_eglise"), requireRole("admin_eglise")] },
+    { preHandler: [requireAuth(db), requireRole("admin_eglise")] },
     async (req, reply) => {
       const churchId = (req.params as { id: string }).id;
       if (churchId !== req.session.churchId) {

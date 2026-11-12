@@ -100,5 +100,4 @@ class AnnexeDetail {
     );
   }
 
-  int get modulesActifs => modules.where((m) => m.actif).length;
 }

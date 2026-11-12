@@ -30,7 +30,7 @@ for (const f of ["001_fonctionnalites_eglise.sql","001_transferts_membre.sql","0
 const hash = await argon2.hash("Test1234!");
 const q = async (sql, p = []) => (await db.query(sql, p)).rows;
 const church = async (code, name) =>
-  (await q(`INSERT INTO churches (code,name,city,status) VALUES ($1,$2,'Abidjan','active') RETURNING id`, [code, name]))[0].id;
+  (await q(`INSERT INTO churches (code,code_fidele,name,city,status) VALUES ($1,$2,$3,'Abidjan','active') RETURNING id`, [code, `${code}-F`, name]))[0].id;
 const mere = await church("ESC-MERE01", "Église Mère Test");
 const annexeA = await church("ESC-ANNX01", "Annexe de Yopougon");
 const egliseB = await church("ESC-EGLB01", "Église Indépendante B");
@@ -63,7 +63,6 @@ try {
   const tokC = await login("admin-c@test.ci");
   const H = (t) => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
   const j = async (r) => { const t = await r.text(); try { return JSON.parse(t); } catch { return t; } };
-  const modulesActifs = async (ch) => (await q(`SELECT count(*)::int AS n FROM eglise_modules WHERE church_id=$1 AND actif=true`, [ch]))[0].n;
 
   console.log("Codes de tutelle :");
   let r = await fetch(`${BASE}/codes-tutelle`, { method: "POST", headers: H(tokM), body: JSON.stringify({}) });
@@ -85,19 +84,18 @@ try {
   d = await j(r);
   check("code inconnu : 400 code_tutelle_invalide", r.status === 400 && d.error === "code_tutelle_invalide", JSON.stringify(d));
 
-  console.log("Acceptation : invalidation + modules automatiques :");
-  check("modules de A avant : 0 actif", (await modulesActifs(annexeA)) === 0);
+  console.log("Acceptation : invalidation du code :");
   r = await fetch(`${BASE}/rattachements/${demandeId}/accepter`, { method: "POST", headers: H(tokM), body: JSON.stringify({}) });
   d = await j(r);
   check("acceptation 200 acceptee", r.status === 200 && d.status === "acceptee", JSON.stringify(d));
-  check("modules de A après : 13 actifs", (await modulesActifs(annexeA)) === 13, String(await modulesActifs(annexeA)));
   const codeRow = (await q(`SELECT status, used_by FROM codes_tutelle WHERE id=$1`, [code1Id]))[0];
   check("code passé utilise, used_by = A", codeRow.status === "utilise" && codeRow.used_by === annexeA, JSON.stringify(codeRow));
   r = await fetch(`${BASE}/rattachements`, { method: "POST", headers: H(tokB), body: JSON.stringify({ code_tutelle: code1 }) });
   d = await j(r);
   check("deuxième usage après acceptation : 400 code_tutelle_invalide", r.status === 400 && d.error === "code_tutelle_invalide", JSON.stringify(d));
-  const auditA = (await q(`SELECT action FROM audit_logs WHERE church_id=$1`, [annexeA])).map((x) => x.action);
-  check("audit A : modules.actives_tutelle", auditA.includes("modules.actives_tutelle"), auditA.join(","));
+  // L'acceptation est journalisée chez la mère qui décide, pas chez l'annexe.
+  const auditM0 = (await q(`SELECT action FROM audit_logs WHERE church_id=$1`, [mere])).map((x) => x.action);
+  check("audit mère : rattachement.accepte", auditM0.includes("rattachement.accepte"), auditM0.join(","));
   const auditM = (await q(`SELECT action FROM audit_logs WHERE church_id=$1`, [mere])).map((x) => x.action);
   check("audit mère : codes_tutelle.cree et utilise", auditM.includes("codes_tutelle.cree") && auditM.includes("codes_tutelle.utilise"), auditM.join(","));
 
@@ -113,22 +111,19 @@ try {
   check("recherche Bouaké : 0", d.annexes?.length === 0, JSON.stringify(d));
   r = await fetch(`${BASE}/annexes/${annexeA}`, { headers: H(tokM) });
   d = await j(r);
-  check("détail A : 1 membre, 10000 entrées, 2000 dépenses, 16 modules dont 13 actifs + 3 noyau", r.status === 200 && d.membres_actifs === 1 && d.total_fcfa === 10000 && d.depenses_fcfa === 2000 && d.modules?.length === 16 && d.modules.filter((m) => m.actif).length === 16, JSON.stringify(d).slice(0, 300));
+  check("détail A : 1 membre, 10000 entrées, 2000 dépenses, 16 modules tous actifs", r.status === 200 && d.membres_actifs === 1 && d.total_fcfa === 10000 && d.depenses_fcfa === 2000 && d.modules?.length === 16 && d.modules.filter((m) => m.actif).length === 16, JSON.stringify(d).slice(0, 300));
   r = await fetch(`${BASE}/annexes/${egliseC}`, { headers: H(tokM) });
   check("détail d'une non-annexe : 403", r.status === 403, String(r.status));
   r = await fetch(`${BASE}/annexes`, { headers: H(tokB) });
   d = await j(r);
   check("B sans annexe : liste vide", d.annexes?.length === 0, JSON.stringify(d));
 
-  console.log("US1 préservé pour les indépendantes, sous-église directe :");
-  check("modules de B : 0 actif", (await modulesActifs(egliseB)) === 0);
+  console.log("Règle modules : plus de route d'activation, sous-église directe (mère seulement) :");
   r = await fetch(`${BASE}/modules`, { headers: H(tokB) });
-  d = await j(r);
-  check("GET /modules B : 13 activables inactifs", d.modules?.filter((m) => !m.noyau && m.actif).length === 0, JSON.stringify(d).slice(0, 200));
+  check("GET /modules : 404, route supprimée", r.status === 404, String(r.status));
   r = await fetch(`${BASE}/eglises`, { method: "POST", headers: H(tokM), body: JSON.stringify({ name: "Sous-église Test", city: "Abidjan" }) });
   d = await j(r);
   check("création sous-église 201", r.status === 201, JSON.stringify(d));
-  check("modules de la sous-église : 13 actifs", (await modulesActifs(d.id)) === 13, String(await modulesActifs(d.id)));
 
   console.log("Refus : le code reste actif :");
   r = await fetch(`${BASE}/codes-tutelle`, { method: "POST", headers: H(tokM), body: JSON.stringify({}) });
@@ -142,7 +137,6 @@ try {
   check("refus 200 refusee", r.status === 200 && d.status === "refusee", `${r.status} ${JSON.stringify(d)}`);
   const code2Row = (await q(`SELECT status FROM codes_tutelle WHERE id=$1`, [code2Id]))[0];
   check("code2 toujours actif après refus", code2Row.status === "actif", JSON.stringify(code2Row));
-  check("modules de B toujours 0 après refus", (await modulesActifs(egliseB)) === 0);
   r = await fetch(`${BASE}/codes-tutelle/${code2Id}/annuler`, { method: "POST", headers: H(tokM), body: JSON.stringify({}) });
   d = await j(r);
   check("annulation code2 200 annule", r.status === 200 && d.status === "annule", JSON.stringify(d));

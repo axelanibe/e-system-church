@@ -1,8 +1,9 @@
-/// Module d'une église, US1 : noyau toujours actif ou module activable.
+/// Module d'une église, tel que renvoyé par le détail d'une annexe.
 ///
-/// Le serveur renvoie le noyau (membres, finances, rapports, `noyau: true`,
-/// toujours actifs) et les modules activables avec leur état. Une église
-/// décide seule pour elle-même ; la mère ne force pas ses antennes.
+/// Tous les modules sont actifs pour toutes les églises (règle du
+/// 11/11/2026) : il n'y a plus de choix d'activation, `actif` vaut
+/// toujours vrai. Le champ reste pour compatibilité avec la réponse
+/// du serveur.
 class ModuleEglise {
   final String code;
   final String label;
@@ -29,24 +30,4 @@ class ModuleEglise {
         noyau: noyau,
         actif: actif ?? this.actif,
       );
-}
-
-/// Codes des modules activables, mêmes que côté serveur (`server/src/modules.ts`).
-class CodesModules {
-  static const String annonces = 'annonces';
-  static const String familles = 'familles';
-  static const String cultes = 'cultes';
-  static const String presences = 'presences';
-  static const String budget = 'budget';
-  static const String prieres = 'prieres';
-  static const String pastoral = 'pastoral';
-  static const String serviteurs = 'serviteurs';
-  static const String enfants = 'enfants';
-  static const String medias = 'medias';
-  static const String biens = 'biens';
-  static const String parametres = 'parametres';
-  static const String monEglise = 'mon_eglise';
-
-  /// Codes du noyau, toujours actifs.
-  static const List<String> noyau = ['membres', 'finances', 'rapports'];
 }

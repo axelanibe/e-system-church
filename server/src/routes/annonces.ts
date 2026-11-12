@@ -3,7 +3,6 @@ import type { Pool } from "pg";
 import { z } from "zod";
 import { auditLog } from "../auth.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
-import { requireModule } from "../modules.js";
 
 /**
  * Annonces.
@@ -22,7 +21,7 @@ const createSchema = z.object({
 export function registerAnnoncesRoutes(app: FastifyInstance, db: Pool) {
   app.post(
     "/annonces",
-    { preHandler: [requireAuth(db), requireModule(db, "annonces"), requireRole("admin_eglise")] },
+    { preHandler: [requireAuth(db), requireRole("admin_eglise")] },
     async (req, reply) => {
       const parsed = createSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -53,7 +52,7 @@ export function registerAnnoncesRoutes(app: FastifyInstance, db: Pool) {
     },
   );
 
-  app.get("/annonces", { preHandler: [requireAuth(db), requireModule(db, "annonces")] }, async (req, reply) => {
+  app.get("/annonces", { preHandler: [requireAuth(db)] }, async (req, reply) => {
     try {
       // Ma propre église + toutes ses mères (ancêtres) : leurs annonces
       // diffusées (broadcast=true) me parviennent ; les autres restent locales.
@@ -84,7 +83,7 @@ export function registerAnnoncesRoutes(app: FastifyInstance, db: Pool) {
   // -- Suppression d'une annonce (admin de l'église propriétaire). ----------
   app.delete(
     "/annonces/:id",
-    { preHandler: [requireAuth(db), requireModule(db, "annonces"), requireRole("admin_eglise")] },
+    { preHandler: [requireAuth(db), requireRole("admin_eglise")] },
     async (req, reply) => {
       try {
         const { rows } = await db.query(

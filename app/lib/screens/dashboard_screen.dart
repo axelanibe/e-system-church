@@ -388,8 +388,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                 ),
                                 if (data.rapport!.sousEglises.isEmpty)
-                                  const Text(
-                                      'Aucune église rattachée pour l’instant. Créez-en une depuis « Réseau ».'),
+                                  Text(
+                                    (church?.isMere ?? false)
+                                        ? 'Aucune église rattachée pour l’instant. Créez-en une depuis « Réseau ».'
+                                        : 'Votre église est une annexe : elle ne peut pas avoir de sous-église.',
+                                  ),
                                 const SizedBox(height: 12),
                                 BoutonAvecAide(
                                   label: 'Voir les finances en détail',
@@ -405,21 +408,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     );
                                   },
                                 ),
-                                const SizedBox(height: 12),
-                                BoutonAvecAide(
-                                  label: 'Voir mes annexes',
-                                  aide: 'Les églises annexes rattachées à '
-                                      'la vôtre, et leurs codes.',
-                                  icon: Icons.hub_outlined,
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const AnnexesScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
+                                // Une annexe n'a pas d'annexe : le bouton
+                                // n'existe que pour une église mère.
+                                if (church?.isMere ?? false) ...[
+                                  const SizedBox(height: 12),
+                                  BoutonAvecAide(
+                                    label: 'Voir mes annexes',
+                                    aide: 'Les églises annexes rattachées à '
+                                        'la vôtre, et leurs codes.',
+                                    icon: Icons.hub_outlined,
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const AnnexesScreen(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
                               ],
                             ),
                           ),

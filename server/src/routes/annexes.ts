@@ -121,17 +121,11 @@ export function registerAnnexesRoutes(app: FastifyInstance, db: Pool) {
              (SELECT count(*)::int FROM announcements a WHERE a.church_id = $1) AS annonces`,
           [id],
         );
-        const { rows: modulesRows } = await db.query<{ module: string; actif: boolean }>(
-          `SELECT module, actif FROM eglise_modules WHERE church_id = $1`,
-          [id],
-        );
-        const etats = new Map(modulesRows.map((r) => [r.module, r.actif]));
+        // Tous les modules sont actifs pour toutes les églises (règle
+        // du 11/11/2026) : plus d'état à lire en base.
         const modules: (ModuleInfo & { actif: boolean })[] = [
           ...MODULES_NOYAU.map((m) => ({ ...m, actif: true })),
-          ...MODULES_ACTIVABLES.map((m) => ({
-            ...m,
-            actif: etats.get(m.code) ?? false,
-          })),
+          ...MODULES_ACTIVABLES.map((m) => ({ ...m, actif: true })),
         ];
         const c = chiffres[0];
         return reply.send({

@@ -11,7 +11,6 @@ import {
   registerCrud,
 } from "../crud.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
-import { requireModule } from "../modules.js";
 
 /**
  * Module 9 — Médias et enseignements : prédications (audio / vidéo),
@@ -24,7 +23,6 @@ const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 export function registerMediasRoutes(app: FastifyInstance, db: Pool) {
   registerCrud(app, db, {
     base: "/predications",
-    module: "medias",
     table: "predications",
     columns: ["titre", "orateur", "date_predication", "culte_id", "serie", "url_audio", "url_video", "duree_minutes"],
     createSchema: z.object({
@@ -52,7 +50,6 @@ export function registerMediasRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/plans-lecture",
-    module: "medias",
     table: "plans_lecture",
     columns: ["nom", "description", "duree_jours", "actif"],
     createSchema: z.object({
@@ -69,7 +66,6 @@ export function registerMediasRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/livres",
-    module: "medias",
     table: "livres",
     columns: ["titre", "auteur", "categorie", "isbn", "exemplaires"],
     createSchema: z.object({
@@ -87,7 +83,6 @@ export function registerMediasRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/prets-livres",
-    module: "medias",
     table: "prets_livres",
     columns: ["livre_id", "member_id", "date_pret", "date_retour_prevue", "date_retour", "statut"],
     createSchema: z.object({
@@ -116,7 +111,7 @@ export function registerMediasRoutes(app: FastifyInstance, db: Pool) {
   // -- Retour d'un livre : statut 'rendu', date de retour = aujourd'hui. ----
   app.post(
     "/prets-livres/:id/rendre",
-    { preHandler: [requireAuth(db), requireModule(db, "medias"), requireRole(...WRITE_STD)] },
+    { preHandler: [requireAuth(db), requireRole(...WRITE_STD)] },
     async (req, reply) => {
       try {
         const { rows } = await db.query(

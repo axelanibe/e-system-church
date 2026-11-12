@@ -20,7 +20,6 @@ const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 export function registerPastoralRoutes(app: FastifyInstance, db: Pool) {
   registerCrud(app, db, {
     base: "/parcours-nouveaux",
-    module: "pastoral",
     table: "parcours_nouveaux",
     columns: ["member_id", "etape", "date_etape", "note"],
     createSchema: z.object({
@@ -43,7 +42,6 @@ export function registerPastoralRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/visites-pastorales",
-    module: "pastoral",
     table: "visites_pastorales",
     columns: ["member_id", "visiteur_id", "date_visite", "motif", "compte_rendu", "statut"],
     createSchema: z.object({
@@ -69,7 +67,6 @@ export function registerPastoralRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/accompagnements",
-    module: "pastoral",
     table: "accompagnements",
     columns: ["member_id", "type", "accompagnateur_id", "description", "statut"],
     createSchema: z.object({

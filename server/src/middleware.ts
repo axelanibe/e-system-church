@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import jwt from "jsonwebtoken";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { getJwtSecret } from "./auth.js";
 
 /** Session d'église : l'utilisateur, l'église active et son rôle DANS cette église. */
@@ -89,6 +89,20 @@ export function requireRole(...roles: string[]) {
       });
     }
   };
+}
+
+/**
+ * Vrai si l'église est une annexe (elle a une mère, `parent_church_id`
+ * non nul). Règle décidée par Axel le 11/11/2026 : une église annexe
+ * ne peut pas avoir d'église annexe ; seule une église mère peut créer
+ * une sous-église, générer un code de tutelle ou accepter un rattachement.
+ */
+export async function estAnnexe(db: Pool | PoolClient, churchId: string): Promise<boolean> {
+  const { rows } = await db.query<{ parent_church_id: string | null }>(
+    `SELECT parent_church_id FROM churches WHERE id = $1`,
+    [churchId],
+  );
+  return rows.length > 0 && rows[0].parent_church_id !== null;
 }
 
 /** Erreurs PostgreSQL connues → réponses HTTP cohérentes. Relance sinon. */

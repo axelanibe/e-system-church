@@ -18,7 +18,6 @@ const uuid = z.string().uuid();
 export function registerCultesRoutes(app: FastifyInstance, db: Pool) {
   registerCrud(app, db, {
     base: "/culte-types",
-    module: "cultes",
     table: "culte_types",
     columns: ["nom", "jour_semaine", "heure_debut", "duree_minutes", "lieu", "actif"],
     createSchema: z.object({
@@ -37,7 +36,6 @@ export function registerCultesRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/cultes",
-    module: "cultes",
     table: "cultes",
     columns: ["culte_type_id", "titre", "date_heure", "lieu", "orateur", "theme"],
     createSchema: z.object({
@@ -64,7 +62,6 @@ export function registerCultesRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/ordre-culte",
-    module: "cultes",
     table: "ordre_culte_items",
     columns: ["culte_id", "ordre", "titre", "description", "intervenant", "duree_minutes"],
     createSchema: z.object({
@@ -90,7 +87,6 @@ export function registerCultesRoutes(app: FastifyInstance, db: Pool) {
 
   registerCrud(app, db, {
     base: "/evenements-speciaux",
-    module: "cultes",
     table: "evenements_speciaux",
     columns: ["type", "titre", "description", "date_debut", "date_fin", "lieu", "responsable"],
     createSchema: z.object({

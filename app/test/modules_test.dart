@@ -25,26 +25,25 @@ void main() {
     expect(m.actif, isFalse);
   });
 
-  test('CodesModules : 13 codes activables, noyau à part', () {
-    const activables = [
-      CodesModules.annonces,
-      CodesModules.familles,
-      CodesModules.cultes,
-      CodesModules.presences,
-      CodesModules.budget,
-      CodesModules.prieres,
-      CodesModules.pastoral,
-      CodesModules.serviteurs,
-      CodesModules.enfants,
-      CodesModules.medias,
-      CodesModules.biens,
-      CodesModules.parametres,
-      CodesModules.monEglise,
+  test('ModuleEglise.fromJson : tous actifs par règle (11/11/2026)', () {
+    // Le serveur renvoie désormais `actif: true` pour tous les modules,
+    // noyau compris, sans choix d'activation.
+    final modules = [
+      ModuleEglise.fromJson({
+        'code': 'membres',
+        'label': 'Membres',
+        'noyau': true,
+        'actif': true,
+      }),
+      ModuleEglise.fromJson({
+        'code': 'cultes',
+        'label': 'Cultes',
+        'noyau': false,
+        'actif': true,
+      }),
     ];
-    expect(activables.toSet().length, 13);
-    expect(CodesModules.noyau, ['membres', 'finances', 'rapports']);
-    for (final code in activables) {
-      expect(CodesModules.noyau.contains(code), isFalse);
-    }
+    expect(modules.length, 2);
+    expect(modules.every((m) => m.actif), isTrue);
+    expect(modules.where((m) => m.noyau).length, 1);
   });
 }

@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/module_eglise.dart';
 import '../state/app_state.dart';
 import 'church_avatar.dart';
 import 'mere_badge.dart';
 import '../screens/annexes_screen.dart';
 import '../screens/mes_eglises_screen.dart';
 import '../screens/finances_mere_screen.dart';
-import '../screens/modules_activation_screen.dart';
 import '../screens/mon_eglise_screen.dart';
 import '../screens/plateforme_screen.dart';
 import '../screens/rattachements_screen.dart';
@@ -91,39 +89,30 @@ class TiroirCourt extends StatelessWidget {
             onTap: () => _ouvrir(context, const MesEglisesScreen()),
           ),
           const Divider(),
-          if (state.isModuleActif(CodesModules.annonces))
-            ListTile(
-              leading: const Icon(Icons.campaign_outlined),
-              title: const Text('Annonces'),
-              subtitle: const Text('Messages pour votre église'),
-              onTap: () {
-                Navigator.of(context).pop();
-                onAller(4);
-              },
-            ),
-          if (state.isModuleActif(CodesModules.monEglise))
-            ListTile(
-              leading: const Icon(Icons.church_outlined),
-              title: const Text('Mon église'),
-              subtitle: const Text('Présentation et horaires des cultes'),
-              onTap: () => _ouvrir(context, const MonEgliseScreen()),
-            ),
-          if (state.isAdmin)
-            ListTile(
-              leading: const Icon(Icons.toggle_on_outlined),
-              title: const Text('Modules de l’église'),
-              subtitle:
-                  const Text('Choisir les fonctions visibles dans l’app'),
-              onTap: () =>
-                  _ouvrir(context, const ModulesActivationScreen()),
-            ),
+          ListTile(
+            leading: const Icon(Icons.campaign_outlined),
+            title: const Text('Annonces'),
+            subtitle: const Text('Messages pour votre église'),
+            onTap: () {
+              Navigator.of(context).pop();
+              onAller(4);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.church_outlined),
+            title: const Text('Mon église'),
+            subtitle: const Text('Présentation et horaires des cultes'),
+            onTap: () => _ouvrir(context, const MonEgliseScreen()),
+          ),
           ListTile(
             leading: const Icon(Icons.group_add_outlined),
             title: const Text('Demandes pour rejoindre une église'),
             subtitle: const Text('Personnes qui veulent vous rejoindre'),
             onTap: () => _ouvrir(context, const RattachementsScreen()),
           ),
-          if (state.isAdmin)
+          // Une annexe n'a pas d'annexe : l'entrée n'existe que pour
+          // une église mère (règle du 11/11/2026).
+          if (state.isAdmin && (church?.isMere ?? false))
             ListTile(
               leading: const Icon(Icons.hub_outlined),
               title: const Text('Mes annexes'),
