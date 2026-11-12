@@ -1,3 +1,12 @@
+/// 1 → « 1 membre », 0 ou 3 → « 0 membres », « 3 membres ».
+/// Le pluriel se donne tel quel quand il ne se forme pas avec un simple
+/// « s » (ex. « membre actif » / « membres actifs »).
+String pluriel(int nombre, String singulier, [String? plurielForme]) {
+  final forme =
+      nombre == 1 ? singulier : (plurielForme ?? '${singulier}s');
+  return '$nombre $forme';
+}
+
 // Formatage des montants (FCFA) et des dates — sans dépendance `intl`
 // (dépendances minimales voulues pour le MVP).
 

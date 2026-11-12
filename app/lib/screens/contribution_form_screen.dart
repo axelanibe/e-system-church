@@ -139,7 +139,7 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                   ? null
                   : _noteController.text.trim(),
             );
-        if (mounted) Navigator.of(context).pop(true);
+        if (mounted) Navigator.of(context).pop(_type);
       }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
@@ -178,21 +178,23 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
       await _showPaiementDialog(
         title: 'Paiement $moyenNom',
         message:
-            'La contribution de ${formatMontant(amount, state.devise)} est '
+            'La ${_type == 'depense' ? 'dépense' : 'contribution'} de ${formatMontant(amount, state.devise)} est '
             'enregistrée en attente de confirmation.\n\n'
             '${ouvert ? 'La page de paiement est ouverte dans le navigateur.' : 'Le lien de paiement n’a pas pu s’ouvrir automatiquement : copiez-le ci-dessous.'}',
         launchUrl: ouvert ? null : launchUrl,
       );
     } else {
       await _showPaiementDialog(
-        title: 'Contribution enregistrée',
+        title: _type == 'depense'
+            ? 'Dépense enregistrée'
+            : 'Contribution enregistrée',
         message:
-            'La contribution de ${formatMontant(amount, state.devise)} par '
+            'La ${_type == 'depense' ? 'dépense' : 'contribution'} de ${formatMontant(amount, state.devise)} par '
             '$moyenNom est enregistrée en attente : elle devra être '
             'confirmée par le trésorier.',
       );
     }
-    if (mounted) Navigator.of(context).pop(true);
+    if (mounted) Navigator.of(context).pop(_type);
   }
 
   /// Ouvre le lien dans le navigateur externe. Faux si impossible.
@@ -255,7 +257,10 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
   Widget build(BuildContext context) {
     final devise = context.watch<AppState>().devise;
     return Scaffold(
-      appBar: AppBar(title: const Text('Nouvelle contribution')),
+      appBar: AppBar(
+          title: Text(_type == 'depense'
+              ? 'Nouvelle dépense'
+              : 'Nouvelle contribution')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Center(
@@ -430,8 +435,10 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'La contribution est enregistrée « en attente » : un admin ou un trésorier devra la confirmer.',
+                  Text(
+                    _type == 'depense'
+                        ? 'La dépense est enregistrée « en attente » : un admin ou un trésorier devra la confirmer.'
+                        : 'La contribution est enregistrée « en attente » : un admin ou un trésorier devra la confirmer.',
                     textAlign: TextAlign.center,
                   ),
                 ],

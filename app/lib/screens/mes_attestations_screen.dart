@@ -42,6 +42,9 @@ class _MesAttestationsScreenState extends State<MesAttestationsScreen> {
           subject: 'Attestation ${a.numero}',
         ),
       );
+      if (mounted) {
+        showSuccess(context, 'Attestation ${a.numero} partagée.');
+      }
     } catch (e) {
       if (mounted) showApiError(context, e);
     }
@@ -85,7 +88,7 @@ class _MesAttestationsScreenState extends State<MesAttestationsScreen> {
                         leading: const Icon(Icons.description_outlined),
                         title: Text('${a.annee} — ${formatFcfa(a.totalFcfa)}'),
                         subtitle: Text(
-                            '${a.numero} · ${a.nbDons} don(s) · ${formatDate(a.dateEmission)}'),
+                            '${a.numero} · ${pluriel(a.nbDons, 'don')} · ${formatDate(a.dateEmission)}'),
                         trailing: IconButton(
                           icon: const Icon(Icons.download_outlined),
                           tooltip: 'Télécharger le PDF',

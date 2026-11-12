@@ -89,6 +89,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final church = state.church;
+    // En bureau (≥ 900 px) la navigation est un rail à gauche, la barre
+    // du bas n'existe qu'en étroit.
+    final large = MediaQuery.of(context).size.width >= 900;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -201,10 +204,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         texte: 'Regardez vos chiffres ci-dessous : '
                             'membres, argent reçu, argent dépensé.',
                       ),
-                      const _GuideEtape(
+                      _GuideEtape(
                         numero: '2',
-                        texte: 'Ouvrez « Membres » en bas de l’écran '
-                            'pour voir vos personnes et leurs fiches.',
+                        texte: large
+                            ? 'Ouvrez « Membres » dans la navigation à gauche '
+                                'pour voir vos personnes et leurs fiches.'
+                            : 'Ouvrez « Membres » en bas de l’écran '
+                                'pour voir vos personnes et leurs fiches.',
                       ),
                       const _GuideEtape(
                         numero: '3',
@@ -299,9 +305,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   const NeverScrollableScrollPhysics(),
                               mainAxisSpacing: 12,
                               crossAxisSpacing: 12,
-                              // 1,0 : les cartes portent un libellé et
-                              // une courte explication, elles sont hautes.
-                              childAspectRatio: 1.0,
+                              // En 2 colonnes les cartes sont étroites :
+                              // 0,85 leur donne la hauteur pour 3 lignes
+                              // d'aide sans troncature (E1).
+                              childAspectRatio:
+                                  crossAxisCount == 2 ? 0.85 : 1.0,
                               children: [
                                 StatCard(
                                   label: 'Membres',
@@ -361,8 +369,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                    '${data.rapport!.totauxReseau.membresActifs} membres actifs · '
-                                    '${data.rapport!.totauxReseau.nombreContributions} contributions · '
+                                    '${pluriel(data.rapport!.totauxReseau.membresActifs, 'membre actif', 'membres actifs')} · '
+                                    '${pluriel(data.rapport!.totauxReseau.nombreContributions, 'contribution')} · '
                                     '${formatFcfa(data.rapport!.totauxReseau.totalFcfa)}'),
                                 const SizedBox(height: 12),
                                 const Divider(),

@@ -157,7 +157,7 @@ class _RapportsScreenState extends State<RapportsScreen> {
                         ),
                         title: Text(b.egliseNom),
                         subtitle: Text(
-                            '${b.membresActifs} membre(s) actif(s) · ${b.nombreContributions} contribution(s)'),
+                            '${pluriel(b.membresActifs, 'membre actif', 'membres actifs')} · ${pluriel(b.nombreContributions, 'contribution')}'),
                         trailing: Text(
                           formatMontant(b.totalFcfa, state.devise),
                           style: const TextStyle(fontWeight: FontWeight.bold),

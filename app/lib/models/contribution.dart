@@ -53,6 +53,21 @@ class Contribution {
         egliseCode: json['eglise_code'] as String?,
       );
 
+  static String labelForTypePluriel(String type) {
+    switch (type) {
+      case 'dime':
+        return 'Dîmes confirmées';
+      case 'offrande':
+        return 'Offrandes confirmées';
+      case 'don':
+        return 'Dons confirmés';
+      case 'depense':
+        return 'Dépenses confirmées';
+      default:
+        return type;
+    }
+  }
+
   static String labelForType(String type) {
     switch (type) {
       case 'dime':

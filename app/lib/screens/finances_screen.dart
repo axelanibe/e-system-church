@@ -44,11 +44,16 @@ class _FinancesScreenState extends State<FinancesScreen> {
   }
 
   Future<void> _openForm() async {
-    final created = await Navigator.of(context).push<bool>(
+    final created = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => const ContributionFormScreen()),
     );
-    if (created == true && mounted) {
-      showSuccess(context, 'Contribution enregistrée (en attente).');
+    if (created != null && mounted) {
+      showSuccess(
+        context,
+        created == 'depense'
+            ? 'Dépense enregistrée (en attente).'
+            : 'Contribution enregistrée (en attente).',
+      );
       _refresh();
     }
   }
@@ -203,8 +208,8 @@ class _FinancesScreenState extends State<FinancesScreen> {
                                 'depense'
                               ])
                                 StatCard(
-                                  label:
-                                      '${Contribution.labelForType(type)} confirmées',
+                                  label: Contribution.labelForTypePluriel(
+                                      type),
                                   value: formatFcfa(
                                       totaux[type]?.totalFcfa ?? 0),
                                   icon: type == 'depense'
@@ -220,9 +225,15 @@ class _FinancesScreenState extends State<FinancesScreen> {
                       ),
                       const SizedBox(height: 16),
                       if (page.contributions.isEmpty)
-                        const EmptyState(
+                        EmptyState(
                           icon: Icons.account_balance_wallet_outlined,
-                          message: 'Aucune contribution trouvée.',
+                          message: switch (_typeFilter) {
+                            'depense' => 'Aucune dépense trouvée.',
+                            'dime' => 'Aucune dîme trouvée.',
+                            'offrande' => 'Aucune offrande trouvée.',
+                            'don' => 'Aucun don trouvé.',
+                            _ => 'Aucune contribution trouvée.',
+                          },
                         )
                       else
                         ...page.contributions.map(
@@ -267,7 +278,7 @@ class _FinancesScreenState extends State<FinancesScreen> {
           ? FloatingActionButton.extended(
               onPressed: _openForm,
               icon: const Icon(Icons.add),
-              label: const Text('Contribution'),
+              label: const Text('Ajouter'),
             )
           : null,
     );

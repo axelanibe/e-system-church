@@ -217,7 +217,7 @@ class StatCard extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 aide!,
-                maxLines: 2,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall,
               ),

@@ -69,6 +69,9 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
           subject: 'Attestation ${a.numero}',
         ),
       );
+      if (mounted) {
+        showSuccess(context, 'Attestation ${a.numero} partagée.');
+      }
     } catch (e) {
       if (mounted) showApiError(context, e);
     }
@@ -195,7 +198,7 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                                 title: Text(
                                     '${a.membreNom ?? 'Donateur'} — ${formatFcfa(a.totalFcfa)}'),
                                 subtitle: Text(
-                                    '${a.numero} · ${a.nbDons} don(s) · ${formatDate(a.dateEmission)}${a.estEmise ? '' : ' · annulée'}'),
+                                    '${a.numero} · ${pluriel(a.nbDons, 'don')} · ${formatDate(a.dateEmission)}${a.estEmise ? '' : ' · annulée'}'),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
