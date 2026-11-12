@@ -3282,6 +3282,25 @@ class MockApiService implements ApiService {
     return tampon.toString();
   }
 
+  // -- Exports PDF (tranche C) : non gérés en démo, comme les attestations.
+  @override
+  Future<Uint8List> exporterFinancesDetailPdf(
+          {String? from, String? to}) async =>
+      throw UnimplementedError('Exports PDF non gérés en démo.');
+
+  @override
+  Future<Uint8List> exporterFinancesResumePdf(
+          {String? from, String? to, int? annee}) async =>
+      throw UnimplementedError('Exports PDF non gérés en démo.');
+
+  @override
+  Future<Uint8List> exporterCultesPdf({String? from, String? to}) async =>
+      throw UnimplementedError('Exports PDF non gérés en démo.');
+
+  @override
+  Future<Uint8List> exporterRapportConsolidePdf() async =>
+      throw UnimplementedError('Exports PDF non gérés en démo.');
+
   // -- Administration --------------------------------------------------------------
 
   @override

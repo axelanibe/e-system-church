@@ -740,6 +740,20 @@ abstract class ApiService {
   /// Export CSV (`membres` ou `contributions`) : renvoie le contenu brut.
   Future<String> exportCsv(String type);
 
+  // -- Exports PDF (tranche C) ------------------------------------------------
+  /// PDF bruts (octets) des exports : détail et résumé des finances
+  /// (admin et trésorier), cultes (tous les rôles de l'église), rapport
+  /// consolidé (admin seulement). Mêmes droits que les routes GET
+  /// correspondantes, le serveur refuse le reste (403).
+  Future<Uint8List> exporterFinancesDetailPdf({String? from, String? to});
+
+  Future<Uint8List> exporterFinancesResumePdf(
+      {String? from, String? to, int? annee});
+
+  Future<Uint8List> exporterCultesPdf({String? from, String? to});
+
+  Future<Uint8List> exporterRapportConsolidePdf();
+
   // -- Administration : paramètres, rôles, audit (module 12) -----------------
   Future<EgliseParametres> getParametres();
 
