@@ -24,6 +24,10 @@ class _MembresScreenState extends State<MembresScreen> {
   final _searchController = TextEditingController();
   Timer? _debounce;
   String _query = '';
+  /// Recherche tapée, appliquée tout de suite sur la page déjà chargée :
+  /// l'API pagine à 50, le filtre local ne remplace donc pas l'appel
+  /// serveur, il donne seulement un retour immédiat en attendant.
+  String _filtreLocal = '';
   String? _statusFilter;
   String? _departmentFilter;
   late Future<MemberPage> _future;
@@ -70,6 +74,9 @@ class _MembresScreenState extends State<MembresScreen> {
   }
 
   void _onSearchChanged(String value) {
+    // Retour immédiat : on filtre d'abord la page déjà chargée, puis
+    // l'appel serveur (temporisé) apporte les résultats complets.
+    setState(() => _filtreLocal = value.trim());
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       setState(() {
@@ -77,6 +84,13 @@ class _MembresScreenState extends State<MembresScreen> {
         _future = _load();
       });
     });
+  }
+
+  bool _correspondRecherche(Member m) {
+    final q = _filtreLocal.toLowerCase();
+    if (q.isEmpty) return true;
+    return m.fullName.toLowerCase().contains(q) ||
+        m.matricule.toLowerCase().contains(q);
   }
 
   Future<void> _openForm() async {
@@ -189,10 +203,14 @@ class _MembresScreenState extends State<MembresScreen> {
                   );
                 }
                 final page = snapshot.data!;
-                if (page.membres.isEmpty) {
+                final membres =
+                    page.membres.where(_correspondRecherche).toList();
+                if (membres.isEmpty) {
                   return EmptyState(
                     icon: Icons.people_outline,
-                    message: 'Aucun membre trouvé.',
+                    message: _filtreLocal.isNotEmpty || _query.isNotEmpty
+                        ? 'Aucun membre ne correspond à « ${_filtreLocal.isNotEmpty ? _filtreLocal : _query} ».'
+                        : 'Aucun membre trouvé.',
                     actionLabel: state.canManageMembers
                         ? 'Ajouter un membre'
                         : null,
@@ -203,9 +221,9 @@ class _MembresScreenState extends State<MembresScreen> {
                 return RefreshIndicator(
                   onRefresh: () async => _refresh(),
                   child: ListView.builder(
-                    itemCount: page.membres.length,
+                    itemCount: membres.length,
                     itemBuilder: (context, index) {
-                      final member = page.membres[index];
+                      final member = membres[index];
                       return ListTile(
                         leading: CircleAvatar(
                           child: Text(member.fullName.isNotEmpty
