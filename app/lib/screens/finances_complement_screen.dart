@@ -8,6 +8,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import 'sycebnl_screen.dart';
 
 /// Module 4 (complément) — Budget, dépenses, caisse et rapport financier.
 /// Les contributions (dîmes, offrandes, dons) restent dans FinancesScreen.
@@ -1014,6 +1015,42 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                     );
                   },
                 ),
+        ),
+        const SectionTitle(title: 'Déclarations et exports'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'États financiers SYCEBNL',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Bilan, compte de résultat, tableau des flux de trésorerie et notes annexes, à produire depuis votre comptabilité. L\'export reste disponible pour toutes les églises, même quand le dépôt n\'est pas imposé.',
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const SycebnlScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text('Ouvrir l\'export SYCEBNL'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );
