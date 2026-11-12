@@ -1171,9 +1171,9 @@ class HttpApiService implements ApiService {
 
   // -- Attestations annuelles de dons (US3) ----------------------------------
   @override
-  Future<List<Attestation>> getAttestations({int? annee}) async {
+  Future<List<Attestation>> getAttestations({int? annee, String? type}) async {
     final data = await _call('GET', '/attestations',
-        query: _q({'annee': annee}));
+        query: _q({'annee': annee, 'type': type}));
     return (data['attestations'] as List<dynamic>? ?? [])
         .map((e) => Attestation.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -1229,10 +1229,62 @@ class HttpApiService implements ApiService {
   }
 
   @override
+  Future<Attestation> emettreAttestation({
+    required String type,
+    required String memberId,
+    required String dateEvenement,
+    String? lieu,
+    String? officiant,
+    String? conjointNom,
+    String? pereNom,
+    String? mereNom,
+    String? parrainNom,
+    String? marraineNom,
+  }) async {
+    final data = await _call('POST', '/attestations/emette', body: {
+      'type': type,
+      'member_id': memberId,
+      'date_evenement': dateEvenement,
+      if (lieu != null && lieu.isNotEmpty) 'lieu': lieu,
+      if (officiant != null && officiant.isNotEmpty) 'officiant': officiant,
+      if (conjointNom != null && conjointNom.isNotEmpty)
+        'conjoint_nom': conjointNom,
+      if (pereNom != null && pereNom.isNotEmpty) 'pere_nom': pereNom,
+      if (mereNom != null && mereNom.isNotEmpty) 'mere_nom': mereNom,
+      if (parrainNom != null && parrainNom.isNotEmpty)
+        'parrain_nom': parrainNom,
+      if (marraineNom != null && marraineNom.isNotEmpty)
+        'marraine_nom': marraineNom,
+    });
+    return Attestation.fromJson(data);
+  }
+
+  @override
   Future<Attestation> corrigerAttestation(String id,
-      {required String motif}) async {
-    final data = await _call('POST', '/attestations/$id/corriger',
-        body: {'motif': motif});
+      {required String motif,
+      String? dateEvenement,
+      String? lieu,
+      String? officiant,
+      String? conjointNom,
+      String? pereNom,
+      String? mereNom,
+      String? parrainNom,
+      String? marraineNom}) async {
+    final data = await _call('POST', '/attestations/$id/corriger', body: {
+      'motif': motif,
+      if (dateEvenement != null && dateEvenement.isNotEmpty)
+        'date_evenement': dateEvenement,
+      if (lieu != null && lieu.isNotEmpty) 'lieu': lieu,
+      if (officiant != null && officiant.isNotEmpty) 'officiant': officiant,
+      if (conjointNom != null && conjointNom.isNotEmpty)
+        'conjoint_nom': conjointNom,
+      if (pereNom != null && pereNom.isNotEmpty) 'pere_nom': pereNom,
+      if (mereNom != null && mereNom.isNotEmpty) 'mere_nom': mereNom,
+      if (parrainNom != null && parrainNom.isNotEmpty)
+        'parrain_nom': parrainNom,
+      if (marraineNom != null && marraineNom.isNotEmpty)
+        'marraine_nom': marraineNom,
+    });
     return Attestation.fromJson(data);
   }
 

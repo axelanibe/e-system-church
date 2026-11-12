@@ -24,13 +24,13 @@ const db = new Client({ connectionString: DB });
 await db.connect();
 // Schéma + migrations (même ordre que migrate.ts, sans toucher à Render).
 await db.query(readFileSync("../db/schema.sql", "utf8"));
-for (const f of ["001_fonctionnalites_eglise.sql","001_transferts_membre.sql","002_vue_consolidee_recursive.sql","003_mot_de_passe_acces_fidele.sql","004_depenses_budget_stats.sql","005_modules_eglise.sql","005_rapports_nombres.sql","006_organisation_catalogues.sql","007_campagnes.sql","008_attestations.sql"]) {
+for (const f of ["001_fonctionnalites_eglise.sql","001_transferts_membre.sql","002_vue_consolidee_recursive.sql","003_mot_de_passe_acces_fidele.sql","004_depenses_budget_stats.sql","005_modules_eglise.sql","005_rapports_nombres.sql","006_organisation_catalogues.sql","007_campagnes.sql","008_attestations.sql","016_types_attestations.sql"]) {
   await db.query(readFileSync(`../db/migrations/${f}`, "utf8"));
 }
 const hash = await argon2.hash("Test1234!");
 const q = async (sql, p = []) => (await db.query(sql, p)).rows;
-const churchA = (await q(`INSERT INTO churches (code,name,status) VALUES ('ESC-TEST-A','Église Test A','active') RETURNING id`))[0].id;
-const churchB = (await q(`INSERT INTO churches (code,name,status) VALUES ('ESC-TEST-B','Église Test B','active') RETURNING id`))[0].id;
+const churchA = (await q(`INSERT INTO churches (code,code_fidele,name,status) VALUES ('ESC-TEST-A','ESC-F-TSTA01','Église Test A','active') RETURNING id`))[0].id;
+const churchB = (await q(`INSERT INTO churches (code,code_fidele,name,status) VALUES ('ESC-TEST-B','ESC-F-TSTB01','Église Test B','active') RETURNING id`))[0].id;
 async function user(email, church, role, memberId = null) {
   const u = (await q(`INSERT INTO users (email,password_hash,full_name,member_id) VALUES ($1,$2,$3,$4) RETURNING id`, [email, hash, email, memberId]))[0].id;
   await q(`INSERT INTO church_users (user_id,church_id,role) VALUES ($1,$2,$3)`, [u, church, role]);

@@ -37,4 +37,39 @@ void main() {
     expect(a.estEmise, isFalse);
     expect(a.remplaceId, 'a3');
   });
+
+  test('Attestation de mariage : type, sans total ni dons', () {
+    final a = Attestation.fromJson({
+      'id': 'a3',
+      'numero': 'MAR-2026-0001',
+      'type': 'mariage',
+      'annee': 2026,
+      'member_id': 'm1',
+      'membre_nom': 'KOFFI JEAN',
+      'total_fcfa': null,
+      'nb_dons': null,
+      'statut': 'emise',
+      'date_emission': '2026-11-12T10:00:00.000Z',
+    });
+    expect(a.type, 'mariage');
+    expect(a.libelle, 'Mariage');
+    expect(a.estDon, isFalse);
+    expect(a.estEmise, isTrue);
+    expect(a.totalFcfa, isNull);
+    expect(a.nbDons, isNull);
+  });
+
+  test('Attestation sans type : don par défaut (anciennes réponses)', () {
+    final a = Attestation.fromJson({
+      'id': 'a4',
+      'numero': 'ATT-2026-0002',
+      'annee': 2026,
+      'total_fcfa': 5000,
+      'nb_dons': 1,
+      'statut': 'emise',
+    });
+    expect(a.type, 'don');
+    expect(a.estDon, isTrue);
+    expect(a.libelle, 'Dons');
+  });
 }
