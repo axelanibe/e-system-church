@@ -11,10 +11,11 @@ import '../state/app_state.dart';
 /// Accessibilité (11 novembre 2026) : une église sans couleur, ou avec
 /// une couleur claire comme l'or, avait des initiales blanches sur fond
 /// clair, ratio ~1,5:1, invisibles. Le fond de repli est désormais le
-/// bleu nuit, et la couleur du texte est celle, blanc ou bleu nuit,
+/// cyprès, et la couleur du texte est celle, blanc ou cyprès,
 /// dont le contraste avec le fond est le plus fort. Un seuil fixe sur la
-/// luminosité ne suffit pas : l'or #D4A72C a une luminosité de 0,42,
-/// sous 0,5, mais du blanc dessus ne contraste qu'à 2,24:1.
+/// luminosité ne suffit pas : l'or ambre #B8862D a une luminosité
+/// moyenne, mais du blanc dessus ne contraste qu'à 3,24:1, et du
+/// cyprès dessus qu'à 2,98:1.
 class ChurchAvatar extends StatelessWidget {
   final Church? church;
   final double radius;
@@ -30,12 +31,13 @@ class ChurchAvatar extends StatelessWidget {
     return (clair + 0.05) / (sombre + 0.05);
   }
 
-  /// Couleur de texte la plus lisible sur [fond] : blanc ou bleu nuit.
-  /// Ex. sur or #D4A72C, le blanc ne vaut que 2,24:1, le bleu nuit 7,5:1.
+  /// Couleur de texte la plus lisible sur [fond] : blanc ou cyprès.
+  /// Ex. sur or ambre #B8862D, le blanc ne vaut que 3,24:1, le cyprès
+  /// 2,98:1, c'est le meilleur des deux mais il reste sous 4,5:1.
   static Color texteSur(Color fond) =>
-      _contraste(fond, Colors.white) >= _contraste(fond, AppTheme.bleuNuit)
+      _contraste(fond, Colors.white) >= _contraste(fond, AppTheme.cypress)
           ? Colors.white
-          : AppTheme.bleuNuit;
+          : AppTheme.cypress;
 
   @override
   Widget build(BuildContext context) {
@@ -43,12 +45,12 @@ class ChurchAvatar extends StatelessWidget {
     if (c == null) {
       return CircleAvatar(
         radius: radius,
-        backgroundColor: AppTheme.bleuNuit,
+        backgroundColor: AppTheme.cypress,
         child: const Icon(Icons.church_outlined, color: Colors.white),
       );
     }
-    // Fond de repli bleu nuit quand l'église n'a pas de couleur.
-    final fond = c.couleur ?? AppTheme.bleuNuit;
+    // Fond de repli cyprès quand l'église n'a pas de couleur.
+    final fond = c.couleur ?? AppTheme.cypress;
     final logoUrl = c.logoUrl;
     if (logoUrl != null && logoUrl.isNotEmpty) {
       final baseUrl = context.read<AppState>().apiBaseUrl;

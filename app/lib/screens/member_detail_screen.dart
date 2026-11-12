@@ -20,9 +20,9 @@ class MemberDetailScreen extends StatelessWidget {
   Color _statusColor(String status) {
     switch (status) {
       case 'actif':
-        return AppTheme.vertFonce;
+        return AppTheme.cypress;
       case 'nouveau_converti':
-        return AppTheme.bleuFonce;
+        return AppTheme.presences;
       case 'inactif':
         return Colors.grey;
       default:
