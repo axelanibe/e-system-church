@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/attestation.dart';
@@ -44,9 +44,25 @@ class HttpApiService implements ApiService {
   final String baseUrl;
   String? _token;
 
-  HttpApiService({required this.baseUrl, String? token}) : _token = token;
+  /// Jeton de rafraîchissement (un par appareil) : renouvelle le JWT sans
+  /// ressaisir le mot de passe, jusqu'à déconnexion manuelle.
+  String? _refreshToken;
+
+  /// Appelée après chaque rotation réussie (nouveau JWT + nouveau jeton),
+  /// pour que l'appelant persiste les deux. Jamais appelée sur un échec.
+  void Function(String token, String? refreshToken)? onTokensRefreshed;
+
+  HttpApiService({required this.baseUrl, String? token, String? refreshToken})
+      : _token = token,
+        _refreshToken = refreshToken;
 
   void setToken(String? token) => _token = token;
+
+  void setRefreshToken(String? token) => _refreshToken = token;
+
+  /// Canal réel : `web` sur le web, `mobile` ailleurs. Le canal fixe la
+  /// durée du JWT côté serveur (30 min web, 2 h mobile).
+  String get _channel => kIsWeb ? 'web' : 'mobile';
 
   /// En-têtes : `Content-Type: application/json` seulement quand un corps
   /// est envoyé. Un POST sans corps (ex. accepter ou refuser un
@@ -59,11 +75,14 @@ class HttpApiService implements ApiService {
       };
 
   /// Appel HTTP générique : renvoie le JSON décodé, ou lève [ApiException].
+  /// Sur 401 d'un appel authentifié, le jeton est rafraîchi une fois et
+  /// l'appel est rejoué (sauf pour `/auth/refresh` et `/auth/login`).
   Future<Map<String, dynamic>> _call(
     String method,
     String path, {
     Map<String, dynamic>? body,
     Map<String, String>? query,
+    bool rafraichir = true,
   }) async {
     final uri = Uri.parse('$baseUrl$path')
         .replace(queryParameters: query?.isEmpty ?? true ? null : query);
@@ -105,10 +124,79 @@ class HttpApiService implements ApiService {
         ? <String, dynamic>{}
         : jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode >= 200 && res.statusCode < 300) return data;
+    if (res.statusCode == 401 &&
+        rafraichir &&
+        _token != null &&
+        _refreshToken != null &&
+        path != '/auth/refresh' &&
+        path != '/auth/login') {
+      if (await _rafraichir()) {
+        return _call(method, path,
+            body: body, query: query, rafraichir: false);
+      }
+    }
     throw ApiException(
       (data['message'] as String?) ?? 'Erreur ${res.statusCode}.',
       res.statusCode,
     );
+  }
+
+  /// Appel `/auth/refresh` : nouveau JWT + nouveau jeton (rotation).
+  /// Renvoie null si la session est expirée. Un échec réseau ne
+  /// déconnecte pas : l'erreur est relayée telle quelle.
+  Future<AuthResult?> _refreshCall() async {
+    final refreshToken = _refreshToken;
+    if (refreshToken == null) return null;
+    try {
+      final data = await _call('POST', '/auth/refresh',
+          body: {'refresh_token': refreshToken}, rafraichir: false);
+      final result = AuthResult.fromJson(data);
+      _token = result.token;
+      _refreshToken = result.refreshToken;
+      onTokensRefreshed?.call(result.token, result.refreshToken);
+      return result;
+    } on ApiException catch (e) {
+      if (e.statusCode == 401) {
+        _token = null;
+        _refreshToken = null;
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  /// Rafraîchit le JWT par le jeton de rafraîchissement (rotation).
+  /// Renvoie faux si la session est expirée ou injoignable.
+  Future<bool> _rafraichir() async {
+    try {
+      return await _refreshCall() != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
+  Future<AuthResult> refresh() async {
+    final result = await _refreshCall();
+    if (result == null) {
+      throw const ApiException(
+          'Session expirée. Connectez-vous à nouveau.', 401);
+    }
+    return result;
+  }
+
+  @override
+  Future<void> logout() async {
+    try {
+      await _call('POST', '/auth/logout', body: {
+        if (_refreshToken != null) 'refresh_token': _refreshToken,
+      });
+    } catch (_) {
+      // Hors ligne ou session déjà expirée : la déconnexion locale a lieu
+      // quand même, le jeton serveur expire seul.
+    }
+    _token = null;
+    _refreshToken = null;
   }
 
   /// Liste générique : `GET` + `data['items']`.
@@ -126,14 +214,15 @@ class HttpApiService implements ApiService {
 
   @override
   Future<AuthResult> login(
-      {required String email, required String password}) async {
+      {required String identifiant, required String password}) async {
     final data = await _call('POST', '/auth/login', body: {
-      'email': email,
+      'identifiant': identifiant,
       'password': password,
-      'channel': 'mobile',
+      'channel': _channel,
     });
     final result = AuthResult.fromJson(data);
     _token = result.token;
+    _refreshToken = result.refreshToken;
     return result;
   }
 
@@ -145,6 +234,7 @@ class HttpApiService implements ApiService {
     String? churchEmail,
     required String adminName,
     required String adminEmail,
+    String? adminPhone,
     required String password,
     String? parentCode,
     String? logoBase64,
@@ -161,12 +251,14 @@ class HttpApiService implements ApiService {
       'admin': {
         'full_name': adminName,
         'email': adminEmail,
+        if (adminPhone != null) 'phone': adminPhone,
         'password': password,
       },
-      'channel': 'mobile',
+      'channel': _channel,
     });
     final result = AuthResult.fromJson(data);
     _token = result.token;
+    _refreshToken = result.refreshToken;
     if (logoBase64 != null) {
       // Logo choisi à l'inscription : téléversé après la création,
       // comme dans Mon église (même route, même limite de 2 Mo).
@@ -256,10 +348,13 @@ class HttpApiService implements ApiService {
       'matricule': matricule,
       if (codeFidele != null && codeFidele.isNotEmpty)
         'code_fidele': codeFidele,
-      'channel': 'mobile',
+      'channel': _channel,
     });
     final result = FideleInscriptionResult.fromJson(data);
-    if (result.auth != null) _token = result.auth!.token;
+    if (result.auth != null) {
+      _token = result.auth!.token;
+      _refreshToken = result.auth!.refreshToken;
+    }
     return result;
   }
 
@@ -285,10 +380,13 @@ class HttpApiService implements ApiService {
       if (sexe != null) 'sexe': sexe,
       if (department != null) 'department': department,
       if (fonction != null) 'fonction': fonction,
-      'channel': 'mobile',
+      'channel': _channel,
     });
     final result = FideleInscriptionResult.fromJson(data);
-    if (result.auth != null) _token = result.auth!.token;
+    if (result.auth != null) {
+      _token = result.auth!.token;
+      _refreshToken = result.auth!.refreshToken;
+    }
     return result;
   }
 
@@ -1804,8 +1902,15 @@ class HttpApiService implements ApiService {
   Future<void> switchChurch(String churchId) async {
     final data = await _call('POST', '/auth/eglise-active', body: {
       'church_id': churchId,
+      'channel': _channel,
+      if (_refreshToken != null) 'refresh_token': _refreshToken,
     });
     _token = data['token'] as String?;
+    final rotated = data['refresh_token'] as String?;
+    if (rotated != null) {
+      _refreshToken = rotated;
+      onTokensRefreshed?.call(_token!, rotated);
+    }
   }
 
   @override

@@ -55,7 +55,7 @@ void main() {
     test('QR scanné pointe le membre en mode scan_qr', () async {
       final api = MockApiService();
       await api.login(
-        email: DemoAccounts.adminEmail,
+        identifiant: DemoAccounts.adminEmail,
         password: DemoAccounts.password,
       );
       final lecture = lireQrCarte('GD-PLAT:GD-002', codeEglise: 'GD-PLAT');
@@ -74,7 +74,7 @@ void main() {
     test('matricule d’une autre église introuvable dans la session', () async {
       final api = MockApiService();
       await api.login(
-        email: DemoAccounts.adminEmail,
+        identifiant: DemoAccounts.adminEmail,
         password: DemoAccounts.password,
       );
       await expectLater(

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
-import { login, registerChurch } from "../auth.js";
+import { auditLog, login, refreshSession, registerChurch, revokeRefreshToken } from "../auth.js";
 import { dbError, requireAuth } from "../middleware.js";
 
 /**
@@ -26,7 +26,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
         const status =
           result.reason === "invalid_input"
             ? 400
-            : result.reason === "email_taken"
+            : result.reason === "email_taken" || result.reason === "phone_taken"
               ? 409
               : 400;
         const message =
@@ -34,11 +34,14 @@ export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
             ? "Données d'inscription invalides."
             : result.reason === "email_taken"
               ? "Cet e-mail est déjà utilisé."
-              : "Code d'invitation de l'église mère invalide.";
+              : result.reason === "phone_taken"
+                ? "Ce numéro de téléphone est déjà utilisé."
+                : "Code d'invitation de l'église mère invalide.";
         return reply.code(status).send({ error: result.reason, message });
       }
       return reply.code(201).send({
         token: result.token,
+        refresh_token: result.refreshToken,
         user: result.user,
         church: result.church,
         rattachement: result.rattachement,
@@ -71,15 +74,71 @@ export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
                   ? "Pour vous connecter, initialisez d'abord votre mot de passe via le lien reçu."
                   : result.reason === "no_church"
                     ? "Votre demande de liaison n'a pas encore été validée par votre église."
-                    : "E-mail ou mot de passe incorrect.";
+                    : "Identifiant ou mot de passe incorrect.";
         return reply.code(status).send({ error: result.reason, message });
       }
       return reply.send({
         token: result.token,
+        refresh_token: result.refreshToken,
         user: result.user,
         church: result.church,
         eglises: result.eglises,
       });
+    } catch (e) {
+      return dbError(reply, e);
+    }
+  });
+
+  // Session gardée : le jeton de rafraîchissement (un par appareil)
+  // renouvelle le JWT court sans ressaisir le mot de passe. Le jeton
+  // présenté est marqué utilisé et un nouveau est émis (rotation).
+  app.post("/auth/refresh", async (req, reply) => {
+    const parsed = z
+      .object({ refresh_token: z.string().min(1).max(256) })
+      .safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: "invalid_input",
+        message: "Jeton de rafraîchissement invalide.",
+      });
+    }
+    try {
+      const result = await refreshSession(db, parsed.data.refresh_token);
+      if (!result.ok) {
+        return reply.code(401).send({
+          error: "session_expiree",
+          message: "Session expirée. Connectez-vous à nouveau.",
+        });
+      }
+      return reply.send({
+        token: result.token,
+        refresh_token: result.refreshToken,
+        user: result.user,
+        church: result.church,
+        eglises: result.eglises,
+      });
+    } catch (e) {
+      return dbError(reply, e);
+    }
+  });
+
+  // Déconnexion d'un appareil : son jeton de rafraîchissement est révoqué.
+  // Le JWT restant expire seul (30 min web, 2 h mobile).
+  app.post("/auth/logout", { preHandler: [requireAuth(db)] }, async (req, reply) => {
+    const parsed = z
+      .object({ refresh_token: z.string().min(1).max(256).optional() })
+      .safeParse(req.body ?? {});
+    try {
+      if (parsed.success && parsed.data.refresh_token) {
+        await revokeRefreshToken(db, parsed.data.refresh_token, req.session.userId);
+      }
+      await auditLog(db, {
+        churchId: req.session.churchId,
+        userId: req.session.userId,
+        action: "auth.logout",
+        details: {},
+      });
+      return reply.send({ ok: true });
     } catch (e) {
       return dbError(reply, e);
     }

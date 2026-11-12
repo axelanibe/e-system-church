@@ -47,7 +47,10 @@ class ApiException implements Exception {
 /// interface. Les listes vides restent vides : l'écran affiche un état vide.
 abstract class ApiService {
   // -- Authentification -----------------------------------------------------
-  Future<AuthResult> login({required String email, required String password});
+  /// Connexion par e-mail ou par téléphone : `identifiant` est l'un ou
+  /// l'autre, le mot de passe est le même dans les deux cas.
+  Future<AuthResult> login(
+      {required String identifiant, required String password});
 
   Future<AuthResult> register({
     required String churchName,
@@ -56,6 +59,7 @@ abstract class ApiService {
     String? churchEmail,
     required String adminName,
     required String adminEmail,
+    String? adminPhone,
     required String password,
     String? parentCode,
     // Logo choisi à l'inscription (facultatif) : téléversé après la
@@ -741,6 +745,14 @@ abstract class ApiService {
 
   /// Bascule l'église active (le jeton est renouvelé côté serveur).
   Future<void> switchChurch(String churchId);
+
+  /// Renouvelle la session par le jeton de rafraîchissement (rotation) :
+  /// nouveau JWT + nouveau jeton, sans ressaisir le mot de passe.
+  Future<AuthResult> refresh();
+
+  /// Déconnexion : révoque le jeton de rafraîchissement de cet appareil
+  /// côté serveur (le JWT restant expire seul).
+  Future<void> logout();
 
   /// Mes églises, paginées + recherche (nom, code, ville) :
   /// `GET /moi/eglises`, 50 par page par défaut. L'église active est

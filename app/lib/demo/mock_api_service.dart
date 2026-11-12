@@ -404,12 +404,38 @@ class MockApiService implements ApiService {
 
   // -- Authentification -----------------------------------------------------
 
+  /// Normalisation démo, même règle que le serveur : espaces, tirets,
+  /// points et parenthèses retirés, 0… → +225…, 225… → +225….
+  String? _normaliserTelephone(String v) {
+    final nettoye = v.replaceAll(RegExp(r'[\s\-.()]'), '');
+    if (nettoye.startsWith('+')) {
+      if (RegExp(r'^\+2250[0-9]{7,9}$').hasMatch(nettoye)) {
+        return '+225${nettoye.substring(5)}';
+      }
+      return RegExp(r'^\+[0-9]{8,15}$').hasMatch(nettoye) ? nettoye : null;
+    }
+    if (RegExp(r'^0[0-9]{7,9}$').hasMatch(nettoye)) {
+      return '+225${nettoye.substring(1)}';
+    }
+    if (RegExp(r'^2250[0-9]{7,9}$').hasMatch(nettoye)) {
+      return '+225${nettoye.substring(4)}';
+    }
+    if (RegExp(r'^225[0-9]{7,9}$').hasMatch(nettoye)) {
+      return '+$nettoye';
+    }
+    return null;
+  }
+
   @override
   Future<AuthResult> login(
-      {required String email, required String password}) async {
+      {required String identifiant, required String password}) async {
     await _latence();
-    final mail = email.trim().toLowerCase();
-    if (mail == DemoAccounts.adminEmail && password == _adminPassword) {
+    final idBrut = identifiant.trim();
+    final mail = idBrut.toLowerCase();
+    final tel =
+        idBrut.contains('@') ? null : _normaliserTelephone(idBrut);
+    if ((mail == DemoAccounts.adminEmail || tel == '+2257470001') &&
+        password == _adminPassword) {
       const user = AppUser(
         id: 'demo-user-admin',
         fullName: 'Admin Grâce Divine',
@@ -425,7 +451,7 @@ class MockApiService implements ApiService {
       _applyAuth(result);
       return result;
     }
-    if (mail == DemoAccounts.plateformeEmail &&
+    if ((mail == DemoAccounts.plateformeEmail || tel == '+2257470002') &&
         password == _adminPassword) {
       const user = AppUser(
         id: 'demo-user-plateforme',
@@ -439,7 +465,8 @@ class MockApiService implements ApiService {
       _applyAuth(result);
       return result;
     }
-    if (mail == DemoAccounts.membreEmail && password == _membrePassword) {
+    if ((mail == DemoAccounts.membreEmail || tel == '+225747123401') &&
+        password == _membrePassword) {
       const user = AppUser(
         id: 'demo-user-membre',
         fullName: 'Awa Koné',
@@ -453,7 +480,7 @@ class MockApiService implements ApiService {
       return result;
     }
     throw const ApiException(
-        'E-mail ou mot de passe incorrect (démo). Utilisez « Entrer dans la démo ».');
+        'Identifiant ou mot de passe incorrect (démo). Utilisez « Entrer dans la démo ».');
   }
 
   @override
@@ -464,6 +491,7 @@ class MockApiService implements ApiService {
     String? churchEmail,
     required String adminName,
     required String adminEmail,
+    String? adminPhone,
     required String password,
     String? parentCode,
     String? logoBase64,
@@ -518,7 +546,7 @@ class MockApiService implements ApiService {
       id: _nextId('user'),
       fullName: adminName,
       email: adminEmail,
-      phone: churchPhone,
+      phone: adminPhone ?? churchPhone,
     );
     _eglises = [
       Membership(church: _withRole(eglise, 'admin_eglise'), role: 'admin_eglise')
@@ -3393,6 +3421,26 @@ class MockApiService implements ApiService {
     // En démo, l'admin de démonstration gère toutes les églises du réseau.
     // Le compte plateforme garde son rôle super_admin en changeant d'église.
     if (_role != 'super_admin') _role = 'admin_eglise';
+  }
+
+  @override
+  Future<AuthResult> refresh() async {
+    await _latence();
+    _requireAuth();
+    // En démo, pas de vrai jeton : la session est simplement prolongée.
+    final eglise = _data.churchById(_churchId) ?? _data.plateau;
+    final result = _buildAuth(_user!, eglise, _role ?? 'membre');
+    _applyAuth(result);
+    return result;
+  }
+
+  @override
+  Future<void> logout() async {
+    await _latence();
+    _user = null;
+    _role = null;
+    _churchId = DemoIds.plateau;
+    _eglises = [];
   }
 
   @override

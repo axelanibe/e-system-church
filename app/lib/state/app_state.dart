@@ -21,6 +21,10 @@ class AppState extends ChangeNotifier {
   String _apiBaseUrl = AppConfig.defaultApiBaseUrl;
 
   String? _token;
+
+  /// Jeton de rafraîchissement (un par appareil) : la session dure
+  /// jusqu'à déconnexion manuelle.
+  String? _refreshToken;
   AppUser? _user;
   Church? _church;
   String? _role;
@@ -82,11 +86,29 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  ApiService _buildApi() => HttpApiService(baseUrl: _apiBaseUrl, token: _token);
+  ApiService _buildApi() {
+    final api = HttpApiService(
+      baseUrl: _apiBaseUrl,
+      token: _token,
+      refreshToken: _refreshToken,
+    );
+    // Rotation réussie (reprise sur 401 ou changement d'église) : les
+    // deux jetons sont persistés tout de suite.
+    api.onTokensRefreshed = (token, refreshToken) async {
+      _token = token;
+      _refreshToken = refreshToken;
+      await _store.saveToken(token);
+      if (refreshToken != null) {
+        await _store.saveRefreshToken(refreshToken);
+      }
+    };
+    return api;
+  }
 
   /// Chargement initial : réglages persistés, puis restauration de session.
   Future<void> init() async {
     _apiBaseUrl = await _store.readApiUrl();
+    _refreshToken = await _store.readRefreshToken();
     _api = _buildApi();
     final savedToken = await _store.readToken();
     if (savedToken != null) {
@@ -97,8 +119,17 @@ class AppState extends ChangeNotifier {
         final me = await _api.me();
         _applyMe(me);
       } catch (_) {
-        _token = null;
-        await _store.clearToken();
+        // JWT expiré : une rotation suffit, sans ressaisir le mot de passe.
+        // Les jetons sont persistés par `onTokensRefreshed`.
+        try {
+          final refreshed = await _api.refresh();
+          _applyAuth(refreshed);
+        } catch (_) {
+          _token = null;
+          _refreshToken = null;
+          await _store.clearToken();
+          await _store.clearRefreshToken();
+        }
       }
     }
     _initialized = true;
@@ -107,6 +138,7 @@ class AppState extends ChangeNotifier {
 
   void _applyAuth(AuthResult result) {
     _token = result.token;
+    _refreshToken = result.refreshToken;
     _user = result.user;
     _church = result.church;
     _role = result.church.role;
@@ -120,10 +152,15 @@ class AppState extends ChangeNotifier {
     _eglises = me.eglises;
   }
 
-  Future<void> login({required String email, required String password}) async {
-    final result = await _api.login(email: email, password: password);
+  Future<void> login(
+      {required String identifiant, required String password}) async {
+    final result =
+        await _api.login(identifiant: identifiant, password: password);
     _applyAuth(result);
     await _store.saveToken(result.token);
+    if (result.refreshToken != null) {
+      await _store.saveRefreshToken(result.refreshToken!);
+    }
     notifyListeners();
   }
 
@@ -134,6 +171,7 @@ class AppState extends ChangeNotifier {
     String? churchEmail,
     required String adminName,
     required String adminEmail,
+    String? adminPhone,
     required String password,
     String? parentCode,
     String? logoBase64,
@@ -146,6 +184,7 @@ class AppState extends ChangeNotifier {
       churchEmail: churchEmail,
       adminName: adminName,
       adminEmail: adminEmail,
+      adminPhone: adminPhone,
       password: password,
       parentCode: parentCode,
       logoBase64: logoBase64,
@@ -153,6 +192,9 @@ class AppState extends ChangeNotifier {
     );
     _applyAuth(result);
     await _store.saveToken(result.token);
+    if (result.refreshToken != null) {
+      await _store.saveRefreshToken(result.refreshToken!);
+    }
     notifyListeners();
     return result;
   }
@@ -173,6 +215,9 @@ class AppState extends ChangeNotifier {
     if (result.auth != null) {
       _applyAuth(result.auth!);
       await _store.saveToken(result.auth!.token);
+      if (result.auth!.refreshToken != null) {
+        await _store.saveRefreshToken(result.auth!.refreshToken!);
+      }
       notifyListeners();
     }
     return result;
@@ -206,6 +251,9 @@ class AppState extends ChangeNotifier {
     if (result.auth != null) {
       _applyAuth(result.auth!);
       await _store.saveToken(result.auth!.token);
+      if (result.auth!.refreshToken != null) {
+        await _store.saveRefreshToken(result.auth!.refreshToken!);
+      }
       notifyListeners();
     }
     return result;
@@ -226,12 +274,19 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    try {
+      await _api.logout();
+    } catch (_) {
+      // Hors ligne : la déconnexion locale a lieu quand même.
+    }
     _token = null;
+    _refreshToken = null;
     _user = null;
     _church = null;
     _role = null;
     _eglises = [];
     await _store.clearToken();
+    await _store.clearRefreshToken();
     notifyListeners();
   }
 
@@ -242,11 +297,13 @@ class AppState extends ChangeNotifier {
     _apiBaseUrl = cleaned;
     await _store.saveApiUrl(cleaned);
     _token = null;
+    _refreshToken = null;
     _user = null;
     _church = null;
     _role = null;
     _eglises = [];
     await _store.clearToken();
+    await _store.clearRefreshToken();
     _api = _buildApi();
     notifyListeners();
   }

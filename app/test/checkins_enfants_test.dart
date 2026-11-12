@@ -60,7 +60,7 @@ void main() {
     test('liste du jour vide, sans effet', () async {
       final api = MockApiService();
       await api.login(
-        email: DemoAccounts.adminEmail,
+        identifiant: DemoAccounts.adminEmail,
         password: DemoAccounts.password,
       );
       expect(await api.getCheckinsEnfantsJour(), isEmpty);
@@ -69,7 +69,7 @@ void main() {
     test('check-in refusé en démo', () async {
       final api = MockApiService();
       await api.login(
-        email: DemoAccounts.adminEmail,
+        identifiant: DemoAccounts.adminEmail,
         password: DemoAccounts.password,
       );
       expect(

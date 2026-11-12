@@ -142,6 +142,9 @@ CREATE INDEX idx_members_name ON members (church_id, full_name);
 ALTER TABLE users ADD CONSTRAINT fk_users_member
   FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE SET NULL;
 ALTER TABLE users ADD CONSTRAINT users_member_id_unique UNIQUE (member_id);
+-- Connexion par téléphone (migration 012) : un numéro = un compte, les
+-- NULL restent libres (comptes sans téléphone, inscrits par e-mail seul).
+ALTER TABLE users ADD CONSTRAINT users_phone_unique UNIQUE (phone);
 
 -- ---------------------------------------------------------------------------
 -- Mot de passe et accès fidèle (modules 15-16) : jetons à usage unique et
@@ -159,6 +162,23 @@ CREATE TABLE auth_tokens (
 );
 CREATE INDEX idx_auth_tokens_user ON auth_tokens (user_id);
 CREATE INDEX idx_auth_tokens_hash ON auth_tokens (token_hash);
+
+-- Session gardée (migration 014) : jetons de rafraîchissement, un par
+-- appareil, hashés en SHA-256, rotation à chaque usage, 365 jours.
+-- ---------------------------------------------------------------------------
+CREATE TABLE refresh_tokens (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    token_hash    TEXT NOT NULL UNIQUE,
+    church_id     UUID REFERENCES churches (id) ON DELETE CASCADE,
+    channel       TEXT NOT NULL CHECK (channel IN ('web', 'mobile')),
+    token_version INT NOT NULL DEFAULT 0,
+    expires_at    TIMESTAMPTZ NOT NULL,
+    used_at       TIMESTAMPTZ,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_refresh_tokens_user ON refresh_tokens (user_id);
+CREATE INDEX idx_refresh_tokens_hash ON refresh_tokens (token_hash);
 
 CREATE TABLE member_link_requests (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
