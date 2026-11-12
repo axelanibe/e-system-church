@@ -12,6 +12,14 @@ import {
  * Module 5 — Communication : demandes de prière (confidentielles : lues
  * par l'admin et le responsable de culte seulement — le pasteur, en
  * pratique l'admin de l'église) et messages internes.
+ *
+ * Confidentialité (Lot B, tranche 1) : tout membre peut déposer une
+ * demande, mais seuls l'admin et le responsable de culte peuvent la
+ * modifier ou la supprimer. Le drapeau `confidentiel` est effectif côté
+ * serveur : une demande confidentielle n'est visible que par l'admin, le
+ * responsable de culte et son auteur (fiche membre liée au compte) ;
+ * une demande non confidentielle est visible par tous les rôles de
+ * l'église. Chaque lecture est journalisée (US17 : consultation tracée).
  */
 
 const uuid = z.string().uuid();
@@ -30,10 +38,33 @@ export function registerPrieresRoutes(app: FastifyInstance, db: Pool) {
       statut: z.enum(["nouvelle", "en_cours", "terminee"]).default("nouvelle"),
     }),
     // Tout membre de l'église peut déposer une demande ; seuls l'admin et
-    // le responsable de culte peuvent les lire (confidentialité).
-    readRoles: ["admin_eglise", "responsable_culte"],
+    // le responsable de culte peuvent les lire en entier (confidentialité)
+    // et les modifier ou les supprimer. Le drapeau `confidentiel` est
+    // effectif : une demande confidentielle est invisible aux autres
+    // rôles, sauf à son auteur (fiche membre liée au compte).
+    readRoles: READ_ALL,
     writeRoles: READ_ALL,
+    createRoles: READ_ALL,
+    updateDeleteRoles: ["admin_eglise", "responsable_culte"],
     audit: "demande_priere",
+    logReads: true,
+    readScope: async (db2, session, paramOffset) => {
+      if (session.role === "admin_eglise" || session.role === "responsable_culte") {
+        return null;
+      }
+      const { rows } = await db2.query<{ member_id: string | null }>(
+        `SELECT member_id FROM users WHERE id = $1`,
+        [session.userId],
+      );
+      const memberId = rows[0]?.member_id ?? null;
+      if (memberId) {
+        return {
+          condition: `confidentiel = false OR member_id = $${paramOffset + 1}`,
+          values: [memberId],
+        };
+      }
+      return { condition: "confidentiel = false", values: [] };
+    },
     filters: { statut: "statut", confidentiel: "confidentiel" },
   });
 

@@ -94,22 +94,8 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
     }
     lignes.add(
         'Total réseau;;;;${rapport.membresActifs};${rapport.totaux['dime']?.totalFcfa ?? 0};${rapport.totaux['offrande']?.totalFcfa ?? 0};${rapport.totaux['don']?.totalFcfa ?? 0};${rapport.totaux['depense']?.totalFcfa ?? 0};${rapport.entreesFcfa};${rapport.soldeFcfa}');
-    lignes.add('');
-    lignes.add('Transactions confirmées;Branche;Type;Montant FCFA;Moyen;Référence;Membre;Date');
-    for (final b in rapport.branches) {
-      for (final t in b.transactions) {
-        lignes.add([
-          '',
-          b.egliseNom,
-          t.typeLabel,
-          '${t.amountFcfa}',
-          t.paymentLabel,
-          t.paymentRef ?? '',
-          t.membreNom ?? '',
-          formatDate(t.createdAt),
-        ].join(';'));
-      }
-    }
+    // Agrégats seulement (Lot B, tranche 1, US17) : aucune transaction
+    // nominative dans l'export.
     return lignes.join('\n');
   }
 
@@ -345,7 +331,8 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
     );
   }
 
-  /// Détail d'une branche : totaux par type et transactions confirmées.
+  /// Détail d'une branche : totaux par type, en agrégats seulement —
+  /// jamais de transaction nominative (Lot B, tranche 1, US17).
   Widget _detailBranche(
       BuildContext context, RapportDetailBranche b) {
     return Card(
@@ -364,8 +351,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
             Text(
                 '${niveauLabel(b.niveau)} · ${b.egliseCode} · ${b.egliseVille ?? ''} · ${pluriel(b.membresActifs, 'membre actif', 'membres actifs')}'),
             const SizedBox(height: 8),
-            Text(
-                'Solde ${formatFcfa(b.soldeFcfa)} · ${b.transactions.length} transactions confirmées'),
+            Text('Solde ${formatFcfa(b.soldeFcfa)}'),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -378,25 +364,6 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                   ),
               ],
             ),
-            const SizedBox(height: 12),
-            if (b.transactions.isEmpty)
-              const Text(
-                  'Aucune transaction confirmée sur cette période.')
-            else
-              ...b.transactions.map(
-                (t) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
-                    child: Icon(
-                      t.type == 'depense' ? Icons.remove : Icons.add,
-                    ),
-                  ),
-                  title: Text(
-                      '${t.typeLabel} — ${formatFcfa(t.amountFcfa)}'),
-                  subtitle: Text(
-                      '${t.paymentLabel}${t.membreNom != null ? ' · ${t.membreNom}' : ''} · ${formatDate(t.createdAt)}'),
-                ),
-              ),
           ],
         ),
       ),
@@ -429,7 +396,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                     child: ExpansionTile(
                       title: Text(b.egliseNom),
                       subtitle: Text(
-                          '${niveauLabel(b.niveau)} · Solde ${formatFcfa(b.soldeFcfa)} · ${b.transactions.length} transactions confirmées'),
+                          '${niveauLabel(b.niveau)} · Solde ${formatFcfa(b.soldeFcfa)}'),
                       children: [
                         Padding(
                           padding: const EdgeInsets.symmetric(
@@ -451,27 +418,6 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                             ],
                           ),
                         ),
-                        if (b.transactions.isEmpty)
-                          const ListTile(
-                            title: Text(
-                                'Aucune transaction confirmée sur cette période.'),
-                          )
-                        else
-                          ...b.transactions.map(
-                            (t) => ListTile(
-                              leading: CircleAvatar(
-                                child: Icon(
-                                  t.type == 'depense'
-                                      ? Icons.remove
-                                      : Icons.add,
-                                ),
-                              ),
-                              title: Text(
-                                  '${t.typeLabel} — ${formatFcfa(t.amountFcfa)}'),
-                              subtitle: Text(
-                                  '${t.paymentLabel}${t.membreNom != null ? ' · ${t.membreNom}' : ''} · ${formatDate(t.createdAt)}'),
-                            ),
-                          ),
                       ],
                     ),
                   ),
@@ -514,7 +460,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                   child: ListTile(
                     title: Text(b.egliseNom),
                     subtitle: Text(
-                        '${niveauLabel(b.niveau)} · Solde ${formatFcfa(b.soldeFcfa)} · ${b.transactions.length} transactions'),
+                        '${niveauLabel(b.niveau)} · Solde ${formatFcfa(b.soldeFcfa)}'),
                     selected: b.egliseId == selection.egliseId,
                     onTap: () => setState(
                         () => _selectionEgliseId = b.egliseId),

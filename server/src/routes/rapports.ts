@@ -5,16 +5,19 @@ import { auditLog } from "../auth.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
 
 /**
- * Rapports consolidés — admin de l'église mère seulement.
+ * Rapports consolidés — admin de l'église mère et trésorier (Lot B,
+ * tranche 1 : le trésorier est autorisé sur son rapport financier et le
+ * consolidé ; il en était exclu).
  * GET /rapports/consolide — chiffres de mon église + agrégats de chaque
  * descendant (vue v_rapports_consolides, récursive : totaux uniquement,
  * jamais le détail nominatif d'une antenne).
  * GET /rapports/consolide/detail — même périmètre (mon église + tous ses
  * descendants, petites-filles comprises, avec leur niveau), mais en détail :
  * total consolidé et détail par branche, par période (mois, trimestre,
- * année) et par type, avec chaque transaction confirmée. La vue agrégée
- * reste pour le tableau de bord ; le détail s'ajoute à côté, il ne la
- * remplace pas.
+ * année) et par type, en agrégats seulement — jamais de transaction
+ * nominative (US17 : aucune donnée sensible dans les rapports
+ * consolidés). La vue agrégée reste pour le tableau de bord ; le détail
+ * s'ajoute à côté, il ne la remplace pas.
  */
 
 const TYPES = ["dime", "offrande", "don", "depense"] as const;
@@ -70,7 +73,7 @@ export function bornesPeriode(
 export function registerRapportsRoutes(app: FastifyInstance, db: Pool) {
   app.get(
     "/rapports/consolide",
-    { preHandler: [requireAuth(db), requireRole("admin_eglise")] },
+    { preHandler: [requireAuth(db), requireRole("admin_eglise", "tresorier")] },
     async (req, reply) => {
       try {
         const { rows: churchRows } = await db.query(
@@ -141,7 +144,7 @@ export function registerRapportsRoutes(app: FastifyInstance, db: Pool) {
 
   app.get(
     "/rapports/consolide/detail",
-    { preHandler: [requireAuth(db), requireRole("admin_eglise")] },
+    { preHandler: [requireAuth(db), requireRole("admin_eglise", "tresorier")] },
     async (req, reply) => {
       const parsed = detailQuerySchema.safeParse(req.query);
       if (!parsed.success) {
@@ -228,19 +231,6 @@ export function registerRapportsRoutes(app: FastifyInstance, db: Pool) {
             totaux.dime.total_fcfa + totaux.offrande.total_fcfa + totaux.don.total_fcfa;
           const depenses = totaux.depense.total_fcfa;
           membresActifsReseau += membresRows[0].n;
-          // Chaque transaction confirmée de la période, la plus récente d'abord.
-          const { rows: transactions } = await db.query(
-            `SELECT c.id, c.type, c.amount_fcfa, c.payment_method, c.payment_ref,
-                    c.status, c.note, c.created_at,
-                    c.member_id, m.full_name AS membre_nom, m.matricule AS membre_matricule
-               FROM contributions c
-               LEFT JOIN members m ON m.id = c.member_id
-              WHERE c.church_id = $1 AND c.status = 'confirme'
-                AND c.created_at >= $2::date AND c.created_at < $3::date
-              ORDER BY c.created_at DESC, c.id DESC
-              LIMIT 100`,
-            [b.id, debut, fin],
-          );
           branches.push({
             eglise_id: b.id,
             eglise_code: b.code,
@@ -252,7 +242,6 @@ export function registerRapportsRoutes(app: FastifyInstance, db: Pool) {
             entrees_fcfa: entrees,
             depenses_fcfa: depenses,
             solde_fcfa: entrees - depenses,
-            transactions,
           });
         }
 

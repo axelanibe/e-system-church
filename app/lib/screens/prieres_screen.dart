@@ -217,6 +217,10 @@ class _PrieresScreenState extends State<PrieresScreen> {
   }
 
   Widget _demandesTab(List<Member> membres) {
+    // Lot B, tranche 1 : seuls l'admin et le responsable de culte peuvent
+    // modifier ou supprimer une demande (le serveur l'impose aussi) ;
+    // tout membre peut en déposer une et lire les non confidentielles.
+    final peutGerer = context.watch<AppState>().canManageMembers;
     return Column(
       children: [
         searchField(
@@ -307,14 +311,15 @@ class _PrieresScreenState extends State<PrieresScreen> {
                               label: _demandeLabel(d.statut),
                               color: _demandeColor(d.statut),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline),
-                              tooltip: 'Supprimer',
-                              onPressed: () => _deleteDemande(d),
-                            ),
+                            if (peutGerer)
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: 'Supprimer',
+                                onPressed: () => _deleteDemande(d),
+                              ),
                           ],
                         ),
-                        onTap: () async {
+                        onTap: peutGerer ? () async {
                           String? choix;
                           await showDialog<void>(
                             context: context,
@@ -349,7 +354,7 @@ class _PrieresScreenState extends State<PrieresScreen> {
                           if (choix != null) {
                             await _setDemandeStatut(d, choix!);
                           }
-                        },
+                        } : null,
                       ),
                     );
                   },

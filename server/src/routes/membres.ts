@@ -326,11 +326,25 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
 
   // -- Suppression d'un membre (les contributions passent à membre NULL,
   //    les présences / statuts / baptêmes / liens sont supprimés en cascade).
+  //    E19 (Lot B, tranche 1) : un membre lié à un transfert entre églises
+  //    ne peut pas être supprimé — la contrainte ON DELETE RESTRICT de
+  //    transferts_membre (migration 001) l'interdit, et on renvoie un 409
+  //    explicite en français plutôt que l'erreur générique de la base.
   app.delete(
     "/membres/:id",
     { preHandler: [requireAuth(db), requireRole(...WRITE_ROLES)] },
     async (req, reply) => {
       try {
+        const { rows: transferts } = await db.query(
+          `SELECT 1 FROM transferts_membre WHERE membre_id = $1 LIMIT 1`,
+          [(req.params as { id: string }).id],
+        );
+        if ((transferts.length ?? 0) > 0) {
+          return reply.code(409).send({
+            error: "membre_lie_transfert",
+            message: "Ce membre est lié à un transfert entre églises et ne peut pas être supprimé.",
+          });
+        }
         const { rows } = await db.query(
           `DELETE FROM members WHERE id = $1 AND church_id = $2 RETURNING id`,
           [(req.params as { id: string }).id, req.session.churchId],
@@ -346,6 +360,15 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
         });
         return reply.send({ ok: true, id: rows[0].id });
       } catch (e) {
+        // Course possible : un transfert créé entre la vérification et la
+        // suppression déclenche la contrainte ON DELETE RESTRICT (23503) —
+        // même 409 explicite.
+        if ((e as { code?: string }).code === "23503") {
+          return reply.code(409).send({
+            error: "membre_lie_transfert",
+            message: "Ce membre est lié à un transfert entre églises et ne peut pas être supprimé.",
+          });
+        }
         return dbError(reply, e);
       }
     },
