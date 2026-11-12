@@ -126,9 +126,9 @@ class HttpApiService implements ApiService {
 
   @override
   Future<AuthResult> login(
-      {required String email, required String password}) async {
+      {required String identifiant, required String password}) async {
     final data = await _call('POST', '/auth/login', body: {
-      'email': email,
+      'identifiant': identifiant,
       'password': password,
       'channel': 'mobile',
     });
@@ -145,6 +145,7 @@ class HttpApiService implements ApiService {
     String? churchEmail,
     required String adminName,
     required String adminEmail,
+    String? adminPhone,
     required String password,
     String? parentCode,
     String? logoBase64,
@@ -161,6 +162,7 @@ class HttpApiService implements ApiService {
       'admin': {
         'full_name': adminName,
         'email': adminEmail,
+        if (adminPhone != null) 'phone': adminPhone,
         'password': password,
       },
       'channel': 'mobile',

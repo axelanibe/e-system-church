@@ -40,13 +40,49 @@ export const registerSchema = z.object({
   channel: z.enum(["web", "mobile"]).default("web"),
 });
 
-export const loginSchema = z.object({
-  email: z.string().email().max(254),
-  password: z.string().min(1).max(256),
-  channel: z.enum(["web", "mobile"]).default("web"),
-  /** Choisir parmi ses églises (un utilisateur peut appartenir à plusieurs). */
-  church_id: z.string().uuid().optional(),
-});
+/**
+ * Normalisation unique des numéros de téléphone (Côte d'Ivoire) :
+ * espaces, tirets, points et parenthèses retirés ; `0XXXXXXXXX` devient
+ * `+225XXXXXXXXX` ; `225XXXXXXXXX` devient `+225XXXXXXXXX` ; le 0 après
+ * l'indicatif est retiré aussi (`+2250...` et `2250...` deviennent
+ * `+225...`), pour qu'un même numéro n'ait qu'une seule forme ; un autre
+ * numéro international `+...` est gardé tel quel. Renvoie null si le
+ * numéro n'a pas une forme reconnue. Appliquée à l'inscription et à la connexion.
+ */
+export function normalizePhone(value: string): string | null {
+  const nettoye = value.replace(/[\s\-.()]/g, "");
+  if (nettoye.startsWith("+")) {
+    if (/^\+2250[0-9]{7,9}$/.test(nettoye)) {
+      return `+225${nettoye.slice(5)}`;
+    }
+    return /^\+[0-9]{8,15}$/.test(nettoye) ? nettoye : null;
+  }
+  if (/^0[0-9]{7,9}$/.test(nettoye)) {
+    return `+225${nettoye.slice(1)}`;
+  }
+  if (/^2250[0-9]{7,9}$/.test(nettoye)) {
+    return `+225${nettoye.slice(4)}`;
+  }
+  if (/^225[0-9]{7,9}$/.test(nettoye)) {
+    return `+${nettoye}`;
+  }
+  return null;
+}
+
+export const loginSchema = z
+  .object({
+    /** Identifiant : e-mail ou numéro de téléphone. `email` est conservé
+     *  pour les anciennes versions de l'application. */
+    identifiant: z.string().min(1).max(254).optional(),
+    email: z.string().max(254).optional(),
+    password: z.string().min(1).max(256),
+    channel: z.enum(["web", "mobile"]).default("web"),
+    /** Choisir parmi ses églises (un utilisateur peut appartenir à plusieurs). */
+    church_id: z.string().uuid().optional(),
+  })
+  .refine((d) => d.identifiant !== undefined || d.email !== undefined, {
+    message: "Identifiant manquant.",
+  });
 
 // ---------------------------------------------------------------------------
 // Types
@@ -351,20 +387,32 @@ export async function registerChurch(
   rawInput: unknown,
 ): Promise<
   | { ok: true; token: string; user: { id: string; full_name: string; email: string }; church: ChurchSummary; rattachement: { id: string; status: string } | null }
-  | { ok: false; reason: "invalid_input" | "email_taken" | "invalid_parent_code" }
+  | { ok: false; reason: "invalid_input" | "email_taken" | "phone_taken" | "invalid_parent_code" }
 > {
   const parsed = registerSchema.safeParse(rawInput);
   if (!parsed.success) return { ok: false, reason: "invalid_input" };
   const { eglise, admin, channel } = parsed.data;
+  const emailNorm = admin.email.toLowerCase();
+  const eglisePhone = eglise.phone ? normalizePhone(eglise.phone) : null;
+  if (eglise.phone && !eglisePhone) return { ok: false, reason: "invalid_input" };
+  const adminPhone = admin.phone ? normalizePhone(admin.phone) : null;
+  if (admin.phone && !adminPhone) return { ok: false, reason: "invalid_input" };
 
   const client = await db.connect();
   try {
     await client.query("BEGIN");
 
-    const existing = await client.query(`SELECT id FROM users WHERE email = $1`, [admin.email]);
+    const existing = await client.query(`SELECT id FROM users WHERE lower(email) = $1`, [emailNorm]);
     if (existing.rowCount && existing.rowCount > 0) {
       await client.query("ROLLBACK");
       return { ok: false, reason: "email_taken" };
+    }
+    if (adminPhone) {
+      const phonePris = await client.query(`SELECT id FROM users WHERE phone = $1`, [adminPhone]);
+      if (phonePris.rowCount && phonePris.rowCount > 0) {
+        await client.query("ROLLBACK");
+        return { ok: false, reason: "phone_taken" };
+      }
     }
 
     // Mère à rejoindre, le cas échéant (par code d'invitation).
@@ -422,7 +470,7 @@ export async function registerChurch(
        RETURNING id, code, code_fidele, name, parent_church_id, status,
                  logo_url, couleur_principale, devise, fuseau_horaire,
                  description, horaires_cultes`,
-      [code, codeFidele, eglise.name, eglise.city, eglise.phone ?? null, eglise.email ?? null],
+      [code, codeFidele, eglise.name, eglise.city, eglisePhone, eglise.email ?? null],
     );
     const church = churchRows[0];
 
@@ -433,7 +481,7 @@ export async function registerChurch(
     const { rows: userRows } = await client.query<{ id: string; full_name: string; email: string }>(
       `INSERT INTO users (email, password_hash, full_name, phone)
        VALUES ($1, $2, $3, $4) RETURNING id, full_name, email`,
-      [admin.email, passwordHash, admin.full_name, admin.phone ?? null],
+      [emailNorm, passwordHash, admin.full_name, adminPhone],
     );
     const user = userRows[0];
 
@@ -586,7 +634,7 @@ export type InscriptionMembreResult =
       eglises: Membership[];
       matricule: string;
     }
-  | { ok: false; reason: "invalid_input" | "invalid_code" | "email_taken" };
+  | { ok: false; reason: "invalid_input" | "invalid_code" | "email_taken" | "phone_taken" };
 
 /**
  * Inscription d'un membre par code fidèle, sans validation (décision de
@@ -608,6 +656,8 @@ export async function inscriptionMembreParCode(
   const { nom_prenom, email, telephone, mot_de_passe, code_eglise, birth_date, sexe, department, fonction, channel } = parsed.data;
   const sexeNorm = normalizeSexe(sexe);
   const emailNorm = email.toLowerCase();
+  const telephoneNorm = normalizePhone(telephone);
+  if (!telephoneNorm) return { ok: false, reason: "invalid_input" };
   const codeNorm = code_eglise.trim().toUpperCase();
   // « Aucun » veut dire sans fonction précise : on ne stocke rien, la
   // carte affichera alors « Membre ».
@@ -638,12 +688,20 @@ export async function inscriptionMembreParCode(
       await client.query("ROLLBACK");
       return { ok: false, reason: "email_taken" };
     }
+    const phonePris = await client.query(
+      `SELECT id FROM users WHERE phone = $1`,
+      [telephoneNorm],
+    );
+    if (phonePris.rowCount && phonePris.rowCount > 0) {
+      await client.query("ROLLBACK");
+      return { ok: false, reason: "phone_taken" };
+    }
 
     const passwordHash = await hashPassword(mot_de_passe);
     const { rows: userRows } = await client.query<{ id: string }>(
       `INSERT INTO users (email, password_hash, full_name, phone)
        VALUES ($1, $2, $3, $4) RETURNING id`,
-      [emailNorm, passwordHash, nom_prenom, telephone],
+      [emailNorm, passwordHash, nom_prenom, telephoneNorm],
     );
     const userId = userRows[0].id;
 
@@ -661,7 +719,7 @@ export async function inscriptionMembreParCode(
         const { rows: memberRows } = await client.query<{ id: string }>(
           `INSERT INTO members (church_id, user_id, matricule, full_name, phone, email, birth_date, sexe, department, fonction, status)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'actif') RETURNING id`,
-          [church.id, userId, matricule, nom_prenom, telephone, emailNorm, birth_date ?? null, sexeNorm, department ?? null, fonctionNorm],
+          [church.id, userId, matricule, nom_prenom, telephoneNorm, emailNorm, birth_date ?? null, sexeNorm, department ?? null, fonctionNorm],
         );
         memberId = memberRows[0].id;
         await client.query("RELEASE SAVEPOINT matricule");
@@ -687,7 +745,7 @@ export async function inscriptionMembreParCode(
     await client.query("COMMIT");
 
     // Connexion immédiate (même réponse que /auth/login, + matricule).
-    const result = await login(db, { email: emailNorm, password: mot_de_passe, channel });
+    const result = await login(db, { identifiant: emailNorm, password: mot_de_passe, channel });
     if (!result.ok) {
       throw new Error("Compte créé, mais la connexion a échoué.");
     }
@@ -714,13 +772,19 @@ export async function inscriptionMembreParCode(
 export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
   const parsed = loginSchema.safeParse(rawInput);
   if (!parsed.success) return { ok: false, reason: "invalid_input" };
-  const { email, password, channel, church_id } = parsed.data;
+  const { identifiant, email, password, channel, church_id } = parsed.data;
+  // Identifiant : e-mail ou numéro de téléphone. Un e-mail saisi en
+  // majuscules trouve son compte (minuscules) ; un téléphone est
+  // normalisé avant la recherche. Un même message d'erreur couvre les
+  // deux cas, sans révéler si le compte existe.
+  const idBrut = (identifiant ?? email ?? "").trim();
+  const telephoneNorm = idBrut.includes("@") ? null : normalizePhone(idBrut);
 
   const { rows } = await db.query(
     `SELECT id, password_hash, failed_logins, locked_until, full_name, email,
             token_version
-       FROM users WHERE email = $1 LIMIT 1`,
-    [email],
+       FROM users WHERE lower(email) = $1 OR phone = $2 LIMIT 1`,
+    [idBrut.toLowerCase(), telephoneNorm ?? idBrut],
   );
   const user = rows[0];
 

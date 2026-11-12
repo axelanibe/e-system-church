@@ -120,8 +120,10 @@ class AppState extends ChangeNotifier {
     _eglises = me.eglises;
   }
 
-  Future<void> login({required String email, required String password}) async {
-    final result = await _api.login(email: email, password: password);
+  Future<void> login(
+      {required String identifiant, required String password}) async {
+    final result =
+        await _api.login(identifiant: identifiant, password: password);
     _applyAuth(result);
     await _store.saveToken(result.token);
     notifyListeners();
@@ -134,6 +136,7 @@ class AppState extends ChangeNotifier {
     String? churchEmail,
     required String adminName,
     required String adminEmail,
+    String? adminPhone,
     required String password,
     String? parentCode,
     String? logoBase64,
@@ -146,6 +149,7 @@ class AppState extends ChangeNotifier {
       churchEmail: churchEmail,
       adminName: adminName,
       adminEmail: adminEmail,
+      adminPhone: adminPhone,
       password: password,
       parentCode: parentCode,
       logoBase64: logoBase64,

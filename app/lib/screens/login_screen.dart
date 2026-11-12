@@ -8,8 +8,25 @@ import 'forgot_password_screen.dart';
 import 'register_fidele_screen.dart';
 import 'register_screen.dart';
 
-/// Écran de connexion : e-mail + mot de passe, JWT stocké en sécurité.
-/// La connexion exige un compte réel créé sur le serveur.
+/// Validation de l'identifiant de connexion : e-mail (contient @) ou
+/// numéro de téléphone (au moins 8 chiffres). Le serveur normalise le
+/// téléphone et met l'e-mail en minuscules.
+String? validerIdentifiant(String? v) {
+  if (v == null || v.trim().isEmpty) {
+    return 'Saisissez votre e-mail ou votre téléphone.';
+  }
+  final s = v.trim();
+  if (s.contains('@')) {
+    if (!s.contains('.')) return 'E-mail invalide.';
+    return null;
+  }
+  final chiffres = s.replaceAll(RegExp(r'[^0-9]'), '');
+  if (chiffres.length < 8) return 'E-mail ou numéro invalide.';
+  return null;
+}
+
+/// Écran de connexion : e-mail ou téléphone + mot de passe, JWT stocké
+/// en sécurité. La connexion exige un compte réel créé sur le serveur.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -19,7 +36,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _identifiantController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _loading = false;
   String? _error;
@@ -27,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _identifiantController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -40,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       await context.read<AppState>().login(
-            email: _emailController.text.trim(),
+            identifiant: _identifiantController.text.trim(),
             password: _passwordController.text,
           );
     } catch (e) {
@@ -88,21 +105,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 32),
                   TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
+                    controller: _identifiantController,
+                    keyboardType: TextInputType.text,
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
-                      labelText: 'E-mail',
-                      prefixIcon: Icon(Icons.email_outlined),
+                      labelText: 'E-mail ou téléphone',
+                      prefixIcon: Icon(Icons.person_outline),
                       border: OutlineInputBorder(),
                     ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Saisissez votre e-mail.';
-                      }
-                      if (!v.contains('@')) return 'E-mail invalide.';
-                      return null;
-                    },
+                    validator: validerIdentifiant,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
