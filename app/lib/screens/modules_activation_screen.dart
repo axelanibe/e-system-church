@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_theme.dart';
 import '../models/module_eglise.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
@@ -87,15 +88,33 @@ class _ModulesActivationScreenState extends State<ModulesActivationScreen> {
               const SizedBox(height: 16),
               const SectionTitle(title: 'Noyau — toujours actif'),
               Card(
-                child: Column(
-                  children: noyau
-                      .map((m) => SwitchListTile(
-                            title: Text(m.label),
-                            subtitle: const Text('Toujours activé.'),
-                            value: true,
-                            onChanged: null,
-                          ))
-                      .toList(),
+                // L'interrupteur reste un SwitchListTile désactivé
+                // (onChanged: null, impossible à désactiver) : seul son
+                // rendu est corrigé. Un interrupteur désactivé se dessine
+                // gris, comme éteint, quelle que soit sa valeur ; le thème
+                // local force ici les couleurs « activé » quand il est
+                // sélectionné, sans toucher à son fonctionnement.
+                child: SwitchTheme(
+                  data: SwitchThemeData(
+                    thumbColor: WidgetStateProperty.resolveWith((states) =>
+                        states.contains(WidgetState.selected)
+                            ? AppTheme.cypress
+                            : null),
+                    trackColor: WidgetStateProperty.resolveWith((states) =>
+                        states.contains(WidgetState.selected)
+                            ? AppTheme.cypress.withValues(alpha: 0.5)
+                            : null),
+                  ),
+                  child: Column(
+                    children: noyau
+                        .map((m) => SwitchListTile(
+                              title: Text(m.label),
+                              subtitle: const Text('Toujours activé.'),
+                              value: true,
+                              onChanged: null,
+                            ))
+                        .toList(),
+                  ),
                 ),
               ),
               const SectionTitle(title: 'Modules activables'),
