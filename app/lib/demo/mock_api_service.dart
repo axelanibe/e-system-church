@@ -1334,6 +1334,33 @@ class MockApiService implements ApiService {
     _data.membersOf(_churchId).removeWhere((m) => m.id == id);
   }
 
+  // -- Import des fidèles (tranche A, non géré en démo) -----------------------
+  @override
+  Future<Uint8List> telechargerModeleImport() async =>
+      throw UnimplementedError('Import non géré en démo.');
+
+  @override
+  Future<Map<String, dynamic>> apercuImport({
+    String? contenuCsv,
+    List<Map<String, String>>? lignes,
+    Map<String, String>? mapping,
+    String? nomFichier,
+  }) async =>
+      throw UnimplementedError('Import non géré en démo.');
+
+  @override
+  Future<Map<String, dynamic>> confirmerImport({
+    String? contenuCsv,
+    List<Map<String, String>>? lignes,
+    Map<String, String>? mapping,
+    String? nomFichier,
+  }) async =>
+      throw UnimplementedError('Import non géré en démo.');
+
+  @override
+  Future<List<Map<String, dynamic>>> historiqueImports() async =>
+      throw UnimplementedError('Import non géré en démo.');
+
   // -- Membres (complément) --------------------------------------------------
 
   @override
