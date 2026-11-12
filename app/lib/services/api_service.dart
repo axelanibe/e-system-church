@@ -97,7 +97,7 @@ abstract class ApiService {
   /// Ancien parcours, conservé côté serveur ; l'écran n'y renvoie plus.
   /// `codeFidele` (optionnel) restreint la recherche du matricule à
   /// l'église de ce code, pour éviter l'inscription dans la mauvaise
-  /// église (les nouveaux matricules, M-KA-0001, sont uniques dans tout
+  /// église (les nouveaux matricules, M-LA-171268-01, sont uniques dans tout
   /// le système).
   Future<FideleInscriptionResult> registerFidele({
     required String email,
@@ -118,6 +118,8 @@ abstract class ApiService {
     required String telephone,
     required String password,
     required String codeEglise,
+    String? birthDate,
+    String? sexe,
     String? department,
     String? fonction,
   });
@@ -201,6 +203,7 @@ abstract class ApiService {
     String? phone,
     String? email,
     String? birthDate,
+    String? sexe,
     String? department,
     String? fonction,
     String? poste,
@@ -213,6 +216,7 @@ abstract class ApiService {
       String? phone,
       String? email,
       String? birthDate,
+      String? sexe,
       String? department,
       String? fonction,
       String? poste,

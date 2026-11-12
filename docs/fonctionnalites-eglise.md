@@ -291,9 +291,10 @@ serveur les récupère seulement au moment d'exécuter un paiement.
   passe + matricule) : trouve le membre actif par matricule (ambiguïté
   possible pour les anciens numéros — le matricule était unique par
   église — résolue par l'e-mail concordant, sinon refus explicite ; les
-  nouveaux matricules (M-KA-0001 : 2 lettres du nom du fidèle + 4
-  chiffres, séquentiel global par préfixe) sont uniques dans tout le
-  système. Champ optionnel
+  nouveaux matricules (M-LA-171268-01 : système du permis du Québec —
+  initiale du nom de famille + initiale du prénom + date de naissance
+  JJMMAA + 2 chiffres séquentiels, règle +50 au mois pour les femmes,
+  unique dans tout le système) sont uniques dans tout le système. Champ optionnel
   `code_fidele` (ESC-F-…) : quand il est fourni, la recherche du membre
   est restreinte à l'église de ce code (code inconnu → refus explicite).
   E-mail concordant avec la fiche membre → liaison immédiate + connexion

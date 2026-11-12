@@ -217,7 +217,7 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                             textCapitalization: TextCapitalization.characters,
                             decoration: const InputDecoration(
                               labelText: 'Matricule du membre',
-                              hintText: 'Ex. M-KA-0001',
+                              hintText: 'Ex. M-LK-150390-01',
                               border: OutlineInputBorder(),
                             ),
                           ),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/membres_complement.dart';
 import '../state/app_state.dart';
+import '../utils/format.dart';
 import '../widgets/code_input_formatter.dart';
 import '../widgets/common_widgets.dart';
 
@@ -32,6 +33,12 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
   final _departementController = TextEditingController();
   final _passwordController = TextEditingController();
   String _fonction = 'Aucun';
+  /// Date de naissance et sexe (optionnels) : ils entrent dans le
+  /// matricule québécois (initiales + JJMMAA + séquence, règle +50 au
+  /// mois pour les femmes). Sans eux, le matricule est quand même
+  /// attribué (segment 000000, mois tel quel).
+  DateTime? _birthDate;
+  String? _sexe;
   bool _loading = false;
   String? _error;
   bool _obscurePassword = true;
@@ -47,6 +54,29 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
     super.dispose();
   }
 
+  Future<void> _choisirDateNaissance() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _birthDate ?? DateTime(now.year - 30, now.month, now.day),
+      firstDate: DateTime(1900),
+      lastDate: now,
+      helpText: 'Date de naissance',
+      cancelText: 'Annuler',
+      confirmText: 'Choisir',
+    );
+    if (picked != null) setState(() => _birthDate = picked);
+  }
+
+  /// Date au format « AAAA-MM-JJ » attendu par l'API (`birth_date`).
+  String? get _birthDateIso {
+    final d = _birthDate;
+    if (d == null) return null;
+    final month = d.month.toString().padLeft(2, '0');
+    final day = d.day.toString().padLeft(2, '0');
+    return '${d.year}-$month-$day';
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -60,6 +90,8 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
             telephone: _telephoneController.text.trim(),
             password: _passwordController.text,
             codeEglise: _codeController.text.trim().toUpperCase(),
+            birthDate: _birthDateIso,
+            sexe: _sexe,
             department: _departementController.text.trim().isEmpty
                 ? null
                 : _departementController.text.trim(),
@@ -151,6 +183,46 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.cake_outlined),
+                    title: Text(
+                      _birthDate == null
+                          ? 'Date de naissance (optionnel)'
+                          : 'Date de naissance : ${formatDate(_birthDate)}',
+                    ),
+                    trailing: _birthDate == null
+                        ? const Icon(Icons.calendar_today_outlined)
+                        : TextButton(
+                            onPressed: () =>
+                                setState(() => _birthDate = null),
+                            child: const Text('Effacer'),
+                          ),
+                    onTap: _choisirDateNaissance,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _sexe,
+                    decoration: const InputDecoration(
+                      labelText: 'Sexe (optionnel)',
+                      hintText: 'Non précisé',
+                      helperText:
+                          'Votre matricule est construit à partir de votre '
+                          'nom, de votre date de naissance et de votre sexe '
+                          '(système du permis du Québec).',
+                      helperMaxLines: 2,
+                      prefixIcon: Icon(Icons.person_outline),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                          value: null, child: Text('Non précisé')),
+                      DropdownMenuItem(value: 'F', child: Text('Femme')),
+                      DropdownMenuItem(value: 'M', child: Text('Homme')),
+                    ],
+                    onChanged: (v) => setState(() => _sexe = v),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(

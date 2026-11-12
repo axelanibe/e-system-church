@@ -26,9 +26,9 @@ const inscriptionSchema = z.object({
   /**
    * Code fidèle de l'église (ESC-F-…), optionnel : quand il est fourni,
    * la recherche du membre par matricule est restreinte à cette église
-   * (les nouveaux matricules, M-KA-0001, sont uniques dans tout le
-   * système ; les anciens numéros M-XXXX peuvent encore se répéter
-   * d'une église à l'autre). Sans lui, on garde le comportement
+   * (les nouveaux matricules, M-LA-171268-01, sont uniques dans tout le
+   * système ; les anciens numéros M-XXXX et M-KA-0001 peuvent encore se
+   * répéter d'une église à l'autre). Sans lui, on garde le comportement
    * existant (e-mail concordant, sinon ambiguïté).
    */
   code_fidele: z.string().min(4).max(20).optional(),
@@ -49,6 +49,11 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
     }
     const { email, mot_de_passe, matricule, code_fidele, channel } = parsed.data;
     const emailNorm = email.toLowerCase();
+    // Saisie normalisée : sans tirets ni espaces, en majuscules — ainsi
+    // « M-LA-171268-01 » et « MLA17126801 » trouvent le même membre.
+    // La comparaison se fait sur les formes dépouillées, ce qui couvre
+    // aussi les anciens matricules stockés sans tirets.
+    const matriculeNu = matricule.trim().toUpperCase().replace(/[\s-]/g, "");
     const client = await db.connect();
     try {
       await client.query("BEGIN");
@@ -78,10 +83,10 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
       const { rows: candidats } = await client.query(
         churchId
           ? `SELECT id, church_id, matricule, full_name, email, user_id
-               FROM members WHERE matricule = $1 AND status = 'actif' AND church_id = $2`
+               FROM members WHERE upper(replace(replace(matricule, '-', ''), ' ', '')) = $1 AND status = 'actif' AND church_id = $2`
           : `SELECT id, church_id, matricule, full_name, email, user_id
-               FROM members WHERE matricule = $1 AND status = 'actif'`,
-        churchId ? [matricule, churchId] : [matricule],
+               FROM members WHERE upper(replace(replace(matricule, '-', ''), ' ', '')) = $1 AND status = 'actif'`,
+        churchId ? [matriculeNu, churchId] : [matriculeNu],
       );
       let member: (typeof candidats)[number] | undefined;
       if (candidats.length === 0) {

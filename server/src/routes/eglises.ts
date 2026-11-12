@@ -60,8 +60,8 @@ export function registerEglisesRoutes(app: FastifyInstance, db: Pool) {
         // Garantie de Bouf : un même nombre à 4 chiffres ne sert qu'une
         // seule fois, dans un seul rôle — le suffixe est vérifié entre
         // les deux colonnes `code` et `code_fidele` uniquement (les
-        // matricules portent désormais leurs propres lettres, M-KA-0001,
-        // et ne croisent plus les codes).
+        // matricules portent désormais leurs propres initiales + date de
+        // naissance, M-LA-171268-01, et ne croisent plus les codes).
         let code = "";
         for (let attempt = 0; attempt < 50; attempt++) {
           code = generateChurchCode();

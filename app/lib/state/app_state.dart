@@ -219,6 +219,8 @@ class AppState extends ChangeNotifier {
     required String telephone,
     required String password,
     required String codeEglise,
+    String? birthDate,
+    String? sexe,
     String? department,
     String? fonction,
   }) async {
@@ -228,6 +230,8 @@ class AppState extends ChangeNotifier {
       telephone: telephone,
       password: password,
       codeEglise: codeEglise,
+      birthDate: birthDate,
+      sexe: sexe,
       department: department,
       fonction: fonction,
     );

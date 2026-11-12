@@ -27,6 +27,9 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
   final _cellController = TextEditingController();
   String _status = 'actif';
   DateTime? _birthDate;
+  /// Sexe du membre ('M', 'F' ou null = non précisé) : il entre dans le
+  /// matricule québécois (règle +50 au mois pour les femmes).
+  String? _sexe;
   // Catalogues de l'église (départements, fonctions, postes) : listes
   // déroulantes quand ils sont chargés, champ libre sinon (département).
   List<String>? _departements;
@@ -53,6 +56,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
       _birthDate = member.birthDate == null
           ? null
           : DateTime.tryParse(member.birthDate!);
+      _sexe = member.sexe;
       _fonction = member.fonction ?? 'Aucun';
       _poste = member.poste;
     }
@@ -134,6 +138,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                   ? null
                   : _emailController.text.trim(),
               birthDate: _birthDateIso,
+              sexe: _sexe,
               department: _departmentController.text.trim().isEmpty
                   ? null
                   : _departmentController.text.trim(),
@@ -154,6 +159,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                   ? null
                   : _emailController.text.trim(),
               birthDate: _birthDateIso,
+              sexe: _sexe,
               department: _departmentController.text.trim().isEmpty
                   ? null
                   : _departmentController.text.trim(),
@@ -244,6 +250,22 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                             child: const Text('Effacer'),
                           ),
                     onTap: _choisirDateNaissance,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: _sexe,
+                    decoration: const InputDecoration(
+                      labelText: 'Sexe (optionnel)',
+                      hintText: 'Non précisé',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                          value: null, child: Text('Non précisé')),
+                      DropdownMenuItem(value: 'F', child: Text('Femme')),
+                      DropdownMenuItem(value: 'M', child: Text('Homme')),
+                    ],
+                    onChanged: (v) => setState(() => _sexe = v),
                   ),
                   const SizedBox(height: 12),
                   if (_departements == null || _departements!.isEmpty)
