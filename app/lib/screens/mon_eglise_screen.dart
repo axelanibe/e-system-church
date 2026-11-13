@@ -308,28 +308,23 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
     showSuccess(context, 'Code copié : $code');
   }
 
-  /// Régénère un code d'invitation (fidèle ou tutelle) : confirmation
-  /// d'abord — l'ancien code cesse de fonctionner immédiatement. Pour le
-  /// code de tutelle, le lien de présentation publique partagé avec
-  /// l'ancien code ne fonctionne plus non plus. Après régénération,
-  /// l'église est rechargée (nouveau code affiché) et la présentation
-  /// aussi (elle se charge par le code de tutelle).
-  Future<void> _regenererCode(String type, String libelle) async {
+  /// Régénère le code de tutelle : confirmation d'abord — l'ancien code
+  /// cesse de fonctionner immédiatement, et le lien de présentation
+  /// publique partagé avec l'ancien code ne fonctionne plus non plus.
+  /// Après régénération, l'église est rechargée (nouveau code affiché)
+  /// et la présentation aussi (elle se charge par le code de tutelle).
+  /// Le code fidèle, lui, ne se régénère jamais.
+  Future<void> _regenererCodeTutelle() async {
     final confirmer = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Régénérer le $libelle ?'),
-        content: Text(
-          type == 'tutelle'
-              ? 'L’ancien code de tutelle cessera de fonctionner '
-                  'immédiatement : les églises qui l’utilisent pour se '
-                  'rattacher à la vôtre devront utiliser le nouveau, et '
-                  'le lien de présentation publique partagé avec '
-                  'l’ancien code ne fonctionnera plus.'
-              : 'L’ancien code fidèle cessera de fonctionner '
-                  'immédiatement : les membres qui l’utilisent pour '
-                  's’inscrire dans votre église devront utiliser le '
-                  'nouveau.',
+        title: const Text('Régénérer le code de tutelle ?'),
+        content: const Text(
+          'L’ancien code de tutelle cessera de fonctionner '
+          'immédiatement : les églises qui l’utilisent pour se '
+          'rattacher à la vôtre devront utiliser le nouveau, et '
+          'le lien de présentation publique partagé avec '
+          'l’ancien code ne fonctionnera plus.',
         ),
         actions: [
           TextButton(
@@ -347,11 +342,11 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
     if (!mounted) return;
     try {
       final state = context.read<AppState>();
-      final nouveau = await state.api.regenererCode(type: type);
+      final nouveau = await state.api.regenererCode(type: 'tutelle');
       await state.refreshMe();
       if (!mounted) return;
       _refresh();
-      showSuccess(context, 'Nouveau $libelle : $nouveau');
+      showSuccess(context, 'Nouveau code de tutelle : $nouveau');
     } catch (e) {
       if (mounted) showApiError(context, e);
     }
@@ -433,9 +428,9 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
         ),
         const Text(
           'Les matricules et les cartes existantes ne changent jamais. '
-          'Les codes d’invitation, eux, peuvent être régénérés depuis la '
+          'Le code de tutelle, lui, peut être régénéré depuis la '
           'section « Codes d’invitation » : l’ancien code cesse alors de '
-          'fonctionner immédiatement.',
+          'fonctionner immédiatement. Le code fidèle ne change jamais.',
           style: TextStyle(fontSize: 12),
         ),
         const SizedBox(height: 12),
@@ -720,9 +715,11 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                         'Le code fidèle permet aux membres de s’inscrire '
                         'dans votre église ; le code de tutelle permet à '
                         'une église de se rattacher à la vôtre. Touchez '
-                        'l’icône pour copier le code à transmettre, ou '
-                        '« Régénérer » pour en créer un nouveau — l’ancien '
-                        'code cesse alors de fonctionner immédiatement.',
+                        'l’icône pour copier le code à transmettre. Le '
+                        'code de tutelle peut être régénéré '
+                        '(« Régénérer ») — l’ancien code cesse alors de '
+                        'fonctionner immédiatement ; le code fidèle, lui, '
+                        'ne change jamais.',
                       ),
                       const SizedBox(height: 8),
                       Card(
@@ -737,25 +734,12 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                               ),
                               trailing: state.church?.codeFidele == null
                                   ? null
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(
-                                              Icons.refresh_outlined),
-                                          tooltip:
-                                              'Régénérer le code fidèle',
-                                          onPressed: () => _regenererCode(
-                                              'fidele', 'code fidèle'),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(
-                                              Icons.copy_outlined),
-                                          tooltip: 'Copier le code fidèle',
-                                          onPressed: () => _copierCode(
-                                              state.church!.codeFidele!),
-                                        ),
-                                      ],
+                                  : IconButton(
+                                      icon:
+                                          const Icon(Icons.copy_outlined),
+                                      tooltip: 'Copier le code fidèle',
+                                      onPressed: () => _copierCode(
+                                          state.church!.codeFidele!),
                                     ),
                             ),
                             const Divider(height: 1),
@@ -772,8 +756,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                                         const Icon(Icons.refresh_outlined),
                                     tooltip:
                                         'Régénérer le code de tutelle',
-                                    onPressed: () => _regenererCode(
-                                        'tutelle', 'code de tutelle'),
+                                    onPressed: _regenererCodeTutelle,
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.copy_outlined),

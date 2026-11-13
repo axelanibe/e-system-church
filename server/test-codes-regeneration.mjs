@@ -2,10 +2,13 @@
 // (branche codes-regeneration).
 //
 // Périmètre : POST /eglises/moi/codes/regenerer (admin de sa propre
-// église, body {type: "fidele" | "tutelle"}) — nouveau code différent,
-// ancien code invalide (inscription fidèle, rattachement, présentation
-// publique), unicité du suffixe à 4 chiffres entre les deux colonnes et
-// les églises, erreurs 400/401/403, journalisation sans valeur de code.
+// église, body {type: "tutelle"}) — le code fidèle NE se régénère pas
+// (type "fidele" → 400 ; décision de Bouf, 13/11/2026 : le code fidèle,
+// largement partagé pour l'inscription, reste fixe pour toujours).
+// Régénération du code de tutelle : nouveau code différent, ancien code
+// invalide (rattachement, présentation publique), unicité du suffixe à
+// 4 chiffres entre les deux colonnes et les églises, erreurs 400/401/
+// 403, journalisation sans valeur de code.
 //
 // Note 404 : la branche 404 de la route est défensive et inaccessible
 // par HTTP — requireAuth exige une ligne church_users (user, église),
@@ -159,58 +162,26 @@ async function main() {
       return appel('POST', '/eglises/moi/codes/regenerer', jeton, corps);
     }
 
-    // --- A. Régénération du code fidèle -------------------------------------
-    console.log('A. Régénération du code fidèle :');
+    // --- A. Le code fidèle ne se régénère pas -----------------------------
+    console.log('A. Le code fidèle ne se régénère pas :');
     const regenFidele = await regenerer(jetonAdmin, { type: 'fidele' });
-    const nouveauFidele = regenFidele.json?.nouveau_code;
     verifier(
-      'admin régénère le code fidèle : 200, format ESC-F-XXXX, différent, tutelle inchangée',
-      regenFidele.statut === 200 &&
-        /^ESC-F-\d{4}$/.test(nouveauFidele ?? '') &&
-        nouveauFidele !== codeFideleInitial &&
-        regenFidele.json?.code === codeTutelleInitial &&
-        regenFidele.json?.code_fidele === nouveauFidele,
+      'type fidele : 400 (le code fidèle reste fixe pour toujours)',
+      regenFidele.statut === 400 && regenFidele.json?.error === 'invalid_input',
       regenFidele.texte,
     );
-    verifier(
-      'suffixe unique : différent des deux codes de l’autre église',
-      nouveauFidele.slice(-4) !== codeTutelleAutre.slice(-4) &&
-        nouveauFidele.slice(-4) !== codeFideleAutre.slice(-4),
-    );
 
-    const inscriptionAncien = await appel('POST', '/auth/inscription-par-code', null, {
-      nom_prenom: 'Ancien Code Regen',
-      email: 'ancien-code-regen@example.com',
+    const inscriptionFidele = await appel('POST', '/auth/inscription-par-code', null, {
+      nom_prenom: 'Code Fidele Regen',
+      email: 'code-fidele-regen@example.com',
       telephone: '+2250700000001',
       mot_de_passe: 'Test1234!',
       code_eglise: codeFideleInitial,
     });
     verifier(
-      'ancien code fidèle : inscription 404 invalid_code',
-      inscriptionAncien.statut === 404 && inscriptionAncien.json?.error === 'invalid_code',
-      inscriptionAncien.texte,
-    );
-
-    const inscriptionNouveau = await appel('POST', '/auth/inscription-par-code', null, {
-      nom_prenom: 'Nouveau Code Regen',
-      email: 'nouveau-code-regen@example.com',
-      telephone: '+2250700000002',
-      mot_de_passe: 'Test1234!',
-      code_eglise: nouveauFidele,
-    });
-    verifier(
-      'nouveau code fidèle : inscription 201 dans la bonne église',
-      inscriptionNouveau.statut === 201 && inscriptionNouveau.json?.church?.id === egliseId,
-      inscriptionNouveau.texte,
-    );
-
-    const regenFidele2 = await regenerer(jetonAdmin, { type: 'fidele' });
-    verifier(
-      'deuxième régénération fidèle : nouveau code encore différent',
-      regenFidele2.statut === 200 &&
-        /^ESC-F-\d{4}$/.test(regenFidele2.json?.nouveau_code ?? '') &&
-        regenFidele2.json?.nouveau_code !== nouveauFidele,
-      regenFidele2.texte,
+      'code fidèle inchangé : inscription 201 dans la bonne église',
+      inscriptionFidele.statut === 201 && inscriptionFidele.json?.church?.id === egliseId,
+      inscriptionFidele.texte,
     );
 
     // --- B. Régénération du code de tutelle ---------------------------------
@@ -223,8 +194,13 @@ async function main() {
         /^ESC-\d{4}$/.test(nouveauTutelle ?? '') &&
         nouveauTutelle !== codeTutelleInitial &&
         regenTutelle.json?.code === nouveauTutelle &&
-        regenTutelle.json?.code_fidele === regenFidele2.json?.nouveau_code,
+        regenTutelle.json?.code_fidele === codeFideleInitial,
       regenTutelle.texte,
+    );
+    verifier(
+      'suffixe unique : différent des deux codes de l’autre église',
+      nouveauTutelle.slice(-4) !== codeTutelleAutre.slice(-4) &&
+        nouveauTutelle.slice(-4) !== codeFideleAutre.slice(-4),
     );
 
     const rattachementAncien = await appel('POST', '/rattachements', jetonAutreAdmin, {
@@ -264,11 +240,11 @@ async function main() {
     verifier('type invalide : 400', typeInvalide.statut === 400, typeInvalide.texte);
     const sansCorps = await regenerer(jetonAdmin, undefined);
     verifier('sans body : 400', sansCorps.statut === 400, sansCorps.texte);
-    const sansJeton = await regenerer(null, { type: 'fidele' });
+    const sansJeton = await regenerer(null, { type: 'tutelle' });
     verifier('sans jeton : 401', sansJeton.statut === 401, sansJeton.texte);
-    const tresorier = await regenerer(jetonTresorier, { type: 'fidele' });
+    const tresorier = await regenerer(jetonTresorier, { type: 'tutelle' });
     verifier('trésorier : 403', tresorier.statut === 403, tresorier.texte);
-    const membre = await regenerer(jetonMembre, { type: 'fidele' });
+    const membre = await regenerer(jetonMembre, { type: 'tutelle' });
     verifier('simple membre : 403', membre.statut === 403, membre.texte);
 
     // --- D. Journalisation : le type seulement, jamais les valeurs -----------
@@ -277,14 +253,13 @@ async function main() {
       `SELECT action, details FROM audit_logs WHERE church_id = $1 AND action = 'eglise.code_regenere' ORDER BY created_at ASC`,
       [egliseId],
     );
-    verifier('3 régénérations journalisées', audits.length === 3, `trouvé ${audits.length}`);
+    verifier('1 régénération journalisée (tutelle)', audits.length === 1, `trouvé ${audits.length}`);
     const valeursInterdites = [
-      codeTutelleInitial, codeFideleInitial, nouveauFidele,
-      regenFidele2.json?.nouveau_code, nouveauTutelle,
+      codeTutelleInitial, codeFideleInitial, nouveauTutelle,
     ].filter(Boolean);
     const detailsPropres = audits.every((a) => {
       const texte = JSON.stringify(a.details);
-      const typeSeul = a.details && typeof a.details === 'object' && Object.keys(a.details).length === 1 && ['fidele', 'tutelle'].includes(a.details.type);
+      const typeSeul = a.details && typeof a.details === 'object' && Object.keys(a.details).length === 1 && a.details.type === 'tutelle';
       return typeSeul && !valeursInterdites.some((v) => texte.includes(v));
     });
     verifier('audit : type seulement, aucune valeur de code', detailsPropres, JSON.stringify(audits.map((a) => a.details)));

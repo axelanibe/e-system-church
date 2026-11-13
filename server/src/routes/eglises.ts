@@ -13,17 +13,19 @@ import { seedPostesPrevisibles } from "../postes_previsibles.js";
  *                        du 11/11/2026, 403 `annexe_sans_annexe`).
  * GET  /eglises/arbre  — mon arborescence (mon église + descendances), avec les
  *                        effectifs et les demandes de rattachement en attente.
- * POST /eglises/moi/codes/regenerer — régénère un code d'invitation de mon
- *                        église (fidèle ESC-F-… ou tutelle ESC-…, un bouton
- *                        par code dans « Mon église ») ; l'ancien code cesse
- *                        de fonctionner immédiatement. Le rattachement et
- *                        l'inscription résolvent le code au moment de
- *                        l'usage : seul l'usage futur de l'ancien code est
- *                        affecté. Attention : le code de tutelle est aussi
- *                        la clé de la présentation publique
+ * POST /eglises/moi/codes/regenerer — régénère le code de tutelle de mon
+ *                        église (ESC-…, bouton « Régénérer » dans
+ *                        « Mon église ») ; l'ancien code cesse de
+ *                        fonctionner immédiatement. Le rattachement
+ *                        résout le code au moment de l'usage : seul
+ *                        l'usage futur de l'ancien code est affecté.
+ *                        Attention : le code de tutelle est aussi la clé
+ *                        de la présentation publique
  *                        (`GET /eglises/:code/presentation`) — un lien de
  *                        présentation partagé avec l'ancien code ne
- *                        fonctionne plus après régénération.
+ *                        fonctionne plus après régénération. Le code
+ *                        fidèle (ESC-F-…), lui, ne se régénère jamais
+ *                        (décision de Bouf, 13/11/2026).
  */
 
 const createEgliseSchema = z.object({
@@ -34,7 +36,10 @@ const createEgliseSchema = z.object({
 });
 
 const regenererCodeSchema = z.object({
-  type: z.enum(["fidele", "tutelle"]),
+  // Seul le code de tutelle se régénère : le code fidèle (ESC-F-…),
+  // largement partagé pour l'inscription des membres, reste fixe pour
+  // toujours (décision de Bouf, 13/11/2026) — « fidele » répond 400.
+  type: z.enum(["tutelle"]),
 });
 
 interface TreeNode {
@@ -145,15 +150,17 @@ export function registerEglisesRoutes(app: FastifyInstance, db: Pool) {
     },
   );
 
-  // -- Régénération d'un code d'invitation de mon église --------------------
-  // Un bouton par code dans « Mon église » (fidèle et tutelle séparément).
-  // Réutilise les générateurs existants et leurs boucles anti-collision
+  // -- Régénération du code de tutelle de mon église ----------------------
+  // Bouton « Régénérer » dans « Mon église » (code de tutelle
+  // seulement : le code fidèle, largement partagé pour l'inscription
+  // des membres, ne se régénère jamais — décision de Bouf, 13/11/2026).
+  // Réutilise le générateur existant et sa boucle anti-collision
   // (50 tentatives, suffixe à 4 chiffres vérifié entre les deux colonnes
   // `code` et `code_fidele`, anciens codes 6 caractères inclus). La ligne
   // de l'église est verrouillée (FOR UPDATE) : deux régénérations
   // concurrentes de la même église ne peuvent pas produire le même code ;
-  // la contrainte UNIQUE sur `code` / `code_fidele` reste le filet de
-  // sécurité. Journalisé : le type seulement, JAMAIS les valeurs des
+  // la contrainte UNIQUE sur `code` reste le filet de sécurité.
+  // Journalisé : le type seulement, JAMAIS les valeurs des
   // codes (ancien ou nouveau).
   app.post(
     "/eglises/moi/codes/regenerer",
@@ -163,7 +170,7 @@ export function registerEglisesRoutes(app: FastifyInstance, db: Pool) {
       if (!parsed.success) {
         return reply.code(400).send({
           error: "invalid_input",
-          message: "Type de code invalide (fidele ou tutelle).",
+          message: "Type de code invalide (seul le code de tutelle peut être régénéré).",
         });
       }
       const { type } = parsed.data;
@@ -185,19 +192,18 @@ export function registerEglisesRoutes(app: FastifyInstance, db: Pool) {
         }
         let nouveau = "";
         for (let attempt = 0; attempt < 50; attempt++) {
-          nouveau = type === "fidele" ? generateFideleCode() : generateChurchCode();
+          nouveau = generateChurchCode();
           const clash = await client.query(
             `SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1`,
             [nouveau.slice(-4)],
           );
           // La requête couvre aussi cette église : le nouveau code diffère
-          // donc de l'ancien code du même rôle et de l'autre code.
+          // donc de l'ancien code de tutelle et du code fidèle.
           if (clash.rowCount === 0) break;
           if (attempt === 49) throw new Error("Impossible de générer un code unique.");
         }
-        const colonne = type === "fidele" ? "code_fidele" : "code";
         const { rows } = await client.query(
-          `UPDATE churches SET ${colonne} = $1 WHERE id = $2
+          `UPDATE churches SET code = $1 WHERE id = $2
            RETURNING id, code, code_fidele`,
           [nouveau, req.session.churchId],
         );
