@@ -34,6 +34,7 @@ import '../models/rapport_annexe.dart';
 import '../models/rattachement.dart';
 import '../models/serviteurs.dart';
 import '../models/stats.dart';
+import '../models/sycebnl.dart';
 
 /// Erreur renvoyée par l'API (ou par le service en mode démo).
 class ApiException implements Exception {
@@ -529,7 +530,8 @@ abstract class ApiService {
 
   Future<CaisseSolde> getCaisseSolde();
 
-  Future<RapportFinancier> getRapportFinancier({int? annee});
+  Future<RapportFinancier> getRapportFinancier(
+      {int? annee, String? from, String? to});
 
   // -- Finances (contributions, existant) ------------------------------------
   Future<ContributionPage> getContributions({String? type, String? status});
@@ -899,6 +901,15 @@ abstract class ApiService {
   /// Le même rapport en PDF (octets).
   Future<Uint8List> exporterRapportPlanComptablePdf(
       {required int annee, int? mois});
+  /// Export PDF d'un état SYCEBNL (`bilan`, `compte_resultat`, `flux` ou
+  /// `notes`), généré depuis la vraie comptabilité (tranche P6).
+  Future<Uint8List> exporterSycebnlPdf(
+      {required String etat, int? annee});
+
+  /// Données JSON des quatre états SYCEBNL pour l'écran (mêmes sommes
+  /// que l'export PDF). Admin et trésorier, sans passer par
+  /// GET /finances/rapport (réservé à l'admin et au responsable de culte).
+  Future<EtatsSycebnl> getDonneesSycebnl({required int annee});
 
   // -- Administration : paramètres, rôles, audit (module 12) -----------------
   Future<EgliseParametres> getParametres();
