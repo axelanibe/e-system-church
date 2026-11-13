@@ -616,22 +616,22 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_presences_culte_unique
 -- catégorie, et un poste peut être marqué récurrent.
 CREATE TABLE IF NOT EXISTS categories_depenses (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code        TEXT NOT NULL UNIQUE,
+    code        TEXT NOT NULL UNIQUE CHECK (code ~ '^[0-9]{2}$'),
     nom         TEXT NOT NULL,
     description TEXT,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 INSERT INTO categories_depenses (code, nom, description) VALUES
-  ('culte', 'Culte et célébrations', NULL),
-  ('evangelisation', 'Évangélisation et mission', NULL),
-  ('formation', 'Formation et enseignement', NULL),
-  ('solidarite', 'Solidarité et entraide', NULL),
-  ('fonctionnement', 'Fonctionnement et administration', NULL),
-  ('batiment', 'Bâtiment et entretien', NULL),
-  ('communication', 'Communication et médias', NULL),
-  ('salaire', 'Salaires et indemnités', NULL),
-  ('transport', 'Transport et déplacements', NULL),
-  ('divers', 'Divers', NULL)
+    ('01', 'Administration', 'Fournitures, télécommunications, frais bancaires'),
+    ('02', 'Infrastructures', 'Loyer, eau, électricité, entretien'),
+    ('03', 'Culte et spiritualité', 'Louange, communion, matériel de culte'),
+    ('04', 'Personnel', 'Salaires, indemnités, formations'),
+    ('05', 'Départements', 'Dépenses propres à chaque ministère'),
+    ('06', 'Événements', 'Conférences, conventions, retraites'),
+    ('07', 'Transport et missions', 'Carburant, déplacements, hébergement'),
+    ('08', 'Action sociale', 'Assistance, solidarité, œuvres sociales'),
+    ('09', 'Communication et numérique', 'Publicité, logiciels, hébergement web'),
+    ('10', 'Imprévus', 'Urgences et dépenses exceptionnelles')
 ON CONFLICT (code) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS postes_budgetaires (
@@ -674,16 +674,16 @@ CREATE TABLE IF NOT EXISTS depenses (
     -- département, mode de paiement, bénéficiaire, responsables, devise.
     reference                TEXT,
     departement_id           UUID REFERENCES departements (id) ON DELETE SET NULL,
-    mode_paiement            TEXT CHECK (mode_paiement IN ('wave', 'orange_money', 'mtn_momo', 'especes', 'virement', 'cheque')),
+    mode_paiement            TEXT CHECK (mode_paiement IN ('especes', 'wave', 'orange_money', 'mtn_money', 'virement', 'cheque')),
     fournisseur_beneficiaire TEXT,
     responsable_depense      TEXT,
     responsable_autorisation TEXT,
-    devise                   TEXT NOT NULL DEFAULT 'XOF',
+    devise                   TEXT NOT NULL DEFAULT 'FCFA',
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_depenses_church ON depenses (church_id, date_depense);
-CREATE UNIQUE INDEX IF NOT EXISTS depenses_reference_unique
-    ON depenses (church_id, reference) WHERE reference IS NOT NULL AND reference <> '';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_depenses_reference_unique
+    ON depenses (church_id, reference);
 
 CREATE TABLE IF NOT EXISTS caisse_mouvements (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),

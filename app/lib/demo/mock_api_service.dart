@@ -3960,6 +3960,52 @@ class MockApiService implements ApiService {
   }
 
   @override
+  Future<String> regenererCode({required String type}) async {
+    await _latence();
+    _requireAuth();
+    // Miroir du serveur : seul le code de tutelle se régénère — le code
+    // fidèle reste fixe pour toujours (décision de Bouf, 13/11/2026).
+    if (type != 'tutelle') {
+      throw const ApiException(
+          'Seul le code de tutelle peut être régénéré (démo).');
+    }
+    final eglise = _data.churchById(_churchId);
+    if (eglise == null) throw const ApiException('Église introuvable (démo).');
+    // Nouveau suffixe à 4 chiffres, unique parmi les codes de démo
+    // (même règle que le serveur : un nombre ne sert qu'une fois,
+    // dans un seul rôle).
+    String nouveau;
+    do {
+      _seq++;
+      final suffixe = (_seq % 10000).toString().padLeft(4, '0');
+      nouveau = 'ESC-$suffixe';
+    } while (_data.churches.any((c) =>
+        c.code.endsWith(nouveau.substring(nouveau.length - 4)) ||
+        (c.codeFidele?.endsWith(nouveau.substring(nouveau.length - 4)) ??
+            false)));
+    final maj = Church(
+      id: eglise.id,
+      code: nouveau,
+      codeFidele: eglise.codeFidele,
+      name: eglise.name,
+      parentChurchId: eglise.parentChurchId,
+      city: eglise.city,
+      status: eglise.status,
+      role: eglise.role,
+      logoUrl: eglise.logoUrl,
+      banniereUrl: eglise.banniereUrl,
+      couleurPrincipale: eglise.couleurPrincipale,
+      devise: eglise.devise,
+      fuseauHoraire: eglise.fuseauHoraire,
+      description: eglise.description,
+      horairesCultes: eglise.horairesCultes,
+    );
+    final i = _data.churches.indexOf(eglise);
+    _data.churches[i] = maj;
+    return nouveau;
+  }
+
+  @override
   Future<Church> updateProfil({
     required String churchId,
     String? name,
