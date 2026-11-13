@@ -32,6 +32,16 @@
 --     — une erreur se corrige par une écriture dans la période en cours.
 -- Idempotente (IF NOT EXISTS, gardes DO). Miroir dans db/schema.sql.
 
+-- Correctif (déploiement Render, 025 jamais appliquée) : PostgreSQL refuse
+-- ALTER TYPE sur une colonne utilisée par une vue (erreur 0A000, règle
+-- _RETURN). Deux vues dépendent de contributions.type : v_rapports_consolides
+-- et v_stats_eglise. On les supprime avant l'ALTER TYPE et on les recrée
+-- après, avec leur définition exacte (migrations 005 et 004). Une vue ne
+-- contient aucune donnée, la recréation est sûre. Précédent : la migration
+-- 005 elle-même utilise DROP + CREATE pour v_rapports_consolides, pour la
+-- même raison.
+DROP VIEW IF EXISTS v_rapports_consolides;
+DROP VIEW IF EXISTS v_stats_eglise;
 -- -- (1) Type de contribution : ENUM -> TEXT + CHECK ------------------------
 DO $$ BEGIN
   IF EXISTS (
@@ -52,6 +62,62 @@ DO $$ BEGIN
   END IF;
 END $$;
 DROP TYPE IF EXISTS contribution_type;
+
+-- Recréation des vues supprimées avant l'ALTER TYPE (définitions exactes
+-- des migrations 005 et 004).
+CREATE VIEW v_rapports_consolides AS
+WITH RECURSIVE descendants AS (
+    SELECT id AS eglise_id, id AS racine_id, 0 AS niveau
+      FROM churches
+     UNION ALL
+    SELECT c.id, d.racine_id, d.niveau + 1
+      FROM churches c
+      JOIN descendants d ON c.parent_church_id = d.eglise_id
+)
+SELECT
+    d.racine_id AS eglise_mere_id,
+    c.id        AS eglise_id,
+    c.name      AS eglise_nom,
+    d.niveau    AS niveau,
+    (SELECT count(*)::int FROM members m WHERE m.church_id = c.id AND m.status = 'actif') AS membres_actifs,
+    (SELECT count(*)::int FROM contributions co
+      WHERE co.church_id = c.id AND co.type IN ('dime','offrande','don')
+        AND co.status = 'confirme') AS nombre_contributions,
+    (SELECT coalesce(sum(amount_fcfa), 0)::int FROM contributions co
+      WHERE co.church_id = c.id AND co.type IN ('dime','offrande','don')
+        AND co.status = 'confirme') AS total_fcfa
+FROM churches c
+JOIN descendants d ON d.eglise_id = c.id
+WHERE d.racine_id <> c.id;
+
+CREATE VIEW v_stats_eglise AS
+SELECT
+    c.id AS eglise_id,
+    c.name AS eglise_nom,
+    (SELECT count(*) FROM members m WHERE m.church_id = c.id AND m.status = 'actif') AS membres_actifs,
+    (SELECT count(*) FROM members m WHERE m.church_id = c.id AND m.status = 'nouveau_converti') AS nouveaux_convertis,
+    (SELECT count(*) FROM baptemes b WHERE b.church_id = c.id) AS baptemes,
+    (SELECT count(*) FROM cultes cu WHERE cu.church_id = c.id
+        AND cu.date_heure >= date_trunc('month', now())
+        AND cu.date_heure < date_trunc('month', now()) + interval '1 month') AS cultes_mois,
+    (SELECT count(*) FROM presences p WHERE p.church_id = c.id
+        AND p.statut = 'present'
+        AND p.pointe_at >= date_trunc('month', now())) AS presences_mois,
+    (SELECT coalesce(sum(amount_fcfa), 0) FROM contributions co
+        WHERE co.church_id = c.id AND co.type IN ('dime','offrande','don')
+        AND co.status = 'confirme'
+        AND co.created_at >= date_trunc('month', now())) AS recettes_mois_fcfa,
+    (SELECT coalesce(sum(amount_fcfa), 0) FROM contributions co
+        WHERE co.church_id = c.id AND co.type = 'depense'
+        AND co.status = 'confirme'
+        AND co.created_at >= date_trunc('month', now())) +
+    -- Dépenses du module Budget & caisse (hors refusées) du mois courant :
+    -- sans elles, le tableau de bord affichait 0 de dépenses.
+    (SELECT coalesce(sum(montant_fcfa), 0) FROM depenses d
+        WHERE d.church_id = c.id AND d.statut <> 'refusee'
+        AND d.date_depense >= date_trunc('month', now())::date
+        AND d.date_depense < (date_trunc('month', now()) + interval '1 month')::date) AS depenses_mois_fcfa
+FROM churches c;
 
 -- -- (2) Reçus numérotés sur contributions ------------------------------------
 ALTER TABLE contributions
