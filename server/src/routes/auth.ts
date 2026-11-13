@@ -60,9 +60,13 @@ export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
             ? 400
             : result.reason === "locked"
               ? 423
-              : result.reason === "invalid_church" || result.reason === "no_church"
-                ? 400
-                : 401;
+              : result.reason === "pas_acces_plateforme"
+                ? 403
+                : result.reason === "invalid_church" ||
+                    result.reason === "no_church" ||
+                    result.reason === "plateforme_seulement"
+                  ? 400
+                  : 401;
         const message =
           result.reason === "invalid_input"
             ? "Données de connexion invalides."
@@ -72,9 +76,13 @@ export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
                 ? "Cette église ne fait pas partie de vos églises."
                 : result.reason === "password_not_set"
                   ? "Pour vous connecter, initialisez d'abord votre mot de passe via le lien reçu."
-                  : result.reason === "no_church"
-                    ? "Votre demande de liaison n'a pas encore été validée par votre église."
-                    : "Identifiant ou mot de passe incorrect.";
+                  : result.reason === "pas_acces_plateforme"
+                    ? "Ce compte n'a pas accès à la Plateforme. Seuls l'admin de la plateforme et ses aides s'y connectent."
+                    : result.reason === "plateforme_seulement"
+                      ? "Ce compte n'a accès qu'à la Plateforme : utilisez la connexion Plateforme."
+                      : result.reason === "no_church"
+                        ? "Votre demande de liaison n'a pas encore été validée par votre église."
+                        : "Identifiant ou mot de passe incorrect.";
         return reply.code(status).send({ error: result.reason, message });
       }
       return reply.send({
@@ -222,6 +230,36 @@ export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
         values.push(`%${recherche.trim()}%`);
         conditions.push(
           `(c.name ILIKE $${values.length} OR c.code ILIKE $${values.length} OR c.city ILIKE $${values.length})`,
+        );
+      }
+      // Espaces indépendants (13/11/2026) : le sélecteur ne propose que
+      // les églises du même espace, sans changer de tutelle (annexe,
+      // membre). La bascule vers un autre espace est refusée par
+      // POST /auth/eglise-active ; la liste ne montre donc jamais une
+      // église vers laquelle on ne peut pas basculer.
+      const { rows: egliseRows } = await db.query<{
+        parent_church_id: string | null;
+      }>(`SELECT parent_church_id FROM churches WHERE id = $1`, [
+        req.session.churchId,
+      ]);
+      const parentActuel = egliseRows[0]?.parent_church_id ?? null;
+      const roleActuel = req.session.role;
+      if (roleActuel === "super_admin" || roleActuel === "aide_plateforme") {
+        conditions.push(`cu.role IN ('super_admin', 'aide_plateforme')`);
+      } else if (roleActuel === "membre") {
+        const ancre = parentActuel ?? req.session.churchId;
+        values.push(ancre);
+        conditions.push(
+          `(cu.role = 'membre' AND (c.parent_church_id = $${values.length} OR c.id = $${values.length}))`,
+        );
+      } else if (parentActuel === null) {
+        conditions.push(
+          `cu.role IN ('admin_eglise', 'tresorier', 'responsable_culte') AND c.parent_church_id IS NULL`,
+        );
+      } else {
+        values.push(parentActuel);
+        conditions.push(
+          `(cu.role IN ('admin_eglise', 'tresorier', 'responsable_culte') AND c.parent_church_id = $${values.length})`,
         );
       }
       const where = `WHERE ${conditions.join(" AND ")}`;

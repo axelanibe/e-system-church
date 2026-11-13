@@ -29,6 +29,7 @@ import '../models/presences.dart';
 import '../models/prieres.dart';
 import '../models/profil.dart';
 import '../models/plateforme.dart';
+import '../models/acces_plateforme.dart';
 import '../models/transfert.dart';
 import '../models/rapport.dart';
 import '../models/rapport_annexe.dart';
@@ -54,9 +55,14 @@ class ApiException implements Exception {
 abstract class ApiService {
   // -- Authentification -----------------------------------------------------
   /// Connexion par e-mail ou par téléphone : `identifiant` est l'un ou
-  /// l'autre, le mot de passe est le même dans les deux cas.
+  /// l'autre, le mot de passe est le même dans les deux cas. Avec
+  /// `plateforme: true`, seule une connexion Plateforme est acceptée
+  /// (admin de la plateforme ou aide) ; sinon, seules les connexions
+  /// églises et membres le sont.
   Future<AuthResult> login(
-      {required String identifiant, required String password});
+      {required String identifiant,
+      required String password,
+      bool plateforme = false});
 
   Future<AuthResult> register({
     required String churchName,
@@ -1154,6 +1160,22 @@ abstract class ApiService {
   /// Chiffres globaux seulement (`GET /plateforme/chiffres`, super_admin
   /// seulement). Aucun détail nominatif, aucune gestion des membres.
   Future<ChiffresPlateforme> getPlateforme();
+
+  /// Accès Plateforme (`GET /plateforme/acces`, super_admin seulement).
+  Future<List<AccesPlateforme>> listerAccesPlateforme();
+
+  /// Ajouter une personne pour aider (`POST /plateforme/acces`,
+  /// super_admin seulement) : invitation si nouveau compte, sinon son
+  /// mot de passe existant.
+  Future<AccesPlateformeCree> creerAccesPlateforme({
+    required String email,
+    String? nom,
+    required List<String> droits,
+  });
+
+  /// Révoquer un accès d'aide (`DELETE /plateforme/acces/:userId`,
+  /// super_admin seulement, jamais soi-même, jamais un super_admin).
+  Future<void> revoquerAccesPlateforme(String userId);
 
   Future<Announcement> createAnnonce({
     required String title,

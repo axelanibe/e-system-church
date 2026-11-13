@@ -34,6 +34,7 @@ import '../models/paiements.dart';
 import '../models/parametres.dart';
 import '../models/pastoral.dart';
 import '../models/plateforme.dart';
+import '../models/acces_plateforme.dart';
 import '../models/presences.dart';
 import '../models/prieres.dart';
 import '../models/profil.dart';
@@ -56,6 +57,18 @@ class MockApiService implements ApiService {
   /// une église ne voit que ses propres données (une nouvelle église voit
   /// donc toutes ses listes vides).
   final Map<String, String> _itemChurch = {};
+
+  /// Accès Plateforme en démo : l'admin de la plateforme, puis les aides
+  /// créées pendant la session.
+  final List<AccesPlateforme> _accesPlateforme = [
+    const AccesPlateforme(
+      userId: 'demo-user-plateforme',
+      nom: 'Plateforme e-System Church',
+      email: DemoAccounts.plateformeEmail,
+      role: 'super_admin',
+      droits: ['chiffres', 'acces'],
+    ),
+  ];
 
   MockApiService() {
     _tagSeed();
@@ -434,7 +447,9 @@ class MockApiService implements ApiService {
 
   @override
   Future<AuthResult> login(
-      {required String identifiant, required String password}) async {
+      {required String identifiant,
+      required String password,
+      bool plateforme = false}) async {
     await _latence();
     final idBrut = identifiant.trim();
     final mail = idBrut.toLowerCase();
@@ -442,6 +457,10 @@ class MockApiService implements ApiService {
         idBrut.contains('@') ? null : _normaliserTelephone(idBrut);
     if ((mail == DemoAccounts.adminEmail || tel == '+2257470001') &&
         password == _adminPassword) {
+      if (plateforme) {
+        throw const ApiException(
+            'Ce compte n’a pas d’accès Plateforme. Utilisez la connexion églises et membres.');
+      }
       const user = AppUser(
         id: 'demo-user-admin',
         fullName: 'Admin Grâce Divine',
@@ -459,6 +478,10 @@ class MockApiService implements ApiService {
     }
     if ((mail == DemoAccounts.plateformeEmail || tel == '+2257470002') &&
         password == _adminPassword) {
+      if (!plateforme) {
+        throw const ApiException(
+            'Ce compte Plateforme se connecte par « Connexion Plateforme ».');
+      }
       const user = AppUser(
         id: 'demo-user-plateforme',
         fullName: 'Plateforme e-System Church',
@@ -473,6 +496,10 @@ class MockApiService implements ApiService {
     }
     if ((mail == DemoAccounts.membreEmail || tel == '+225747123401') &&
         password == _membrePassword) {
+      if (plateforme) {
+        throw const ApiException(
+            'Ce compte n’a pas d’accès Plateforme. Utilisez la connexion églises et membres.');
+      }
       const user = AppUser(
         id: 'demo-user-membre',
         fullName: 'Awa Koné',
@@ -4538,5 +4565,61 @@ class MockApiService implements ApiService {
       depensesFcfa:
           _data.depenses.fold<int>(0, (s, d) => s + d.montantFcfa),
     );
+  }
+
+  @override
+  Future<List<AccesPlateforme>> listerAccesPlateforme() async {
+    await _latence();
+    _requireAuth();
+    return List.unmodifiable(_accesPlateforme);
+  }
+
+  @override
+  Future<AccesPlateformeCree> creerAccesPlateforme({
+    required String email,
+    String? nom,
+    required List<String> droits,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final mail = email.trim().toLowerCase();
+    if (_accesPlateforme.any((a) => a.email.toLowerCase() == mail)) {
+      throw const ApiException('Cette personne a déjà un accès Plateforme.');
+    }
+    final dejaMembre = mail == DemoAccounts.adminEmail ||
+        mail == DemoAccounts.membreEmail;
+    final cree = AccesPlateforme(
+      userId: _nextId('acces-plateforme'),
+      nom: nom?.trim().isNotEmpty == true
+          ? nom!.trim()
+          : mail.split('@')[0],
+      email: mail,
+      role: 'aide_plateforme',
+      droits: droits,
+    );
+    _accesPlateforme.add(cree);
+    return AccesPlateformeCree(
+      userId: cree.userId,
+      email: mail,
+      nom: cree.nom,
+      dejaMembre: dejaMembre,
+    );
+  }
+
+  @override
+  Future<void> revoquerAccesPlateforme(String userId) async {
+    await _latence();
+    _requireAuth();
+    final index =
+        _accesPlateforme.indexWhere((a) => a.userId == userId);
+    if (index < 0) {
+      throw const ApiException(
+          'Cette personne n’a pas d’accès Plateforme.');
+    }
+    if (_accesPlateforme[index].estSuperAdmin) {
+      throw const ApiException(
+          'On ne révoque pas l’accès d’un admin de la plateforme.');
+    }
+    _accesPlateforme.removeAt(index);
   }
 }

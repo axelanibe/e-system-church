@@ -73,6 +73,7 @@ CREATE TABLE rattachements (
 -- ---------------------------------------------------------------------------
 CREATE TYPE user_role AS ENUM (
     'super_admin',        -- plateforme e-System Church
+    'aide_plateforme',    -- aide de la plateforme (migration 032 : chiffres seulement, pas de gestion des accès)
     'admin_eglise',       -- admin de sa propre église (mère ou sous-église)
     'tresorier',          -- finances de son église
     'responsable_culte',  -- cultes et présences de son église
@@ -107,6 +108,16 @@ CREATE TABLE church_users (
     PRIMARY KEY (user_id, church_id)
 );
 CREATE INDEX idx_church_users_church ON church_users (church_id);
+
+-- Accès Plateforme (migration 032) : droits choisis par le super_admin
+-- pour chaque aide. Un seul droit existe aujourd'hui (« chiffres »).
+CREATE TABLE acces_plateforme (
+    user_id   UUID PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+    droits    TEXT[] NOT NULL DEFAULT '{}',
+    cree_par  UUID REFERENCES users (id) ON DELETE SET NULL,
+    cree_le   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT acces_plateforme_droits_connus CHECK (droits <@ ARRAY['chiffres']::text[])
+);
 
 -- ---------------------------------------------------------------------------
 -- Membres d'une église (distincts des comptes utilisateurs : un membre peut

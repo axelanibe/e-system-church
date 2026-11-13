@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
 import '../widgets/app_bottom_bar.dart';
-import '../widgets/barre_perimetre.dart';
+import '../widgets/en_tete_clair.dart';
 import 'bible_fidele_screen.dart';
 import 'carte_fidele_screen.dart';
 import 'fidele_home_screen.dart';
@@ -101,10 +101,6 @@ class _FideleShellState extends State<FideleShell> {
           Expanded(
             child: Column(
               children: [
-                BarrePerimetre.depuisContexte(
-                  context,
-                  courant: EspaceArtefact.espaceMembre,
-                ),
                 EnTeteClair(
                   titre: _titles[courant],
                   // En aperçu admin, un retour visible vers l'espace admin.

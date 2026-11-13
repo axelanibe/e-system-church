@@ -80,6 +80,11 @@ export const loginSchema = z
     channel: z.enum(["web", "mobile"]).default("web"),
     /** Choisir parmi ses églises (un utilisateur peut appartenir à plusieurs). */
     church_id: z.string().uuid().optional(),
+    /** Connexion Plateforme : seuls les comptes avec un accès Plateforme
+     *  (super_admin ou aide_plateforme) sont acceptés ; la connexion
+     *  normale refuse au contraire ces comptes (chaque interface est
+     *  indépendante, 13/11/2026). */
+    plateforme: z.boolean().optional(),
   })
   .refine((d) => d.identifiant !== undefined || d.email !== undefined, {
     message: "Identifiant manquant.",
@@ -128,6 +133,8 @@ export type LoginResult =
         | "locked"
         | "invalid_church"
         | "password_not_set"
+        | "pas_acces_plateforme"
+        | "plateforme_seulement"
         | "no_church";
     };
 
@@ -808,13 +815,66 @@ export async function chargerEglises(
 }
 
 // ---------------------------------------------------------------------------
+// Espaces indépendants (13/11/2026) : la Plateforme ne bascule pas en
+// église, l'église mère ne bascule pas en église locale, l'église locale
+// ne bascule pas en membre. Une bascule d'église ne change jamais
+// d'espace ; dans l'espace annexe ou membre, la tutelle (l'église mère
+// de rattachement) ne change pas non plus.
+// ---------------------------------------------------------------------------
+export type Espace = "plateforme" | "mere" | "annexe" | "membre";
+
+export function espaceDe(role: string, parentChurchId: string | null): Espace {
+  if (role === "super_admin" || role === "aide_plateforme") return "plateforme";
+  if (role === "membre") return "membre";
+  return parentChurchId === null ? "mere" : "annexe";
+}
+
+/** Ancre de tutelle : l'église mère de rattachement (elle-même pour une mère). */
+export function ancreTutelle(parentChurchId: string | null, churchId: string): string {
+  return parentChurchId ?? churchId;
+}
+
+export type AppartenanceEspace = {
+  role: string;
+  parentChurchId: string | null;
+  churchId: string;
+};
+
+/** Vrai si la bascule de l'appartenance actuelle vers la cible reste dans
+ *  le même espace, sans changer de tutelle (annexe et membre). */
+export function basculeAutorisee(
+  actuel: AppartenanceEspace,
+  cible: AppartenanceEspace,
+): boolean {
+  const espaceActuel = espaceDe(actuel.role, actuel.parentChurchId);
+  const espaceCible = espaceDe(cible.role, cible.parentChurchId);
+  if (espaceActuel !== espaceCible) return false;
+  if (espaceActuel === "annexe") {
+    return actuel.parentChurchId === cible.parentChurchId;
+  }
+  if (espaceActuel === "membre") {
+    return (
+      ancreTutelle(actuel.parentChurchId, actuel.churchId) ===
+      ancreTutelle(cible.parentChurchId, cible.churchId)
+    );
+  }
+  return true; // mère, plateforme : l'espace ne change pas.
+}
+
+/** Rôles d'administration d'une église (ni Plateforme, ni membre). */
+export const ROLES_ADMIN_EGLISE = ["admin_eglise", "tresorier", "responsable_culte"] as const;
+
+/** Rôles de la Plateforme (accès spécial, hors églises). */
+export const ROLES_PLATEFORME = ["super_admin", "aide_plateforme"] as const;
+
+// ---------------------------------------------------------------------------
 // Connexion : argon2id + verrouillage après 5 échecs → 15 min.
 // Le JWT embarque l'église choisie (churchId) et son rôle dans cette église.
 // ---------------------------------------------------------------------------
 export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
   const parsed = loginSchema.safeParse(rawInput);
   if (!parsed.success) return { ok: false, reason: "invalid_input" };
-  const { identifiant, email, password, channel, church_id } = parsed.data;
+  const { identifiant, email, password, channel, church_id, plateforme } = parsed.data;
   // Identifiant : e-mail ou numéro de téléphone. Un e-mail saisi en
   // majuscules trouve son compte (minuscules) ; un téléphone est
   // normalisé avant la recherche. Un même message d'erreur couvre les
@@ -851,15 +911,36 @@ export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
 
   const eglises = await chargerEglises(db, user.id as string);
 
-  let chosen: Membership | undefined = eglises[0];
+  // Connexion Plateforme / connexion églises : deux entrées séparées.
+  // La connexion Plateforme ne choisit que parmi les accès Plateforme
+  // (super_admin d'abord), la connexion normale que parmi les églises.
+  const estPlateforme = (role: string) =>
+    (ROLES_PLATEFORME as readonly string[]).includes(role);
+  const candidates = plateforme === true
+    ? eglises.filter((e) => estPlateforme(e.role))
+    : eglises.filter((e) => !estPlateforme(e.role));
+  if (plateforme === true && candidates.length === 0) {
+    return { ok: false, reason: "pas_acces_plateforme" };
+  }
+  if (plateforme !== true && candidates.length === 0) {
+    // Compte sans église, ou compte Plateforme seulement : fidèle en
+    // attente de validation, compte orphelin, ou accès Plateforme à
+    // utiliser par la connexion Plateforme.
+    return {
+      ok: false,
+      reason: eglises.length > 0 ? "plateforme_seulement" : "no_church",
+    };
+  }
+
+  let chosen: Membership | undefined =
+    plateforme === true
+      ? (candidates.find((e) => e.role === "super_admin") ?? candidates[0])
+      : candidates[0];
   if (church_id) {
-    chosen = eglises.find((e) => e.church.id === church_id);
+    chosen = candidates.find((e) => e.church.id === church_id);
     if (!chosen) return { ok: false, reason: "invalid_church" };
   }
   if (!chosen) {
-    // Compte sans église : fidèle en attente de validation de sa liaison,
-    // ou compte orphelin. Il ne peut pas se connecter tant qu'aucune
-    // église ne l'a rattaché.
     return { ok: false, reason: "no_church" };
   }
 

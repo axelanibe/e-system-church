@@ -8,6 +8,7 @@ import 'config/app_theme.dart';
 import 'screens/fidele_shell.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/plateforme_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'state/app_state.dart';
 
@@ -52,12 +53,16 @@ class EsystemApp extends StatelessWidget {
               home = const LoginScreen();
             }
           } else {
-            // Coquille fidèle (tranche P1) : le fidèle a sa propre
-            // navigation. L'admin peut aussi la regarder en aperçu
-            // (« Voir l'espace fidèle »), sans changer de session.
-            home = (state.isMembre || state.apercuFidele)
-                ? const FideleShell()
-                : const HomeScreen();
+            // Connexion Plateforme (admin ou aide) : l'écran Plateforme
+            // directement, jamais une église. Coquille fidèle (tranche
+            // P1) : le fidèle a sa propre navigation. L'admin peut aussi
+            // la regarder en aperçu (« Voir l'espace fidèle »), sans
+            // changer de session.
+            home = state.isPlateforme
+                ? const PlateformeScreen()
+                : (state.isMembre || state.apercuFidele)
+                    ? const FideleShell()
+                    : const HomeScreen();
           }
           return MaterialApp(
             title: AppConfig.appName,

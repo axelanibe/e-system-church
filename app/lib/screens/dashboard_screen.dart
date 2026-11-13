@@ -218,7 +218,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 16),
                 // Aperçu multi-rôles (maquette de refonte) : remplace
                 // la carte « Démonstration des deux espaces ». Même
-                // accès que l'espace 4 de la barre de périmètre.
+                // accès que l'espace fidèle, en aperçu avec retour.
                 Container(
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(

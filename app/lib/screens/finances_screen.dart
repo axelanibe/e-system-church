@@ -123,6 +123,54 @@ class _FinancesScreenState extends State<FinancesScreen> {
                     // qui recouvrait sinon le badge de la dernière ligne.
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                     children: [
+                      // Filtres en tête de liste : sous les cartes, ils
+                      // défilaient dans la bande du bouton flottant, qui
+                      // recouvrait une pastille à chaque arrêt. En tête,
+                      // ils ne descendent jamais dans cette bande.
+                      _FiltresDefilants(
+                        enfants: [
+                          for (final entry in <String, String?>{
+                            'Tous types': null,
+                            'Dîmes': 'dime',
+                            'Offrandes': 'offrande',
+                            'Dons': 'don',
+                            'Dépenses': 'depense',
+                            'Cotisations': 'cotisation',
+                          }.entries)
+                            ChoiceChip(
+                              label: Text(entry.key),
+                              selected: _typeFilter == entry.value,
+                              onSelected: (_) {
+                                setState(() {
+                                  _typeFilter = entry.value;
+                                  _future = _load();
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _FiltresDefilants(
+                        enfants: [
+                          for (final entry in <String, String?>{
+                            'Tous statuts': null,
+                            'En attente': 'en_attente',
+                            'Confirmées': 'confirme',
+                            'Annulées': 'annule',
+                          }.entries)
+                            ChoiceChip(
+                              label: Text(entry.key),
+                              selected: _statusFilter == entry.value,
+                              onSelected: (_) {
+                                setState(() {
+                                  _statusFilter = entry.value;
+                                  _future = _load();
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                       LayoutBuilder(
                         builder: (context, constraints) {
                           final crossAxisCount =
@@ -202,50 +250,6 @@ class _FinancesScreenState extends State<FinancesScreen> {
                           icon: const Icon(Icons.description_outlined),
                           label: const Text('Attestations annuelles'),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      _FiltresDefilants(
-                        enfants: [
-                          for (final entry in <String, String?>{
-                            'Tous types': null,
-                            'Dîmes': 'dime',
-                            'Offrandes': 'offrande',
-                            'Dons': 'don',
-                            'Dépenses': 'depense',
-                            'Cotisations': 'cotisation',
-                          }.entries)
-                            ChoiceChip(
-                              label: Text(entry.key),
-                              selected: _typeFilter == entry.value,
-                              onSelected: (_) {
-                                setState(() {
-                                  _typeFilter = entry.value;
-                                  _future = _load();
-                                });
-                              },
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      _FiltresDefilants(
-                        enfants: [
-                          for (final entry in <String, String?>{
-                            'Tous statuts': null,
-                            'En attente': 'en_attente',
-                            'Confirmées': 'confirme',
-                            'Annulées': 'annule',
-                          }.entries)
-                            ChoiceChip(
-                              label: Text(entry.key),
-                              selected: _statusFilter == entry.value,
-                              onSelected: (_) {
-                                setState(() {
-                                  _statusFilter = entry.value;
-                                  _future = _load();
-                                });
-                              },
-                            ),
-                        ],
                       ),
                       const SizedBox(height: 16),
                       if (page.contributions.isEmpty)

@@ -5,7 +5,6 @@ import 'package:esystem_church/models/fidele.dart';
 import 'package:esystem_church/widgets/short_drawer.dart';
 import 'package:esystem_church/state/app_state.dart';
 import 'package:esystem_church/widgets/app_bottom_bar.dart';
-import 'package:esystem_church/widgets/barre_perimetre.dart';
 import 'package:esystem_church/widgets/common_widgets.dart';
 import 'package:esystem_church/widgets/carte_membre_vedette.dart';
 import 'package:esystem_church/widgets/screen_header.dart';
@@ -194,28 +193,6 @@ void main() {
       expect(find.text('Matricule : ESC-M-0001'), findsOneWidget);
       expect(find.text('Église Test'), findsOneWidget);
       expect(find.text('Voir ma carte de membre'), findsOneWidget);
-    });
-
-    testWidgets('BarrePerimetre : 4 espaces, courant en or',
-        (tester) async {
-      await tester.pumpWidget(const MaterialApp(
-        home: Scaffold(
-          body: BarrePerimetre(courant: EspaceArtefact.egliseMere),
-        ),
-      ));
-      expect(find.text('En ligne'), findsOneWidget);
-      expect(find.text('1. Plateforme'), findsOneWidget);
-      expect(find.text('2. Église Mère'), findsOneWidget);
-      expect(find.text('3. Annexe'), findsOneWidget);
-      expect(find.text('4. Espace Membre'), findsOneWidget);
-      final conteneurs = tester.widgetList<Container>(find.byType(Container));
-      expect(
-        conteneurs.any((c) =>
-            c.decoration is BoxDecoration &&
-            (c.decoration as BoxDecoration).color == AppTheme.or),
-        isTrue,
-      );
-      expect(tester.takeException(), isNull);
     });
 
     testWidgets('StatCard : libellé long sur une ligne, sans coupure',
