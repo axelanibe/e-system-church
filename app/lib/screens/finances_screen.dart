@@ -9,6 +9,7 @@ import '../widgets/common_widgets.dart';
 import 'campagnes_screen.dart';
 import 'contribution_form_screen.dart';
 import 'attestations_screen.dart';
+import 'finances_completes_screen.dart';
 import 'receipt_screen.dart';
 
 /// Finances de mon église : totaux par type, liste avec filtres, ajout
@@ -100,6 +101,7 @@ class _FinancesScreenState extends State<FinancesScreen> {
                   'Offrandes': 'offrande',
                   'Dons': 'don',
                   'Dépenses': 'depense',
+                  'Cotisations': 'cotisation',
                 }.entries)
                   ChoiceChip(
                     label: Text(entry.key),
@@ -151,6 +153,25 @@ class _FinancesScreenState extends State<FinancesScreen> {
                     // qui recouvrait sinon le badge de la dernière ligne.
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                     children: [
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(
+                              Icons.account_balance_wallet_outlined),
+                          title: const Text('Finances complètes'),
+                          subtitle: const Text(
+                              'Cotisations, banque, caisse, reçus, budgets.'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const FinancesCompletesScreen(),
+                              ),
+                            );
+                            _refresh();
+                          },
+                        ),
+                      ),
                       Card(
                         child: ListTile(
                           leading: const Icon(Icons.volunteer_activism_outlined),

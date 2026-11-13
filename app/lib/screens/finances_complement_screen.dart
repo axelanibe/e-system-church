@@ -41,7 +41,11 @@ const _modesPaiement = {
 /// Module 4 (complément) — Budget, dépenses, caisse et rapport financier.
 /// Les contributions (dîmes, offrandes, dons) restent dans FinancesScreen.
 class FinancesComplementScreen extends StatefulWidget {
-  const FinancesComplementScreen({super.key});
+  /// Onglet ouvert au départ (0 Budget, 1 Dépenses, 2 Caisse,
+  /// 3 Rapport, 4 Suivi mensuel). Ex. 2 depuis l'écran Clôture.
+  final int initialTab;
+
+  const FinancesComplementScreen({super.key, this.initialTab = 0});
 
   @override
   State<FinancesComplementScreen> createState() =>
@@ -49,7 +53,7 @@ class FinancesComplementScreen extends StatefulWidget {
 }
 
 class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
-  int _tab = 0;
+  late int _tab;
   final _searchController = TextEditingController();
   String _query = '';
   String? _statutDepenseFilter;
@@ -93,6 +97,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
   @override
   void initState() {
     super.initState();
+    _tab = widget.initialTab;
     _refreshAll();
   }
 
@@ -1144,7 +1149,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                       title: Text(
                           '${m.type == 'entree' ? 'Entrée' : 'Sortie'} — ${formatMontant(m.montantFcfa, state.devise)}'),
                       subtitle: Text(
-                        '${m.motif}${m.reference != null ? ' · ${m.reference}' : ''} · ${afficherDateTime(m.createdAt)}',
+                        '${m.motif}${m.reference != null ? ' · ${m.reference}' : ''} · ${m.sourceLabel}${m.canal != null ? ' · ${m.canalLabel}' : ''} · ${afficherDateTime(m.createdAt)}',
                       ),
                     );
                   },
@@ -1685,6 +1690,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 5,
+      initialIndex: widget.initialTab,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Budget & caisse'),
