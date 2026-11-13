@@ -13,6 +13,9 @@ export interface Session {
 declare module "fastify" {
   interface FastifyRequest {
     session: Session;
+    /** Corps brut tel que reçu (tranche T8) : la signature HMAC des
+     *  webhooks Wave se vérifie sur le corps exact, avant analyse. */
+    rawBody?: string;
   }
 }
 

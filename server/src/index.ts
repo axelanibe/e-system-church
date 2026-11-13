@@ -33,6 +33,7 @@ import { registerStatsRoutes } from "./routes/stats.js";
 import { registerParametresRoutes } from "./routes/parametres.js";
 import { registerProfilEgliseRoutes } from "./routes/profil_eglise.js";
 import { registerPaiementsRoutes } from "./routes/paiements.js";
+import { registerWebhooksPaiementsRoutes } from "./routes/webhooks_paiements.js";
 import { registerTransfertsRoutes } from "./routes/transferts.js";
 import { registerCodesTutelleRoutes } from "./routes/codes_tutelle.js";
 import { registerAnnexesRoutes } from "./routes/annexes.js";
@@ -96,9 +97,32 @@ export function buildApp(db: Pool) {
     { parseAs: "string" },
     (req, body, done) => {
       const text = typeof body === "string" ? body : body.toString();
+      // Corps brut conservé (tranche T8) : la signature HMAC des
+      // webhooks Wave se vérifie sur le corps exact, avant analyse.
+      req.rawBody = text;
       if (text === "") return done(null, {});
       try {
         done(null, JSON.parse(text));
+      } catch (e) {
+        const err = e as Error & { statusCode?: number };
+        err.statusCode = 400;
+        done(err, undefined);
+      }
+    },
+  );
+
+  // Corps de formulaire toléré (tranche T8) : la notification Orange
+  // Money arrive en application/x-www-form-urlencoded, pas en JSON.
+  // Le corps brut est conservé comme pour le JSON (empreinte de
+  // l'événement), et les paramètres deviennent l'objet req.body.
+  app.addContentTypeParser(
+    "application/x-www-form-urlencoded",
+    { parseAs: "string" },
+    (req, body, done) => {
+      const text = typeof body === "string" ? body : body.toString();
+      req.rawBody = text;
+      try {
+        done(null, Object.fromEntries(new URLSearchParams(text)));
       } catch (e) {
         const err = e as Error & { statusCode?: number };
         err.statusCode = 400;
@@ -131,6 +155,7 @@ export function buildApp(db: Pool) {
   registerParametresRoutes(app, db);
   registerProfilEgliseRoutes(app, db);
   registerPaiementsRoutes(app, db);
+  registerWebhooksPaiementsRoutes(app, db);
   registerTransfertsRoutes(app, db);
   registerCodesTutelleRoutes(app, db);
   registerAnnexesRoutes(app, db);

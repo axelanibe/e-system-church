@@ -10,7 +10,10 @@ import { verifierCampagneAffectation } from "./campagnes.js";
 /**
  * Finances de l'église de la session (dons sur le compte de CHAQUE église,
  * jamais centralisés — décision de Bouf). Enregistrement manuel avec
- * référence Mobile Money en MVP (pas de webhook Wave / Orange / MTN).
+ * référence Mobile Money en MVP ; confirmation automatique par webhook
+ * (Wave / Orange Money / MTN) depuis la tranche T8 — voir
+ * routes/webhooks_paiements.ts, qui réutilise confirmerContribution
+ * ci-dessous (mêmes effets : reçu numéroté, caisse, audit).
  * GET   /contributions      — liste + filtres + totaux par type (confirmées).
  * GET   /contributions/:id  — une contribution, avec son numéro de reçu.
  * POST  /contributions      — enregistrer (admin_eglise, tresorier).
@@ -64,6 +67,93 @@ async function prochainNumeroRecu(
     [churchId, `REC-${annee}-%`],
   );
   return `REC-${annee}-${String(rows[0].n + 1).padStart(4, "0")}`;
+}
+
+/** Résultat d'une tentative de confirmation. */
+export type ConfirmationContribution =
+  | {
+      ok: true;
+      contribution: {
+        id: string;
+        type: string;
+        amount_fcfa: number;
+        status: string;
+        recu_numero: string | null;
+      };
+    }
+  | { ok: false; raison: "introuvable" };
+
+/**
+ * Confirme une contribution en_attente — mêmes effets que la confirmation
+ * manuelle du pasteur (tranche T7) : reçu numéroté REC-AAAA-NNNN,
+ * écriture automatique en caisse (source 'contribution', index
+ * anti-doublon) et verrouillage (statut terminal).
+ *
+ * À exécuter DANS une transaction (client passé par l'appelant), la ligne
+ * étant verrouillée FOR UPDATE : une contribution déjà confirmée ou
+ * annulée retourne { ok: false } — jamais de double effet, même si le
+ * fournisseur renotifie la même notification.
+ *
+ * `validePar` : id de l'utilisateur qui valide, ou null quand la
+ * confirmation vient d'un webhook (aucun humain ne valide — le reçu
+ * n'est pas « validé par » quelqu'un, et l'action d'audit est
+ * `contribution.confirmee_webhook`).
+ */
+export async function confirmerContribution(
+  client: PoolClient,
+  churchId: string,
+  contributionId: string,
+  opts: { validePar: string | null; actionAudit?: string },
+): Promise<ConfirmationContribution> {
+  const { rows: existantes } = await client.query(
+    `SELECT c.id, c.type, c.amount_fcfa, c.payment_method, c.status,
+            m.full_name AS membre_nom
+       FROM contributions c
+       LEFT JOIN members m ON m.id = c.member_id
+      WHERE c.id = $1 AND c.church_id = $2
+      FOR UPDATE OF c`,
+    [contributionId, churchId],
+  );
+  if (existantes.length === 0 || existantes[0].status !== "en_attente") {
+    return { ok: false, raison: "introuvable" };
+  }
+  const contribution = existantes[0];
+  const annee = new Date().getFullYear();
+  const recuNumero = await prochainNumeroRecu(client, churchId, annee);
+  const { rows } = await client.query(
+    `UPDATE contributions
+        SET status = 'confirme', recu_numero = $3, recu_emis_le = now(),
+            valide_par = $4
+      WHERE id = $1 AND church_id = $2
+      RETURNING id, type, amount_fcfa, status, recu_numero`,
+    [contributionId, churchId, recuNumero, opts.validePar],
+  );
+  const libelle = LIBELLES_TYPE[contribution.type as string] ?? contribution.type;
+  await client.query(
+    `INSERT INTO caisse_mouvements
+       (church_id, type, montant_fcfa, motif, reference, source, source_id, canal)
+     VALUES ($1, 'entree', $2, $3, $4, 'contribution', $5, $6)`,
+    [
+      churchId,
+      contribution.amount_fcfa,
+      `Contribution ${libelle} — ${contribution.membre_nom ?? "donateur non identifié"} — reçu ${recuNumero}`,
+      recuNumero,
+      contribution.id,
+      contribution.payment_method,
+    ],
+  );
+  await auditLog(client, {
+    churchId,
+    userId: opts.validePar,
+    action: opts.actionAudit ?? "contribution.confirmee",
+    details: {
+      contribution_id: rows[0].id,
+      type: rows[0].type,
+      amount_fcfa: rows[0].amount_fcfa,
+      recu_numero: recuNumero,
+    },
+  });
+  return { ok: true, contribution: rows[0] };
 }
 
 /** Fiche membre liée à un compte (pour le « membre lui-même »). */
@@ -364,51 +454,26 @@ export function registerContributionsRoutes(app: FastifyInstance, db: Pool) {
             message: "Contribution introuvable, ou déjà confirmée / annulée.",
           });
         }
-        let recuNumero: string | null = null;
         if (parsed.data.status === "confirme") {
-          // Reçu numéroté (REC-AAAA-NNNN, par église et par année) + caisse.
-          const annee = new Date().getFullYear();
-          recuNumero = await prochainNumeroRecu(client, req.session.churchId, annee);
-          const { rows } = await client.query(
-            `UPDATE contributions
-                SET status = 'confirme', recu_numero = $3, recu_emis_le = now(),
-                    valide_par = $4
-              WHERE id = $1 AND church_id = $2
-              RETURNING id, type, amount_fcfa, status, recu_numero`,
-            [
-              (req.params as { id: string }).id,
-              req.session.churchId,
-              recuNumero,
-              req.session.userId,
-            ],
+          // Mêmes effets que la confirmation manuelle (reçu + caisse +
+          // audit) — voir confirmerContribution, partagée avec les
+          // webhooks (tranche T8). Le SELECT FOR UPDATE ci-dessus a déjà
+          // vérifié que la contribution est en_attente.
+          const confirme = await confirmerContribution(
+            client,
+            req.session.churchId,
+            (req.params as { id: string }).id,
+            { validePar: req.session.userId },
           );
-          const libelle = LIBELLES_TYPE[contribution.type as string] ?? contribution.type;
-          await client.query(
-            `INSERT INTO caisse_mouvements
-               (church_id, type, montant_fcfa, motif, reference, source, source_id, canal)
-             VALUES ($1, 'entree', $2, $3, $4, 'contribution', $5, $6)`,
-            [
-              req.session.churchId,
-              contribution.amount_fcfa,
-              `Contribution ${libelle} — ${contribution.membre_nom ?? "donateur non identifié"} — reçu ${recuNumero}`,
-              recuNumero,
-              contribution.id,
-              contribution.payment_method,
-            ],
-          );
-          await auditLog(client, {
-            churchId: req.session.churchId,
-            userId: req.session.userId,
-            action: "contribution.confirmee",
-            details: {
-              contribution_id: rows[0].id,
-              type: rows[0].type,
-              amount_fcfa: rows[0].amount_fcfa,
-              recu_numero: recuNumero,
-            },
-          });
+          if (!confirme.ok) {
+            await client.query("ROLLBACK");
+            return reply.code(409).send({
+              error: "conflict",
+              message: "Contribution introuvable, ou déjà confirmée / annulée.",
+            });
+          }
           await client.query("COMMIT");
-          return reply.send(rows[0]);
+          return reply.send(confirme.contribution);
         }
         const { rows } = await client.query(
           `UPDATE contributions SET status = 'annule'

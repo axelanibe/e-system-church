@@ -2657,6 +2657,73 @@ class MockApiService implements ApiService {
     return maj;
   }
 
+  // -- Finances complètes (tranche T7, non gérées en démo) ------------------
+  @override
+  Future<CotisationConfig?> getCotisationsConfig() async =>
+      throw UnimplementedError('Finances complètes non gérées en démo.');
+
+  @override
+  Future<CotisationConfig> saveCotisationsConfig({
+    required int montantFcfa,
+    String? periodicite,
+    bool? actif,
+  }) async =>
+      throw UnimplementedError('Finances complètes non gérées en démo.');
+
+  @override
+  Future<SuiviCotisations> getCotisationsSuivi({String? periode}) async =>
+      throw UnimplementedError('Finances complètes non gérées en démo.');
+
+  @override
+  Future<List<CompteBancaire>> getComptesBancaires() async =>
+      throw UnimplementedError('Finances complètes non gérées en démo.');
+
+  @override
+  Future<CompteBancaire> createCompteBancaire({
+    required String banque,
+    String? titulaire,
+    String? numeroCompte,
+    String type = 'banque',
+    String devise = 'FCFA',
+  }) async =>
+      throw UnimplementedError('Finances complètes non gérées en démo.');
+
+  @override
+  Future<CompteBancaire> updateCompteBancaire(
+    String id, {
+    String? banque,
+    String? titulaire,
+    String? numeroCompte,
+    String? type,
+    String? devise,
+    bool? actif,
+  }) async =>
+      throw UnimplementedError('Finances complètes non gérées en démo.');
+
+  @override
+  Future<void> deleteCompteBancaire(String id) async =>
+      throw UnimplementedError('Finances complètes non gérées en démo.');
+
+  @override
+  Future<Rapprochement> getRapprochement({int? annee, int? mois}) async =>
+      throw UnimplementedError('Finances complètes non gérées en démo.');
+
+  @override
+  Future<List<ClotureCaisse>> getCloturesCaisse() async =>
+      throw UnimplementedError('Finances complètes non gérées en démo.');
+
+  @override
+  Future<ClotureCaisse> cloturerCaisse({
+    required String periode,
+    int? soldeCompteFcfa,
+    String? commentaire,
+  }) async =>
+      throw UnimplementedError('Finances complètes non gérées en démo.');
+
+  @override
+  Future<Uint8List> telechargerRecuPdf(String id) async =>
+      throw UnimplementedError('Reçus PDF non gérés en démo.');
+
   // -- Campagnes de collecte (US2, démo : aucune campagne fictive) -----------
 
   @override
@@ -3736,6 +3803,29 @@ class MockApiService implements ApiService {
       throw UnimplementedError('Plan comptable non géré en démo.');
 
   @override
+  Future<List<BudgetDepartement>> getBudgetsDepartements(
+          {int? annee, int? mois, String? departementId}) async =>
+      throw UnimplementedError('Plan comptable non géré en démo.');
+
+  @override
+  Future<BudgetDepartement> creerBudgetDepartement({
+    required String departementId,
+    required int annee,
+    required int mois,
+    required int montantPrevu,
+  }) async =>
+      throw UnimplementedError('Plan comptable non géré en démo.');
+
+  @override
+  Future<void> supprimerBudgetDepartement(String id) async =>
+      throw UnimplementedError('Plan comptable non géré en démo.');
+
+  @override
+  Future<SuiviDepartements> getSuiviDepartements(
+          {required int annee, required int mois}) async =>
+      throw UnimplementedError('Plan comptable non géré en démo.');
+
+  @override
   Future<RapportPlanComptable> getRapportPlanComptable(
           {required int annee, int? mois}) async =>
       throw UnimplementedError('Plan comptable non géré en démo.');
@@ -3988,6 +4078,11 @@ class MockApiService implements ApiService {
       champsRequis: [
         ChampPaiement(nom: 'api_key', label: 'Clé API', secret: true),
         ChampPaiement(nom: 'marchand', label: 'Identifiant marchand', secret: false),
+        ChampPaiement(
+            nom: 'webhook_secret',
+            label: 'Secret de signature du webhook Wave',
+            secret: true,
+            optionnel: true),
       ],
     ),
     FournisseurPaiement(

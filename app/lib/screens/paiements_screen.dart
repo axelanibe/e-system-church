@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
@@ -223,7 +224,9 @@ class _FournisseurCardState extends State<_FournisseurCard> {
     for (final champ in widget.fournisseur.champsRequis) {
       final valeur = _champControllers[champ.nom]!.text.trim();
       if (valeur.isEmpty) {
-        if (isCreation) {
+        // Un champ facultatif (optionnel, tranche T8 — ex. le secret de
+        // signature du webhook Wave) ne bloque pas l'enregistrement.
+        if (isCreation && !champ.optionnel) {
           _showMessage(
               'Champ obligatoire manquant : ${champ.label}.',
               isError: true);
@@ -293,6 +296,17 @@ class _FournisseurCardState extends State<_FournisseurCard> {
     }
   }
 
+  /// Adresse du webhook à enregistrer chez le fournisseur (tranche T8) :
+  /// seuls Wave, Orange Money et MTN ont un webhook ; l'adresse est celle
+  /// de l'API que l'appli utilise. En démo (base 'demo'), pas de webhook.
+  String? get _urlWebhook {
+    const avecWebhook = {'wave', 'orange_money', 'mtn_momo'};
+    if (!avecWebhook.contains(widget.fournisseur.code)) return null;
+    final base = context.read<AppState>().apiBaseUrl;
+    if (base == 'demo' || base.isEmpty) return null;
+    return '$base/webhooks/${widget.fournisseur.code}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final f = widget.fournisseur;
@@ -346,6 +360,41 @@ class _FournisseurCardState extends State<_FournisseurCard> {
                 Text(
                   '${champ.label} : ${champ.configure ? 'configuré' : 'non configuré'}',
                 ),
+              // Webhook (tranche T8) : l'adresse à enregistrer dans le
+              // portail du fournisseur pour que les paiements reçus
+              // confirment automatiquement les contributions en attente.
+              if (_urlWebhook != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Webhook à enregistrer : ${_urlWebhook!}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.copy, size: 18),
+                      tooltip: 'Copier l’adresse du webhook',
+                      onPressed: () async {
+                        await Clipboard.setData(
+                            ClipboardData(text: _urlWebhook!));
+                        if (context.mounted) {
+                          showSuccess(
+                              context, 'Adresse du webhook copiée.');
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                const Text(
+                  'À coller dans le portail du fournisseur : les '
+                  'paiements reçus confirment alors automatiquement les '
+                  'contributions en attente.',
+                  style: TextStyle(fontSize: 13),
+                ),
+              ],
             ],
             if (!widget.readOnly) ...[
               const SizedBox(height: 12),
@@ -366,7 +415,9 @@ class _FournisseurCardState extends State<_FournisseurCard> {
                   enableSuggestions: !champ.secret,
                   autocorrect: !champ.secret,
                   decoration: InputDecoration(
-                    labelText: champ.label,
+                    labelText: champ.optionnel
+                        ? '${champ.label} (facultatif)'
+                        : champ.label,
                     hintText: config == null
                         ? null
                         : 'Laisser vide pour garder la valeur actuelle',
