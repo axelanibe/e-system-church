@@ -1036,6 +1036,12 @@ abstract class ApiService {
   // -- Présentation et identité de l'église (module 13) ----------------------
   Future<ProfilEglise> getPresentation(String code);
 
+  /// Régénère le code de tutelle de mon église ; renvoie le nouveau code.
+  /// L'ancien code cesse de fonctionner immédiatement (rattachements,
+  /// transferts et lien de présentation publique avec l'ancien code de
+  /// tutelle).
+  Future<String> regenererCode({required String type});
+
   Future<Church> updateProfil({
     required String churchId,
     String? name,

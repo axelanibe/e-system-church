@@ -2528,6 +2528,16 @@ class HttpApiService implements ApiService {
           await _call('GET', '/eglises/$code/presentation'));
 
   @override
+  Future<String> regenererCode({required String type}) async {
+    final data = await _call(
+      'POST',
+      '/eglises/moi/codes/regenerer',
+      body: {'type': type},
+    );
+    return data['nouveau_code'] as String;
+  }
+
+  @override
   Future<Church> updateProfil({
     required String churchId,
     String? name,

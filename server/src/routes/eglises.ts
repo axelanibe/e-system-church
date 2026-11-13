@@ -13,6 +13,19 @@ import { seedPostesPrevisibles } from "../postes_previsibles.js";
  *                        du 11/11/2026, 403 `annexe_sans_annexe`).
  * GET  /eglises/arbre  — mon arborescence (mon église + descendances), avec les
  *                        effectifs et les demandes de rattachement en attente.
+ * POST /eglises/moi/codes/regenerer — régénère le code de tutelle de mon
+ *                        église (ESC-…, bouton « Régénérer » dans
+ *                        « Mon église ») ; l'ancien code cesse de
+ *                        fonctionner immédiatement. Le rattachement
+ *                        résout le code au moment de l'usage : seul
+ *                        l'usage futur de l'ancien code est affecté.
+ *                        Attention : le code de tutelle est aussi la clé
+ *                        de la présentation publique
+ *                        (`GET /eglises/:code/presentation`) — un lien de
+ *                        présentation partagé avec l'ancien code ne
+ *                        fonctionne plus après régénération. Le code
+ *                        fidèle (ESC-F-…), lui, ne se régénère jamais
+ *                        (décision de Bouf, 13/11/2026).
  */
 
 const createEgliseSchema = z.object({
@@ -20,6 +33,13 @@ const createEgliseSchema = z.object({
   city: z.string().min(2).max(120),
   phone: z.string().min(8).max(30).optional(),
   email: z.string().email().max(254).optional(),
+});
+
+const regenererCodeSchema = z.object({
+  // Seul le code de tutelle se régénère : le code fidèle (ESC-F-…),
+  // largement partagé pour l'inscription des membres, reste fixe pour
+  // toujours (décision de Bouf, 13/11/2026) — « fidele » répond 400.
+  type: z.enum(["tutelle"]),
 });
 
 interface TreeNode {
@@ -121,6 +141,87 @@ export function registerEglisesRoutes(app: FastifyInstance, db: Pool) {
 
         await client.query("COMMIT");
         return reply.code(201).send(sub);
+      } catch (e) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        return dbError(reply, e);
+      } finally {
+        client.release();
+      }
+    },
+  );
+
+  // -- Régénération du code de tutelle de mon église ----------------------
+  // Bouton « Régénérer » dans « Mon église » (code de tutelle
+  // seulement : le code fidèle, largement partagé pour l'inscription
+  // des membres, ne se régénère jamais — décision de Bouf, 13/11/2026).
+  // Réutilise le générateur existant et sa boucle anti-collision
+  // (50 tentatives, suffixe à 4 chiffres vérifié entre les deux colonnes
+  // `code` et `code_fidele`, anciens codes 6 caractères inclus). La ligne
+  // de l'église est verrouillée (FOR UPDATE) : deux régénérations
+  // concurrentes de la même église ne peuvent pas produire le même code ;
+  // la contrainte UNIQUE sur `code` reste le filet de sécurité.
+  // Journalisé : le type seulement, JAMAIS les valeurs des
+  // codes (ancien ou nouveau).
+  app.post(
+    "/eglises/moi/codes/regenerer",
+    { preHandler: [requireAuth(db), requireRole("admin_eglise")] },
+    async (req, reply) => {
+      const parsed = regenererCodeSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "invalid_input",
+          message: "Type de code invalide (seul le code de tutelle peut être régénéré).",
+        });
+      }
+      const { type } = parsed.data;
+      const client = await db.connect();
+      try {
+        await client.query("BEGIN");
+        const { rows: verrouillees } = await client.query<{
+          id: string;
+          code: string;
+          code_fidele: string | null;
+        }>(
+          `SELECT id, code, code_fidele FROM churches WHERE id = $1 FOR UPDATE`,
+          [req.session.churchId],
+        );
+        const courante = verrouillees[0];
+        if (!courante) {
+          await client.query("ROLLBACK");
+          return reply.code(404).send({ error: "not_found", message: "Église introuvable." });
+        }
+        let nouveau = "";
+        for (let attempt = 0; attempt < 50; attempt++) {
+          nouveau = generateChurchCode();
+          const clash = await client.query(
+            `SELECT 1 FROM churches WHERE right(code, 4) = $1 OR right(code_fidele, 4) = $1`,
+            [nouveau.slice(-4)],
+          );
+          // La requête couvre aussi cette église : le nouveau code diffère
+          // donc de l'ancien code de tutelle et du code fidèle.
+          if (clash.rowCount === 0) break;
+          if (attempt === 49) throw new Error("Impossible de générer un code unique.");
+        }
+        const { rows } = await client.query(
+          `UPDATE churches SET code = $1 WHERE id = $2
+           RETURNING id, code, code_fidele`,
+          [nouveau, req.session.churchId],
+        );
+        await auditLog(client, {
+          churchId: req.session.churchId,
+          userId: req.session.userId,
+          action: "eglise.code_regenere",
+          details: { type },
+        });
+        await client.query("COMMIT");
+        const maj = rows[0];
+        return reply.send({
+          id: maj.id as string,
+          code: maj.code as string,
+          code_fidele: maj.code_fidele as string | null,
+          type,
+          nouveau_code: nouveau,
+        });
       } catch (e) {
         await client.query("ROLLBACK").catch(() => undefined);
         return dbError(reply, e);
