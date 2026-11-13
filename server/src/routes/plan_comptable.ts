@@ -23,6 +23,14 @@ import {
  * - GET  /budgets-mensuels — budgets mensuels (année, mois, poste).
  * - POST /budgets-mensuels — crée ou remplace le budget mensuel d'un poste.
  * - DELETE /budgets-mensuels/:id — supprime un budget mensuel.
+ * - GET  /budgets-departements — budgets mensuels par département (T7).
+ * - POST /budgets-departements — crée ou remplace le budget mensuel
+ *        d'un département. DELETE /budgets-departements/:id — supprime.
+ * - GET  /plan-comptable/suivi-departements — prévu contre réel par
+ *        département, mois en cours, avec alerte de dépassement (T7).
+ *        Le réalisé vient des dépenses portées par le département
+ *        (depenses.departement_id) ; les dépenses sans département sont
+ *        regroupées en « sans département » : rien n'est caché.
  * - POST /plan-comptable/depenses — crée une dépense avec tous les champs
  *        du plan (référence auto DEP-AAAA-NNNN, département, mode de
  *        paiement, fournisseur, responsables, devise). Le statut et la
@@ -489,6 +497,196 @@ export function registerPlanComptableRoutes(app: FastifyInstance, db: Pool) {
           });
         }
         return reply.code(204).send();
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  // -- Budgets par département (tranche T7) : même forme que les budgets
+  //    mensuels par poste, mais par département et par mois. ------------------
+  const budgetsDepartementsQuerySchema = z.object({
+    annee: z.coerce.number().int().min(2000).max(2100).optional(),
+    mois: z.coerce.number().int().min(1).max(12).optional(),
+    departement_id: z.string().uuid().optional(),
+  });
+
+  const creerBudgetDepartementSchema = z.object({
+    departement_id: z.string().uuid(),
+    annee: z.number().int().min(2000).max(2100),
+    mois: z.number().int().min(1).max(12),
+    montant_prevu: z.number().int().min(0).max(100_000_000),
+  });
+
+  app.get(
+    "/budgets-departements",
+    { preHandler: [requireAuth(db), requireRole(...READ_ALL)] },
+    async (req, reply) => {
+      const parsed = budgetsDepartementsQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        invalidInput(reply, parsed.error);
+        return;
+      }
+      const { annee, mois, departement_id } = parsed.data;
+      try {
+        const conditions = [`b.church_id = $1`];
+        const values: unknown[] = [req.session.churchId];
+        if (annee !== undefined) {
+          values.push(annee);
+          conditions.push(`b.annee = $${values.length}`);
+        }
+        if (mois !== undefined) {
+          values.push(mois);
+          conditions.push(`b.mois = $${values.length}`);
+        }
+        if (departement_id !== undefined) {
+          values.push(departement_id);
+          conditions.push(`b.departement_id = $${values.length}`);
+        }
+        const { rows } = await db.query(
+          `SELECT b.*, d.nom AS departement_nom
+             FROM budgets_departements b
+             JOIN departements d ON d.id = b.departement_id
+            WHERE ${conditions.join(" AND ")}
+            ORDER BY b.annee DESC, b.mois DESC, d.nom ASC`,
+          values,
+        );
+        return reply.send(rows);
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  app.post(
+    "/budgets-departements",
+    { preHandler: [requireAuth(db), requireRole(...WRITE_FINANCES)] },
+    async (req, reply) => {
+      const parsed = creerBudgetDepartementSchema.safeParse(req.body);
+      if (!parsed.success) {
+        invalidInput(reply, parsed.error);
+        return;
+      }
+      const { departement_id, annee, mois, montant_prevu } = parsed.data;
+      try {
+        if (
+          !(await existsInChurch(db, "departements", req.session.churchId, departement_id))
+        ) {
+          return reply.code(400).send({
+            error: "invalid_reference",
+            message: "Département introuvable dans votre église.",
+          });
+        }
+        const { rows } = await db.query(
+          `INSERT INTO budgets_departements (church_id, departement_id, annee, mois, montant_prevu)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (church_id, departement_id, annee, mois)
+           DO UPDATE SET montant_prevu = EXCLUDED.montant_prevu
+           RETURNING *`,
+          [req.session.churchId, departement_id, annee, mois, montant_prevu],
+        );
+        return reply.code(201).send(rows[0]);
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  app.delete(
+    "/budgets-departements/:id",
+    { preHandler: [requireAuth(db), requireRole(...WRITE_FINANCES)] },
+    async (req, reply) => {
+      const { id } = req.params as { id: string };
+      try {
+        const { rowCount } = await db.query(
+          `DELETE FROM budgets_departements WHERE id = $1 AND church_id = $2`,
+          [id, req.session.churchId],
+        );
+        if (rowCount === 0) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Budget de département introuvable.",
+          });
+        }
+        return reply.code(204).send();
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  // -- Suivi par département : prévu contre réel, avec alerte de dépassement.
+  //    Même règle que le suivi mensuel par poste : un dépassement est
+  //    signalé quand le réel dépasse un budget mensuel défini ; sans
+  //    budget, le prévu vaut 0 et le département est marqué sans budget.
+  app.get(
+    "/plan-comptable/suivi-departements",
+    { preHandler: [requireAuth(db), requireRole(...READ_ALL)] },
+    async (req, reply) => {
+      const parsed = anneeMoisQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        invalidInput(reply, parsed.error);
+        return;
+      }
+      const maintenant = new Date();
+      const annee = parsed.data.annee ?? maintenant.getFullYear();
+      const mois = parsed.data.mois ?? maintenant.getMonth() + 1;
+      const { debut, fin } = bornesPeriode(annee, mois);
+      try {
+        const { rows } = await db.query(
+          `SELECT d.id AS departement_id, d.nom AS departement,
+                  coalesce(b.montant_prevu, 0)::int AS prevu_fcfa,
+                  (b.id IS NOT NULL) AS budget_defini,
+                  coalesce(sum(dep.montant_fcfa) FILTER (WHERE dep.statut <> 'refusee'), 0)::int AS reel_fcfa
+             FROM departements d
+             LEFT JOIN budgets_departements b
+               ON b.departement_id = d.id AND b.annee = $2 AND b.mois = $3
+             LEFT JOIN depenses dep
+               ON dep.departement_id = d.id
+              AND dep.date_depense >= $4::date AND dep.date_depense < $5::date
+            WHERE d.church_id = $1
+            GROUP BY d.id, d.nom, b.montant_prevu, b.id
+            ORDER BY d.nom ASC`,
+          [req.session.churchId, annee, mois, debut, fin],
+        );
+        const { rows: sansRows } = await db.query(
+          `SELECT coalesce(sum(montant_fcfa), 0)::int AS reel_fcfa
+             FROM depenses
+            WHERE church_id = $1 AND departement_id IS NULL AND statut <> 'refusee'
+              AND date_depense >= $2::date AND date_depense < $3::date`,
+          [req.session.churchId, debut, fin],
+        );
+        const parDepartements = rows.map((r) => {
+          const prevu = Number(r.prevu_fcfa);
+          const reel = Number(r.reel_fcfa);
+          const budgetDefini = Boolean(r.budget_defini);
+          return {
+            departement_id: r.departement_id,
+            departement: r.departement,
+            prevu_fcfa: prevu,
+            reel_fcfa: reel,
+            ecart_fcfa: reel - prevu,
+            depasse: budgetDefini && reel > prevu,
+            budget_defini: budgetDefini,
+          };
+        });
+        const sansDepartementReel = Number(sansRows[0]?.reel_fcfa ?? 0);
+        const sansDepartement = {
+          prevu_fcfa: 0,
+          reel_fcfa: sansDepartementReel,
+          ecart_fcfa: sansDepartementReel,
+          depasse: false,
+          budget_defini: false,
+        };
+        return reply.send({
+          annee,
+          mois,
+          par_departements: parDepartements,
+          sans_departement: sansDepartement,
+          total_prevu_fcfa: parDepartements.reduce((s, l) => s + l.prevu_fcfa, 0),
+          total_reel_fcfa:
+            parDepartements.reduce((s, l) => s + l.reel_fcfa, 0) + sansDepartementReel,
+        });
       } catch (e) {
         return dbError(reply, e);
       }

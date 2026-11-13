@@ -436,3 +436,68 @@ export function genererAttestationEvenementPdf(d: AttestationEvenementPdfData): 
   texte(50, y, 11, "Cachet de l'église", true);
   return assemblerPdf(lignes);
 }
+
+export interface RecuPdfData {
+  egliseNom: string;
+  egliseCode: string;
+  numero: string; // REC-AAAA-NNNN, par église et par année
+  dateEmission: string; // JJ/MM/AAAA
+  membreNom: string | null;
+  membreMatricule: string | null;
+  /** Libellé du type, ex. « Dîme », « Cotisation ». */
+  typeLibelle: string;
+  montantFcfa: number;
+  /** Libellé du canal, ex. « Wave », « Espèces ». */
+  paiementLibelle: string;
+  dateContribution: string; // JJ/MM/AAAA
+  campagneNom: string | null;
+}
+
+/**
+ * Reçu numéroté d'une contribution (tranche T7, Lot B) : même approche
+ * sans dépendance, une page, Helvetica. Contenu figé à la validation
+ * (numéro, montant, canal), jamais recalculé. En Côte d'Ivoire, ce reçu
+ * n'a aucune valeur fiscale : il sert de justificatif de la contribution.
+ */
+export function genererRecuPdf(d: RecuPdfData): Buffer {
+  const { lignes, texte } = lignesTexte();
+  let y = 760;
+  texte(50, y, 16, d.egliseNom, true);
+  y -= 20;
+  texte(50, y, 11, `Code : ${d.egliseCode}`);
+  y -= 32;
+  texte(50, y, 15, "Reçu de contribution", true);
+  y -= 22;
+  texte(50, y, 11, `Numéro : ${d.numero}`);
+  y -= 18;
+  texte(50, y, 11, `Date d'émission : ${d.dateEmission}`);
+  y -= 32;
+  texte(50, y, 12, `Reçu de : ${d.membreNom ?? "Donateur non identifié"}`, true);
+  if (d.membreMatricule) {
+    y -= 18;
+    texte(50, y, 11, `Matricule : ${d.membreMatricule}`);
+  }
+  y -= 32;
+  texte(50, y, 12, `Type : ${d.typeLibelle}`, true);
+  y -= 20;
+  texte(50, y, 11, `Montant : ${formaterMontant(d.montantFcfa)}`);
+  y -= 18;
+  texte(50, y, 11, `Payé par : ${d.paiementLibelle}`);
+  y -= 18;
+  texte(50, y, 11, `Date de la contribution : ${d.dateContribution}`);
+  if (d.campagneNom) {
+    y -= 18;
+    texte(50, y, 11, `Campagne : ${d.campagneNom}`);
+  }
+  y -= 48;
+  texte(50, y, 11, "Signature : ____________________", true);
+  y -= 40;
+  texte(50, y, 11, "Cachet de l'église", true);
+  y -= 32;
+  texte(50, y, 10, "En Côte d'Ivoire, ce reçu n'a aucune valeur fiscale.");
+  y -= 15;
+  texte(50, y, 10, "Il sert de justificatif de votre contribution,");
+  y -= 15;
+  texte(50, y, 10, "pas de déclaration d'impôt.");
+  return assemblerPdf(lignes);
+}
