@@ -972,10 +972,10 @@ abstract class ApiService {
   // -- Présentation et identité de l'église (module 13) ----------------------
   Future<ProfilEglise> getPresentation(String code);
 
-  /// Régénère un code d'invitation de mon église (`fidele` ou `tutelle`) ;
-  /// renvoie le nouveau code. L'ancien code cesse de fonctionner
-  /// immédiatement (inscriptions, rattachements, transferts et lien de
-  /// présentation publique avec l'ancien code de tutelle).
+  /// Régénère le code de tutelle de mon église ; renvoie le nouveau code.
+  /// L'ancien code cesse de fonctionner immédiatement (rattachements,
+  /// transferts et lien de présentation publique avec l'ancien code de
+  /// tutelle).
   Future<String> regenererCode({required String type});
 
   Future<Church> updateProfil({
