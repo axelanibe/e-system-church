@@ -2,7 +2,6 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
 import {
-  READ_ALL,
   WRITE_STD,
   memberInChurch,
   registerCrud,
@@ -12,6 +11,11 @@ import {
  * Module 6 — Suivi pastoral : parcours des nouveaux convertis (accueil →
  * formation → baptême → intégration en cellule), visites pastorales,
  * accompagnements (couples, familles, malades, difficultés).
+ *
+ * Confidentialité (Lot B, tranche 1) : lecture réservée à l'admin de
+ * l'église et au responsable de culte — le trésorier et le simple membre
+ * sont exclus, comptes rendus inclus. Chaque lecture est journalisée
+ * dans audit_logs (US17 : consultation tracée).
  */
 
 const uuid = z.string().uuid();
@@ -28,9 +32,10 @@ export function registerPastoralRoutes(app: FastifyInstance, db: Pool) {
       date_etape: z.string().regex(dateRe, "Date au format AAAA-MM-JJ.").optional(),
       note: z.string().max(1000).optional(),
     }),
-    readRoles: READ_ALL,
+    readRoles: ["admin_eglise", "responsable_culte"],
     writeRoles: WRITE_STD,
     audit: "parcours_nouveau",
+    logReads: true,
     filters: { member_id: "member_id", etape: "etape" },
     validate: async (db2, churchId, data) => {
       if (!(await memberInChurch(db2, churchId, data.member_id as string))) {
@@ -52,9 +57,10 @@ export function registerPastoralRoutes(app: FastifyInstance, db: Pool) {
       compte_rendu: z.string().max(5000).optional(),
       statut: z.enum(["planifiee", "realisee", "annulee"]).default("planifiee"),
     }),
-    readRoles: READ_ALL,
+    readRoles: ["admin_eglise", "responsable_culte"],
     writeRoles: WRITE_STD,
     audit: "visite_pastorale",
+    logReads: true,
     filters: { member_id: "member_id", statut: "statut" },
     orderBy: "date_visite ASC",
     validate: async (db2, churchId, data) => {
@@ -76,9 +82,10 @@ export function registerPastoralRoutes(app: FastifyInstance, db: Pool) {
       description: z.string().max(2000).optional(),
       statut: z.enum(["en_cours", "termine"]).default("en_cours"),
     }),
-    readRoles: READ_ALL,
+    readRoles: ["admin_eglise", "responsable_culte"],
     writeRoles: WRITE_STD,
     audit: "accompagnement",
+    logReads: true,
     filters: { member_id: "member_id", type: "type", statut: "statut" },
     validate: async (db2, churchId, data) => {
       if (!(await memberInChurch(db2, churchId, data.member_id as string))) {

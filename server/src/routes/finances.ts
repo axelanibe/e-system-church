@@ -5,7 +5,6 @@ import { auditLog } from "../auth.js";
 import {
   READ_ALL,
   WRITE_FINANCES,
-  WRITE_STD,
   existsInChurch,
   invalidInput,
   registerCrud,
@@ -89,6 +88,16 @@ export function registerFinancesRoutes(app: FastifyInstance, db: Pool) {
     validate: async (db2, churchId, data) => {
       if (data.poste_id && !(await existsInChurch(db2, "postes_budgetaires", churchId, data.poste_id as string))) {
         return "Poste budgétaire introuvable dans votre église.";
+      }
+      return null;
+    },
+    // Lot B, tranche 1 : le statut ne se change QUE par la route de
+    // validation en deux temps (PATCH /depenses/:id/statut). Le PATCH
+    // générique ne peut plus passer une dépense directement à « payee »
+    // sans passer par la machine à états.
+    validateUpdate: async (_db2, _churchId, _id, data) => {
+      if (data.statut !== undefined) {
+        return "Le statut d'une dépense se change uniquement par la route de validation en deux temps (PATCH /depenses/:id/statut).";
       }
       return null;
     },
@@ -193,7 +202,9 @@ export function registerFinancesRoutes(app: FastifyInstance, db: Pool) {
   });
   app.get(
     "/finances/rapport",
-    { preHandler: [requireAuth(db), requireRole(...WRITE_STD)] },
+    // Lot B, tranche 1 : le trésorier est autorisé sur son rapport
+    // financier (il en était exclu : la route exigeait WRITE_STD).
+    { preHandler: [requireAuth(db), requireRole("admin_eglise", "tresorier", "responsable_culte")] },
     async (req, reply) => {
       const parsed = rapportQuerySchema.safeParse(req.query);
       if (!parsed.success) {

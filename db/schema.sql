@@ -128,6 +128,7 @@ CREATE TABLE members (
     fonction    TEXT,                              -- ex. Pasteur, Chantre… ; NULL = « Aucun »
     poste       TEXT,                              -- ex. Directeur de département, Collaborateur…
     cell_group  TEXT,                              -- cellule / groupe de maison
+    photo_url   TEXT,                              -- migration 013 : photo du membre, NULL tant que non renseignée
     date_mariage DATE,                             -- migration 019 : US7, NULL tant que non renseignée
     date_conversion DATE,                         -- migration 019 : US7, NULL tant que non renseignée
     status      member_status NOT NULL DEFAULT 'actif',

@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import { z } from "zod";
 import { auditLog } from "./auth.js";
 import { dbError, requireAuth, requireRole } from "./middleware.js";
+import type { Session } from "./middleware.js";
 
 /**
  * Usine de routes CRUD standard pour les ressources « par église ».
@@ -42,8 +43,38 @@ export interface CrudOptions {
   updateSchema?: z.ZodObject<z.ZodRawShape>;
   readRoles: string[];
   writeRoles: string[];
+  /**
+   * Rôles autorisés à CRÉER (défaut : writeRoles). Sert quand la création
+   * est ouverte à tous les membres mais que la modification / suppression
+   * est restreinte (ex. demandes de prière : tout membre dépose, seuls
+   * l'admin et le responsable de culte modifient ou suppriment).
+   */
+  createRoles?: string[];
+  /**
+   * Rôles autorisés à MODIFIER et SUPPRIMER (défaut : writeRoles).
+   */
+  updateDeleteRoles?: string[];
   /** Préfixe d'audit, ex. 'famille' → 'famille.cree'. */
   audit: string;
+  /**
+   * Journaliser les lectures dans audit_logs (action `<audit>.lu`).
+   * À activer pour les données sensibles (US17 : consultation tracée).
+   */
+  logReads?: boolean;
+  /**
+   * Portée de lecture : condition SQL supplémentaire (et ses paramètres)
+   * appliquée à la liste et à la lecture d'un élément. Sert à rendre un
+   * drapeau effectif côté serveur (ex. demandes de prière confidentielles
+   * invisibles aux rôles non autorisés). `paramOffset` = nombre de
+   * paramètres déjà placés : les `$n` de la condition doivent commencer
+   * à `paramOffset + 1`. Retourne null quand aucune restriction ne
+   * s'applique (ex. rôle autorisé).
+   */
+  readScope?: (
+    db: Pool,
+    session: Session,
+    paramOffset: number,
+  ) => Promise<{ condition: string; values: unknown[] } | null>;
   orderBy?: string;
   /** Filtres d'égalité : paramètre de requête -> colonne. */
   filters?: Record<string, string>;
@@ -55,6 +86,19 @@ export interface CrudOptions {
     churchId: string,
     data: Record<string, unknown>,
     userId: string,
+  ) => Promise<string | null>;
+  /**
+   * Validation métier à la MISE À JOUR (PATCH) : message d'erreur ou
+   * null si OK. Sert à fermer un contournement par PATCH générique
+   * (ex. refuser le changement de `statut` d'une dépense hors de la
+   * machine à états, ou revalider un chevauchement de réservation).
+   * `data` ne contient que les champs envoyés par le client.
+   */
+  validateUpdate?: (
+    db: Pool,
+    churchId: string,
+    id: string,
+    data: Record<string, unknown>,
   ) => Promise<string | null>;
   /**
    * Garde avant suppression : message d'erreur ou null si OK. Sert à
@@ -117,7 +161,11 @@ export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions):
   // Tous les modules sont actifs pour toutes les églises (règle du
   // 11/11/2026) : plus aucune garde de module ici.
   const lecture = [requireAuth(db), requireRole(...opts.readRoles)];
-  const ecriture = [requireAuth(db), requireRole(...opts.writeRoles)];
+  // Création et modification / suppression peuvent avoir des rôles
+  // différents (ex. demandes de prière : création ouverte, modification
+  // restreinte). Par défaut, les deux valent writeRoles.
+  const creation = [requireAuth(db), requireRole(...(opts.createRoles ?? opts.writeRoles))];
+  const majSuppression = [requireAuth(db), requireRole(...(opts.updateDeleteRoles ?? opts.writeRoles))];
   const querySchema = listQueryWithFilters(opts.filters ?? {});
   const updateSchema = opts.updateSchema ?? opts.createSchema.partial();
 
@@ -145,6 +193,13 @@ export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions):
         values.push(`%${query.q}%`);
         conditions.push(`${opts.searchColumn} ILIKE $${values.length}`);
       }
+      if (opts.readScope) {
+        const scope = await opts.readScope(db, req.session, values.length);
+        if (scope) {
+          conditions.push(`(${scope.condition})`);
+          values.push(...scope.values);
+        }
+      }
       const where = `WHERE ${conditions.join(" AND ")}`;
       const total = await db.query<{ n: string }>(
         `SELECT count(*)::text AS n FROM ${opts.table} ${where}`,
@@ -156,6 +211,14 @@ export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions):
           LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
         [...values, limit, offset],
       );
+      if (opts.logReads) {
+        await auditLog(db, {
+          churchId: req.session.churchId,
+          userId: req.session.userId,
+          action: `${opts.audit}.lu`,
+          details: { total: Number(total.rows[0]?.n ?? 0), limit, offset },
+        });
+      }
       return reply.send({ total: Number(total.rows[0]?.n ?? 0), items: rows });
     } catch (e) {
       return dbError(reply, e);
@@ -168,12 +231,30 @@ export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions):
     { preHandler: lecture },
     async (req, reply) => {
       try {
+        const id = (req.params as { id: string }).id;
+        const values: unknown[] = [id, req.session.churchId];
+        let scopeCondition = "";
+        if (opts.readScope) {
+          const scope = await opts.readScope(db, req.session, values.length);
+          if (scope) {
+            scopeCondition = ` AND (${scope.condition})`;
+            values.push(...scope.values);
+          }
+        }
         const { rows } = await db.query(
-          `SELECT * FROM ${opts.table} WHERE id = $1 AND church_id = $2`,
-          [(req.params as { id: string }).id, req.session.churchId],
+          `SELECT * FROM ${opts.table} WHERE id = $1 AND church_id = $2${scopeCondition}`,
+          values,
         );
         if (rows.length === 0) {
           return reply.code(404).send({ error: "not_found", message: "Élément introuvable." });
+        }
+        if (opts.logReads) {
+          await auditLog(db, {
+            churchId: req.session.churchId,
+            userId: req.session.userId,
+            action: `${opts.audit}.lu`,
+            details: { id: rows[0].id },
+          });
         }
         return reply.send(rows[0]);
       } catch (e) {
@@ -183,7 +264,7 @@ export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions):
   );
 
   // -- Création ---------------------------------------------------------------
-  app.post(opts.base, { preHandler: ecriture }, async (req, reply) => {
+  app.post(opts.base, { preHandler: creation }, async (req, reply) => {
     const parsed = opts.createSchema.safeParse(req.body);
     if (!parsed.success) {
       invalidInput(reply, parsed.error);
@@ -223,7 +304,7 @@ export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions):
   // -- Mise à jour -------------------------------------------------------------
   app.patch(
     `${opts.base}/:id`,
-    { preHandler: ecriture },
+    { preHandler: majSuppression },
     async (req, reply) => {
       const parsed = updateSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -236,6 +317,17 @@ export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions):
         return reply.code(400).send({ error: "invalid_input", message: "Rien à modifier." });
       }
       try {
+        if (opts.validateUpdate) {
+          const message = await opts.validateUpdate(
+            db,
+            req.session.churchId,
+            (req.params as { id: string }).id,
+            data,
+          );
+          if (message) {
+            return reply.code(400).send({ error: "invalid_update", message });
+          }
+        }
         const sets = keys.map((c, i) => `${c} = $${i + 3}`).join(", ");
         const values: unknown[] = [
           (req.params as { id: string }).id,
@@ -265,7 +357,7 @@ export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions):
   // -- Suppression -------------------------------------------------------------
   app.delete(
     `${opts.base}/:id`,
-    { preHandler: ecriture },
+    { preHandler: majSuppression },
     async (req, reply) => {
       try {
         const id = (req.params as { id: string }).id;

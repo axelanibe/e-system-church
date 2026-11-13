@@ -64,6 +64,39 @@ export function registerBiensRoutes(app: FastifyInstance, db: Pool) {
       }
       return null;
     },
+    // Lot B, tranche 1 : le contrôle de chevauchement n'existait qu'à la
+    // création ; le PATCH générique pouvait créer un chevauchement. On
+    // revalide la réservation résultante (valeurs modifiées + valeurs
+    // actuelles) avant toute modification.
+    validateUpdate: async (db2, churchId, id, data) => {
+      const { rows } = await db2.query(
+        `SELECT salle_id, debut, fin, statut FROM reservations_salles
+          WHERE id = $1 AND church_id = $2`,
+        [id, churchId],
+      );
+      if (rows.length === 0) return null; // le PATCH répondra 404 lui-même.
+      const actuelle = rows[0] as { salle_id: string; debut: string; fin: string; statut: string };
+      const salleId = (data.salle_id as string) ?? actuelle.salle_id;
+      const debut = (data.debut as string) ?? actuelle.debut;
+      const fin = (data.fin as string) ?? actuelle.fin;
+      const statut = (data.statut as string) ?? actuelle.statut;
+      if (!(await existsInChurch(db2, "salles", churchId, salleId))) {
+        return "Salle introuvable dans votre église.";
+      }
+      if (new Date(fin).getTime() <= new Date(debut).getTime()) {
+        return "La fin de la réservation doit être après son début.";
+      }
+      if (statut === "confirmee") {
+        const { rowCount } = await db2.query(
+          `SELECT 1 FROM reservations_salles
+            WHERE salle_id = $1 AND church_id = $2 AND statut = 'confirmee' AND id <> $5
+              AND debut < $4::timestamptz AND fin > $3::timestamptz`,
+          [salleId, churchId, debut, fin, id],
+        );
+        if ((rowCount ?? 0) > 0) return "Cette salle est déjà réservée sur ce créneau.";
+      }
+      return null;
+    },
   });
 
   registerCrud(app, db, {

@@ -91,7 +91,7 @@ try {
   check("bascule vers la sous-église", r.status === 200 && !!tokSousEglise, `${r.status} ${JSON.stringify(d)}`);
   r = await fetch(`${BASE}/membres/${testId}`, { method: "DELETE", headers: H(tokSousEglise) });
   d = await j(r);
-  check("DELETE /membres du TEST échoue 400 (clé transferts_membre)", r.status === 400, `${r.status} ${JSON.stringify(d)}`);
+  check("DELETE /membres du TEST échoue 409 (E19, membre lié à un transfert)", r.status === 409 && /transfert/i.test(d.message ?? ""), `${r.status} ${JSON.stringify(d)}`);
   check("membre TEST toujours présent", (await count(`SELECT id FROM members WHERE id='${testId}'`)) === 1);
 
   console.log("Droits :");
