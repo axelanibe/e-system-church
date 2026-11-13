@@ -550,6 +550,52 @@ abstract class ApiService {
 
   Future<Contribution> setContributionStatus(String id, String status);
 
+  // -- Finances complètes (tranche T7) --------------------------------------
+  Future<CotisationConfig?> getCotisationsConfig();
+
+  Future<CotisationConfig> saveCotisationsConfig({
+    required int montantFcfa,
+    String? periodicite,
+    bool? actif,
+  });
+
+  Future<SuiviCotisations> getCotisationsSuivi({String? periode});
+
+  Future<List<CompteBancaire>> getComptesBancaires();
+
+  Future<CompteBancaire> createCompteBancaire({
+    required String banque,
+    String? titulaire,
+    String? numeroCompte,
+    String type = 'banque',
+    String devise = 'FCFA',
+  });
+
+  Future<CompteBancaire> updateCompteBancaire(
+    String id, {
+    String? banque,
+    String? titulaire,
+    String? numeroCompte,
+    String? type,
+    String? devise,
+    bool? actif,
+  });
+
+  Future<void> deleteCompteBancaire(String id);
+
+  Future<Rapprochement> getRapprochement({int? annee, int? mois});
+
+  Future<List<ClotureCaisse>> getCloturesCaisse();
+
+  Future<ClotureCaisse> cloturerCaisse({
+    required String periode,
+    int? soldeCompteFcfa,
+    String? commentaire,
+  });
+
+  /// Reçu numéroté en PDF (octets) : `GET /contributions/:id/recu.pdf`.
+  Future<Uint8List> telechargerRecuPdf(String id);
+
   // -- Campagnes de collecte (US2) -----------------------------------------
   Future<List<Campagne>> getCampagnes();
 
@@ -928,6 +974,24 @@ abstract class ApiService {
 
   /// Prévu mensuel contre réel, par catégorie et par poste.
   Future<SuiviMensuel> getSuiviMensuel(
+      {required int annee, required int mois});
+
+  /// Budgets mensuels par département (tranche T7).
+  Future<List<BudgetDepartement>> getBudgetsDepartements(
+      {int? annee, int? mois, String? departementId});
+
+  /// Crée ou remplace le budget mensuel d'un département.
+  Future<BudgetDepartement> creerBudgetDepartement({
+    required String departementId,
+    required int annee,
+    required int mois,
+    required int montantPrevu,
+  });
+
+  Future<void> supprimerBudgetDepartement(String id);
+
+  /// Prévu mensuel contre réel, par département, avec alerte de dépassement.
+  Future<SuiviDepartements> getSuiviDepartements(
       {required int annee, required int mois});
 
   /// Rapport des dépenses, mensuel (mois donné) ou annuel.

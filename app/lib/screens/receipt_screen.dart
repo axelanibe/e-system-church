@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/contribution.dart';
 import '../state/app_state.dart';
@@ -8,8 +9,9 @@ import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 
 /// Reçu d'une contribution (`GET /contributions/:id`) : détail complet,
-/// avec confirmation / annulation quand elle est en attente (admin ou
-/// trésorier seulement).
+/// avec confirmation par le pasteur seul et annulation (admin ou
+/// trésorier) quand elle est en attente. Une contribution confirmée est
+/// verrouillée : son reçu numéroté est téléchargeable en PDF.
 class ReceiptScreen extends StatefulWidget {
   final String contributionId;
 
@@ -48,6 +50,26 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       if (mounted) showApiError(context, e);
     } finally {
       if (mounted) setState(() => _working = false);
+    }
+  }
+
+  /// Télécharge le reçu numéroté en PDF (contribution confirmée).
+  Future<void> _telechargerRecu(Contribution c) async {
+    try {
+      final bytes =
+          await context.read<AppState>().api.telechargerRecuPdf(c.id);
+      final nom = 'recu-${c.recuNumero ?? c.id}.pdf';
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(bytes, name: nom, mimeType: 'application/pdf'),
+          ],
+          subject: 'Reçu ${c.recuNumero ?? ''}',
+        ),
+      );
+      if (mounted) showSuccess(context, 'Reçu partagé.');
+    } catch (e) {
+      if (mounted) showApiError(context, e);
     }
   }
 
@@ -158,9 +180,8 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                           children: [
                             _row(context, 'Moyen', c.paymentLabel),
                             _row(context, 'Référence', c.paymentRef),
-                            _row(
-                                context,
-                                'Membre',
+                            _row(context, 'Reçu', c.recuNumero),
+                            _row(context, 'Membre',
                                 c.membreNom == null
                                     ? null
                                     : '${c.membreNom} (${c.membreMatricule ?? ''})'),
@@ -171,19 +192,38 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                         ),
                       ),
                     ),
-                    if (c.status == 'en_attente' &&
-                        state.canManageFinances) ...[
+                    if (c.status == 'confirme') ...[
                       const SizedBox(height: 24),
                       FilledButton.icon(
                         onPressed: _working
                             ? null
-                            : () => _setStatus(
-                                'confirme', c.type == 'depense'),
-                        icon: const Icon(Icons.check),
-                        label: Text(c.type == 'depense'
-                            ? 'Confirmer la dépense'
-                            : 'Confirmer la contribution'),
+                            : () => _telechargerRecu(c),
+                        icon: const Icon(Icons.description_outlined),
+                        label: const Text('Télécharger le reçu (PDF)'),
                       ),
+                    ],
+                    if (c.status == 'en_attente' &&
+                        state.canManageFinances) ...[
+                      const SizedBox(height: 24),
+                      // Seul le pasteur (admin de l'église) confirme :
+                      // le trésorier enregistre, il ne confirme pas
+                      // (le serveur refuse sa confirmation, 403).
+                      if (state.isAdmin)
+                        FilledButton.icon(
+                          onPressed: _working
+                              ? null
+                              : () => _setStatus(
+                                  'confirme', c.type == 'depense'),
+                          icon: const Icon(Icons.check),
+                          label: Text(c.type == 'depense'
+                              ? 'Confirmer la dépense'
+                              : 'Confirmer la contribution'),
+                        ),
+                      if (!state.isAdmin)
+                        const Text(
+                          'Seul le pasteur confirme une contribution.',
+                          textAlign: TextAlign.center,
+                        ),
                       const SizedBox(height: 12),
                       OutlinedButton.icon(
                         onPressed: _working
