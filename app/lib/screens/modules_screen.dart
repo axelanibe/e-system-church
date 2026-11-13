@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../config/app_theme.dart';
 import 'biens_screen.dart';
+import 'cultes_direct_screen.dart';
 import 'cultes_screen.dart';
 import 'enfants_screen.dart';
 import 'familles_screen.dart';
@@ -36,6 +37,13 @@ class ModulesScreen extends StatelessWidget {
         label: 'Cultes',
         description: 'Types de culte, cultes, ordre du culte et événements.',
         screen: CultesScreen(),
+      ),
+      _ModuleCard(
+        icon: Icons.timer_outlined,
+        couleur: AppTheme.violetCultes,
+        label: 'Cultes en direct',
+        description: 'Conducteur chronométré, transposition, portes.',
+        screen: CultesDirectScreen(),
       ),
       _ModuleCard(
         icon: Icons.how_to_reg_outlined,
