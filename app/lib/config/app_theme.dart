@@ -7,7 +7,12 @@ import 'package:flutter/material.dart';
 /// bleu nuit #0B1F3A, or #D4A72C, or foncé #8A6A12, fond papier
 /// #F5F6FA. Le rouge ne sert qu'aux erreurs et aux alertes. Elle
 /// remplace la palette Vision (cyprès #1E4D3B, terracotta #C86D51,
-/// alabaster #F7F5F0), abandonnée le 12 novembre 2026.
+/// alabaster #F7F5F0), abandonnée le 12 novembre 2026. Exception
+/// tranchée par Axel le 13 novembre 2026, reprise de la maquette
+/// de refonte : l'or d'attention #B8860B sert aux états actifs et
+/// aux éléments d'attention, car l'or actuel ne capte pas
+/// l'attention sur fond clair. Il ne remplace pas l'or foncé, qui
+/// garde les textes courants sur papier.
 /// Typographies : Inter pour le corps, Plus Jakarta Sans pour les
 /// titres, JetBrains Mono pour les codes et matricules. Les polices
 /// sont embarquées dans le build (pubspec.yaml, fichiers TTF
@@ -35,6 +40,12 @@ class AppTheme {
 
   /// Or foncé, accent secondaire, texte sur papier 4,68:1.
   static const Color orFonce = Color(0xFF8A6A12);
+
+  /// Or d'attention, états actifs et éléments d'attention sur fond
+  /// clair (maquette de refonte, 13 novembre 2026). Contraste
+  /// 3,03:1 sur papier : libellés gras et icônes seulement, jamais
+  /// le corps de texte.
+  static const Color orAttention = Color(0xFFB8860B);
 
   /// Or clair, fonds doux (badge « Église mère », indicateurs).
   static const Color orClair = Color(0xFFF7F0DA);
@@ -100,19 +111,19 @@ class AppTheme {
           side: const BorderSide(color: bordure),
         ),
       ),
-      // Puces de filtre : sélection or clair sur papier, jamais le
-      // bleu clair par défaut du thème Material. Non sélectionnée :
-      // blanche, bordure claire, texte bleu nuit.
+      // Puces de filtre : sélection bleu nuit, texte blanc, coche or,
+      // pour que l'actif se voie au premier coup d'œil. Non
+      // sélectionnée : blanche, bordure claire, texte bleu nuit.
       chipTheme: const ChipThemeData(
         backgroundColor: Colors.white,
-        selectedColor: orClair,
-        checkmarkColor: bleuNuit,
+        selectedColor: bleuNuit,
+        checkmarkColor: or,
         labelStyle: TextStyle(
             fontFamily: 'Inter', fontSize: 14, color: bleuNuit),
         secondaryLabelStyle: TextStyle(
             fontFamily: 'Inter',
             fontSize: 14,
-            color: bleuNuit,
+            color: Colors.white,
             fontWeight: FontWeight.bold),
         side: BorderSide(color: bordure),
         shape: RoundedRectangleBorder(
@@ -137,16 +148,36 @@ class AppTheme {
         ),
         indicatorSize: TabBarIndicatorSize.tab,
       ),
-      navigationBarTheme: const NavigationBarThemeData(
+      // Barre du bas : l'onglet actif se voit au premier coup d'œil,
+      // pastille or, icône bleu nuit, libellé or d'attention gras.
+      // Inactif : bleu nuit à 55 %, jamais d'or pâle.
+      navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white,
-        indicatorColor: orClair,
-        labelTextStyle: WidgetStatePropertyAll(
-          TextStyle(fontFamily: 'Inter', fontSize: 11, color: bleuNuit),
-        ),
+        indicatorColor: or,
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return IconThemeData(
+            color: selected
+                ? bleuNuit
+                : bleuNuit.withValues(alpha: 0.55),
+          );
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 11,
+            fontWeight:
+                selected ? FontWeight.bold : FontWeight.normal,
+            color: selected
+                ? orAttention
+                : bleuNuit.withValues(alpha: 0.55),
+          );
+        }),
       ),
       navigationRailTheme: const NavigationRailThemeData(
         backgroundColor: Colors.white,
-        indicatorColor: orClair,
+        indicatorColor: or,
       ),
       drawerTheme: const DrawerThemeData(
         backgroundColor: Colors.white,

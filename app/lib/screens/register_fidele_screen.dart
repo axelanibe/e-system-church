@@ -188,17 +188,17 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.cake_outlined),
-                    title: Text(
-                      _birthDate == null
-                          ? 'Date de naissance (optionnel)'
-                          : 'Date de naissance : ${formatDate(_birthDate)}',
-                    ),
+                    title: const Text('Date de naissance (optionnel)'),
+                    subtitle: _birthDate == null
+                        ? null
+                        : Text(formatDate(_birthDate)),
                     trailing: _birthDate == null
                         ? const Icon(Icons.calendar_today_outlined)
-                        : TextButton(
+                        : IconButton(
+                            tooltip: 'Effacer',
+                            icon: const Icon(Icons.clear),
                             onPressed: () =>
                                 setState(() => _birthDate = null),
-                            child: const Text('Effacer'),
                           ),
                     onTap: _choisirDateNaissance,
                   ),
@@ -208,10 +208,7 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Sexe (optionnel)',
                       hintText: 'Non précisé',
-                      helperText:
-                          'Votre matricule est construit à partir de votre '
-                          'nom, de votre date de naissance et de votre sexe '
-                          '(système du permis du Québec).',
+                      helperText: 'Sert à construire votre matricule.',
                       helperMaxLines: 2,
                       prefixIcon: Icon(Icons.person_outline),
                       border: OutlineInputBorder(),
@@ -236,8 +233,8 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                       labelText: 'Code fidèle de l’église (ex. ESC-F-0411)',
                       helperText:
                           'Demandez le code fidèle à votre pasteur ou à un '
-                          'responsable, il ressemble à ESC-F-0411. Le tiret '
-                          's’ajoute tout seul : tapez seulement les caractères.',
+                          'responsable. Le tiret s’ajoute tout seul : tapez '
+                          'seulement les caractères.',
                       helperMaxLines: 2,
                       prefixIcon: Icon(Icons.key_outlined),
                       border: OutlineInputBorder(),

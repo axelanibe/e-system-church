@@ -47,6 +47,10 @@ class ReservationSalle {
     this.createdAt,
   });
 
+  /// Libellé lisible du statut, jamais la valeur brute.
+  String get statutLabel =>
+      switch (statut) { 'annulee' => 'Annulée', _ => 'Confirmée' };
+
   factory ReservationSalle.fromJson(Map<String, dynamic> json) =>
       ReservationSalle(
         id: json['id'] as String,

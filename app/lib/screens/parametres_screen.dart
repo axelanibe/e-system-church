@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/membres_complement.dart';
+import '../models/member.dart';
 import '../models/parametres.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
@@ -24,6 +26,8 @@ class _ParametresScreenState extends State<ParametresScreen> {
   late Future<EgliseParametres> _parametresFuture;
   late Future<List<RoleEglise>> _rolesFuture;
   late Future<List<AuditEntree>> _auditFuture;
+  late Future<List<Departement>> _departementsFuture;
+  late Future<MemberPage> _membresFuture;
 
   final _adresseController = TextEditingController();
   final _villeController = TextEditingController();
@@ -43,6 +47,8 @@ class _ParametresScreenState extends State<ParametresScreen> {
     _parametresFuture = context.read<AppState>().api.getParametres();
     _rolesFuture = context.read<AppState>().api.getRoles();
     _auditFuture = context.read<AppState>().api.getAudit();
+    _departementsFuture = context.read<AppState>().api.getDepartements();
+    _membresFuture = context.read<AppState>().api.getMembers();
   }
 
   @override
@@ -67,6 +73,10 @@ class _ParametresScreenState extends State<ParametresScreen> {
       if (_tab == 0) _parametresFuture = api.getParametres();
       if (_tab == 1) _rolesFuture = api.getRoles();
       if (_tab == 2) _auditFuture = api.getAudit();
+      if (_tab == 3) {
+        _departementsFuture = api.getDepartements();
+        _membresFuture = api.getMembers();
+      }
     });
   }
 
@@ -100,6 +110,184 @@ class _ParametresScreenState extends State<ParametresScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// Gestion des départements : créer, renommer, supprimer. Les
+  /// départements restent aussi le filtre et le sélecteur en contexte
+  /// (liste des membres, formulaire membre).
+  Future<void> _createDepartement(List<Member> membres) async {
+    final nomController = TextEditingController();
+    final descriptionController = TextEditingController();
+    String? responsableId;
+    await showCreateDialog(
+      context: context,
+      title: 'Nouveau département',
+      saveLabel: 'Créer',
+      fields: [
+        dialogTextField(controller: nomController, label: 'Nom du département'),
+        dialogTextField(
+            controller: descriptionController, label: 'Description'),
+        dialogDropdown<String?>(
+          value: responsableId,
+          label: 'Responsable',
+          options: {
+            null: 'Aucun',
+            for (final m in membres) m.id: '${m.fullName} (${m.matricule})',
+          },
+          onChanged: (v) => responsableId = v,
+        ),
+      ],
+      isValid: () => nomController.text.trim().isNotEmpty,
+      onSave: () async {
+        try {
+          await context.read<AppState>().api.createDepartement(
+                nom: nomController.text.trim(),
+                description: descriptionController.text.trim().isEmpty
+                    ? null
+                    : descriptionController.text.trim(),
+                responsableMemberId: responsableId,
+              );
+          if (mounted) showSuccess(context, 'Département créé.');
+          _refresh();
+        } catch (e) {
+          if (mounted) showApiError(context, e);
+        }
+      },
+    );
+  }
+
+  /// Renomme un département (les membres rattachés gardent leur département,
+  /// seul le libellé change).
+  Future<void> _renameDepartement(Departement departement) async {
+    final nomController = TextEditingController(text: departement.nom);
+    await showCreateDialog(
+      context: context,
+      title: 'Renommer le département',
+      saveLabel: 'Enregistrer',
+      fields: [
+        dialogTextField(controller: nomController, label: 'Nom du département'),
+      ],
+      isValid: () => nomController.text.trim().length >= 2,
+      onSave: () async {
+        try {
+          await context.read<AppState>().api.updateDepartement(
+                departement.id,
+                nom: nomController.text.trim(),
+              );
+          if (mounted) showSuccess(context, 'Département renommé.');
+          _refresh();
+        } catch (e) {
+          if (mounted) showApiError(context, e);
+        }
+      },
+    );
+  }
+
+  Future<void> _deleteDepartement(Departement departement) async {
+    final confirmed = await confirmDelete(
+      context,
+      'Supprimer définitivement le département « ${departement.nom} » ?',
+    );
+    if (!confirmed) return;
+    if (!mounted) return;
+    try {
+      await context.read<AppState>().api.deleteDepartement(departement.id);
+      if (mounted) showSuccess(context, 'Département supprimé.');
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
+  Widget _departementsTab() {
+    return FutureBuilder<MemberPage>(
+      future: _membresFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AppLoading();
+        }
+        if (snapshot.hasError) {
+          return AppError(
+            message: snapshot.error.toString(),
+            onRetry: _refresh,
+          );
+        }
+        final membres = snapshot.data!.membres;
+        final noms = {for (final m in membres) m.id: m.fullName};
+        return Column(
+          children: [
+            searchField(
+              controller: _searchController,
+              onChanged: (v) => setState(() => _query = v.trim()),
+              label: 'Rechercher un département',
+            ),
+            Expanded(
+              child: FutureBuilder<List<Departement>>(
+                future: _departementsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const AppLoading();
+                  }
+                  if (snapshot.hasError) {
+                    return AppError(
+                      message: snapshot.error.toString(),
+                      onRetry: _refresh,
+                    );
+                  }
+                  final items = snapshot.data!
+                      .where((d) => _matches(d.nom))
+                      .toList();
+                  if (items.isEmpty) {
+                    return EmptyState(
+                      icon: Icons.group_work_outlined,
+                      message: snapshot.data!.isEmpty
+                          ? 'Aucun département pour l’instant.'
+                          : 'Aucun département ne correspond à la recherche.',
+                      actionLabel: 'Créer un département',
+                      onAction: () => _createDepartement(membres),
+                    );
+                  }
+                  return RefreshIndicator(
+                    onRefresh: () async => _refresh(),
+                    child: ListView.builder(
+                      itemCount: items.length,
+                      itemBuilder: (context, index) {
+                        final d = items[index];
+                        return ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.group_work_outlined),
+                          ),
+                          title: Text(d.nom),
+                          subtitle: Text(
+                            '${d.responsableMemberId != null ? 'Responsable : ${noms[d.responsableMemberId] ?? '—'}' : 'Sans responsable'}'
+                            '${d.description != null ? ' · ${d.description}' : ''}',
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined),
+                                tooltip: 'Renommer',
+                                onPressed: () => _renameDepartement(d),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: 'Supprimer',
+                                onPressed: () => _deleteDepartement(d),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _parametresTab() {
@@ -321,7 +509,7 @@ class _ParametresScreenState extends State<ParametresScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Paramètres de l’église'),
@@ -336,6 +524,7 @@ class _ParametresScreenState extends State<ParametresScreen> {
               Tab(text: 'Paramètres'),
               Tab(text: 'Rôles'),
               Tab(text: 'Journal d’audit'),
+              Tab(text: 'Départements'),
             ],
           ),
         ),
@@ -344,6 +533,7 @@ class _ParametresScreenState extends State<ParametresScreen> {
             _parametresTab(),
             _rolesTab(),
             _auditTab(),
+            _departementsTab(),
           ],
         ),
       ),

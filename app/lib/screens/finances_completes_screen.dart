@@ -42,20 +42,21 @@ class _DonneesHub {
   });
 }
 
-/// Finances complètes (tranche T7, projection validée) : indicateurs du
-/// mois et de la caisse, puis une carte par fonction (cotisations,
-/// comptes bancaires, rapprochement, clôture, reçus, budgets par
-/// département), chacune ouvrant son écran. Le rôle « membre » simple
-/// n'a pas accès à cet écran.
-class FinancesCompletesScreen extends StatefulWidget {
-  const FinancesCompletesScreen({super.key});
+/// Contenu de l'onglet « Finances complètes » (tranche T7) :
+/// indicateurs du mois et de la caisse, puis une carte par fonction
+/// (cotisations, comptes bancaires, rapprochement, clôture, reçus,
+/// budgets par département), chacune ouvrant son écran. Le rôle
+/// « membre » simple n'a pas accès à cet écran.
+class ContenuFinancesCompletes extends StatefulWidget {
+  const ContenuFinancesCompletes({super.key});
 
   @override
-  State<FinancesCompletesScreen> createState() =>
-      _FinancesCompletesScreenState();
+  State<ContenuFinancesCompletes> createState() =>
+      _ContenuFinancesCompletesState();
 }
 
-class _FinancesCompletesScreenState extends State<FinancesCompletesScreen> {
+class _ContenuFinancesCompletesState
+    extends State<ContenuFinancesCompletes> {
   late Future<_DonneesHub> _future;
 
   @override
@@ -136,9 +137,7 @@ class _FinancesCompletesScreenState extends State<FinancesCompletesScreen> {
         message: 'Votre rôle ne donne pas accès aux finances de l’église.',
       );
     }
-    return Scaffold(
-      appBar: AppBar(title: const Text('Finances complètes')),
-      body: FutureBuilder<_DonneesHub>(
+    return FutureBuilder<_DonneesHub>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -151,6 +150,10 @@ class _FinancesCompletesScreenState extends State<FinancesCompletesScreen> {
             );
           }
           final d = snapshot.data!;
+          // On ne clôture qu'un mois terminé, jamais le mois en cours.
+          final aCloturer = dernierMoisTermine();
+          final cloturee =
+              d.clotures.any((c) => c.periode == aCloturer);
           final suivi = d.suiviCotisations;
           final budgetsDefinis = d.suiviDepartements.parDepartements
               .where((l) => l.budgetDefini)
@@ -236,11 +239,16 @@ class _FinancesCompletesScreenState extends State<FinancesCompletesScreen> {
                 ),
                 _CarteFonction(
                   icone: Icons.lock_outline,
-                  titre: 'Clôture',
+                  titre: 'Clôture de période',
                   texte: d.clotures.isEmpty
                       ? 'Aucune période clôturée pour le moment.'
-                      : 'Dernière clôture : ${d.clotures.first.periode}',
-                  actionLabel: 'Clôturer',
+                      : 'Dernière clôture : ${libellePeriodeMois(d.clotures.first.periode)}',
+                  badge: cloturee ? 'Clôturé' : 'Ouvert',
+                  badgeColor:
+                      cloturee ? AppTheme.vertFonce : Colors.grey,
+                  infoLabel: 'Période à clôturer :',
+                  infoValeur: libellePeriodeMois(aCloturer),
+                  actionLabel: 'Clôturer la période',
                   onTap: () => _ouvrir(const ClotureCaisseScreen()),
                 ),
                 _CarteFonction(
@@ -292,13 +300,15 @@ class _FinancesCompletesScreenState extends State<FinancesCompletesScreen> {
             ),
           );
         },
-      ),
-    );
+      );
   }
 }
 
 /// Une carte de fonction de l'écran Finances complètes : titre, texte,
-/// et valeur, badge ou action selon la fonction.
+/// et valeur, badge ou action selon la fonction. Mise en page
+/// horizontale : le texte prend toute la largeur restante, le bouton
+/// d'action est en dessous, jamais en trailing d'un ListTile (la carte
+/// Clôture s'affichait en colonne d'une lettre avec un ListTile).
 class _CarteFonction extends StatelessWidget {
   final IconData icone;
   final String titre;
@@ -307,6 +317,9 @@ class _CarteFonction extends StatelessWidget {
   final String? valeur;
   final bool valeurAlerte;
   final String? badge;
+  final Color? badgeColor;
+  final String? infoLabel;
+  final String? infoValeur;
   final String? actionLabel;
   final VoidCallback onTap;
 
@@ -318,6 +331,9 @@ class _CarteFonction extends StatelessWidget {
     this.valeur,
     this.valeurAlerte = false,
     this.badge,
+    this.badgeColor,
+    this.infoLabel,
+    this.infoValeur,
     this.actionLabel,
     required this.onTap,
   });
@@ -325,42 +341,96 @@ class _CarteFonction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: ListTile(
-        leading: Icon(icone),
-        title: Text(titre),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(texte),
-            if (sousTexte != null)
-              Text(
-                sousTexte!,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-          ],
-        ),
-        trailing: valeur != null
-            ? Text(
-                valeur!,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: valeurAlerte
-                      ? AppTheme.rougeErreur
-                      : AppTheme.bleuNuit,
-                ),
-              )
-            : badge != null
-                ? StatusChip(
-                    label: badge!,
-                    color: AppTheme.bleuNuit,
-                  )
-                : actionLabel != null
-                    ? OutlinedButton(
-                        onPressed: onTap,
-                        child: Text(actionLabel!),
-                      )
-                    : const Icon(Icons.chevron_right),
+      child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icone, color: AppTheme.bleuNuit),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          titre,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(texte),
+                        if (sousTexte != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            sousTexte!,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (valeur != null) ...[
+                    const SizedBox(width: 12),
+                    Text(
+                      valeur!,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: valeurAlerte
+                            ? AppTheme.rougeErreur
+                            : AppTheme.vertFonce,
+                      ),
+                    ),
+                  ] else if (badge != null) ...[
+                    const SizedBox(width: 12),
+                    StatusChip(
+                      label: badge!,
+                      color: badgeColor ?? AppTheme.bleuNuit,
+                    ),
+                  ] else if (actionLabel == null) ...[
+                    const SizedBox(width: 12),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ],
+              ),
+              if (infoLabel != null && infoValeur != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.fondPapier,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(infoLabel!),
+                      Text(
+                        infoValeur!,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (actionLabel != null) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: onTap,
+                    child: Text(actionLabel!),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

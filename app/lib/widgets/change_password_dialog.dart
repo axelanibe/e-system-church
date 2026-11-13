@@ -17,13 +17,17 @@ Future<void> showChangePasswordDialog(BuildContext context) async {
     saveLabel: 'Changer',
     fields: [
       dialogTextField(
-          controller: ancienController, label: 'Mot de passe actuel'),
+          controller: ancienController,
+          label: 'Mot de passe actuel',
+          obscureText: true),
       dialogTextField(
           controller: nouveauController,
-          label: 'Nouveau mot de passe (8 caractères minimum)'),
+          label: 'Nouveau mot de passe (8 caractères minimum)',
+          obscureText: true),
       dialogTextField(
           controller: confirmController,
-          label: 'Confirmer le nouveau mot de passe'),
+          label: 'Confirmer le nouveau mot de passe',
+          obscureText: true),
     ],
     isValid: () =>
         ancienController.text.isNotEmpty &&

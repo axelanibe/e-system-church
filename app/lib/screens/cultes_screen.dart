@@ -10,6 +10,20 @@ import '../widgets/dialog_helpers.dart';
 
 /// Module 2 — Cultes et programmes : types de culte, cultes (avec ordre
 /// du culte en détail) et événements spéciaux.
+/// Nom du jour de la semaine (0 = dimanche … 6 = samedi).
+String _nomJour(int jour) {
+  const noms = [
+    'Dimanche',
+    'Lundi',
+    'Mardi',
+    'Mercredi',
+    'Jeudi',
+    'Vendredi',
+    'Samedi',
+  ];
+  return (jour >= 0 && jour < noms.length) ? noms[jour] : 'Jour $jour';
+}
+
 class CultesScreen extends StatefulWidget {
   const CultesScreen({super.key});
 
@@ -398,7 +412,7 @@ class _CultesScreenState extends State<CultesScreen> {
                       ),
                       title: Text(t.nom),
                       subtitle: Text(
-                        '${t.jourSemaine != null ? 'Jour ${t.jourSemaine}' : '—'}'
+                        '${t.jourSemaine != null ? _nomJour(t.jourSemaine!) : '—'}'
                         '${t.heureDebut != null ? ' · ${t.heureDebut}' : ''}'
                         '${t.dureeMinutes != null ? ' · ${t.dureeMinutes} min' : ''}'
                         '${t.lieu != null ? ' · ${t.lieu}' : ''}',
@@ -460,7 +474,7 @@ class _CultesScreenState extends State<CultesScreen> {
                       ),
                       title: Text(e.titre),
                       subtitle: Text(
-                        '${e.type} · ${afficherDate(e.dateDebut)}'
+                        '${e.typeLabel} · ${afficherDate(e.dateDebut)}'
                         '${e.lieu != null ? ' · ${e.lieu}' : ''}'
                         '${e.responsable != null ? ' · ${e.responsable}' : ''}',
                       ),
@@ -515,8 +529,11 @@ class _CultesScreenState extends State<CultesScreen> {
             }
           },
           icon: const Icon(Icons.add),
-          label: Text(
-              _tab == 0 ? 'Culte' : _tab == 1 ? 'Type' : 'Événement'),
+          label: Text(_tab == 0
+              ? 'Nouveau culte'
+              : _tab == 1
+                  ? 'Nouveau type'
+                  : 'Nouvel événement'),
         ),
       ),
     );

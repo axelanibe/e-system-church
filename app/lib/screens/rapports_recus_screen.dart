@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/rapport_annexe.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
+import '../widgets/common_widgets.dart';
 import 'exemple_bilan_screen.dart';
 
 /// Rapports reçus (tranche P5) : l'église mère lit ici les rapports
@@ -82,14 +83,9 @@ class _RapportsRecusScreenState extends State<RapportsRecusScreen> {
                       ),
                       const SizedBox(height: 16),
                       if (rapports.isEmpty)
-                        const Card(
-                          child: Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Text(
-                              'Aucun rapport reçu pour l’instant.',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                          ),
+                        const EmptyState(
+                          icon: Icons.mail_outline,
+                          message: 'Aucun rapport reçu pour l’instant.',
                         )
                       else
                         ...rapports.map(
@@ -139,7 +135,7 @@ class _RapportsRecusScreenState extends State<RapportsRecusScreen> {
                                   if (r.enAttenteEnvoi) ...[
                                     const SizedBox(height: 8),
                                     const Text(
-                                      'En attente d’envoi par e-mail (Lot B).',
+                                      'En attente d’envoi par e-mail.',
                                       style: TextStyle(fontSize: 16),
                                     ),
                                   ],
@@ -172,7 +168,7 @@ class _RapportsRecusScreenState extends State<RapportsRecusScreen> {
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.orClair,
+                                      color: AppTheme.bleuNuit,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: const Text(
@@ -180,6 +176,7 @@ class _RapportsRecusScreenState extends State<RapportsRecusScreen> {
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   ),

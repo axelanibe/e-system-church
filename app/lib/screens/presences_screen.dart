@@ -238,7 +238,6 @@ class _PresencesScreenState extends State<PresencesScreen> {
                   onSubmitted: (_) => _pointer(),
                   decoration: const InputDecoration(
                     labelText: 'Matricule du membre',
-                    prefixIcon: Icon(Icons.qr_code_scanner),
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),

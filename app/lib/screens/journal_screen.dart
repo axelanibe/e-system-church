@@ -193,9 +193,8 @@ class _JournalScreenState extends State<JournalScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Journal privé pour prendre vos notes, comme dans '
-                          'CONNEXION PROPHÉTIQUE. Vos notes restent privées, '
-                          'elles ne sont jamais envoyées.',
+                          'Journal privé pour prendre vos notes. Vos notes '
+                          'restent privées, elles ne sont jamais envoyées.',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         const SizedBox(height: 16),
@@ -232,7 +231,7 @@ class _JournalScreenState extends State<JournalScreen> {
                                     note.titre.isEmpty
                                         ? 'Sans titre'
                                         : note.titre,
-                                    maxLines: 1,
+                                    maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   subtitle: Text(
@@ -307,14 +306,7 @@ class _JournalScreenState extends State<JournalScreen> {
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Note privée, conservée dans votre '
-                                    'journal seulement.',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall,
-                                  ),
+
                                 ],
                               ),
                             ),
@@ -331,9 +323,9 @@ class _JournalScreenState extends State<JournalScreen> {
                         const Padding(
                           padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
                           child: Text(
-                            'Export et import JSON par fusion, comme dans '
-                            'CONNEXION PROPHÉTIQUE. L’import ajoute vos notes '
-                            'sans effacer celles déjà présentes.',
+                            'Export et import JSON par fusion. L’import '
+                            'ajoute vos notes sans effacer celles déjà '
+                            'présentes.',
                           ),
                         ),
                         Row(

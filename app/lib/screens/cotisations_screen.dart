@@ -130,11 +130,6 @@ class _CotisationsScreenState extends State<CotisationsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          'Votre historique personnel, avec vos reçus.',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        const SizedBox(height: 16),
                         Card(
                           child: Padding(
                             padding: const EdgeInsets.all(20),
@@ -165,13 +160,6 @@ class _CotisationsScreenState extends State<CotisationsScreen> {
                         ),
                         const SizedBox(height: 16),
                         const SectionTitle(title: 'Historique'),
-                        const Padding(
-                          padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-                          child: Text(
-                            'Chaque cotisation affiche sa date, son '
-                            'montant et son reçu.',
-                          ),
-                        ),
                         if (dons.isEmpty)
                           const EmptyState(
                             icon: Icons.account_balance_wallet_outlined,
@@ -189,6 +177,8 @@ class _CotisationsScreenState extends State<CotisationsScreen> {
                                         ),
                                         title: Text(
                                           '${Contribution.labelForType(c.type)} — ${formatMontant(c.amountFcfa, state.devise)}',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                         subtitle: Text(
                                           '${formatDate(c.createdAt)} · ${c.statusLabel}',
@@ -214,13 +204,6 @@ class _CotisationsScreenState extends State<CotisationsScreen> {
                           onPressed: _payer,
                           icon: const Icon(Icons.payments_outlined),
                           label: const Text('Payer ma cotisation'),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Le reçu de chaque paiement reste disponible '
-                          'dans cet historique.',
-                          style: Theme.of(context).textTheme.bodySmall,
-                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),

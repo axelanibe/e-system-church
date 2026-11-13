@@ -56,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 2:
         return FinancesScreen(key: cle);
       case 3:
-        return FamillesScreen(key: cle, ongletInitial: 1);
+        return FamillesScreen(key: cle);
       default:
         return DashboardScreen(key: cle);
     }
@@ -69,8 +69,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Libellés courts, une ligne : « Accueil », « Membres »,
     // « Finances », « Départements ». Les titres complets restent
-    // dans _titles. Le hub « Modules » reste accessible par le
-    // tiroir court, il n'est plus un onglet (copie de l'artefact).
+    // dans _titles. Chaque module est joignable par le tiroir, une
+    // seule entrée par fonctionnalité, jamais par une grille.
     const destinations = [
       NavigationDestination(
           icon: Icon(Icons.dashboard_outlined),
@@ -124,9 +124,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 BarrePerimetre.depuisContexte(context, courant: espace),
                 EnTeteClair(
                   titre: _titles[courant],
-                  sousTitre: courant == 0
-                      ? 'Application finale, tranches T1 à T13'
-                      : null,
                   leading: Builder(
                     builder: (context) => IconButton(
                       icon: const Icon(Icons.menu),

@@ -65,4 +65,10 @@ class PlanningServiteur {
         statut: json['statut'] as String? ?? 'prevu',
         createdAt: parseDate(json['created_at'] as String?),
       );
+  /// Libellé lisible du statut, jamais la valeur brute.
+  String get statutLabel => switch (statut) {
+        'confirme' => 'Confirmé',
+        'absent' => 'Absent',
+        _ => 'Prévu',
+      };
 }

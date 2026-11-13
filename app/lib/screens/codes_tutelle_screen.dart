@@ -120,7 +120,7 @@ class _CodesTutelleScreenState extends State<CodesTutelleScreen> {
                             c.estActif
                                 ? 'Actif · créé le ${formatDate(c.createdAt)}'
                                 : c.status == 'utilise'
-                                    ? 'Utilisé par ${c.utiliseeParNom ?? ''} (${c.utiliseeParCode ?? ''})'
+                                    ? 'Utilisé par ${[c.utiliseeParNom, c.utiliseeParCode].where((e) => (e ?? '').isNotEmpty).join(' · ')}'
                                     : 'Annulé',
                           ),
                           trailing: Row(

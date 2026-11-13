@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
+import '../widgets/common_widgets.dart';
 
 /// Mode de l'écran : réinitialisation (lien « mot de passe oublié ») ou
 /// initialisation (lien d'invitation de l'admin).
@@ -74,7 +75,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       }
       if (mounted) setState(() => _done = true);
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = messageErreurSimple(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -211,9 +212,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     child: CircularProgressIndicator(
                                         strokeWidth: 2),
                                   )
-                                : Text(_isInitialisation
-                                    ? 'Initialiser mon mot de passe'
-                                    : 'Réinitialiser mon mot de passe'),
+                                : const Text('Valider'),
                           ),
                         ),
                       ],

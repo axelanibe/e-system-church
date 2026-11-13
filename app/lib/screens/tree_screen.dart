@@ -130,6 +130,7 @@ class _TreeScreenState extends State<TreeScreen> {
     final state = context.watch<AppState>();
 
     return Scaffold(
+      appBar: AppBar(title: const Text('Réseau')),
       body: FutureBuilder<TreeResult>(
         future: _future,
         builder: (context, snapshot) {

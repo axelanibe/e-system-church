@@ -171,8 +171,6 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
                                   decoration: const InputDecoration(
                                     labelText: 'Code d’invitation',
                                     hintText: 'Ex. ESC-0411',
-                                    helperText:
-                                        'Le tiret s’ajoute tout seul : tapez seulement les caractères.',
                                     border: OutlineInputBorder(),
                                   ),
                                 ),

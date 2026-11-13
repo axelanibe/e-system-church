@@ -93,9 +93,12 @@ class _ClotureCaisseScreenState extends State<ClotureCaisseScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     if (!state.canReadFinances) {
-      return const EmptyState(
-        icon: Icons.lock_outline,
-        message: 'Votre rôle ne donne pas accès aux finances de l’église.',
+      return Scaffold(
+        appBar: AppBar(title: const Text('Clôture de caisse')),
+        body: const EmptyState(
+          icon: Icons.block_outlined,
+          message: 'Votre rôle ne donne pas accès aux finances de l’église.',
+        ),
       );
     }
     return Scaffold(
@@ -171,7 +174,7 @@ class _ClotureCaisseScreenState extends State<ClotureCaisseScreen> {
                             ),
                             const SizedBox(height: 4),
                             const Text(
-                              'On ne clôture qu’un mois terminé, jamais le mois en cours. Une clôture ne se rouvre ni ne se supprime.',
+                              'Une clôture ne se rouvre ni ne se supprime.',
                             ),
                             const SizedBox(height: 12),
                             TextFormField(

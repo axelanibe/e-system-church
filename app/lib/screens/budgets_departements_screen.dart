@@ -150,9 +150,12 @@ class _BudgetsDepartementsScreenState
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     if (!state.canReadFinances) {
-      return const EmptyState(
-        icon: Icons.lock_outline,
-        message: 'Votre rôle ne donne pas accès aux finances de l’église.',
+      return Scaffold(
+        appBar: AppBar(title: const Text('Budgets par département')),
+        body: const EmptyState(
+          icon: Icons.lock_outline,
+          message: 'Votre rôle ne donne pas accès aux finances de l’église.',
+        ),
       );
     }
     return Scaffold(

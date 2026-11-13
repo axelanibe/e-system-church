@@ -131,15 +131,16 @@ class _AnnexeDetailScreenState extends State<AnnexeDetailScreen> {
                 ),
                 const SectionTitle(title: 'Modules de l’annexe'),
                 if (d.modules.isEmpty)
-                  const Text('Aucun module.')
+                  const EmptyState(
+                    icon: Icons.extension_outlined,
+                    message: 'Aucun module.',
+                  )
                 else
                   ...d.modules.map((m) => ListTile(
                         leading: const Icon(Icons.check_circle_outlined,
                             color: AppTheme.bleuNuit),
                         title: Text(m.label),
-                        subtitle: m.noyau
-                            ? const Text('Noyau, toujours actif')
-                            : const Text('Toujours actif'),
+                        subtitle: m.noyau ? const Text('Noyau') : null,
                       )),
               ],
             ),

@@ -50,7 +50,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Mot de passe oublié')),
+      // Pas de retour de l'AppBar : le bouton « Retour à la connexion »
+      // est la sortie explicite, l'écran est aussi une destination
+      // de lien.
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Mot de passe oublié'),
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),

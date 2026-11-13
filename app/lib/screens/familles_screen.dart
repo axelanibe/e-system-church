@@ -8,16 +8,13 @@ import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
 import 'member_detail_screen.dart';
 
-/// Module 1 — Familles, départements et cellules de l'église.
+/// Module 1 — Familles et cellules de l'église.
 /// La fiche complète d'un membre (statuts, baptême, liens) s'ouvre depuis
-/// la section dédiée en bas de l'onglet Familles.
+/// la section dédiée en bas de l'onglet Familles. Les départements se
+/// gèrent en Paramètres ; les fonctions et les postes sont des options
+/// dans les formulaires où on les attribue.
 class FamillesScreen extends StatefulWidget {
-  /// Onglet ouvert au départ (0 Familles, 1 Départements,
-  /// 2 Cellules, 3 Fonctions, 4 Postes). La barre du bas ouvre
-  /// l'onglet Départements directement.
-  final int ongletInitial;
-
-  const FamillesScreen({super.key, this.ongletInitial = 0});
+  const FamillesScreen({super.key});
 
   @override
   State<FamillesScreen> createState() => _FamillesScreenState();
@@ -29,16 +26,12 @@ class _FamillesScreenState extends State<FamillesScreen> {
   String _query = '';
 
   late Future<List<Famille>> _famillesFuture;
-  late Future<List<Departement>> _departementsFuture;
   late Future<List<Cellule>> _cellulesFuture;
-  late Future<List<Fonction>> _fonctionsFuture;
-  late Future<List<Poste>> _postesFuture;
   late Future<MemberPage> _membresFuture;
 
   @override
   void initState() {
     super.initState();
-    _tab = widget.ongletInitial;
     _refreshAll();
   }
 
@@ -52,10 +45,7 @@ class _FamillesScreenState extends State<FamillesScreen> {
     final api = context.read<AppState>().api;
     setState(() {
       _famillesFuture = api.getFamilles();
-      _departementsFuture = api.getDepartements();
       _cellulesFuture = api.getCellules();
-      _fonctionsFuture = api.getFonctions();
-      _postesFuture = api.getPostes();
       _membresFuture = api.getMembers();
     });
   }
@@ -64,10 +54,7 @@ class _FamillesScreenState extends State<FamillesScreen> {
     final api = context.read<AppState>().api;
     setState(() {
       if (_tab == 0) _famillesFuture = api.getFamilles();
-      if (_tab == 1) _departementsFuture = api.getDepartements();
-      if (_tab == 2) _cellulesFuture = api.getCellules();
-      if (_tab == 3) _fonctionsFuture = api.getFonctions();
-      if (_tab == 4) _postesFuture = api.getPostes();
+      if (_tab == 1) _cellulesFuture = api.getCellules();
     });
   }
 
@@ -115,47 +102,6 @@ class _FamillesScreenState extends State<FamillesScreen> {
                     : telephoneController.text.trim(),
               );
           if (mounted) showSuccess(context, 'Famille créée.');
-          _refresh();
-        } catch (e) {
-          if (mounted) showApiError(context, e);
-        }
-      },
-    );
-  }
-
-  Future<void> _createDepartement(List<Member> membres) async {
-    final nomController = TextEditingController();
-    final descriptionController = TextEditingController();
-    String? responsableId;
-    await showCreateDialog(
-      context: context,
-      title: 'Nouveau département',
-      saveLabel: 'Créer',
-      fields: [
-        dialogTextField(controller: nomController, label: 'Nom du département'),
-        dialogTextField(
-            controller: descriptionController, label: 'Description'),
-        dialogDropdown<String?>(
-          value: responsableId,
-          label: 'Responsable',
-          options: {
-            null: 'Aucun',
-            for (final m in membres) m.id: '${m.fullName} (${m.matricule})',
-          },
-          onChanged: (v) => responsableId = v,
-        ),
-      ],
-      isValid: () => nomController.text.trim().isNotEmpty,
-      onSave: () async {
-        try {
-          await context.read<AppState>().api.createDepartement(
-                nom: nomController.text.trim(),
-                description: descriptionController.text.trim().isEmpty
-                    ? null
-                    : descriptionController.text.trim(),
-                responsableMemberId: responsableId,
-              );
-          if (mounted) showSuccess(context, 'Département créé.');
           _refresh();
         } catch (e) {
           if (mounted) showApiError(context, e);
@@ -214,60 +160,6 @@ class _FamillesScreenState extends State<FamillesScreen> {
     );
   }
 
-  /// Renomme un département (les membres rattachés gardent leur département,
-  /// seul le libellé change).
-  Future<void> _renameDepartement(Departement departement) async {
-    final nomController = TextEditingController(text: departement.nom);
-    await showCreateDialog(
-      context: context,
-      title: 'Renommer le département',
-      saveLabel: 'Enregistrer',
-      fields: [
-        dialogTextField(controller: nomController, label: 'Nom du département'),
-      ],
-      isValid: () => nomController.text.trim().length >= 2,
-      onSave: () async {
-        try {
-          await context.read<AppState>().api.updateDepartement(
-                departement.id,
-                nom: nomController.text.trim(),
-              );
-          if (mounted) showSuccess(context, 'Département renommé.');
-          _refresh();
-        } catch (e) {
-          if (mounted) showApiError(context, e);
-        }
-      },
-    );
-  }
-
-  /// Dialogue de création / renommage d'un élément de catalogue (fonction
-  /// ou poste) : un seul champ, le nom.
-  Future<void> _editCatalogue({
-    required String titre,
-    required String label,
-    String? nomActuel,
-    required Future<void> Function(String nom) onSave,
-  }) async {
-    final nomController = TextEditingController(text: nomActuel ?? '');
-    await showCreateDialog(
-      context: context,
-      title: titre,
-      saveLabel: nomActuel == null ? 'Créer' : 'Enregistrer',
-      fields: [dialogTextField(controller: nomController, label: label)],
-      isValid: () => nomController.text.trim().length >= 2,
-      onSave: () async {
-        try {
-          await onSave(nomController.text.trim());
-          if (mounted) showSuccess(context, 'Enregistré.');
-          _refresh();
-        } catch (e) {
-          if (mounted) showApiError(context, e);
-        }
-      },
-    );
-  }
-
   Future<void> _deleteFamille(Famille famille) async {
     final confirmed = await confirmDelete(
       context,
@@ -278,54 +170,6 @@ class _FamillesScreenState extends State<FamillesScreen> {
     try {
       await context.read<AppState>().api.deleteFamille(famille.id);
       if (mounted) showSuccess(context, 'Famille supprimée.');
-      _refresh();
-    } catch (e) {
-      if (mounted) showApiError(context, e);
-    }
-  }
-
-  Future<void> _deleteDepartement(Departement departement) async {
-    final confirmed = await confirmDelete(
-      context,
-      'Supprimer définitivement le département « ${departement.nom} » ?',
-    );
-    if (!confirmed) return;
-    if (!mounted) return;
-    try {
-      await context.read<AppState>().api.deleteDepartement(departement.id);
-      if (mounted) showSuccess(context, 'Département supprimé.');
-      _refresh();
-    } catch (e) {
-      if (mounted) showApiError(context, e);
-    }
-  }
-
-  Future<void> _deleteFonction(Fonction fonction) async {
-    final confirmed = await confirmDelete(
-      context,
-      'Supprimer la fonction « ${fonction.nom} » ? '
-      'Refusée si des membres la portent encore.',
-    );
-    if (!confirmed || !mounted) return;
-    try {
-      await context.read<AppState>().api.deleteFonction(fonction.id);
-      if (mounted) showSuccess(context, 'Fonction supprimée.');
-      _refresh();
-    } catch (e) {
-      if (mounted) showApiError(context, e);
-    }
-  }
-
-  Future<void> _deletePoste(Poste poste) async {
-    final confirmed = await confirmDelete(
-      context,
-      'Supprimer le poste « ${poste.nom} » ? '
-      'Refusé si des membres l’occupent encore.',
-    );
-    if (!confirmed || !mounted) return;
-    try {
-      await context.read<AppState>().api.deletePoste(poste.id);
-      if (mounted) showSuccess(context, 'Poste supprimé.');
       _refresh();
     } catch (e) {
       if (mounted) showApiError(context, e);
@@ -455,163 +299,6 @@ class _FamillesScreenState extends State<FamillesScreen> {
     );
   }
 
-  Widget _departementsTab(List<Member> membres) {
-    final noms = {for (final m in membres) m.id: m.fullName};
-    return Column(
-      children: [
-        searchField(
-          controller: _searchController,
-          onChanged: (v) => setState(() => _query = v.trim()),
-          label: 'Rechercher un département',
-        ),
-        Expanded(
-          child: FutureBuilder<List<Departement>>(
-            future: _departementsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const AppLoading();
-              }
-              if (snapshot.hasError) {
-                return AppError(
-                  message: snapshot.error.toString(),
-                  onRetry: _refresh,
-                );
-              }
-              final items = snapshot.data!
-                  .where((d) => _matches(d.nom))
-                  .toList();
-              if (items.isEmpty) {
-                return EmptyState(
-                  icon: Icons.group_work_outlined,
-                  message: snapshot.data!.isEmpty
-                      ? 'Aucun département pour l’instant.'
-                      : 'Aucun département ne correspond à la recherche.',
-                  actionLabel: 'Créer un département',
-                  onAction: () => _createDepartement(membres),
-                );
-              }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final d = items[index];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.group_work_outlined),
-                      ),
-                      title: Text(d.nom),
-                      subtitle: Text(
-                        '${d.responsableMemberId != null ? 'Responsable : ${noms[d.responsableMemberId] ?? '—'}' : 'Sans responsable'}'
-                        '${d.description != null ? ' · ${d.description}' : ''}',
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            tooltip: 'Renommer',
-                            onPressed: () => _renameDepartement(d),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            tooltip: 'Supprimer',
-                            onPressed: () => _deleteDepartement(d),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Onglet catalogue (fonctions ou postes) : liste, ajout, renommage,
-  /// suppression. Même structure pour les deux, seuls les appels changent.
-  Widget _catalogueTab<T>({
-    required Future<List<T>> future,
-    required String rechercheLabel,
-    required String videMessage,
-    required String creerLabel,
-    required IconData icon,
-    required String Function(T item) nom,
-    required Future<void> Function() onCreate,
-    required Future<void> Function(T item) onRename,
-    required Future<void> Function(T item) onDelete,
-  }) {
-    return Column(
-      children: [
-        searchField(
-          controller: _searchController,
-          onChanged: (v) => setState(() => _query = v.trim()),
-          label: rechercheLabel,
-        ),
-        Expanded(
-          child: FutureBuilder<List<T>>(
-            future: future,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const AppLoading();
-              }
-              if (snapshot.hasError) {
-                return AppError(
-                  message: snapshot.error.toString(),
-                  onRetry: _refresh,
-                );
-              }
-              final items = snapshot.data!
-                  .where((e) => _matches(nom(e)))
-                  .toList();
-              if (items.isEmpty) {
-                return EmptyState(
-                  icon: icon,
-                  message: snapshot.data!.isEmpty
-                      ? videMessage
-                      : 'Aucun élément ne correspond à la recherche.',
-                  actionLabel: creerLabel,
-                  onAction: onCreate,
-                );
-              }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    return ListTile(
-                      leading: CircleAvatar(child: Icon(icon)),
-                      title: Text(nom(item)),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            tooltip: 'Renommer',
-                            onPressed: () => onRename(item),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            tooltip: 'Supprimer',
-                            onPressed: () => onDelete(item),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _cellulesTab(List<Member> membres) {
     final noms = {for (final m in membres) m.id: m.fullName};
     return Column(
@@ -683,8 +370,7 @@ class _FamillesScreenState extends State<FamillesScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5,
-      initialIndex: widget.ongletInitial,
+      length: 2,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Familles'),
@@ -697,10 +383,7 @@ class _FamillesScreenState extends State<FamillesScreen> {
             }),
             tabs: const [
               Tab(text: 'Familles'),
-              Tab(text: 'Départements'),
               Tab(text: 'Cellules'),
-              Tab(text: 'Fonctions'),
-              Tab(text: 'Postes'),
             ],
           ),
         ),
@@ -717,56 +400,10 @@ class _FamillesScreenState extends State<FamillesScreen> {
               );
             }
             final membres = snapshot.data!.membres;
-            final api = context.read<AppState>().api;
             return TabBarView(
               children: [
                 _famillesTab(membres),
-                _departementsTab(membres),
                 _cellulesTab(membres),
-                _catalogueTab<Fonction>(
-                  future: _fonctionsFuture,
-                  rechercheLabel: 'Rechercher une fonction',
-                  videMessage: 'Aucune fonction pour l’instant.',
-                  creerLabel: 'Créer une fonction',
-                  icon: Icons.work_outline,
-                  nom: (f) => f.nom,
-                  onCreate: () => _editCatalogue(
-                    titre: 'Nouvelle fonction',
-                    label: 'Nom de la fonction',
-                    onSave: (nom) async =>
-                        api.createFonction(nom: nom),
-                  ),
-                  onRename: (f) => _editCatalogue(
-                    titre: 'Renommer la fonction',
-                    label: 'Nom de la fonction',
-                    nomActuel: f.nom,
-                    onSave: (nom) async =>
-                        api.updateFonction(f.id, nom: nom),
-                  ),
-                  onDelete: _deleteFonction,
-                ),
-                _catalogueTab<Poste>(
-                  future: _postesFuture,
-                  rechercheLabel: 'Rechercher un poste',
-                  videMessage: 'Aucun poste pour l’instant.',
-                  creerLabel: 'Créer un poste',
-                  icon: Icons.badge_outlined,
-                  nom: (p) => p.nom,
-                  onCreate: () => _editCatalogue(
-                    titre: 'Nouveau poste',
-                    label: 'Nom du poste',
-                    onSave: (nom) async =>
-                        api.createPoste(nom: nom),
-                  ),
-                  onRename: (p) => _editCatalogue(
-                    titre: 'Renommer le poste',
-                    label: 'Nom du poste',
-                    nomActuel: p.nom,
-                    onSave: (nom) async =>
-                        api.updatePoste(p.id, nom: nom),
-                  ),
-                  onDelete: _deletePoste,
-                ),
               ],
             );
           },
@@ -778,43 +415,15 @@ class _FamillesScreenState extends State<FamillesScreen> {
               if (!mounted) return;
               if (_tab == 0) {
                 await _createFamille(membres);
-              } else if (_tab == 1) {
-                await _createDepartement(membres);
-              } else if (_tab == 2) {
-                await _createCellule(membres);
-              } else if (_tab == 3) {
-                await _editCatalogue(
-                  titre: 'Nouvelle fonction',
-                  label: 'Nom de la fonction',
-                  onSave: (nom) async => context
-                      .read<AppState>()
-                      .api
-                      .createFonction(nom: nom),
-                );
               } else {
-                await _editCatalogue(
-                  titre: 'Nouveau poste',
-                  label: 'Nom du poste',
-                  onSave: (nom) async => context
-                      .read<AppState>()
-                      .api
-                      .createPoste(nom: nom),
-                );
+                await _createCellule(membres);
               }
             } catch (e) {
               if (context.mounted) showApiError(context, e);
             }
           },
           icon: const Icon(Icons.add),
-          label: Text(_tab == 0
-              ? 'Famille'
-              : _tab == 1
-                  ? 'Département'
-                  : _tab == 2
-                      ? 'Cellule'
-                      : _tab == 3
-                          ? 'Fonction'
-                          : 'Poste'),
+          label: Text(_tab == 0 ? 'Famille' : 'Cellule'),
         ),
       ),
     );

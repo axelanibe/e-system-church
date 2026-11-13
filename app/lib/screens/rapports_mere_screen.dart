@@ -9,6 +9,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import 'exemple_bilan_screen.dart';
+import 'rapports_recus_screen.dart';
 
 class _DonneesRapport {
   final EgliseMereContact mere;
@@ -146,13 +147,14 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Rapports à mon église mère')),
       body: estMere
-          ? const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  'Cet écran est pour une église annexe. Une église mère '
-                  'lit les rapports dans « Rapports reçus ».',
-                  textAlign: TextAlign.center,
+          ? EmptyState(
+              icon: Icons.mail_outline,
+              message: 'Cet écran est pour une église annexe. Une église '
+                  'mère lit les rapports dans « Rapports reçus ».',
+              actionLabel: 'Voir les rapports reçus',
+              onAction: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const RapportsRecusScreen(),
                 ),
               ),
             )
@@ -237,27 +239,27 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                           ),
                           const _Etape(
                             numero: '2',
-                            titre: 'Générer depuis vos vraies données',
+                            titre: 'Générer le rapport',
                             texte:
                                 'L’application remplit le rapport avec les données de votre église.',
                           ),
                           const _Etape(
                             numero: '3',
-                            titre: 'Voir l’aperçu du rapport',
+                            titre: 'Relire l’aperçu',
                             texte:
                                 'Vous relisez le rapport avant l’envoi.',
                           ),
                           const _Etape(
                             numero: '4',
-                            titre: 'Envoyer par e-mail à votre église mère',
+                            titre: 'Envoyer à votre église mère',
                             texte:
-                                'Le rapport part en pièce jointe PDF, depuis l’application.',
+                                'Le rapport est enregistré pour votre église mère. L’envoi par e-mail sera activé prochainement.',
                           ),
                           const _Etape(
                             numero: '5',
                             titre: 'Confirmation',
                             texte:
-                                'Vous voyez que le rapport est bien envoyé.',
+                                'Vous voyez que le rapport est bien enregistré.',
                           ),
                           const SizedBox(height: 16),
                           const Text(
@@ -358,20 +360,14 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                                   : () => _envoyer(donnees),
                               icon: const Icon(Icons.email_outlined),
                               label: const Text(
-                                'Envoyer par e-mail à mon église mère',
+                                'Envoyer à mon église mère',
                               ),
                             ),
                             const SizedBox(height: 8),
                             const Text(
-                              'Envoyé par e-mail depuis l’application, en pièce jointe PDF.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 16),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Envoi par e-mail en attente du Lot B : le '
-                              'rapport est enregistré dès maintenant, votre '
-                              'église mère le voit dans « Rapports reçus ».',
+                              'L’envoi par e-mail sera activé prochainement : '
+                              'le rapport est déjà enregistré, votre église '
+                              'mère le voit dans « Rapports reçus ».',
                               textAlign: TextAlign.center,
                               style: TextStyle(fontSize: 16),
                             ),
@@ -398,7 +394,7 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                                       'Votre église mère le verra dans '
                                       '« Rapports reçus ». Elle le recevra '
                                       'par e-mail, en pièce jointe PDF, quand '
-                                      'l’envoi sera branché (Lot B).',
+                                      'l’envoi sera activé.',
                                       style: TextStyle(fontSize: 16),
                                     ),
                                   ],

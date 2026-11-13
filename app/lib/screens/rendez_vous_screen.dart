@@ -103,14 +103,6 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back),
-                    label: const Text('Retour au menu'),
-                  ),
-                ),
                 const Text(
                   'Demandez un rendez-vous auprès de votre pasteur local.',
                 ),
@@ -166,8 +158,6 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
                           'Le rendez-vous se fait avec le pasteur de '
                           'votre église.',
                         ),
-                        SizedBox(height: 12),
-                        Chip(label: Text('Pasteur de mon église')),
                       ],
                     ),
                   ),
@@ -187,12 +177,8 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
                           label: Text(_dateTexte),
                         ),
                         const SizedBox(height: 12),
-                        const Text('Créneau'),
-                        const SizedBox(height: 8),
-                        const Chip(label: Text('À compléter')),
-                        const SizedBox(height: 8),
                         const Text(
-                          'Les créneaux de votre pasteur s’afficheront ici.',
+                          'Le créneau sera convenu avec votre pasteur.',
                         ),
                       ],
                     ),
@@ -203,7 +189,7 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
                   controller: _motifController,
                   decoration: const InputDecoration(
                     labelText: 'Motif du rendez-vous',
-                    hintText: 'Motif du rendez-vous',
+                    hintText: 'Décrivez brièvement le motif.',
                   ),
                   maxLines: 3,
                 ),

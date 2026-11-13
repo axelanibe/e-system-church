@@ -630,7 +630,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                     Card(
                       child: ListTile(
                         leading: const Icon(Icons.payments_outlined),
-                        title: const Text('Paiements'),
+                        title: const Text('Moyens de paiement'),
                         subtitle: const Text(
                             'Moyens de paiement de l’église par pays'),
                         trailing: const Icon(Icons.chevron_right),
@@ -745,7 +745,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                             const Divider(height: 1),
                             ListTile(
                               leading:
-                                  const Icon(Icons.account_tree_outlined),
+                                  const Icon(Icons.key_outlined),
                               title: const Text('Code de tutelle'),
                               subtitle: Text(state.church?.code ?? ''),
                               trailing: Row(
@@ -780,7 +780,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                       const SizedBox(height: 12),
                       OutlinedButton.icon(
                         onPressed: _lienReinitialisation,
-                        icon: const Icon(Icons.key_outlined),
+                        icon: const Icon(Icons.link_outlined),
                         label: const Text('Lien de réinitialisation'),
                       ),
                       const SizedBox(height: 12),
@@ -845,7 +845,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                     ],
                     const SizedBox(height: 16),
                     Text(
-                      'Présentation publique : ${state.church?.code ?? ''}',
+                      'Code de votre église : ${state.church?.code ?? ''}',
                       style: Theme.of(context).textTheme.bodySmall,
                       textAlign: TextAlign.center,
                     ),
@@ -896,8 +896,8 @@ class _ChoixCouleurState extends State<_ChoixCouleur> {
     'Bleu nuit profond': '#12294D',
     'Or': '#D4A72C',
     'Or foncé': '#8A6A12',
-    'Présences': '#2563EB',
-    'Cultes': '#6B4C7A',
+    'Bleu': '#2563EB',
+    'Violet': '#6B4C7A',
     'Rouge': '#B3261E',
   };
 

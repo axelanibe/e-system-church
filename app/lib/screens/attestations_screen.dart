@@ -59,7 +59,7 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
         context,
         creees.isEmpty
             ? 'Aucune nouvelle attestation pour $_annee.'
-            : '${creees.length} attestation(s) créée(s) pour $_annee.',
+            : '${pluriel(creees.length, 'attestation créée', 'attestations créées')} pour $_annee.',
       );
       _refresh();
     } catch (e) {
@@ -492,7 +492,7 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                     child: FilledButton.icon(
                       onPressed: _working ? null : _generer,
                       icon: const Icon(Icons.description_outlined),
-                      label: const Text('Générer les dons'),
+                      label: const Text('Générer'),
                     ),
                   ),
                 ),

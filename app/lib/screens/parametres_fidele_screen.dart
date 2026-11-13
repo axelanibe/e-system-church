@@ -120,29 +120,19 @@ class _ParametresFideleScreenState extends State<ParametresFideleScreen> {
                 ),
               ),
               const SectionTitle(title: 'Notifications'),
-              Card(
+              const Card(
                 child: ListTile(
-                  leading: const Icon(Icons.campaign_outlined),
-                  title: const Text('Notifications'),
-                  subtitle: const Text(
+                  leading: Icon(Icons.notifications_outlined),
+                  title: Text('Notifications'),
+                  subtitle: Text(
                     'Aucun réglage de notification pour l’instant.',
                   ),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Aucun réglage de notification pour l’instant.',
-                        ),
-                      ),
-                    );
-                  },
                 ),
               ),
-              const SectionTitle(title: 'Langue'),
               const Card(
                 child: ListTile(
                   leading: Icon(Icons.language_outlined),
-                  title: Text('Langue'),
+                  title: Text('Langue de l’application'),
                   subtitle: Text('Français'),
                 ),
               ),

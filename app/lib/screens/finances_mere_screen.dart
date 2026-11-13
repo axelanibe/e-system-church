@@ -435,6 +435,12 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
   /// dans une colonne de 720 px au plus.
   Widget _buildDeuxVolets(BuildContext context,
       RapportDetailConsolide rapport, int maxEntrees) {
+    if (rapport.branches.isEmpty) {
+      return const EmptyState(
+        icon: Icons.account_tree_outlined,
+        message: 'Aucune église annexe pour l’instant.',
+      );
+    }
     final selection = rapport.branches.firstWhere(
       (b) => b.egliseId == _selectionEgliseId,
       orElse: () => rapport.branches.first,
@@ -518,12 +524,16 @@ class _Total extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: Theme.of(context).textTheme.bodySmall),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+          ),
         ),
       ],
     );

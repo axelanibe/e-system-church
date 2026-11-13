@@ -67,9 +67,12 @@ class _RapprochementScreenState extends State<RapprochementScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     if (!state.canReadFinances) {
-      return const EmptyState(
-        icon: Icons.lock_outline,
-        message: 'Votre rôle ne donne pas accès aux finances de l’église.',
+      return Scaffold(
+        appBar: AppBar(title: const Text('Rapprochement')),
+        body: const EmptyState(
+          icon: Icons.lock_outline,
+          message: 'Votre rôle ne donne pas accès aux finances de l’église.',
+        ),
       );
     }
     return Scaffold(
@@ -166,7 +169,7 @@ class _RapprochementScreenState extends State<RapprochementScreen> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Un écart signale des écritures manuelles ou des mouvements d’avant la T7, sans écriture automatique. Les mouvements sans canal sont regroupés en « Non ventilé ».',
+                  'Un écart signale des écritures manuelles ou des mouvements antérieurs à la mise en place du rapprochement, sans écriture automatique. Les mouvements sans canal sont regroupés en « Non ventilé ».',
                   textAlign: TextAlign.center,
                 ),
               ],

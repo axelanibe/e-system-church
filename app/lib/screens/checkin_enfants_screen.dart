@@ -483,7 +483,10 @@ class _CheckinEnfantsScreenState extends State<CheckinEnfantsScreen> {
               }
               final presents = snapshot.data!;
               if (presents.isEmpty) {
-                return const Text('Aucun enfant enregistré aujourd’hui.');
+                return const EmptyState(
+                  icon: Icons.child_care_outlined,
+                  message: 'Aucun enfant enregistré aujourd’hui.',
+                );
               }
               return Column(
                 children: presents

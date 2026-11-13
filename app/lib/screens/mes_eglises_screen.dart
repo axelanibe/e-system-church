@@ -115,6 +115,9 @@ class _MesEglisesScreenState extends State<MesEglisesScreen> {
   /// Recherche après une courte pause, pour ne pas appeler l'API à
   /// chaque lettre tapée.
   void _surRechercheChangee() {
+    // Reconstruction immédiate : l'icône d'effacement apparaît dès
+    // la première lettre tapée, la recherche suit après une pause.
+    setState(() {});
     _attenteRecherche?.cancel();
     _attenteRecherche = Timer(const Duration(milliseconds: 400), _charger);
   }
@@ -172,36 +175,26 @@ class _MesEglisesScreenState extends State<MesEglisesScreen> {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                _chargement
-                    ? 'Chargement…'
-                    : _total == 0
-                        ? 'Aucune église.'
-                        : _total == 1
-                            ? '1 église'
-                            : '$_total églises',
-                style: Theme.of(context).textTheme.bodySmall,
+          if (!_chargement && _total > 0)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _total == 1 ? '1 église' : '$_total églises',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
             ),
-          ),
           Expanded(
             child: _chargement
                 ? const Center(child: AppLoading())
                 : _items.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                            _recherche.text.trim().isEmpty
-                                ? 'Aucune église pour l’instant.'
-                                : 'Aucune église trouvée pour « ${_recherche.text.trim()} ».',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
+                    ? EmptyState(
+                        icon: Icons.church_outlined,
+                        message: _recherche.text.trim().isEmpty
+                            ? 'Aucune église pour l’instant.'
+                            : 'Aucune église trouvée pour « ${_recherche.text.trim()} ».',
                       )
                     : ListView.builder(
                         controller: _defilement,
