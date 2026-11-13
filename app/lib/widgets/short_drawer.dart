@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_theme.dart';
 import '../state/app_state.dart';
 import 'church_avatar.dart';
 import 'mere_badge.dart';
@@ -10,6 +11,7 @@ import '../screens/annonces_screen.dart';
 import '../screens/annexes_screen.dart';
 import '../screens/mes_eglises_screen.dart';
 import '../screens/finances_mere_screen.dart';
+import '../screens/modules_screen.dart';
 import '../screens/mon_eglise_screen.dart';
 import '../screens/plateforme_screen.dart';
 import '../screens/rapports_mere_screen.dart';
@@ -25,7 +27,7 @@ import '../screens/tree_screen.dart';
 /// où il va avant de toucher.
 class TiroirCourt extends StatelessWidget {
   /// Aller à un onglet de la barre du bas (0 Accueil, 1 Membres,
-  /// 2 Finances, 3 Modules).
+  /// 2 Finances, 3 Départements).
   final void Function(int index) onAller;
 
   const TiroirCourt({super.key, required this.onAller});
@@ -46,7 +48,7 @@ class TiroirCourt extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: [
           Container(
-            color: Theme.of(context).colorScheme.primaryContainer,
+            color: AppTheme.bleuNuit,
             padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,7 +60,10 @@ class TiroirCourt extends StatelessWidget {
                   church?.name ?? 'e-System Church',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(color: Colors.white),
                 ),
                 if (church?.isMere ?? false) ...[
                   const SizedBox(height: 6),
@@ -69,19 +74,28 @@ class TiroirCourt extends StatelessWidget {
                   '${church?.code ?? ''} · ${church?.city ?? ''}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: Colors.white70),
                 ),
                 Text(
                   state.user?.fullName ?? '',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: Colors.white),
                 ),
                 Text(
                   state.roleLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: Colors.white70),
                 ),
               ],
             ),
@@ -111,6 +125,12 @@ class TiroirCourt extends StatelessWidget {
             title: const Text('Mon église'),
             subtitle: const Text('Présentation et horaires des cultes'),
             onTap: () => _ouvrir(context, const MonEgliseScreen()),
+          ),
+          ListTile(
+            leading: const Icon(Icons.grid_view_outlined),
+            title: const Text('Modules'),
+            subtitle: const Text('Tous les modules de l’église'),
+            onTap: () => _ouvrir(context, const ModulesScreen()),
           ),
           ListTile(
             leading: const Icon(Icons.group_add_outlined),
