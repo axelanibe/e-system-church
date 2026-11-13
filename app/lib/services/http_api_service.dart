@@ -26,6 +26,7 @@ import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
 import '../models/nettoyage_test.dart';
+import '../models/suppression_eglise.dart';
 import '../models/paiements.dart';
 import '../models/parametres.dart';
 import '../models/pastoral.dart';
@@ -677,6 +678,20 @@ class HttpApiService implements ApiService {
       NettoyageTestResultat.fromJson(await _call(
           'POST', '/admin/nettoyage-test',
           body: {'confirmer': true}));
+
+  @override
+  Future<SuppressionEgliseApercu> getSuppressionEgliseApercu(
+          {String? egliseId}) async =>
+      SuppressionEgliseApercu.fromJson(await _call(
+          'POST', '/admin/supprimer-eglise',
+          body: {if (egliseId != null) 'eglise_id': egliseId}));
+
+  @override
+  Future<SuppressionEgliseResultat> executerSuppressionEglise(
+          {String? egliseId}) async =>
+      SuppressionEgliseResultat.fromJson(await _call(
+          'POST', '/admin/supprimer-eglise',
+          body: {'confirmer': true, if (egliseId != null) 'eglise_id': egliseId}));
 
   @override
   Future<TransfertsResult> getTransferts() async {

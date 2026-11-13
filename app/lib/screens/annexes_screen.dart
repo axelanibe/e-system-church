@@ -171,14 +171,21 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                                         ),
                                       ],
                                     ),
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
+                                    onTap: () async {
+                                      final supprimee =
+                                          await Navigator.of(context).push(
+                                        MaterialPageRoute<bool>(
                                           builder: (_) =>
                                               AnnexeDetailScreen(
                                                   annexeId: a.egliseId),
                                         ),
                                       );
+                                      if (supprimee == true && context.mounted) {
+                                        showSuccess(
+                                            context, 'Annexe supprimée.');
+                                        _load(
+                                            q: _recherche.text.trim());
+                                      }
                                     },
                                   ),
                                 );

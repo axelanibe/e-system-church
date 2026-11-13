@@ -21,6 +21,7 @@ import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
 import '../models/nettoyage_test.dart';
+import '../models/suppression_eglise.dart';
 import '../models/paiements.dart';
 import '../models/parametres.dart';
 import '../models/pastoral.dart';
@@ -260,6 +261,14 @@ abstract class ApiService {
   Future<NettoyageTestApercu> getNettoyageTestApercu();
 
   Future<NettoyageTestResultat> executerNettoyageTest();
+
+  /// Suppression d'une église entière : aperçu puis suppression confirmée.
+  /// Sans `egliseId` : sa propre église TEST (admin d'église seulement).
+  /// Avec `egliseId` : une annexe directe (mère) ou n'importe quelle
+  /// annexe (super admin). Côté serveur.
+  Future<SuppressionEgliseApercu> getSuppressionEgliseApercu({String? egliseId});
+
+  Future<SuppressionEgliseResultat> executerSuppressionEglise({String? egliseId});
 
   Future<TransfertsResult> getTransferts();
 

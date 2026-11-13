@@ -29,6 +29,7 @@ import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
 import '../models/nettoyage_test.dart';
+import '../models/suppression_eglise.dart';
 import '../models/paiements.dart';
 import '../models/parametres.dart';
 import '../models/pastoral.dart';
@@ -1216,6 +1217,35 @@ class MockApiService implements ApiService {
     await _latence();
     _requireAuth();
     return const NettoyageTestResultat(supprimes: []);
+  }
+
+  @override
+  Future<SuppressionEgliseApercu> getSuppressionEgliseApercu(
+      {String? egliseId}) async {
+    await _latence();
+    _requireAuth();
+    // La démo n'a pas d'église à supprimer : aperçu vide.
+    return SuppressionEgliseApercu(
+      eglise: EgliseASupprimer(
+          id: _church.id, nom: _church.name, code: _church.code),
+      annexes: const [],
+      comptes: const {},
+      utilisateursSupprimes: 0,
+    );
+  }
+
+  @override
+  Future<SuppressionEgliseResultat> executerSuppressionEglise(
+      {String? egliseId}) async {
+    await _latence();
+    _requireAuth();
+    return SuppressionEgliseResultat(
+      eglise: EgliseASupprimer(
+          id: _church.id, nom: _church.name, code: _church.code),
+      annexes: const [],
+      comptes: const {},
+      utilisateursSupprimes: 0,
+    );
   }
 
   @override
