@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -377,11 +378,9 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                           ],
                           if (_envoye != null) ...[
                             const SizedBox(height: 16),
-                            Card(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primaryContainer,
-                              child: const Padding(
+                            const Card(
+                              color: AppTheme.orClair,
+                              child: Padding(
                                 padding: EdgeInsets.all(16),
                                 child: Column(
                                   crossAxisAlignment:

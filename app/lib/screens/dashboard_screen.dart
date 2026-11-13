@@ -11,7 +11,6 @@ import '../utils/format.dart';
 import '../widgets/church_avatar.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/mere_badge.dart';
-import '../widgets/screen_header.dart';
 import '../widgets/soft_button.dart';
 import '../widgets/soft_card.dart';
 import 'annonces_screen.dart';
@@ -155,10 +154,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const EnteteEcran(
-                  titre: 'Accueil',
-                  sousTitre: 'Voici votre église en un coup d’œil.',
-                ),
                 SoftCard(
                   color: AppTheme.orClair,
                   child: Column(

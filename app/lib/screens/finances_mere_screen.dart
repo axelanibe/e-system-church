@@ -223,7 +223,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
   /// Carte du total consolidé, commune aux deux dispositions.
   Widget _carteTotaux(BuildContext context, RapportDetailConsolide rapport) {
     return Card(
-      color: Theme.of(context).colorScheme.primaryContainer,
+      color: AppTheme.orClair,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -266,7 +266,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                     value: formatFcfa(rapport.soldeFcfa),
                     // Présences : le bleu vif Colors.blue est illisible
                     // en texte sur fond clair.
-                    color: AppTheme.bleuPresences,
+                    color: AppTheme.bleuNuit,
                   ),
                 ),
               ],

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
 import '../widgets/app_bottom_bar.dart';
+import '../widgets/barre_perimetre.dart';
 import 'bible_fidele_screen.dart';
 import 'carte_fidele_screen.dart';
 import 'fidele_home_screen.dart';
@@ -82,22 +83,6 @@ class _FideleShellState extends State<FideleShell> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _titles[courant],
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        // En aperçu admin, un retour visible vers l'espace admin.
-        leading: context.watch<AppState>().apercuFidele
-            ? IconButton(
-                icon: const Icon(Icons.chevron_left),
-                tooltip: 'Voir l’espace admin',
-                onPressed: () =>
-                    context.read<AppState>().sortirApercuFidele(),
-              )
-            : null,
-      ),
       body: Row(
         children: [
           if (wide)
@@ -113,7 +98,30 @@ class _FideleShellState extends State<FideleShell> {
                       ))
                   .toList(),
             ),
-          Expanded(child: ecran),
+          Expanded(
+            child: Column(
+              children: [
+                BarrePerimetre.depuisContexte(
+                  context,
+                  courant: EspaceArtefact.espaceMembre,
+                ),
+                EnTeteClair(
+                  titre: _titles[courant],
+                  // En aperçu admin, un retour visible vers l'espace admin.
+                  leading: context.watch<AppState>().apercuFidele
+                      ? IconButton(
+                          icon: const Icon(Icons.chevron_left),
+                          tooltip: 'Voir l’espace admin',
+                          onPressed: () => context
+                              .read<AppState>()
+                              .sortirApercuFidele(),
+                        )
+                      : null,
+                ),
+                Expanded(child: ecran),
+              ],
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: wide

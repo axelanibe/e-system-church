@@ -519,6 +519,7 @@ class _MediasScreenState extends State<MediasScreen> {
         appBar: AppBar(
           title: const Text('Médias & bibliothèque'),
           bottom: TabBar(
+            isScrollable: true,
             onTap: (i) => setState(() {
               _tab = i;
               _query = '';

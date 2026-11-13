@@ -83,7 +83,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
       case 'actif':
         return AppTheme.bleuNuit;
       case 'nouveau_converti':
-        return AppTheme.bleuPresences;
+        return AppTheme.bleuFonce;
       case 'inactif':
         return Colors.grey;
       case 'ancien':

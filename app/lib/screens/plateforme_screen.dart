@@ -73,11 +73,9 @@ class _PlateformeScreenState extends State<PlateformeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Card(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primaryContainer,
-                        child: const Padding(
+                      const Card(
+                        color: AppTheme.orClair,
+                        child: Padding(
                           padding: EdgeInsets.all(16),
                           child: Text(
                             'Chiffres globaux de toutes les églises mères '

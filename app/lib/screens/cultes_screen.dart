@@ -483,6 +483,7 @@ class _CultesScreenState extends State<CultesScreen> {
         appBar: AppBar(
           title: const Text('Cultes'),
           bottom: TabBar(
+            isScrollable: true,
             onTap: (i) => setState(() {
               _tab = i;
               _query = '';

@@ -326,6 +326,7 @@ class _ParametresScreenState extends State<ParametresScreen> {
         appBar: AppBar(
           title: const Text('Paramètres de l’église'),
           bottom: TabBar(
+            isScrollable: true,
             onTap: (i) => setState(() {
               _tab = i;
               _query = '';

@@ -54,9 +54,6 @@ class AppTheme {
   /// Bleu foncé lisible sur fond clair (remplace le bleu vif).
   static const Color bleuFonce = Color(0xFF1B4F72);
 
-  /// Couleur du module Présences.
-  static const Color bleuPresences = Color(0xFF2563EB);
-
   /// Style mono pour les codes et matricules.
   static const TextStyle styleCode =
       TextStyle(fontFamily: 'JetBrainsMono', fontSize: 14, color: bleuNuit);
@@ -121,6 +118,24 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(24)),
         ),
+      ),
+      tabBarTheme: const TabBarThemeData(
+        labelColor: or,
+        unselectedLabelColor: Colors.white,
+        labelStyle: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+        ),
+        unselectedLabelStyle: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        indicator: UnderlineTabIndicator(
+          borderSide: BorderSide(color: or, width: 3),
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
       ),
       navigationBarTheme: const NavigationBarThemeData(
         backgroundColor: Colors.white,

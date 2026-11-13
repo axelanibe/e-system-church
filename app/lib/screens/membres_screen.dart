@@ -129,7 +129,7 @@ class _MembresScreenState extends State<MembresScreen> {
       case 'actif':
         return AppTheme.bleuNuit;
       case 'nouveau_converti':
-        return AppTheme.bleuPresences;
+        return AppTheme.bleuFonce;
       case 'inactif':
         return Colors.grey;
       case 'ancien':

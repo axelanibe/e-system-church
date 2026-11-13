@@ -494,6 +494,7 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
             ),
           ],
           bottom: TabBar(
+            isScrollable: true,
             onTap: (i) => setState(() {
               _tab = i;
               _query = '';

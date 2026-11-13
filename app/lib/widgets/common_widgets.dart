@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../config/app_theme.dart';
+
 /// Indicateur de chargement centré.
 class AppLoading extends StatelessWidget {
   const AppLoading({super.key});
@@ -173,10 +175,11 @@ class StatusChip extends StatelessWidget {
   }
 }
 
-/// Carte de chiffre (tableau de bord).
-/// Carte de chiffre (tableau de bord). [aide] est la courte explication
-/// sous le libellé : un nouveau responsable comprend le chiffre sans
-/// deviner. [onTap] rend toute la carte touchable, une seule action.
+/// Carte de statistique de l'artefact : libellé en haut, sur une
+/// seule ligne, valeur en mono en dessous. Le libellé et la valeur
+/// se rétrécissent au lieu d'être coupés au bord de la carte.
+/// L'icône est gardée au constructeur pour compatibilité, mais
+/// l'artefact n'en montre pas, elle n'est plus affichée.
 class StatCard extends StatelessWidget {
   final String label;
   final String value;
@@ -197,47 +200,44 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final card = Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color ?? scheme.primary),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.headlineSmall,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                label.toUpperCase(),
+                maxLines: 1,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppTheme.bleuNuit.withValues(alpha: 0.7),
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
             ),
-            Row(
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: color ?? scheme.primary,
-                    shape: BoxShape.circle,
-                  ),
+            const SizedBox(height: 6),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                maxLines: 1,
+                style: AppTheme.styleCode.copyWith(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: color ?? AppTheme.bleuNuit,
                 ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
-              ],
+              ),
             ),
             if (aide != null) ...[
               const SizedBox(height: 2),
               Text(
                 aide!,
-                maxLines: 3,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
