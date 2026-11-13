@@ -642,13 +642,48 @@ abstract class ApiService {
 
   Future<ParcoursNouveau> setParcoursEtape(String id, String etape);
 
-  Future<List<VisitePastorale>> getVisitesPastorales({String? statut});
+  /// Radar des absences consécutives (T6, vue calculée) : seuil de 1 à
+  /// 10, 3 par défaut.
+  Future<List<AlerteRadar>> getRadarAbsences({int seuil = 3});
+
+  /// Rendez-vous de l'église, côté admin (T6, table 022 réutilisée).
+  Future<List<RendezVous>> getRendezVousAdmin({String? statut});
+
+  /// Machine à états d'un rendez-vous (T6) : confirme exige un créneau
+  /// (400 sinon), refuse depuis en attente, annule depuis confirmé.
+  Future<RendezVous> setRendezVousStatut(String id, String statut,
+      {String? creneau});
+
+  /// Tableau des cas ouverts (T6) : accompagnements en cours, par
+  /// défaut les personnes en difficulté, triés par le serveur
+  /// (priorité puis ancienneté).
+  Future<List<Accompagnement>> getCasOuverts(
+      {String type = 'difficulte', String? priorite});
+
+  /// Rencontres datées d'un accompagnement (T6).
+  Future<List<RencontreAccompagnement>> getRencontresAccompagnement(
+      String accompagnementId);
+
+  Future<RencontreAccompagnement> createRencontreAccompagnement({
+    required String accompagnementId,
+    required String dateRencontre,
+    String? note,
+  });
+
+  /// Priorité d'un accompagnement (T6) : basse, normale, haute, urgente.
+  Future<Accompagnement> setAccompagnementPriorite(
+      String id, String priorite);
+
+  Future<List<VisitePastorale>> getVisitesPastorales(
+      {String? statut, String? type});
 
   Future<VisitePastorale> createVisitePastorale({
     required String memberId,
     required String dateVisite,
     String? motif,
     String? compteRendu,
+    String? type,
+    String? lieu,
   });
 
   Future<List<Accompagnement>> getAccompagnements(
@@ -658,6 +693,7 @@ abstract class ApiService {
     required String memberId,
     required String type,
     String? description,
+    String priorite = 'normale',
   });
 
   // -- Serviteurs (module 7) -------------------------------------------------

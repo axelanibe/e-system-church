@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../config/app_theme.dart';
+import '../state/app_state.dart';
 import 'biens_screen.dart';
 import 'cultes_direct_screen.dart';
 import 'cultes_screen.dart';
@@ -24,92 +26,96 @@ class ModulesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // Tous les modules sont affichés pour toutes les églises (règle
     // du 11/11/2026) : plus de filtrage par activation.
-    const modules = <_ModuleCard>[
-      _ModuleCard(
+    // Le suivi pastoral reste réservé à l'admin et au responsable de
+    // culte (tranche 1 : les routes renvoient 403 aux autres rôles) :
+    // la tuile est masquée au trésorier.
+    final peutPastoral = context.watch<AppState>().canManageMembers;
+    final modules = <_ModuleCard>[
+      const _ModuleCard(
         icon: Icons.family_restroom_outlined,
         label: 'Familles',
         description: 'Familles, départements, cellules et fiches complètes.',
         screen: FamillesScreen(),
       ),
-      _ModuleCard(
+      const _ModuleCard(
         icon: Icons.event_outlined,
         couleur: AppTheme.violetCultes,
         label: 'Cultes',
         description: 'Types de culte, cultes, ordre du culte et événements.',
         screen: CultesScreen(),
       ),
-      _ModuleCard(
+      const _ModuleCard(
         icon: Icons.timer_outlined,
         couleur: AppTheme.violetCultes,
         label: 'Cultes en direct',
         description: 'Conducteur chronométré, transposition, portes.',
         screen: CultesDirectScreen(),
       ),
-      _ModuleCard(
+      const _ModuleCard(
         icon: Icons.how_to_reg_outlined,
         couleur: AppTheme.bleuPresences,
         label: 'Présences',
         description: 'Feuille de présence par culte et statistiques.',
         screen: PresencesScreen(),
       ),
-      _ModuleCard(
+      const _ModuleCard(
         icon: Icons.account_balance_outlined,
         label: 'Budget & caisse',
         description: 'Postes, budgets, dépenses, caisse et rapport financier.',
         screen: FinancesComplementScreen(),
       ),
-      _ModuleCard(
+      const _ModuleCard(
         icon: Icons.volunteer_activism_outlined,
         couleur: AppTheme.rosePrieres,
         label: 'Prières & messages',
         description: 'Demandes de prière et messages internes.',
         screen: PrieresScreen(),
       ),
-      _ModuleCard(
+      const _ModuleCard(
         icon: Icons.route_outlined,
         label: 'Suivi pastoral',
         description: 'Parcours des nouveaux, visites et accompagnements.',
         screen: PastoralScreen(),
       ),
-      _ModuleCard(
+      const _ModuleCard(
         icon: Icons.volunteer_activism_outlined,
         label: 'Serviteurs',
         description: 'Affectations par département et planning des services.',
         screen: ServiteursScreen(),
       ),
-      _ModuleCard(
+      const _ModuleCard(
         icon: Icons.child_care_outlined,
         couleur: AppTheme.orangeEnfants,
         label: 'Enfants & jeunesse',
         description: 'Classes, autorisations de sortie et activités.',
         screen: EnfantsScreen(),
       ),
-      _ModuleCard(
+      const _ModuleCard(
         icon: Icons.mic_outlined,
         couleur: AppTheme.indigoMedias,
         label: 'Médias & bibliothèque',
         description: 'Prédications, plans de lecture, livres et prêts.',
         screen: MediasScreen(),
       ),
-      _ModuleCard(
+      const _ModuleCard(
         icon: Icons.meeting_room_outlined,
         label: 'Biens de l’église',
         description: 'Salles, réservations, matériel et maintenance.',
         screen: BiensScreen(),
       ),
-      _ModuleCard(
+      const _ModuleCard(
         icon: Icons.assessment_outlined,
         label: 'Rapports',
         description: 'Statistiques globales et export CSV.',
         screen: RapportsScreen(),
       ),
-      _ModuleCard(
+      const _ModuleCard(
         icon: Icons.settings_outlined,
         label: 'Paramètres',
         description: 'Paramètres de l’église, rôles et journal d’audit.',
         screen: ParametresScreen(),
       ),
-      _ModuleCard(
+      const _ModuleCard(
         icon: Icons.church_outlined,
         label: 'Mon église',
         description: 'Logo, présentation, horaires, pasteur et antennes.',
@@ -117,6 +123,10 @@ class ModulesScreen extends StatelessWidget {
       ),
     ];
 
+
+    final modulesVisibles = modules
+        .where((m) => m.label != 'Suivi pastoral' || peutPastoral)
+        .toList();
 
     // Pas d'AppBar ici : le titre « Modules » est déjà dans l'AppBar
     // de HomeScreen. Deux AppBar empilées faisaient la haute bande
@@ -133,9 +143,9 @@ class ModulesScreen extends StatelessWidget {
               mainAxisSpacing: 12,
               childAspectRatio: 1.1,
             ),
-            itemCount: modules.length,
+            itemCount: modulesVisibles.length,
             itemBuilder: (context, index) {
-              final module = modules[index];
+              final module = modulesVisibles[index];
               return Card(
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
+import '../models/fidele.dart';
 import '../models/member.dart';
 import '../models/pastoral.dart';
 import '../state/app_state.dart';
@@ -9,8 +10,10 @@ import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
 
-/// Module 6 — Suivi pastoral : parcours des nouveaux convertis, visites
-/// pastorales et accompagnements.
+/// Module 6 — Suivi pastoral : radar des absences, rendez-vous côté
+/// admin, parcours des nouveaux convertis, visites pastorales et
+/// accompagnements (T6 : radar, rendez-vous, visites typées, rencontres
+/// datées, priorité, cas ouverts).
 class PastoralScreen extends StatefulWidget {
   const PastoralScreen({super.key});
 
@@ -34,11 +37,37 @@ const _etapesOrdre = [
   'integre',
 ];
 
+const _rdvStatuts = {
+  'en_attente': 'En attente',
+  'confirme': 'Confirmé',
+  'refuse': 'Refusé',
+  'annule': 'Annulé',
+};
+
+const _priorites = {
+  'basse': 'Basse',
+  'normale': 'Normale',
+  'haute': 'Haute',
+  'urgente': 'Urgente',
+};
+
+const _typesVisite = {
+  'domicile': 'Domicile',
+  'hopital': 'Hôpital',
+};
+
 class _PastoralScreenState extends State<PastoralScreen> {
   int _tab = 0;
   final _searchController = TextEditingController();
   String _query = '';
 
+  int _seuil = 3;
+  String? _rdvStatut;
+  String? _visiteType;
+  bool _casOuverts = false;
+
+  late Future<List<AlerteRadar>> _radarFuture;
+  late Future<List<RendezVous>> _rdvFuture;
   late Future<List<ParcoursNouveau>> _parcoursFuture;
   late Future<List<VisitePastorale>> _visitesFuture;
   late Future<List<Accompagnement>> _accompagnementsFuture;
@@ -48,6 +77,8 @@ class _PastoralScreenState extends State<PastoralScreen> {
   void initState() {
     super.initState();
     final api = context.read<AppState>().api;
+    _radarFuture = api.getRadarAbsences(seuil: _seuil);
+    _rdvFuture = api.getRendezVousAdmin();
     _parcoursFuture = api.getParcoursNouveaux();
     _visitesFuture = api.getVisitesPastorales();
     _accompagnementsFuture = api.getAccompagnements();
@@ -63,9 +94,17 @@ class _PastoralScreenState extends State<PastoralScreen> {
   void _refresh() {
     final api = context.read<AppState>().api;
     setState(() {
-      if (_tab == 0) _parcoursFuture = api.getParcoursNouveaux();
-      if (_tab == 1) _visitesFuture = api.getVisitesPastorales();
-      if (_tab == 2) _accompagnementsFuture = api.getAccompagnements();
+      if (_tab == 0) _radarFuture = api.getRadarAbsences(seuil: _seuil);
+      if (_tab == 1) _rdvFuture = api.getRendezVousAdmin(statut: _rdvStatut);
+      if (_tab == 2) _parcoursFuture = api.getParcoursNouveaux();
+      if (_tab == 3) {
+        _visitesFuture = api.getVisitesPastorales(type: _visiteType);
+      }
+      if (_tab == 4) {
+        _accompagnementsFuture = _casOuverts
+            ? api.getCasOuverts()
+            : api.getAccompagnements();
+      }
     });
   }
 
@@ -79,6 +118,292 @@ class _PastoralScreenState extends State<PastoralScreen> {
 
   Future<List<Member>> _membres() async =>
       (await _membresFuture).membres;
+
+  Color _prioriteColor(String priorite) => priorite == 'urgente'
+      ? AppTheme.rougeErreur
+      : priorite == 'haute'
+          ? Colors.orange
+          : priorite == 'basse'
+              ? Colors.grey
+              : AppTheme.bleuNuit;
+
+  Widget _filtreChips({
+    required List<String?> valeurs,
+    required String? selection,
+    required String Function(String?) label,
+    required void Function(String?) onSelect,
+  }) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: valeurs
+            .map((v) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(label(v)),
+                    selected: selection == v,
+                    onSelected: (_) {
+                      onSelect(v);
+                      _refresh();
+                    },
+                  ),
+                ))
+            .toList(),
+      ),
+    );
+  }
+
+  Widget _radarTab() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Attention bienveillante : le radar signale les membres '
+                  'absents plusieurs cultes de suite, pour organiser un '
+                  'appel ou une visite, jamais une sanction.',
+                ),
+              ),
+              const SizedBox(width: 12),
+              DropdownButton<int>(
+                value: _seuil,
+                items: [
+                  for (var s = 1; s <= 10; s++)
+                    DropdownMenuItem(value: s, child: Text('$s cultes')),
+                ],
+                onChanged: (s) {
+                  if (s == null) return;
+                  setState(() => _seuil = s);
+                  _refresh();
+                },
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: FutureBuilder<List<AlerteRadar>>(
+            future: _radarFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const AppLoading();
+              }
+              if (snapshot.hasError) {
+                return AppError(
+                  message: snapshot.error.toString(),
+                  onRetry: _refresh,
+                );
+              }
+              final items = snapshot.data!;
+              if (items.isEmpty) {
+                return const EmptyState(
+                  icon: Icons.favorite_outline,
+                  message: 'Aucune alerte pour l’instant.',
+                );
+              }
+              return RefreshIndicator(
+                onRefresh: () async => _refresh(),
+                child: ListView.builder(
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final a = items[index];
+                    return ListTile(
+                      leading: const CircleAvatar(
+                        child: Icon(Icons.favorite_outline),
+                      ),
+                      title: Text(a.membreNom),
+                      subtitle: Text(
+                        'Absent ${a.absencesConsecutives} cultes de suite\n'
+                        '${a.alerte}'
+                        '${a.visiteMotif != null ? '\nVisite à domicile suggérée : ${a.visiteMotif}' : ''}',
+                      ),
+                      isThreeLine: true,
+                      trailing: TextButton(
+                        onPressed: () async {
+                          try {
+                            final membres = await _membres();
+                            if (mounted) {
+                              await _createVisite(
+                                membres,
+                                memberIdPrefill: a.memberId,
+                                motifPrefill: a.visiteMotif,
+                                typePrefill: a.visiteType,
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) showApiError(context, e);
+                          }
+                        },
+                        child: const Text('Visite'),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _changerStatutRdv(RendezVous rdv, String statut) async {
+    final api = context.read<AppState>().api;
+    String? creneau;
+    if (statut == 'confirme') {
+      final creneauController = TextEditingController();
+      await showCreateDialog(
+        context: context,
+        title: 'Confirmer le rendez-vous',
+        saveLabel: 'Confirmer',
+        fields: [
+          dialogTextField(
+            controller: creneauController,
+            label: 'Créneau confirmé',
+            hintText: 'Ex. Samedi 10 h',
+          ),
+        ],
+        isValid: () => creneauController.text.trim().isNotEmpty,
+        onSave: () async {
+          creneau = creneauController.text.trim();
+        },
+      );
+      if (creneau == null) return;
+    }
+    try {
+      await api.setRendezVousStatut(
+        rdv.id,
+        statut,
+        creneau: creneau,
+      );
+      if (mounted) {
+        showSuccess(
+            context, 'Rendez-vous ${_rdvStatuts[statut]!.toLowerCase()}.');
+      }
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
+  Future<void> _showRendezVous(RendezVous rdv) async {
+    final nom = rdv.membreNom ?? rdv.memberId ?? '—';
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(nom),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Date souhaitée : ${afficherDate(rdv.dateSouhaitee)}'),
+            if (rdv.creneau != null) Text('Créneau : ${rdv.creneau}'),
+            Text('Motif : ${rdv.motif}'),
+            Text('Statut : ${_rdvStatuts[rdv.statut] ?? rdv.statut}'),
+          ],
+        ),
+        actions: [
+          if (rdv.statut == 'en_attente') ...[
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _changerStatutRdv(rdv, 'confirme');
+              },
+              child: const Text('Confirmer'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _changerStatutRdv(rdv, 'refuse');
+              },
+              child: const Text('Refuser'),
+            ),
+          ],
+          if (rdv.statut == 'confirme')
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _changerStatutRdv(rdv, 'annule');
+              },
+              child: const Text('Annuler'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _rdvTab() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: _filtreChips(
+            valeurs: [null, ..._rdvStatuts.keys],
+            selection: _rdvStatut,
+            label: (v) => v == null ? 'Tous' : _rdvStatuts[v]!,
+            onSelect: (v) => setState(() => _rdvStatut = v),
+          ),
+        ),
+        Expanded(
+          child: FutureBuilder<List<RendezVous>>(
+            future: _rdvFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const AppLoading();
+              }
+              if (snapshot.hasError) {
+                return AppError(
+                  message: snapshot.error.toString(),
+                  onRetry: _refresh,
+                );
+              }
+              final items = snapshot.data!;
+              if (items.isEmpty) {
+                return const EmptyState(
+                  icon: Icons.calendar_month_outlined,
+                  message: 'Aucun rendez-vous pour l’instant.',
+                );
+              }
+              return RefreshIndicator(
+                onRefresh: () async => _refresh(),
+                child: ListView.builder(
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final r = items[index];
+                    return ListTile(
+                      leading: const CircleAvatar(
+                        child: Icon(Icons.calendar_month_outlined),
+                      ),
+                      title: Text(r.membreNom ?? r.memberId ?? '—'),
+                      subtitle: Text(
+                        '${afficherDate(r.dateSouhaitee)}'
+                        '${r.creneau != null ? ' · ${r.creneau}' : ''} · ${r.motif}',
+                      ),
+                      trailing: StatusChip(
+                        label: _rdvStatuts[r.statut] ?? r.statut,
+                        color: r.statut == 'confirme'
+                            ? AppTheme.bleuNuit
+                            : r.statut == 'en_attente'
+                                ? Colors.orange
+                                : AppTheme.rougeErreur,
+                      ),
+                      onTap: () => _showRendezVous(r),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
   Future<void> _createParcours(List<Member> membres) async {
     String? memberId = membres.isEmpty ? null : membres.first.id;
@@ -156,10 +481,18 @@ class _PastoralScreenState extends State<PastoralScreen> {
     );
   }
 
-  Future<void> _createVisite(List<Member> membres) async {
-    String? memberId = membres.isEmpty ? null : membres.first.id;
+  Future<void> _createVisite(
+    List<Member> membres, {
+    String? memberIdPrefill,
+    String? motifPrefill,
+    String? typePrefill,
+  }) async {
+    String? memberId = memberIdPrefill ??
+        (membres.isEmpty ? null : membres.first.id);
+    String? type = typePrefill;
     final dateController = TextEditingController();
-    final motifController = TextEditingController();
+    final motifController = TextEditingController(text: motifPrefill ?? '');
+    final lieuController = TextEditingController();
     final compteRenduController = TextEditingController();
     await showCreateDialog(
       context: context,
@@ -176,6 +509,17 @@ class _PastoralScreenState extends State<PastoralScreen> {
         ),
         dialogDateField(
             context: context, controller: dateController, label: 'Date de la visite'),
+        dialogDropdown<String?>(
+          value: type,
+          label: 'Type',
+          options: const {
+            null: 'Non précisé',
+            'domicile': 'Domicile',
+            'hopital': 'Hôpital',
+          },
+          onChanged: (v) => type = v,
+        ),
+        dialogTextField(controller: lieuController, label: 'Lieu'),
         dialogTextField(controller: motifController, label: 'Motif'),
         dialogTextField(
           controller: compteRenduController,
@@ -192,6 +536,8 @@ class _PastoralScreenState extends State<PastoralScreen> {
                 dateVisite: dateController.text.trim(),
                 motif: motifController.text.trim(),
                 compteRendu: _opt(compteRenduController),
+                type: type,
+                lieu: _opt(lieuController),
               );
           if (mounted) showSuccess(context, 'Visite enregistrée.');
           _refresh();
@@ -205,6 +551,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
   Future<void> _createAccompagnement(List<Member> membres) async {
     String? memberId = membres.isEmpty ? null : membres.first.id;
     String type = 'autre';
+    String priorite = 'normale';
     final descriptionController = TextEditingController();
     await showCreateDialog(
       context: context,
@@ -231,6 +578,12 @@ class _PastoralScreenState extends State<PastoralScreen> {
           },
           onChanged: (v) => type = v ?? 'autre',
         ),
+        dialogDropdown<String>(
+          value: priorite,
+          label: 'Priorité',
+          options: _priorites,
+          onChanged: (v) => priorite = v ?? 'normale',
+        ),
         dialogTextField(
           controller: descriptionController,
           label: 'Description',
@@ -244,6 +597,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
                 memberId: memberId!,
                 type: type,
                 description: descriptionController.text.trim(),
+                priorite: priorite,
               );
           if (mounted) showSuccess(context, 'Accompagnement créé.');
           _refresh();
@@ -251,6 +605,134 @@ class _PastoralScreenState extends State<PastoralScreen> {
           if (mounted) showApiError(context, e);
         }
       },
+    );
+  }
+
+  Future<void> _showAccompagnement(
+      Accompagnement a, Map<String, String> noms) async {
+    String priorite = a.priorite;
+    final dateController = TextEditingController();
+    final noteController = TextEditingController();
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(noms[a.memberId] ?? a.memberId),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${a.typeLabel} · ${a.description ?? '—'}'),
+                const SizedBox(height: 12),
+                DropdownButton<String>(
+                  value: priorite,
+                  isExpanded: true,
+                  items: _priorites.entries
+                      .map((e) => DropdownMenuItem(
+                          value: e.key, child: Text(e.value)))
+                      .toList(),
+                  onChanged: (v) async {
+                    if (v == null || v == priorite) return;
+                    try {
+                      await context
+                          .read<AppState>()
+                          .api
+                          .setAccompagnementPriorite(a.id, v);
+                      setDialogState(() => priorite = v);
+                      if (mounted) {
+                        showSuccess(context, 'Priorité mise à jour.');
+                      }
+                      _refresh();
+                    } catch (e) {
+                      if (mounted) showApiError(context, e);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                const Text('Rencontres',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                FutureBuilder<List<RencontreAccompagnement>>(
+                  future: context
+                      .read<AppState>()
+                      .api
+                      .getRencontresAccompagnement(a.id),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: AppLoading(),
+                      );
+                    }
+                    if (snapshot.hasError) {
+                      return Text(snapshot.error.toString());
+                    }
+                    final rencontres = snapshot.data!;
+                    if (rencontres.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Text('Aucune rencontre pour l’instant.'),
+                      );
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: rencontres
+                          .map((r) => Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 4),
+                                child: Text(
+                                  '${afficherDate(r.dateRencontre)}'
+                                  '${r.note != null ? ' · ${r.note}' : ''}',
+                                ),
+                              ))
+                          .toList(),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                dialogDateField(
+                    context: dialogContext,
+                    controller: dateController,
+                    label: 'Date de la rencontre'),
+                dialogTextField(
+                    controller: noteController, label: 'Note'),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                if (dateController.text.trim().isEmpty) return;
+                try {
+                  await context
+                      .read<AppState>()
+                      .api
+                      .createRencontreAccompagnement(
+                        accompagnementId: a.id,
+                        dateRencontre: dateController.text.trim(),
+                        note: _opt(noteController),
+                      );
+                  if (mounted) {
+                    showSuccess(context, 'Rencontre enregistrée.');
+                  }
+                  if (dialogContext.mounted) {
+                    Navigator.of(dialogContext).pop();
+                  }
+                  _refresh();
+                } catch (e) {
+                  if (mounted) showApiError(context, e);
+                }
+              },
+              child: const Text('Ajouter la rencontre'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Fermer'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -333,6 +815,15 @@ class _PastoralScreenState extends State<PastoralScreen> {
           onChanged: (v) => setState(() => _query = v.trim()),
           label: 'Rechercher une visite',
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: _filtreChips(
+            valeurs: const [null, 'domicile', 'hopital'],
+            selection: _visiteType,
+            label: (v) => v == null ? 'Toutes' : _typesVisite[v]!,
+            onSelect: (v) => setState(() => _visiteType = v),
+          ),
+        ),
         Expanded(
           child: FutureBuilder<List<VisitePastorale>>(
             future: _visitesFuture,
@@ -378,7 +869,8 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       ),
                       title: Text(noms[v.memberId] ?? v.memberId),
                       subtitle: Text(
-                        '${afficherDate(v.dateVisite)} · ${v.motif ?? '—'}'
+                        '${afficherDate(v.dateVisite)} · ${v.typeLabel}'
+                        '${v.lieu != null ? ' · ${v.lieu}' : ''} · ${v.motif ?? '—'}'
                         '${v.compteRendu != null ? ' · ${v.compteRendu}' : ''}',
                       ),
                       trailing: StatusChip(
@@ -408,6 +900,15 @@ class _PastoralScreenState extends State<PastoralScreen> {
           onChanged: (v) => setState(() => _query = v.trim()),
           label: 'Rechercher un accompagnement',
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: _filtreChips(
+            valeurs: const [null, 'ouverts'],
+            selection: _casOuverts ? 'ouverts' : null,
+            label: (v) => v == null ? 'Tous' : 'Cas ouverts',
+            onSelect: (v) => setState(() => _casOuverts = v == 'ouverts'),
+          ),
+        ),
         Expanded(
           child: FutureBuilder<List<Accompagnement>>(
             future: _accompagnementsFuture,
@@ -428,7 +929,9 @@ class _PastoralScreenState extends State<PastoralScreen> {
                 return EmptyState(
                   icon: Icons.handshake_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucun accompagnement pour l’instant.'
+                      ? (_casOuverts
+                          ? 'Aucun cas ouvert pour l’instant.'
+                          : 'Aucun accompagnement pour l’instant.')
                       : 'Aucun accompagnement ne correspond à la recherche.',
                   actionLabel: 'Créer un accompagnement',
                   onAction: () async {
@@ -452,13 +955,13 @@ class _PastoralScreenState extends State<PastoralScreen> {
                         child: Icon(Icons.handshake_outlined),
                       ),
                       title: Text(noms[a.memberId] ?? a.memberId),
-                      subtitle: Text('${a.type} · ${a.description ?? '—'}'),
+                      subtitle: Text(
+                          '${a.type} · ${a.description ?? '—'}'),
                       trailing: StatusChip(
-                        label: a.statut,
-                        color: a.statut == 'termine'
-                            ? AppTheme.bleuNuit
-                            : AppTheme.bleuPresences,
+                        label: a.prioriteLabel,
+                        color: _prioriteColor(a.priorite),
                       ),
+                      onTap: () => _showAccompagnement(a, noms),
                     );
                   },
                 ),
@@ -473,17 +976,20 @@ class _PastoralScreenState extends State<PastoralScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Suivi pastoral'),
           bottom: TabBar(
+            isScrollable: true,
             onTap: (i) => setState(() {
               _tab = i;
               _query = '';
               _searchController.clear();
             }),
             tabs: const [
+              Tab(text: 'Radar'),
+              Tab(text: 'Rendez-vous'),
               Tab(text: 'Parcours'),
               Tab(text: 'Visites'),
               Tab(text: 'Accompagnements'),
@@ -509,7 +1015,10 @@ class _PastoralScreenState extends State<PastoralScreen> {
               for (final m in snapshot.data!.membres) m.id: m.fullName
             };
             return TabBarView(
+              physics: const NeverScrollableScrollPhysics(),
               children: [
+                _radarTab(),
+                _rdvTab(),
                 _parcoursTab(noms),
                 _visitesTab(noms),
                 _accompagnementsTab(noms),
@@ -517,29 +1026,31 @@ class _PastoralScreenState extends State<PastoralScreen> {
             );
           },
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            try {
-              final membres = await _membres();
-              if (!mounted) return;
-              if (_tab == 0) {
-                await _createParcours(membres);
-              } else if (_tab == 1) {
-                await _createVisite(membres);
-              } else {
-                await _createAccompagnement(membres);
-              }
-            } catch (e) {
-              if (context.mounted) showApiError(context, e);
-            }
-          },
-          icon: const Icon(Icons.add),
-          label: Text(_tab == 0
-              ? 'Parcours'
-              : _tab == 1
-                  ? 'Visite'
-                  : 'Accompagnement'),
-        ),
+        floatingActionButton: _tab < 2
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () async {
+                  try {
+                    final membres = await _membres();
+                    if (!mounted) return;
+                    if (_tab == 2) {
+                      await _createParcours(membres);
+                    } else if (_tab == 3) {
+                      await _createVisite(membres);
+                    } else {
+                      await _createAccompagnement(membres);
+                    }
+                  } catch (e) {
+                    if (context.mounted) showApiError(context, e);
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: Text(_tab == 2
+                    ? 'Parcours'
+                    : _tab == 3
+                        ? 'Visite'
+                        : 'Accompagnement'),
+              ),
       ),
     );
   }
