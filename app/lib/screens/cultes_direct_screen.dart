@@ -12,8 +12,10 @@ import 'package:provider/provider.dart';
 
 import '../models/cultes.dart';
 import '../models/cultes_direct.dart';
+import '../models/presences.dart';
 import '../state/app_state.dart';
 import '../config/app_theme.dart';
+import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import 'qr_scan_screen.dart';
 
@@ -41,6 +43,13 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
   int _transposition = 0;
   int _entrees = 0;
 
+  // Compléments T5 r3, mémoire de séance uniquement, jamais envoyés.
+  final _retourRegieController = TextEditingController();
+  final _capaciteController = TextEditingController();
+  int? _capacite;
+  PresenceStats? _stats;
+  bool _statsErreur = false;
+
   @override
   void initState() {
     super.initState();
@@ -50,6 +59,8 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
   @override
   void dispose() {
     _minuteur?.cancel();
+    _retourRegieController.dispose();
+    _capaciteController.dispose();
     super.dispose();
   }
 
@@ -69,12 +80,22 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
         final presences = await api.getPresences(culteId: culteId);
         presents = compterPresents(presences);
       }
+      // Statistiques globales : un échec ne bloque pas l'écran.
+      PresenceStats? stats;
+      var statsErreur = false;
+      try {
+        stats = await api.getPresenceStats();
+      } catch (_) {
+        statsErreur = true;
+      }
       if (!mounted) return;
       setState(() {
         _cultes = cultes;
         _culteId = culteId;
         _moments = moments;
         _presents = presents;
+        _stats = stats;
+        _statsErreur = statsErreur;
         _chargement = false;
       });
     } catch (e) {
@@ -89,6 +110,8 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
   Future<void> _changerCulte(String? culteId) async {
     if (culteId == null || culteId == _culteId) return;
     _arreter();
+    _retourRegieController.clear();
+    _capaciteController.clear();
     setState(() {
       _culteId = culteId;
       _ecoule = 0;
@@ -96,6 +119,7 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
       _momentIndex = 0;
       _transposition = 0;
       _entrees = 0;
+      _capacite = null;
     });
     try {
       final api = context.read<AppState>().api;
@@ -116,10 +140,15 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
     final culteId = _culteId;
     if (culteId == null) return;
     try {
-      final presences =
-          await context.read<AppState>().api.getPresences(culteId: culteId);
+      final api = context.read<AppState>().api;
+      final presences = await api.getPresences(culteId: culteId);
+      final stats = await api.getPresenceStats();
       if (!mounted) return;
-      setState(() => _presents = compterPresents(presences));
+      setState(() {
+        _presents = compterPresents(presences);
+        _stats = stats;
+        _statsErreur = false;
+      });
     } catch (e) {
       if (!mounted) return;
       showApiError(context, e);
@@ -370,6 +399,44 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                     ],
                   ),
                   const Center(child: Text('ENTRÉES')),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _capaciteController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Capacité',
+                      hintText: 'Nombre de places pour ce culte',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    onChanged: (texte) => setState(
+                        () => _capacite = capaciteValide(texte)),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Jauge',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ),
+                      Text(
+                        _capacite == null
+                            ? 'Aucune capacité saisie.'
+                            : '$_entrees / $_capacite '
+                                '(${pourcentageJauge(_entrees, _capacite)} %)',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: progressionJauge(_entrees, _capacite),
+                    color: AppTheme.orFonce,
+                    backgroundColor: AppTheme.bleuNuit.withValues(alpha: 0.15),
+                    minHeight: 8,
+                  ),
                 ],
               ),
             ),
@@ -422,6 +489,98 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                   ),
                 ],
               ),
+            ),
+          ),
+        ),
+        const SectionTitle(title: 'Retour régie'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                      'Note courte de la régie après le culte, gardée sur cet écran seulement.'),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _retourRegieController,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Retour régie',
+                      hintText: 'Saisissez une courte note…',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SectionTitle(title: 'Statistiques'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: _statsErreur
+                  ? const Text('Statistiques indisponibles pour l’instant.')
+                  : _stats == null
+                      ? const Text(
+                          'Aucune présence enregistrée pour l’instant.')
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Statistiques par culte',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 4),
+                            if (_stats!.parCulte.isEmpty)
+                              const Text(
+                                  'Aucune présence enregistrée pour l’instant.')
+                            else
+                              ..._stats!.parCulte.map((entree) {
+                                final presents = presentsStat(entree);
+                                final date = entree['date_heure'];
+                                return ListTile(
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(titreStatCulte(entree)),
+                                  subtitle: date == null
+                                      ? null
+                                      : Text(afficherDateTime(date)),
+                                  trailing: Text(
+                                    '$presents '
+                                    '${presents > 1 ? 'présents' : 'présent'}',
+                                  ),
+                                );
+                              }),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Statistiques par membre',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 4),
+                            if (_stats!.parMembre.isEmpty)
+                              const Text(
+                                  'Aucune présence enregistrée pour l’instant.')
+                            else
+                              ..._stats!.parMembre.map((entree) {
+                                final presents = presentsStat(entree);
+                                return ListTile(
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(nomStatMembre(entree)),
+                                  trailing: Text(
+                                    '$presents '
+                                    '${presents > 1 ? 'cultes' : 'culte'}',
+                                  ),
+                                );
+                              }),
+                          ],
+                        ),
             ),
           ),
         ),
