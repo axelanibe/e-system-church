@@ -5,9 +5,9 @@ import '../state/app_state.dart';
 import '../widgets/app_bottom_bar.dart';
 import '../widgets/short_drawer.dart';
 import 'dashboard_screen.dart';
+import 'familles_screen.dart';
 import 'finances_screen.dart';
 import 'membres_screen.dart';
-import 'modules_screen.dart';
 
 /// Coquille principale après connexion : 4 destinations.
 /// Écrans larges (≥ 900 px) : rail latéral ; écrans étroits : barre
@@ -35,16 +35,15 @@ class _HomeScreenState extends State<HomeScreen> {
     'Accueil',
     'Membres',
     'Finances',
-    'Modules',
+    'Départements',
   ];
 
   /// Chaque écran reçoit une clé liée à l'église active : après une
   /// bascule d'église, HomeScreen reste monté et les écrans garderaient
   /// sinon leur Future d'avant (données de l'église précédente). La clé
   /// changeante recrée l'écran, donc son chargement, sans refaire la
-  /// navigation. Vaut pour les 3 écrans à Future en initState
-  /// (Accueil, Membres, Finances) ; ModulesScreen est sans état et lit
-  /// déjà l'état courant.
+  /// navigation. Vaut pour les 4 écrans à Future en initState
+  /// (Accueil, Membres, Finances, Familles).
   Widget _screenFor(int index, String? egliseId) {
     final cle = ValueKey(egliseId);
     switch (index) {
@@ -55,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 2:
         return FinancesScreen(key: cle);
       case 3:
-        return ModulesScreen(key: cle);
+        return FamillesScreen(key: cle, ongletInitial: 1);
       default:
         return DashboardScreen(key: cle);
     }
@@ -67,7 +66,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final wide = MediaQuery.of(context).size.width >= 900;
 
     // Libellés courts, une ligne : « Accueil », « Membres »,
-    // « Finances », « Modules ». Les titres complets restent dans _titles.
+    // « Finances », « Départements ». Les titres complets restent
+    // dans _titles. Le hub « Modules » reste accessible par le
+    // tiroir court, il n'est plus un onglet (copie de l'artefact).
     const destinations = [
       NavigationDestination(
           icon: Icon(Icons.dashboard_outlined),
@@ -82,9 +83,9 @@ class _HomeScreenState extends State<HomeScreen> {
           selectedIcon: Icon(Icons.account_balance_wallet),
           label: 'Finances'),
       NavigationDestination(
-          icon: Icon(Icons.grid_view_outlined),
-          selectedIcon: Icon(Icons.grid_view),
-          label: 'Modules'),
+          icon: Icon(Icons.groups_outlined),
+          selectedIcon: Icon(Icons.groups),
+          label: 'Départements'),
     ];
 
     // Tous les modules sont affichés pour toutes les églises (règle

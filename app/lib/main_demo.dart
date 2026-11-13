@@ -9,7 +9,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'config/app_config.dart';
@@ -23,11 +22,7 @@ import 'state/app_state.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // Polices, comme dans `main.dart`.
-  GoogleFonts.inter();
-  GoogleFonts.plusJakartaSans();
-  GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold);
-  GoogleFonts.jetBrainsMono();
+  // Polices, comme dans `main.dart` : embarquées dans le build.
   runApp(const DemoApp());
 }
 

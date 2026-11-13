@@ -9,11 +9,11 @@ import 'package:flutter/material.dart';
 /// remplace la palette Vision (cyprès #1E4D3B, terracotta #C86D51,
 /// alabaster #F7F5F0), abandonnée le 12 novembre 2026.
 /// Typographies : Inter pour le corps, Plus Jakarta Sans pour les
-/// titres, JetBrains Mono pour les codes et matricules. Les familles
-/// sont déclarées ici par leur nom seul, sans appel réseau : les
-/// polices sont chargées au démarrage par `main.dart` (et
-/// `main_demo.dart`) via google_fonts, téléchargement à l'exécution
-/// puis cache. Les tests restent ainsi verts hors ligne.
+/// titres, JetBrains Mono pour les codes et matricules. Les polices
+/// sont embarquées dans le build (pubspec.yaml, fichiers TTF
+/// officiels Google Fonts), sans appel réseau : le site statique et
+/// l'APK les servent depuis leurs propres assets. Les tests restent
+/// ainsi verts hors ligne.
 ///
 /// Contrastes vérifiés (WCAG, textes principaux au moins 4,5:1) :
 /// blanc sur bleu nuit 16,52:1, bleu nuit sur papier 15,30:1, or
@@ -21,9 +21,7 @@ import 'package:flutter/material.dart';
 /// 7,36:1, bleu nuit sur or clair 14,50:1, rouge #B3261E sur papier
 /// 6,05:1, vert foncé #0C5B40 sur papier 7,52:1. Blanc sur or ne vaut
 /// que 2,24:1 : jamais de texte blanc sur or, le texte sur or est
-/// bleu nuit. Cultes #6B4C7A, Présences #2563EB, Prières #B8506A,
-/// Enfants #B45309 et Médias #3730A3 sont des accents de module,
-/// icônes et aplats seulement, jamais pour du texte courant.
+/// bleu nuit.
 ///
 /// Accessibilité (11 novembre 2026) : taille minimale 14 px, titres
 /// 24 gras, sous-titres 18, corps 16, boutons 48 px de haut, champs
@@ -56,20 +54,8 @@ class AppTheme {
   /// Bleu foncé lisible sur fond clair (remplace le bleu vif).
   static const Color bleuFonce = Color(0xFF1B4F72);
 
-  /// Couleur du module Cultes.
-  static const Color violetCultes = Color(0xFF6B4C7A);
-
   /// Couleur du module Présences.
   static const Color bleuPresences = Color(0xFF2563EB);
-
-  /// Couleur du module Prières.
-  static const Color rosePrieres = Color(0xFFB8506A);
-
-  /// Couleur du module Enfants : icônes et aplats seulement.
-  static const Color orangeEnfants = Color(0xFFB45309);
-
-  /// Couleur du module Médias.
-  static const Color indigoMedias = Color(0xFF3730A3);
 
   /// Style mono pour les codes et matricules.
   static const TextStyle styleCode =
@@ -115,6 +101,25 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: bordure),
+        ),
+      ),
+      // Puces de filtre : sélection or clair sur papier, jamais le
+      // bleu clair par défaut du thème Material. Non sélectionnée :
+      // blanche, bordure claire, texte bleu nuit.
+      chipTheme: const ChipThemeData(
+        backgroundColor: Colors.white,
+        selectedColor: orClair,
+        checkmarkColor: bleuNuit,
+        labelStyle: TextStyle(
+            fontFamily: 'Inter', fontSize: 14, color: bleuNuit),
+        secondaryLabelStyle: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14,
+            color: bleuNuit,
+            fontWeight: FontWeight.bold),
+        side: BorderSide(color: bordure),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(24)),
         ),
       ),
       navigationBarTheme: const NavigationBarThemeData(

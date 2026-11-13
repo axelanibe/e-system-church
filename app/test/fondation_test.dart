@@ -2,6 +2,8 @@ import 'package:esystem_church/config/app_theme.dart';
 import 'package:esystem_church/models/auth.dart';
 import 'package:esystem_church/models/church.dart';
 import 'package:esystem_church/models/fidele.dart';
+import 'package:esystem_church/screens/modules_screen.dart';
+import 'package:esystem_church/state/app_state.dart';
 import 'package:esystem_church/widgets/app_bottom_bar.dart';
 import 'package:esystem_church/widgets/carte_membre_vedette.dart';
 import 'package:esystem_church/widgets/screen_header.dart';
@@ -9,6 +11,7 @@ import 'package:esystem_church/widgets/soft_button.dart';
 import 'package:esystem_church/widgets/soft_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   group('Thème fondation', () {
@@ -22,11 +25,7 @@ void main() {
       expect(AppTheme.rougeErreur, const Color(0xFFB3261E));
       expect(AppTheme.vertFonce, const Color(0xFF0C5B40));
       expect(AppTheme.bleuFonce, const Color(0xFF1B4F72));
-      expect(AppTheme.violetCultes, const Color(0xFF6B4C7A));
       expect(AppTheme.bleuPresences, const Color(0xFF2563EB));
-      expect(AppTheme.rosePrieres, const Color(0xFFB8506A));
-      expect(AppTheme.orangeEnfants, const Color(0xFFB45309));
-      expect(AppTheme.indigoMedias, const Color(0xFF3730A3));
     });
 
     test('contrastes des textes principaux au moins 4,5:1', () {
@@ -45,11 +44,7 @@ void main() {
           greaterThanOrEqualTo(4.5));
       expect(contraste(AppTheme.vertFonce, fond),
           greaterThanOrEqualTo(4.5));
-      expect(contraste(AppTheme.violetCultes, fond),
-          greaterThanOrEqualTo(4.5));
       expect(contraste(AppTheme.bleuPresences, fond),
-          greaterThanOrEqualTo(4.5));
-      expect(contraste(AppTheme.indigoMedias, fond),
           greaterThanOrEqualTo(4.5));
       expect(contraste(Colors.white, AppTheme.bleuNuit),
           greaterThanOrEqualTo(4.5));
@@ -200,6 +195,43 @@ void main() {
       expect(find.text('Matricule : ESC-M-0001'), findsOneWidget);
       expect(find.text('Église Test'), findsOneWidget);
       expect(find.text('Voir ma carte de membre'), findsOneWidget);
+    });
+
+    testWidgets('Modules : toutes les icônes en bleu nuit (artefact)',
+        (tester) async {
+      // Fenêtre haute pour que toute la grille soit construite.
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(800, 3000);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        ChangeNotifierProvider<AppState>(
+          create: (_) => AppState(),
+          child: MaterialApp(
+            theme: AppTheme.theme,
+            home: const Scaffold(body: ModulesScreen()),
+          ),
+        ),
+      );
+      await tester.pump();
+      // Les modules autrefois colorés (Cultes, Présences, Prières,
+      // Enfants, Médias) portent désormais la même icône bleu nuit.
+      for (final label in [
+        'Familles',
+        'Cultes',
+        'Cultes en direct',
+        'Présences',
+        'Prières & messages',
+        'Enfants & jeunesse',
+        'Médias & bibliothèque',
+      ]) {
+        expect(find.text(label), findsOneWidget);
+      }
+      final icones = tester.widgetList<Icon>(find.byType(Icon));
+      expect(icones, isNotEmpty);
+      for (final icone in icones) {
+        expect(icone.color, AppTheme.bleuNuit);
+      }
     });
   });
 }

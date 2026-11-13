@@ -12,7 +12,12 @@ import 'member_detail_screen.dart';
 /// La fiche complète d'un membre (statuts, baptême, liens) s'ouvre depuis
 /// la section dédiée en bas de l'onglet Familles.
 class FamillesScreen extends StatefulWidget {
-  const FamillesScreen({super.key});
+  /// Onglet ouvert au départ (0 Familles, 1 Départements,
+  /// 2 Cellules, 3 Fonctions, 4 Postes). La barre du bas ouvre
+  /// l'onglet Départements directement.
+  final int ongletInitial;
+
+  const FamillesScreen({super.key, this.ongletInitial = 0});
 
   @override
   State<FamillesScreen> createState() => _FamillesScreenState();
@@ -33,6 +38,7 @@ class _FamillesScreenState extends State<FamillesScreen> {
   @override
   void initState() {
     super.initState();
+    _tab = widget.ongletInitial;
     _refreshAll();
   }
 
@@ -678,6 +684,7 @@ class _FamillesScreenState extends State<FamillesScreen> {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 5,
+      initialIndex: widget.ongletInitial,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Familles'),
