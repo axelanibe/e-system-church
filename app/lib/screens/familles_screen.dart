@@ -689,6 +689,7 @@ class _FamillesScreenState extends State<FamillesScreen> {
         appBar: AppBar(
           title: const Text('Familles'),
           bottom: TabBar(
+            isScrollable: true,
             onTap: (i) => setState(() {
               _tab = i;
               _query = '';

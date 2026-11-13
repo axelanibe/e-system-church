@@ -170,7 +170,7 @@ class _FinancesCompletesScreenState extends State<FinancesCompletesScreen> {
                       physics: const NeverScrollableScrollPhysics(),
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
-                      childAspectRatio: 1.6,
+                      childAspectRatio: 1.9,
                       children: [
                         StatCard(
                           label: 'Cotisations du mois',

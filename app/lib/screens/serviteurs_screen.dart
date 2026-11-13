@@ -385,6 +385,7 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
         appBar: AppBar(
           title: const Text('Serviteurs'),
           bottom: TabBar(
+            isScrollable: true,
             onTap: (i) => setState(() {
               _tab = i;
               _query = '';

@@ -139,7 +139,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                   children: [
                     Card(
                       color:
-                          Theme.of(context).colorScheme.primaryContainer,
+                          AppTheme.orClair,
                       child: Padding(
                         padding: const EdgeInsets.all(20),
                         child: Column(

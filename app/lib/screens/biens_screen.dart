@@ -506,6 +506,7 @@ class _BiensScreenState extends State<BiensScreen> {
         appBar: AppBar(
           title: const Text('Biens de l’église'),
           bottom: TabBar(
+            isScrollable: true,
             onTap: (i) => setState(() {
               _tab = i;
               _query = '';

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 
 import '../widgets/common_widgets.dart';
 
@@ -35,7 +36,7 @@ class ExempleBilanScreen extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
+                    color: AppTheme.orClair,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(

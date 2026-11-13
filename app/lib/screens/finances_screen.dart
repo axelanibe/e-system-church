@@ -87,51 +87,6 @@ class _FinancesScreenState extends State<FinancesScreen> {
     return Scaffold(
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
-            // Retour à la ligne en largeur étroite : en défilement
-            // horizontal, la puce « Dépenses » sortait de l'écran sans
-            // indice de défilement. En large, tout tient sur une ligne.
-            child: Wrap(
-              spacing: 8,
-              children: [
-                for (final entry in <String, String?>{
-                  'Tous types': null,
-                  'Dîmes': 'dime',
-                  'Offrandes': 'offrande',
-                  'Dons': 'don',
-                  'Dépenses': 'depense',
-                  'Cotisations': 'cotisation',
-                }.entries)
-                  ChoiceChip(
-                    label: Text(entry.key),
-                    selected: _typeFilter == entry.value,
-                    onSelected: (_) {
-                      setState(() {
-                        _typeFilter = entry.value;
-                        _future = _load();
-                      });
-                    },
-                  ),
-                for (final entry in <String, String?>{
-                  'Tous statuts': null,
-                  'En attente': 'en_attente',
-                  'Confirmées': 'confirme',
-                  'Annulées': 'annule',
-                }.entries)
-                  ChoiceChip(
-                    label: Text(entry.key),
-                    selected: _statusFilter == entry.value,
-                    onSelected: (_) {
-                      setState(() {
-                        _statusFilter = entry.value;
-                        _future = _load();
-                      });
-                    },
-                  ),
-              ],
-            ),
-          ),
           Expanded(
             child: FutureBuilder<ContributionPage>(
               future: _future,
@@ -153,6 +108,42 @@ class _FinancesScreenState extends State<FinancesScreen> {
                     // qui recouvrait sinon le badge de la dernière ligne.
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                     children: [
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final crossAxisCount =
+                              constraints.maxWidth > 600 ? 4 : 2;
+                          final totaux = page.totaux;
+                          return GridView.count(
+                            crossAxisCount: crossAxisCount,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 1.9,
+                            children: [
+                              for (final type in [
+                                'dime',
+                                'offrande',
+                                'don',
+                                'depense'
+                              ])
+                                StatCard(
+                                  label: Contribution.labelForTypePluriel(
+                                      type),
+                                  value: formatFcfa(
+                                      totaux[type]?.totalFcfa ?? 0),
+                                  icon: type == 'depense'
+                                      ? Icons.trending_down
+                                      : Icons.trending_up,
+                                  color: type == 'depense'
+                                      ? AppTheme.rougeErreur
+                                      : AppTheme.bleuNuit,
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
                       Card(
                         child: ListTile(
                           leading: const Icon(
@@ -205,40 +196,50 @@ class _FinancesScreenState extends State<FinancesScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final crossAxisCount =
-                              constraints.maxWidth > 600 ? 4 : 2;
-                          final totaux = page.totaux;
-                          return GridView.count(
-                            crossAxisCount: crossAxisCount,
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            mainAxisSpacing: 12,
-                            crossAxisSpacing: 12,
-                            childAspectRatio: 1.6,
-                            children: [
-                              for (final type in [
-                                'dime',
-                                'offrande',
-                                'don',
-                                'depense'
-                              ])
-                                StatCard(
-                                  label: Contribution.labelForTypePluriel(
-                                      type),
-                                  value: formatFcfa(
-                                      totaux[type]?.totalFcfa ?? 0),
-                                  icon: type == 'depense'
-                                      ? Icons.trending_down
-                                      : Icons.trending_up,
-                                  color: type == 'depense'
-                                      ? AppTheme.rougeErreur
-                                      : AppTheme.bleuNuit,
-                                ),
-                            ],
-                          );
-                        },
+                      Padding(
+                        padding: EdgeInsets.zero,
+                        // Retour à la ligne en largeur étroite : en défilement
+                        // horizontal, la puce « Dépenses » sortait de l'écran sans
+                        // indice de défilement. En large, tout tient sur une ligne.
+                        child: Wrap(
+                          spacing: 8,
+                          children: [
+                            for (final entry in <String, String?>{
+                              'Tous types': null,
+                              'Dîmes': 'dime',
+                              'Offrandes': 'offrande',
+                              'Dons': 'don',
+                              'Dépenses': 'depense',
+                              'Cotisations': 'cotisation',
+                            }.entries)
+                              ChoiceChip(
+                                label: Text(entry.key),
+                                selected: _typeFilter == entry.value,
+                                onSelected: (_) {
+                                  setState(() {
+                                    _typeFilter = entry.value;
+                                    _future = _load();
+                                  });
+                                },
+                              ),
+                            for (final entry in <String, String?>{
+                              'Tous statuts': null,
+                              'En attente': 'en_attente',
+                              'Confirmées': 'confirme',
+                              'Annulées': 'annule',
+                            }.entries)
+                              ChoiceChip(
+                                label: Text(entry.key),
+                                selected: _statusFilter == entry.value,
+                                onSelected: (_) {
+                                  setState(() {
+                                    _statusFilter = entry.value;
+                                    _future = _load();
+                                  });
+                                },
+                              ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 16),
                       if (page.contributions.isEmpty)

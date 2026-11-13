@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
 import '../widgets/app_bottom_bar.dart';
+import '../widgets/barre_perimetre.dart';
 import '../widgets/short_drawer.dart';
 import 'dashboard_screen.dart';
 import 'familles_screen.dart';
@@ -15,8 +16,9 @@ import 'membres_screen.dart';
 /// des onglets : ils restent accessibles par le tiroir court et par
 /// le tableau de bord (« Mon réseau », « Annonces récentes »),
 /// qui les montrent directement, sans déplacement inutile.
-/// L'AppBar montre le titre de l'écran seul, une ligne, coupé avec
-/// « … ». Le tiroir court ne montre que l'église courante, « Changer
+/// La barre de périmètre et l'en-tête clair de l'artefact sont
+/// au-dessus de l'écran. Le tiroir court ne montre que l'église
+/// courante, « Changer
 /// d'église » ouvre l'écran dédié « Mes églises » (paginé et
 /// cherchable), et il garde les entrées « Réseau », « Annonces »,
 /// « Mon église », « Demandes de rattachement », « Mes annexes »,
@@ -92,14 +94,12 @@ class _HomeScreenState extends State<HomeScreen> {
     // du 11/11/2026) : plus de destination masquée.
     final courant = _index.clamp(0, _titles.length - 1);
 
+    final espace = state.isSuperAdmin
+        ? EspaceArtefact.plateforme
+        : ((state.church?.isMere ?? true)
+            ? EspaceArtefact.egliseMere
+            : EspaceArtefact.annexe);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _titles[courant],
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
       drawer: TiroirCourt(
         onAller: (i) => setState(() => _index = i),
       ),
@@ -118,7 +118,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       ))
                   .toList(),
             ),
-          Expanded(child: _screenFor(courant, state.church?.id)),
+          Expanded(
+            child: Column(
+              children: [
+                BarrePerimetre.depuisContexte(context, courant: espace),
+                EnTeteClair(
+                  titre: _titles[courant],
+                  sousTitre: courant == 0
+                      ? 'Application finale, tranches T1 à T13'
+                      : null,
+                  leading: Builder(
+                    builder: (context) => IconButton(
+                      icon: const Icon(Icons.menu),
+                      tooltip: 'Menu',
+                      onPressed: () =>
+                          Scaffold.of(context).openDrawer(),
+                    ),
+                  ),
+                ),
+                Expanded(child: _screenFor(courant, state.church?.id)),
+              ],
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: wide

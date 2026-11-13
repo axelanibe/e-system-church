@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
@@ -150,7 +151,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }) {
     final scheme = Theme.of(context).colorScheme;
     return Card(
-      color: selected ? scheme.primaryContainer : null,
+      color: selected ? AppTheme.orClair : null,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),

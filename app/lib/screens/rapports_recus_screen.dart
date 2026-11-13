@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/rapport_annexe.dart';
@@ -171,9 +172,7 @@ class _RapportsRecusScreenState extends State<RapportsRecusScreen> {
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primaryContainer,
+                                      color: AppTheme.orClair,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: const Text(

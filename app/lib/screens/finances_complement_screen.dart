@@ -657,7 +657,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
         return AppTheme.bleuNuit;
       case 'validee_pasteur':
       case 'validee_tresorier':
-        return AppTheme.bleuPresences;
+        return AppTheme.bleuFonce;
       case 'soumise':
         return Colors.orange;
       case 'refusee':
@@ -1695,6 +1695,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
         appBar: AppBar(
           title: const Text('Budget & caisse'),
           bottom: TabBar(
+            isScrollable: true,
             onTap: (i) => setState(() {
               _tab = i;
               _query = '';

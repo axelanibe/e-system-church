@@ -77,7 +77,7 @@ class _PrieresScreenState extends State<PrieresScreen> {
       case 'nouvelle':
         return Colors.orange;
       case 'en_cours':
-        return AppTheme.bleuPresences;
+        return AppTheme.bleuFonce;
       case 'terminee':
         return AppTheme.bleuNuit;
       default:
@@ -435,6 +435,7 @@ class _PrieresScreenState extends State<PrieresScreen> {
         appBar: AppBar(
           title: const Text('Prières & messages'),
           bottom: TabBar(
+            isScrollable: true,
             onTap: (i) => setState(() {
               _tab = i;
               _query = '';
