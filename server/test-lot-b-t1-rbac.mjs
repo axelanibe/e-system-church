@@ -148,6 +148,13 @@ try {
   check("GET /demandes-priere trésorier : 200, voit la publique + aucune confidentielle d'autrui", r.status === 200 && r.body.items.every((x) => !x.confidentiel || x.id === mienneId) && r.body.total === 1, `status=${r.status} total=${r.body.total}`);
   r = await call("DELETE", `/demandes-priere/${publiqueId}`, tokAdmin);
   check("DELETE /demandes-priere/:id admin : 200", r.status === 200, String(r.status));
+  // Correctif relecture PR #59 (Muse) : un simple membre ne peut déposer
+  // que pour lui-même ; l'admin garde le dépôt pour un autre fidèle.
+  const autre = await call("POST", "/membres", tokAdmin, { full_name: "Autre Fidèle", status: "actif" });
+  r = await call("POST", "/demandes-priere", tokMembre, { sujet: "Pour un autre", confidentiel: true, member_id: autre.body.id });
+  check("POST /demandes-priere membre avec le member_id d'un autre : 400", r.status === 400, String(r.status));
+  r = await call("POST", "/demandes-priere", tokAdmin, { sujet: "Pour un autre (admin)", confidentiel: true, member_id: autre.body.id });
+  check("POST /demandes-priere admin avec le member_id d'un autre : 201", r.status === 201, String(r.status));
 
   console.log("2c. Contournement réservations : PATCH revalide le chevauchement :");
   r = await call("POST", "/salles", tokAdmin, { nom: "Grande salle" });
