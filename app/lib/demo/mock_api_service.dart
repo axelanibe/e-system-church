@@ -4124,6 +4124,11 @@ class MockApiService implements ApiService {
       champsRequis: [
         ChampPaiement(nom: 'api_key', label: 'Clé API', secret: true),
         ChampPaiement(nom: 'marchand', label: 'Identifiant marchand', secret: false),
+        ChampPaiement(
+            nom: 'webhook_secret',
+            label: 'Secret de signature du webhook Wave',
+            secret: true,
+            optionnel: true),
       ],
     ),
     FournisseurPaiement(

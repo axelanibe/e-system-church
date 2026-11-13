@@ -6,21 +6,27 @@
 
 /// Un champ requis par un fournisseur (ex. clé API, secret, identifiant
 /// marchand). `secret` vrai = champ masqué à la saisie (`obscureText`).
+/// `optionnel` vrai (tranche T8) = champ requis pour une fonction mais pas
+/// pour l'exécution — ex. le secret de signature du webhook Wave : sans
+/// lui la configuration fonctionne, mais les webhooks sont rejetés.
 class ChampPaiement {
   final String nom;
   final String label;
   final bool secret;
+  final bool optionnel;
 
   const ChampPaiement({
     required this.nom,
     required this.label,
     required this.secret,
+    this.optionnel = false,
   });
 
   factory ChampPaiement.fromJson(Map<String, dynamic> json) => ChampPaiement(
         nom: json['nom'] as String,
         label: json['label'] as String? ?? json['nom'] as String,
         secret: json['secret'] as bool? ?? false,
+        optionnel: json['optionnel'] as bool? ?? false,
       );
 }
 

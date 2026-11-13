@@ -611,12 +611,37 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_presences_culte_unique
 -- ---------------------------------------------------------------------------
 -- Module 4 — Finances (compléter) : postes, budgets, dépenses, caisse
 -- ---------------------------------------------------------------------------
+-- Migration 031 (plan comptable) : catégories de dépenses du plan
+-- comptable de référence — chaque poste budgétaire pointe vers sa
+-- catégorie, et un poste peut être marqué récurrent.
+CREATE TABLE IF NOT EXISTS categories_depenses (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code        TEXT NOT NULL UNIQUE CHECK (code ~ '^[0-9]{2}$'),
+    nom         TEXT NOT NULL,
+    description TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+INSERT INTO categories_depenses (code, nom, description) VALUES
+    ('01', 'Administration', 'Fournitures, télécommunications, frais bancaires'),
+    ('02', 'Infrastructures', 'Loyer, eau, électricité, entretien'),
+    ('03', 'Culte et spiritualité', 'Louange, communion, matériel de culte'),
+    ('04', 'Personnel', 'Salaires, indemnités, formations'),
+    ('05', 'Départements', 'Dépenses propres à chaque ministère'),
+    ('06', 'Événements', 'Conférences, conventions, retraites'),
+    ('07', 'Transport et missions', 'Carburant, déplacements, hébergement'),
+    ('08', 'Action sociale', 'Assistance, solidarité, œuvres sociales'),
+    ('09', 'Communication et numérique', 'Publicité, logiciels, hébergement web'),
+    ('10', 'Imprévus', 'Urgences et dépenses exceptionnelles')
+ON CONFLICT (code) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS postes_budgetaires (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     church_id   UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
     nom         TEXT NOT NULL,
     categorie   TEXT NOT NULL CHECK (categorie IN ('recette','depense')),
     description TEXT,
+    categorie_id UUID REFERENCES categories_depenses (id) ON DELETE SET NULL,
+    est_recurrente BOOLEAN NOT NULL DEFAULT FALSE,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (church_id, nom)
 );
@@ -645,9 +670,20 @@ CREATE TABLE IF NOT EXISTS depenses (
     demande_par    UUID REFERENCES users (id) ON DELETE SET NULL,
     valide_par     UUID REFERENCES users (id) ON DELETE SET NULL,
     date_depense   DATE NOT NULL DEFAULT CURRENT_DATE,
+    -- Migration 031 (plan comptable) : référence unique par église,
+    -- département, mode de paiement, bénéficiaire, responsables, devise.
+    reference                TEXT,
+    departement_id           UUID REFERENCES departements (id) ON DELETE SET NULL,
+    mode_paiement            TEXT CHECK (mode_paiement IN ('especes', 'wave', 'orange_money', 'mtn_money', 'virement', 'cheque')),
+    fournisseur_beneficiaire TEXT,
+    responsable_depense      TEXT,
+    responsable_autorisation TEXT,
+    devise                   TEXT NOT NULL DEFAULT 'FCFA',
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_depenses_church ON depenses (church_id, date_depense);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_depenses_reference_unique
+    ON depenses (church_id, reference);
 
 CREATE TABLE IF NOT EXISTS caisse_mouvements (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1082,10 +1118,37 @@ CREATE TABLE IF NOT EXISTS eglise_paiement_secrets (
 );
 CREATE INDEX IF NOT EXISTS idx_paiement_secrets_config ON eglise_paiement_secrets (eglise_paiement_id);
 
+-- Migration 026 (webhooks, tranche T8) : journal des événements de
+-- paiement reçus (Wave / Orange Money / MTN). Une notification n'est
+-- jamais rejouée : (fournisseur, evenement_id) est unique et le statut
+-- 'confirme' bloque tout retraitement. On ne stocke ni la charge utile
+-- brute ni aucune signature — seulement l'empreinte SHA-256 du corps.
+CREATE TABLE IF NOT EXISTS evenements_paiement (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id           UUID REFERENCES churches (id) ON DELETE CASCADE,
+    fournisseur         TEXT NOT NULL
+                        CHECK (fournisseur IN ('wave', 'orange_money', 'mtn_momo')),
+    evenement_id        TEXT NOT NULL,
+    contribution_id     UUID REFERENCES contributions (id) ON DELETE SET NULL,
+    statut              TEXT NOT NULL DEFAULT 'recu'
+                        CHECK (statut IN ('recu', 'confirme', 'ignore', 'rejete', 'a_verifier')),
+    montant_fcfa        INT,
+    devise              TEXT,
+    reference_externe   TEXT,
+    payload_hash        TEXT,
+    recu_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+    traite_at           TIMESTAMPTZ,
+    UNIQUE (fournisseur, evenement_id)
+);
+CREATE INDEX IF NOT EXISTS idx_evenements_paiement_church
+    ON evenements_paiement (church_id, recu_at DESC);
+CREATE INDEX IF NOT EXISTS idx_evenements_paiement_contribution
+    ON evenements_paiement (contribution_id);
+
 -- Catalogue initial (extensible : ajouter une ligne + un adaptateur).
 INSERT INTO fournisseurs_paiement (code, nom, pays, type, champs_requis) VALUES
   ('wave', 'Wave', ARRAY['CI','SN'], 'mobile_money',
-   '[{"nom":"api_key","label":"Clé API Wave","secret":true}]'::jsonb),
+   '[{"nom":"api_key","label":"Clé API Wave","secret":true},{"nom":"webhook_secret","label":"Secret de signature du webhook Wave","secret":true,"optionnel":true}]'::jsonb),
   ('orange_money', 'Orange Money', ARRAY['CI','SN'], 'mobile_money',
    '[{"nom":"client_id","label":"Client ID","secret":false},{"nom":"client_secret","label":"Client secret","secret":true},{"nom":"merchant_key","label":"Clé marchand","secret":true}]'::jsonb),
   ('mtn_momo', 'MTN MoMo', ARRAY['CI'], 'mobile_money',
@@ -1225,6 +1288,22 @@ CREATE TABLE IF NOT EXISTS budgets_departements (
 );
 CREATE INDEX IF NOT EXISTS idx_budgets_departements_church
     ON budgets_departements (church_id, annee, mois);
+
+-- Migration 031 : budgets mensuels (prévisionnel) par église — le miroir
+-- de budgets_mensuels ; 8 postes prévisibles sont créés par église dans
+-- la migration, le réalisé vient des dépenses (depenses.departement_id).
+CREATE TABLE IF NOT EXISTS budgets_mensuels (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id      UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    annee          INT NOT NULL CHECK (annee BETWEEN 2000 AND 2100),
+    mois           INT NOT NULL CHECK (mois BETWEEN 1 AND 12),
+    poste_id       UUID NOT NULL REFERENCES postes_budgetaires (id) ON DELETE CASCADE,
+    montant_prevu  INT NOT NULL CHECK (montant_prevu >= 0),
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (church_id, annee, mois, poste_id)
+);
+CREATE INDEX IF NOT EXISTS idx_budgets_mensuels_church
+    ON budgets_mensuels (church_id, annee, mois);
 
 -- Clôtures de caisse verrouillées : une ligne par église et par mois.
 -- Une clôture ne se rouvre ni ne se supprime ; une erreur se corrige par
