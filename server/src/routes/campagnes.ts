@@ -280,6 +280,11 @@ export async function verifierCampagneAffectation(
   if (typeContribution === "depense") {
     return { code: 400, error: "invalid_input", message: "Une dépense ne peut pas être affectée à une campagne." };
   }
+  // Tranche T7 : une cotisation est une redevance de membre, pas un don
+  // de campagne — elle ne rentre pas dans le total collecté.
+  if (typeContribution === "cotisation") {
+    return { code: 400, error: "invalid_input", message: "Une cotisation ne peut pas être affectée à une campagne." };
+  }
   const { rows } = await db.query(
     `SELECT statut FROM campagnes WHERE id = $1 AND church_id = $2`,
     [campagneId, churchId],

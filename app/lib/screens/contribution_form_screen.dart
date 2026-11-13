@@ -9,16 +9,20 @@ import '../models/paiements.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 
-/// Formulaire d'enregistrement d'une contribution (dîme, offrande, don ou
-/// dépense).
+/// Formulaire d'enregistrement d'une contribution (dîme, offrande, don,
+/// dépense ou cotisation).
 ///
 /// Quand l'église a configuré des moyens de paiement actifs (« Mon église
 /// → Paiements »), le don est exécuté par le serveur via ce moyen :
 /// Wave ouvre sa page de paiement, virement / espèces enregistrent la
-/// contribution en attente de confirmation par le trésorier. Sans moyen
+/// contribution en attente de confirmation par le pasteur. Sans moyen
 /// configuré, on retombe sur l'enregistrement manuel avec référence.
+/// Une cotisation est toujours saisie à la main, pour un membre précis.
 class ContributionFormScreen extends StatefulWidget {
-  const ContributionFormScreen({super.key});
+  /// Type présélectionné (ex. « cotisation » depuis l'écran Cotisations).
+  final String? initialType;
+
+  const ContributionFormScreen({super.key, this.initialType});
 
   @override
   State<ContributionFormScreen> createState() => _ContributionFormScreenState();
@@ -43,6 +47,11 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialType != null &&
+        ['dime', 'offrande', 'don', 'depense', 'cotisation']
+            .contains(widget.initialType)) {
+      _type = widget.initialType!;
+    }
     _loadMembers();
     _loadMoyens();
     _loadCampagnes();
@@ -107,9 +116,12 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
   }
 
   /// Vrai quand le don passe par un moyen configuré de l'église
-  /// (l'exécution serveur ne couvre pas les dépenses).
+  /// (l'exécution serveur ne couvre ni les dépenses ni les cotisations).
   bool get _viaMoyenConfigure =>
-      _moyens.isNotEmpty && _moyenCode != null && _type != 'depense';
+      _moyens.isNotEmpty &&
+      _moyenCode != null &&
+      _type != 'depense' &&
+      _type != 'cotisation';
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -190,8 +202,7 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
             : 'Contribution enregistrée',
         message:
             'La ${_type == 'depense' ? 'dépense' : 'contribution'} de ${formatMontant(amount, state.devise)} par '
-            '$moyenNom est enregistrée en attente : elle devra être '
-            'confirmée par le trésorier.',
+            '$moyenNom est enregistrée en attente : seul le pasteur peut la confirmer.',
       );
     }
     if (mounted) Navigator.of(context).pop(_type);
@@ -284,6 +295,9 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                       DropdownMenuItem(value: 'don', child: Text('Don')),
                       DropdownMenuItem(
                           value: 'depense', child: Text('Dépense')),
+                      DropdownMenuItem(
+                          value: 'cotisation',
+                          child: Text('Cotisation')),
                     ],
                     onChanged: (v) => setState(() => _type = v ?? 'dime'),
                   ),
@@ -367,10 +381,20 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String?>(
                     initialValue: _memberId,
-                    decoration: const InputDecoration(
-                      labelText: 'Membre (facultatif)',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: _type == 'cotisation'
+                          ? 'Membre *'
+                          : 'Membre (facultatif)',
+                      border: const OutlineInputBorder(),
                     ),
+                    validator: (v) {
+                      // Une cotisation est le paiement d'un membre :
+                      // le serveur refuse une cotisation sans membre.
+                      if (_type == 'cotisation' && v == null) {
+                        return 'Un membre est requis pour une cotisation.';
+                      }
+                      return null;
+                    },
                     items: [
                       const DropdownMenuItem(
                           value: null, child: Text('— Aucun —')),
@@ -382,7 +406,9 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                     ],
                     onChanged: (v) => setState(() => _memberId = v),
                   ),
-                  if (_type != 'depense' && !_viaMoyenConfigure) ...[
+                  if (_type != 'depense' &&
+                      _type != 'cotisation' &&
+                      !_viaMoyenConfigure) ...[
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String?>(
                       initialValue: _campagneId,
@@ -437,8 +463,8 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                   const SizedBox(height: 8),
                   Text(
                     _type == 'depense'
-                        ? 'La dépense est enregistrée « en attente » : un admin ou un trésorier devra la confirmer.'
-                        : 'La contribution est enregistrée « en attente » : un admin ou un trésorier devra la confirmer.',
+                        ? 'La dépense est enregistrée « en attente » : seul le pasteur peut la confirmer.'
+                        : 'La contribution est enregistrée « en attente » : seul le pasteur peut la confirmer.',
                     textAlign: TextAlign.center,
                   ),
                 ],

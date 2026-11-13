@@ -210,6 +210,28 @@ class Depense {
 }
 
 /// Mouvement de caisse (`caisse_mouvements` : entrée ou sortie).
+/// Libellé d'un canal de paiement ou de caisse (codes serveur → français).
+String labelCanal(String? canal) {
+  switch (canal) {
+    case 'wave':
+      return 'Wave';
+    case 'orange_money':
+      return 'Orange Money';
+    case 'mtn_momo':
+      return 'MTN MoMo';
+    case 'especes':
+      return 'Espèces';
+    case 'virement':
+      return 'Virement';
+    case 'cheque':
+      return 'Chèque';
+    case 'non_ventile':
+      return 'Non ventilé';
+    default:
+      return canal ?? '—';
+  }
+}
+
 class CaisseMouvement {
   final String id;
   final String type; // entree | sortie
@@ -218,6 +240,14 @@ class CaisseMouvement {
   final String? reference;
   final DateTime? createdAt;
 
+  /// Origine de l'écriture (T7) : manuelle (saisie à la main),
+  /// contribution (confirmée) ou depense (payée).
+  final String? source;
+
+  /// Canal de paiement (T7) : wave, orange_money, mtn_momo, especes,
+  /// virement, cheque. Null pour les écritures non ventilées.
+  final String? canal;
+
   const CaisseMouvement({
     required this.id,
     required this.type,
@@ -225,6 +255,8 @@ class CaisseMouvement {
     required this.motif,
     this.reference,
     this.createdAt,
+    this.source,
+    this.canal,
   });
 
   factory CaisseMouvement.fromJson(Map<String, dynamic> json) =>
@@ -235,7 +267,16 @@ class CaisseMouvement {
         motif: json['motif'] as String,
         reference: json['reference'] as String?,
         createdAt: parseDate(json['created_at'] as String?),
+        source: json['source'] as String?,
+        canal: json['canal'] as String?,
       );
+
+  /// « Manuelle » pour une saisie, « Automatique » pour une écriture
+  /// créée par le serveur (contribution confirmée, dépense payée).
+  String get sourceLabel =>
+      source == 'manuelle' ? 'Manuelle' : 'Automatique';
+
+  String get canalLabel => labelCanal(canal);
 }
 
 /// Solde de caisse (`GET /finances/caisse` :
@@ -403,6 +444,436 @@ class RapportPlanComptable {
         depenses: (json['depenses'] as List<dynamic>? ?? [])
             .map((e) => Map<String, dynamic>.from(e as Map))
             .toList(),
+        totalPrevuFcfa: (json['total_prevu_fcfa'] as num?)?.toInt() ?? 0,
+        totalReelFcfa: (json['total_reel_fcfa'] as num?)?.toInt() ?? 0,
+      );
+}
+
+/// ---------------------------------------------------------------------------
+/// Tranche T7 — Finances complètes (cotisations, comptes bancaires,
+/// rapprochement, clôture, reçus, budgets par département).
+/// ---------------------------------------------------------------------------
+
+/// Configuration des cotisations (`cotisations_config`, T7) : montant
+/// fixé par l'église, pour tous les membres actifs.
+class CotisationConfig {
+  final int montantFcfa;
+  final String periodicite; // mensuelle | annuelle
+  final bool actif;
+
+  const CotisationConfig({
+    required this.montantFcfa,
+    required this.periodicite,
+    required this.actif,
+  });
+
+  factory CotisationConfig.fromJson(Map<String, dynamic> json) =>
+      CotisationConfig(
+        montantFcfa: (json['montant_fcfa'] as num).toInt(),
+        periodicite: json['periodicite'] as String? ?? 'mensuelle',
+        actif: json['actif'] as bool? ?? true,
+      );
+
+  String get periodiciteLabel =>
+      periodicite == 'annuelle' ? 'Annuelle' : 'Mensuelle';
+}
+
+/// Une ligne du suivi des cotisations (T7, `GET /cotisations/suivi`) :
+/// ce qu'un membre doit, a payé et doit encore, sur la période.
+class LigneCotisation {
+  final String memberId;
+  final String membreNom;
+  final String? membreMatricule;
+  final int montantDuFcfa;
+  final int montantPayeFcfa;
+  final int resteFcfa;
+  final int surplusFcfa;
+  final String statut; // payee | partielle | impayee
+
+  const LigneCotisation({
+    required this.memberId,
+    required this.membreNom,
+    this.membreMatricule,
+    required this.montantDuFcfa,
+    required this.montantPayeFcfa,
+    required this.resteFcfa,
+    required this.surplusFcfa,
+    required this.statut,
+  });
+
+  factory LigneCotisation.fromJson(Map<String, dynamic> json) =>
+      LigneCotisation(
+        memberId: json['member_id'] as String,
+        membreNom: json['membre_nom'] as String,
+        membreMatricule: json['membre_matricule'] as String?,
+        montantDuFcfa: (json['montant_du_fcfa'] as num).toInt(),
+        montantPayeFcfa: (json['montant_paye_fcfa'] as num).toInt(),
+        resteFcfa: (json['reste_fcfa'] as num).toInt(),
+        surplusFcfa: (json['surplus_fcfa'] as num?)?.toInt() ?? 0,
+        statut: json['statut'] as String,
+      );
+
+  String get statutLabel {
+    switch (statut) {
+      case 'payee':
+        return 'Payée';
+      case 'partielle':
+        return 'Partielle';
+      default:
+        return 'Impayée';
+    }
+  }
+}
+
+/// Totaux du suivi des cotisations (T7).
+class TotauxCotisations {
+  final int totalDuFcfa;
+  final int totalPayeFcfa;
+  final int totalResteFcfa;
+  final int membresPayes;
+  final int membresTotal;
+
+  const TotauxCotisations({
+    required this.totalDuFcfa,
+    required this.totalPayeFcfa,
+    required this.totalResteFcfa,
+    required this.membresPayes,
+    required this.membresTotal,
+  });
+
+  factory TotauxCotisations.fromJson(Map<String, dynamic> json) =>
+      TotauxCotisations(
+        totalDuFcfa: (json['total_du_fcfa'] as num?)?.toInt() ?? 0,
+        totalPayeFcfa: (json['total_paye_fcfa'] as num?)?.toInt() ?? 0,
+        totalResteFcfa: (json['total_reste_fcfa'] as num?)?.toInt() ?? 0,
+        membresPayes: (json['membres_payes'] as num?)?.toInt() ?? 0,
+        membresTotal: (json['membres_total'] as num?)?.toInt() ?? 0,
+      );
+}
+
+/// Suivi des cotisations (T7, `GET /cotisations/suivi`).
+class SuiviCotisations {
+  final CotisationConfig? config;
+  final bool configAbsente;
+  final String periode;
+  final List<LigneCotisation> membres;
+  final TotauxCotisations totaux;
+
+  const SuiviCotisations({
+    this.config,
+    required this.configAbsente,
+    required this.periode,
+    required this.membres,
+    required this.totaux,
+  });
+
+  factory SuiviCotisations.fromJson(Map<String, dynamic> json) =>
+      SuiviCotisations(
+        config: json['config'] == null
+            ? null
+            : CotisationConfig.fromJson(
+                Map<String, dynamic>.from(json['config'] as Map)),
+        configAbsente: json['config_absente'] as bool? ?? false,
+        periode: json['periode'] as String,
+        membres: (json['membres'] as List<dynamic>? ?? [])
+            .map((e) =>
+                LigneCotisation.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList(),
+        totaux: TotauxCotisations.fromJson(
+            Map<String, dynamic>.from(json['totaux'] as Map)),
+      );
+}
+
+/// Compte bancaire de l'église (T7, `comptes_bancaires`).
+class CompteBancaire {
+  final String id;
+  final String banque;
+  final String? titulaire;
+  final String? numeroCompte;
+  final String type; // banque | mobile_money
+  final String devise;
+  final bool actif;
+  final DateTime? createdAt;
+
+  const CompteBancaire({
+    required this.id,
+    required this.banque,
+    this.titulaire,
+    this.numeroCompte,
+    required this.type,
+    required this.devise,
+    required this.actif,
+    this.createdAt,
+  });
+
+  factory CompteBancaire.fromJson(Map<String, dynamic> json) =>
+      CompteBancaire(
+        id: json['id'] as String,
+        banque: json['banque'] as String,
+        titulaire: json['titulaire'] as String?,
+        numeroCompte: json['numero_compte'] as String?,
+        type: json['type'] as String? ?? 'banque',
+        devise: json['devise'] as String? ?? 'FCFA',
+        actif: json['actif'] as bool? ?? true,
+        createdAt: parseDate(json['created_at'] as String?),
+      );
+
+  String get typeLabel =>
+      type == 'mobile_money' ? 'Mobile Money' : 'Banque';
+}
+
+/// Une ligne du rapprochement par canal (T7,
+/// `GET /finances/rapprochement`) : ce qui aurait dû entrer ou sortir
+/// contre ce qui est comptabilisé en caisse, pour un canal et un mois.
+class LigneRapprochement {
+  final String canal;
+  final int entreesConfirmeesFcfa;
+  final int sortiesPayeesFcfa;
+  final int attenduFcfa;
+  final int caisseEntreesFcfa;
+  final int caisseSortiesFcfa;
+  final int caisseNetFcfa;
+  final int ecartFcfa;
+  final bool alerte;
+
+  const LigneRapprochement({
+    required this.canal,
+    required this.entreesConfirmeesFcfa,
+    required this.sortiesPayeesFcfa,
+    required this.attenduFcfa,
+    required this.caisseEntreesFcfa,
+    required this.caisseSortiesFcfa,
+    required this.caisseNetFcfa,
+    required this.ecartFcfa,
+    required this.alerte,
+  });
+
+  factory LigneRapprochement.fromJson(Map<String, dynamic> json) =>
+      LigneRapprochement(
+        canal: json['canal'] as String,
+        entreesConfirmeesFcfa:
+            (json['entrees_confirmees_fcfa'] as num?)?.toInt() ?? 0,
+        sortiesPayeesFcfa:
+            (json['sorties_payees_fcfa'] as num?)?.toInt() ?? 0,
+        attenduFcfa: (json['attendu_fcfa'] as num?)?.toInt() ?? 0,
+        caisseEntreesFcfa:
+            (json['caisse_entrees_fcfa'] as num?)?.toInt() ?? 0,
+        caisseSortiesFcfa:
+            (json['caisse_sorties_fcfa'] as num?)?.toInt() ?? 0,
+        caisseNetFcfa: (json['caisse_net_fcfa'] as num?)?.toInt() ?? 0,
+        ecartFcfa: (json['ecart_fcfa'] as num?)?.toInt() ?? 0,
+        alerte: json['alerte'] as bool? ?? false,
+      );
+
+  String get canalLabel => labelCanal(canal);
+}
+
+/// Totaux du rapprochement (T7).
+class TotauxRapprochement {
+  final int entreesConfirmeesFcfa;
+  final int sortiesPayeesFcfa;
+  final int attenduFcfa;
+  final int caisseNetFcfa;
+  final int ecartFcfa;
+
+  const TotauxRapprochement({
+    required this.entreesConfirmeesFcfa,
+    required this.sortiesPayeesFcfa,
+    required this.attenduFcfa,
+    required this.caisseNetFcfa,
+    required this.ecartFcfa,
+  });
+
+  factory TotauxRapprochement.fromJson(Map<String, dynamic> json) =>
+      TotauxRapprochement(
+        entreesConfirmeesFcfa:
+            (json['entrees_confirmees_fcfa'] as num?)?.toInt() ?? 0,
+        sortiesPayeesFcfa:
+            (json['sorties_payees_fcfa'] as num?)?.toInt() ?? 0,
+        attenduFcfa: (json['attendu_fcfa'] as num?)?.toInt() ?? 0,
+        caisseNetFcfa: (json['caisse_net_fcfa'] as num?)?.toInt() ?? 0,
+        ecartFcfa: (json['ecart_fcfa'] as num?)?.toInt() ?? 0,
+      );
+}
+
+/// Rapprochement par canal (T7, `GET /finances/rapprochement`).
+class Rapprochement {
+  final int annee;
+  final int mois;
+  final String periode;
+  final List<LigneRapprochement> canaux;
+  final LigneRapprochement nonVentile;
+  final TotauxRapprochement totaux;
+
+  const Rapprochement({
+    required this.annee,
+    required this.mois,
+    required this.periode,
+    required this.canaux,
+    required this.nonVentile,
+    required this.totaux,
+  });
+
+  factory Rapprochement.fromJson(Map<String, dynamic> json) =>
+      Rapprochement(
+        annee: (json['annee'] as num).toInt(),
+        mois: (json['mois'] as num).toInt(),
+        periode: json['periode'] as String,
+        canaux: (json['canaux'] as List<dynamic>? ?? [])
+            .map((e) => LigneRapprochement.fromJson(
+                Map<String, dynamic>.from(e as Map)))
+            .toList(),
+        nonVentile: LigneRapprochement.fromJson(
+            Map<String, dynamic>.from(json['non_ventile'] as Map)),
+        totaux: TotauxRapprochement.fromJson(
+            Map<String, dynamic>.from(json['totaux'] as Map)),
+      );
+}
+
+/// Clôture de caisse verrouillée (T7, `clotures_caisse`) : un mois
+/// clôturé ne se rouvre ni ne se supprime.
+class ClotureCaisse {
+  final String id;
+  final String periode; // AAAA-MM
+  final int soldeCalculeFcfa;
+  final int soldeCompteFcfa;
+  final int ecartFcfa;
+  final String? commentaire;
+  final DateTime? createdAt;
+
+  const ClotureCaisse({
+    required this.id,
+    required this.periode,
+    required this.soldeCalculeFcfa,
+    required this.soldeCompteFcfa,
+    required this.ecartFcfa,
+    this.commentaire,
+    this.createdAt,
+  });
+
+  factory ClotureCaisse.fromJson(Map<String, dynamic> json) =>
+      ClotureCaisse(
+        id: json['id'] as String,
+        periode: json['periode'] as String,
+        soldeCalculeFcfa: (json['solde_calcule_fcfa'] as num).toInt(),
+        soldeCompteFcfa: (json['solde_compte_fcfa'] as num).toInt(),
+        ecartFcfa: (json['ecart_fcfa'] as num).toInt(),
+        commentaire: json['commentaire'] as String?,
+        createdAt: parseDate(json['created_at'] as String?),
+      );
+}
+
+/// Budget mensuel d'un département (T7, `budgets_departements`).
+class BudgetDepartement {
+  final String id;
+  final String departementId;
+  final String? departementNom;
+  final int annee;
+  final int mois;
+  final int montantPrevu;
+
+  const BudgetDepartement({
+    required this.id,
+    required this.departementId,
+    this.departementNom,
+    required this.annee,
+    required this.mois,
+    required this.montantPrevu,
+  });
+
+  factory BudgetDepartement.fromJson(Map<String, dynamic> json) =>
+      BudgetDepartement(
+        id: json['id'] as String,
+        departementId: json['departement_id'] as String,
+        departementNom: json['departement_nom'] as String?,
+        annee: (json['annee'] as num).toInt(),
+        mois: (json['mois'] as num).toInt(),
+        montantPrevu: (json['montant_prevu'] as num).toInt(),
+      );
+}
+
+/// Une ligne du suivi par département (T7,
+/// `GET /plan-comptable/suivi-departements`) : prévu contre réel,
+/// avec alerte quand le réel dépasse un budget défini.
+class LigneSuiviDepartement {
+  final String departementId;
+  final String departement;
+  final int prevuFcfa;
+  final int reelFcfa;
+  final int ecartFcfa;
+  final bool depasse;
+  final bool budgetDefini;
+
+  const LigneSuiviDepartement({
+    required this.departementId,
+    required this.departement,
+    required this.prevuFcfa,
+    required this.reelFcfa,
+    required this.ecartFcfa,
+    required this.depasse,
+    required this.budgetDefini,
+  });
+
+  factory LigneSuiviDepartement.fromJson(Map<String, dynamic> json) =>
+      LigneSuiviDepartement(
+        departementId: json['departement_id'] as String,
+        departement: json['departement'] as String,
+        prevuFcfa: (json['prevu_fcfa'] as num?)?.toInt() ?? 0,
+        reelFcfa: (json['reel_fcfa'] as num?)?.toInt() ?? 0,
+        ecartFcfa: (json['ecart_fcfa'] as num?)?.toInt() ?? 0,
+        depasse: json['depasse'] as bool? ?? false,
+        budgetDefini: json['budget_defini'] as bool? ?? false,
+      );
+}
+
+/// Dépenses sans département, dans le suivi par département (T7).
+class TotalSansDepartement {
+  final int prevuFcfa;
+  final int reelFcfa;
+  final int ecartFcfa;
+
+  const TotalSansDepartement({
+    required this.prevuFcfa,
+    required this.reelFcfa,
+    required this.ecartFcfa,
+  });
+
+  factory TotalSansDepartement.fromJson(Map<String, dynamic> json) =>
+      TotalSansDepartement(
+        prevuFcfa: (json['prevu_fcfa'] as num?)?.toInt() ?? 0,
+        reelFcfa: (json['reel_fcfa'] as num?)?.toInt() ?? 0,
+        ecartFcfa: (json['ecart_fcfa'] as num?)?.toInt() ?? 0,
+      );
+}
+
+/// Suivi par département (T7, `GET /plan-comptable/suivi-departements`).
+class SuiviDepartements {
+  final int annee;
+  final int mois;
+  final List<LigneSuiviDepartement> parDepartements;
+  final TotalSansDepartement sansDepartement;
+  final int totalPrevuFcfa;
+  final int totalReelFcfa;
+
+  const SuiviDepartements({
+    required this.annee,
+    required this.mois,
+    required this.parDepartements,
+    required this.sansDepartement,
+    required this.totalPrevuFcfa,
+    required this.totalReelFcfa,
+  });
+
+  factory SuiviDepartements.fromJson(Map<String, dynamic> json) =>
+      SuiviDepartements(
+        annee: (json['annee'] as num).toInt(),
+        mois: (json['mois'] as num).toInt(),
+        parDepartements: (json['par_departements'] as List<dynamic>? ?? [])
+            .map((e) => LigneSuiviDepartement.fromJson(
+                Map<String, dynamic>.from(e as Map)))
+            .toList(),
+        sansDepartement: TotalSansDepartement.fromJson(
+            Map<String, dynamic>.from(json['sans_departement'] as Map)),
         totalPrevuFcfa: (json['total_prevu_fcfa'] as num?)?.toInt() ?? 0,
         totalReelFcfa: (json['total_reel_fcfa'] as num?)?.toInt() ?? 0,
       );

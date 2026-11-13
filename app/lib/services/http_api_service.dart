@@ -1393,6 +1393,127 @@ class HttpApiService implements ApiService {
     return getReceipt(id);
   }
 
+  // -- Finances complètes (tranche T7) --------------------------------------
+  @override
+  Future<CotisationConfig?> getCotisationsConfig() async {
+    try {
+      final data = await _call('GET', '/cotisations/config');
+      return CotisationConfig.fromJson(data);
+    } on TypeError {
+      // Le serveur renvoie JSON `null` quand aucune cotisation n'est
+      // configurée : `_call` ne décode que les objets JSON.
+      return null;
+    }
+  }
+
+  @override
+  Future<CotisationConfig> saveCotisationsConfig({
+    required int montantFcfa,
+    String? periodicite,
+    bool? actif,
+  }) async =>
+      CotisationConfig.fromJson(await _call('POST', '/cotisations/config',
+          body: {
+            'montant_fcfa': montantFcfa,
+            if (periodicite != null) 'periodicite': periodicite,
+            if (actif != null) 'actif': actif,
+          }));
+
+  @override
+  Future<SuiviCotisations> getCotisationsSuivi({String? periode}) async =>
+      SuiviCotisations.fromJson(await _call('GET', '/cotisations/suivi',
+          query: _q({'periode': periode})));
+
+  @override
+  Future<List<CompteBancaire>> getComptesBancaires() async =>
+      _items(await _call('GET', '/comptes-bancaires'),
+          CompteBancaire.fromJson);
+
+  @override
+  Future<CompteBancaire> createCompteBancaire({
+    required String banque,
+    String? titulaire,
+    String? numeroCompte,
+    String type = 'banque',
+    String devise = 'FCFA',
+  }) async =>
+      CompteBancaire.fromJson(await _call('POST', '/comptes-bancaires',
+          body: {
+            'banque': banque,
+            if (titulaire != null) 'titulaire': titulaire,
+            if (numeroCompte != null) 'numero_compte': numeroCompte,
+            'type': type,
+            'devise': devise,
+          }));
+
+  @override
+  Future<CompteBancaire> updateCompteBancaire(
+    String id, {
+    String? banque,
+    String? titulaire,
+    String? numeroCompte,
+    String? type,
+    String? devise,
+    bool? actif,
+  }) async =>
+      CompteBancaire.fromJson(await _call('PATCH', '/comptes-bancaires/$id',
+          body: {
+            if (banque != null) 'banque': banque,
+            if (titulaire != null) 'titulaire': titulaire,
+            if (numeroCompte != null) 'numero_compte': numeroCompte,
+            if (type != null) 'type': type,
+            if (devise != null) 'devise': devise,
+            if (actif != null) 'actif': actif,
+          }));
+
+  @override
+  Future<void> deleteCompteBancaire(String id) async {
+    await _call('DELETE', '/comptes-bancaires/$id');
+  }
+
+  @override
+  Future<Rapprochement> getRapprochement({int? annee, int? mois}) async =>
+      Rapprochement.fromJson(await _call('GET', '/finances/rapprochement',
+          query: _q({'annee': annee, 'mois': mois})));
+
+  /// GET JSON qui renvoie un tableau nu (`[...]`, pas un objet) : certaines
+  /// routes renvoient `reply.send(rows)` directement (clôtures de caisse,
+  /// budgets par département). `_call` ne décode que les objets JSON, on
+  /// passe donc par les octets bruts, avec le jeton Bearer et le message
+  /// du serveur en cas d'erreur, comme `_telechargerPdf`.
+  Future<List<Map<String, dynamic>>> _getListe(
+      String path, Map<String, String> query) async {
+    final bytes = await _telechargerPdf(path, query);
+    final decoded = jsonDecode(utf8.decode(bytes));
+    return (decoded as List<dynamic>)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
+  @override
+  Future<List<ClotureCaisse>> getCloturesCaisse() async =>
+      (await _getListe('/finances/caisse/clotures', {}))
+          .map(ClotureCaisse.fromJson)
+          .toList();
+
+  @override
+  Future<ClotureCaisse> cloturerCaisse({
+    required String periode,
+    int? soldeCompteFcfa,
+    String? commentaire,
+  }) async =>
+      ClotureCaisse.fromJson(
+          await _call('POST', '/finances/caisse/cloturer', body: {
+        'periode': periode,
+        if (soldeCompteFcfa != null)
+          'solde_compte_fcfa': soldeCompteFcfa,
+        if (commentaire != null) 'commentaire': commentaire,
+      }));
+
+  @override
+  Future<Uint8List> telechargerRecuPdf(String id) =>
+      _telechargerPdf('/contributions/$id/recu.pdf', {});
+
   // -- Campagnes de collecte (US2) ------------------------------------------
   @override
   Future<List<Campagne>> getCampagnes() async {
@@ -2270,6 +2391,47 @@ class HttpApiService implements ApiService {
           {required int annee, required int mois}) async =>
       SuiviMensuel.fromJson(await _call(
           'GET', '/plan-comptable/suivi-mensuel',
+          query: _q({'annee': annee, 'mois': mois})));
+
+  // -- Budgets par département (tranche T7) ----------------------------------
+  @override
+  Future<List<BudgetDepartement>> getBudgetsDepartements(
+          {int? annee, int? mois, String? departementId}) async =>
+      (await _getListe(
+              '/budgets-departements',
+              _q({
+                'annee': annee,
+                'mois': mois,
+                'departement_id': departementId,
+              })))
+          .map(BudgetDepartement.fromJson)
+          .toList();
+
+  @override
+  Future<BudgetDepartement> creerBudgetDepartement({
+    required String departementId,
+    required int annee,
+    required int mois,
+    required int montantPrevu,
+  }) async =>
+      BudgetDepartement.fromJson(
+          await _call('POST', '/budgets-departements', body: {
+        'departement_id': departementId,
+        'annee': annee,
+        'mois': mois,
+        'montant_prevu': montantPrevu,
+      }));
+
+  @override
+  Future<void> supprimerBudgetDepartement(String id) async {
+    await _call('DELETE', '/budgets-departements/$id');
+  }
+
+  @override
+  Future<SuiviDepartements> getSuiviDepartements(
+          {required int annee, required int mois}) async =>
+      SuiviDepartements.fromJson(await _call(
+          'GET', '/plan-comptable/suivi-departements',
           query: _q({'annee': annee, 'mois': mois})));
 
   @override

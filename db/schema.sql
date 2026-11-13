@@ -201,7 +201,6 @@ CREATE INDEX idx_link_requests_member ON member_link_requests (member_id);
 -- ---------------------------------------------------------------------------
 -- Finances : dîmes, offrandes, dons, dépenses (par église, jamais globales)
 -- ---------------------------------------------------------------------------
-CREATE TYPE contribution_type AS ENUM ('dime', 'offrande', 'don', 'depense');
 CREATE TYPE payment_method AS ENUM ('wave', 'orange_money', 'mtn_momo', 'especes', 'virement');
 CREATE TYPE contribution_status AS ENUM ('en_attente', 'confirme', 'annule');
 
@@ -209,17 +208,29 @@ CREATE TABLE contributions (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     church_id      UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
     member_id      UUID REFERENCES members (id) ON DELETE SET NULL,
-    type           contribution_type NOT NULL,
+    -- Migration 025 : le type était un ENUM (contribution_type) ; passé en
+    -- TEXT avec CHECK pour accueillir 'cotisation' (ALTER TYPE ADD VALUE
+    -- est impossible en migration — transaction implicite).
+    type           TEXT NOT NULL
+                   CONSTRAINT contributions_type_check
+                   CHECK (type IN ('dime', 'offrande', 'don', 'depense', 'cotisation')),
     amount_fcfa    INT NOT NULL CHECK (amount_fcfa > 0),
     payment_method payment_method NOT NULL,
     payment_ref    TEXT,                           -- référence Wave / Orange / MTN
     status         contribution_status NOT NULL DEFAULT 'en_attente',
     received_by    UUID REFERENCES users (id) ON DELETE SET NULL,
     note           TEXT,
+    -- Migration 025 : reçu numéroté (REC-AAAA-NNNN, par église et par
+    -- année), émis à la validation par le pasteur.
+    recu_numero    TEXT,
+    recu_emis_le   TIMESTAMPTZ,
+    valide_par     UUID REFERENCES users (id) ON DELETE SET NULL,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_contributions_church ON contributions (church_id, created_at);
 CREATE INDEX idx_contributions_type ON contributions (church_id, type, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS contributions_recu_numero_unique
+    ON contributions (church_id, recu_numero) WHERE recu_numero IS NOT NULL;
 
 -- Campagnes de collecte (US2, migration 007) : objectif FCFA strictement
 -- positif, période, statut brouillon, active ou cloturee. Le total collecté
@@ -645,9 +656,22 @@ CREATE TABLE IF NOT EXISTS caisse_mouvements (
     montant_fcfa INT NOT NULL CHECK (montant_fcfa > 0),
     motif        TEXT NOT NULL,
     reference    TEXT,
+    -- Migration 025 : origine de l'écriture ('manuelle' par défaut, ou
+    -- automatique : 'contribution' / 'depense') et canal (Wave, Orange
+    -- Money, MTN, espèces, virement, chèque). Une seule source de vérité
+    -- pour la caisse : cette table, manuelle + automatique.
+    source       TEXT NOT NULL DEFAULT 'manuelle'
+                 CHECK (source IN ('manuelle', 'contribution', 'depense')),
+    source_id    UUID,
+    canal        TEXT
+                 CHECK (canal IN ('wave', 'orange_money', 'mtn_momo', 'especes', 'virement', 'cheque')),
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_caisse_church ON caisse_mouvements (church_id, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS caisse_mouvements_source_unique
+    ON caisse_mouvements (source, source_id) WHERE source <> 'manuelle';
+CREATE INDEX IF NOT EXISTS idx_caisse_canal
+    ON caisse_mouvements (church_id, canal, created_at);
 
 -- ---------------------------------------------------------------------------
 -- Module 5 — Communication : demandes de prière, messages internes
@@ -1146,3 +1170,77 @@ LEFT JOIN LATERAL (
    WHERE c2.church_id = m.church_id
 ) derniere_presence ON true
 WHERE m.status <> 'inactif';
+
+-- ===========================================================================
+-- Migration 025 — Finances complètes, partie serveur (tranche T7, Lot B)
+-- Miroir pour les nouvelles bases. Les migrations restent la référence ;
+-- ce miroir ne sert qu'au schéma initial (voir server/src/migrate.ts).
+-- Les colonnes contributions (recu_numero, recu_emis_le, valide_par, type
+-- TEXT) et caisse_mouvements (source, source_id, canal) sont déjà dans les
+-- définitions de base ci-dessus ; restent ici les nouvelles tables.
+-- ===========================================================================
+
+-- Comptes bancaires par église (virements ; les numéros Wave / Orange /
+-- MTN restent dans eglise_parametres).
+CREATE TABLE IF NOT EXISTS comptes_bancaires (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id     UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    banque        TEXT NOT NULL,
+    titulaire     TEXT,
+    numero_compte TEXT,
+    type          TEXT NOT NULL DEFAULT 'banque'
+                  CHECK (type IN ('banque', 'mobile_money')),
+    devise        TEXT NOT NULL DEFAULT 'FCFA',
+    actif         BOOLEAN NOT NULL DEFAULT true,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_comptes_bancaires_church
+    ON comptes_bancaires (church_id, actif);
+
+-- Cotisations : montant fixé par l'église, une ligne par église. Le suivi
+-- payé / reste par membre est calculé depuis les contributions confirmées
+-- de type 'cotisation', jamais stocké.
+CREATE TABLE IF NOT EXISTS cotisations_config (
+    church_id     UUID PRIMARY KEY REFERENCES churches (id) ON DELETE CASCADE,
+    montant_fcfa  INT NOT NULL CHECK (montant_fcfa > 0),
+    periodicite   TEXT NOT NULL DEFAULT 'mensuelle'
+                  CHECK (periodicite IN ('mensuelle', 'annuelle')),
+    actif         BOOLEAN NOT NULL DEFAULT true,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Budgets par département, mensuels (comme budgets_mensuels, migration 031).
+-- Le réalisé vient des dépenses portées par le département
+-- (depenses.departement_id).
+CREATE TABLE IF NOT EXISTS budgets_departements (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id      UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    departement_id UUID NOT NULL REFERENCES departements (id) ON DELETE CASCADE,
+    annee          INT NOT NULL CHECK (annee BETWEEN 2000 AND 2100),
+    mois           INT NOT NULL CHECK (mois BETWEEN 1 AND 12),
+    montant_prevu  INT NOT NULL CHECK (montant_prevu >= 0),
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (church_id, departement_id, annee, mois)
+);
+CREATE INDEX IF NOT EXISTS idx_budgets_departements_church
+    ON budgets_departements (church_id, annee, mois);
+
+-- Clôtures de caisse verrouillées : une ligne par église et par mois.
+-- Une clôture ne se rouvre ni ne se supprime ; une erreur se corrige par
+-- une écriture dans la période en cours. Les mouvements d'un mois clôturé
+-- ne se modifient ni ne se suppriment plus (garde serveur).
+CREATE TABLE IF NOT EXISTS clotures_caisse (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id          UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    periode            TEXT NOT NULL CHECK (periode ~ '^[0-9]{4}-[0-9]{2}$'),
+    solde_calcule_fcfa INT NOT NULL,
+    solde_compte_fcfa  INT NOT NULL,
+    ecart_fcfa         INT NOT NULL,
+    commentaire        TEXT,
+    cloture_par        UUID REFERENCES users (id) ON DELETE SET NULL,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (church_id, periode)
+);
+CREATE INDEX IF NOT EXISTS idx_clotures_caisse_church
+    ON clotures_caisse (church_id, periode DESC);

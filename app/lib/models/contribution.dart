@@ -1,9 +1,10 @@
 import '../utils/format.dart';
 
-/// Contribution financière (`contributions`) : dîme, offrande, don ou dépense.
+/// Contribution financière (`contributions`) : dîme, offrande, don,
+/// dépense ou cotisation.
 class Contribution {
   final String id;
-  final String type; // dime | offrande | don | depense
+  final String type; // dime | offrande | don | depense | cotisation
   final int amountFcfa;
   final String paymentMethod; // wave | orange_money | mtn_momo | especes | virement
   final String? paymentRef;
@@ -14,6 +15,9 @@ class Contribution {
   final String? membreMatricule;
   final String? campagneId;
   final DateTime? createdAt;
+
+  /// Numéro de reçu (T7) : REC-AAAA-NNNN, émis à la confirmation.
+  final String? recuNumero;
 
   /// Champs du reçu (`GET /contributions/:id` → `{ recu }`).
   final String? egliseNom;
@@ -32,6 +36,7 @@ class Contribution {
     this.membreMatricule,
     this.campagneId,
     this.createdAt,
+    this.recuNumero,
     this.egliseNom,
     this.egliseCode,
   });
@@ -49,6 +54,7 @@ class Contribution {
         membreMatricule: json['membre_matricule'] as String?,
         campagneId: json['campagne_id'] as String?,
         createdAt: parseDate(json['created_at'] as String?),
+        recuNumero: json['recu_numero'] as String?,
         egliseNom: json['eglise_nom'] as String?,
         egliseCode: json['eglise_code'] as String?,
       );
@@ -63,6 +69,8 @@ class Contribution {
         return 'Dons confirmés';
       case 'depense':
         return 'Dépenses confirmées';
+      case 'cotisation':
+        return 'Cotisations confirmées';
       default:
         return type;
     }
@@ -78,6 +86,8 @@ class Contribution {
         return 'Don';
       case 'depense':
         return 'Dépense';
+      case 'cotisation':
+        return 'Cotisation';
       default:
         return type;
     }
