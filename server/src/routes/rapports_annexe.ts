@@ -91,9 +91,45 @@ function reponseRapport(ligne: RapportLigne, envoi_email: ResultatEnvoi) {
   };
 }
 
+/** Largeur maximale d'une ligne meta du générateur PDF (taille 10). */
+const LIGNE_META_MAX = 94;
+
+/**
+ * Découpe un message libre en lignes de 94 caractères maximum, par
+ * retour à la ligne sur les mots. La première ligne porte le préfixe
+ * « Message : » ; les suivantes n'en ont pas. Un mot isolé plus long
+ * qu'une ligne est coupé à la longueur maximale. Le générateur PDF
+ * (pdf.ts) tronque chaque ligne meta à 94 caractères : sans cette
+ * découpe, la fin du message serait perdue. Exporté pour les tests.
+ */
+export function decouperLignesMessage(message: string): string[] {
+  const mots: string[] = [];
+  for (const mot of message.split(/\s+/)) {
+    if (!mot) continue;
+    for (let i = 0; i < mot.length; i += LIGNE_META_MAX) {
+      mots.push(mot.slice(i, i + LIGNE_META_MAX));
+    }
+  }
+  if (mots.length === 0) return [];
+  const prefixe = "Message : ";
+  const lignes: string[] = [];
+  let courante = prefixe;
+  for (const mot of mots) {
+    const separateur = courante.endsWith(" ") ? "" : " ";
+    if (courante.length + separateur.length + mot.length > LIGNE_META_MAX) {
+      lignes.push(courante);
+      courante = mot;
+    } else {
+      courante += separateur + mot;
+    }
+  }
+  if (courante) lignes.push(courante);
+  return lignes;
+}
+
 // Construit le PDF du rapport depuis les données figées en base (jamais
 // recalculé) et le nom du fichier joint. Réutilise genererRapportPdf.
-function construirePdfRapport(
+export function construirePdfRapport(
   rapport: RapportLigne,
   annexeNom: string,
   mereNom: string,
@@ -105,7 +141,7 @@ function construirePdfRapport(
     lignesMeta: [
       `À l'attention de : ${mereNom}`,
       `Émis le ${dateEmission}`,
-      ...(rapport.message ? [`Message : ${rapport.message}`] : []),
+      ...(rapport.message ? decouperLignesMessage(rapport.message) : []),
     ],
     sections: [
       {

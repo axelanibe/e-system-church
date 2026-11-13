@@ -9,6 +9,9 @@
 //     NODE_ENV=test + MAIL_TRANSPORT=stream (transport en mémoire) ;
 //     un second serveur, sans ces variables, couvre le cas « SMTP non
 //     configuré ».
+//   - Partie D (PDF, en processus) : le message libre tient
+//     intégralement dans le PDF, découpé en lignes de 94 caractères
+//     maximum (correctif relecture PR #67).
 //   - Les bases sont éphémères (créées puis supprimées).
 //
 // Usage (depuis la racine du dépôt, après `npm run build` dans
@@ -27,6 +30,10 @@ import {
   sendMail,
   setTransportCourrielPourTests,
 } from './dist/mailer.js';
+import {
+  construirePdfRapport,
+  decouperLignesMessage,
+} from './dist/routes/rapports_annexe.js';
 
 const exec = promisify(execFile);
 const JWT_SECRET = 'test-secret-p5-envoi-32-caracteres';
@@ -142,6 +149,104 @@ async function partieA() {
 }
 
 // ---------------------------------------------------------------------------
+// Partie D — PDF du rapport (en processus) : le message libre tient
+// intégralement dans le PDF, découpé en lignes de 94 caractères max.
+// ---------------------------------------------------------------------------
+
+/** Texte littéral d'un PDF minimal (chaînes entre parenthèses, échappements défaits). */
+function extraireTextePdf(pdf) {
+  const texte = pdf.toString('latin1');
+  const morceaux = [];
+  const re = /\((?:\\.|[^\\()])*\)/g;
+  let m;
+  while ((m = re.exec(texte)) !== null) {
+    morceaux.push(m[0].slice(1, -1).replace(/\\([()\\])/g, '$1'));
+  }
+  return morceaux;
+}
+
+const MESSAGE_LONG =
+  "Message de test pour vérifier que le rapport complet parvient bien à l'église mère : " +
+  'bilan annuel positif, quarante-deux membres actifs, recettes en hausse, dépenses maîtrisées, ' +
+  "merci pour votre accompagnement et vos prières tout au long de l'année écoulée.";
+
+function normaliser(texte) {
+  return texte.replace(/\s+/g, ' ').trim();
+}
+
+async function partieD() {
+  console.log('D. PDF du rapport (message libre intégral, en processus) :');
+
+  // Découpe : chaque ligne ≤ 94 caractères, préfixe sur la première.
+  const lignes = decouperLignesMessage(MESSAGE_LONG);
+  verifier(
+    'découpe : première ligne préfixée « Message : »',
+    lignes.length > 1 && lignes[0].startsWith('Message : '),
+    lignes.join(' | '),
+  );
+  verifier(
+    'découpe : chaque ligne ≤ 94 caractères',
+    lignes.every((l) => l.length <= 94),
+    lignes.map((l) => l.length).join(','),
+  );
+  verifier(
+    'découpe : le message est conservé intégralement',
+    normaliser(lignes.join(' ').replace('Message : ', '')) ===
+      normaliser(MESSAGE_LONG),
+  );
+
+  // Mot isolé plus long qu'une ligne : coupé, rien perdu.
+  const motLong = 'a'.repeat(200);
+  const lignesMot = decouperLignesMessage(motLong);
+  verifier(
+    'mot de 200 caractères : découpé en lignes ≤ 94, rien perdu',
+    lignesMot.every((l) => l.length <= 94) &&
+      lignesMot.join('').replace('Message : ', '') === motLong,
+  );
+  verifier(
+    'message vide : aucune ligne',
+    decouperLignesMessage('   ').length === 0,
+  );
+
+  // PDF généré : le message intégral s'y retrouve.
+  const { pdf } = construirePdfRapport(
+    {
+      id: '00000000-0000-0000-0000-000000000000',
+      type: 'bilan_annuel',
+      message: MESSAGE_LONG,
+      membres: 42,
+      recettes_fcfa: 120000,
+      depenses_fcfa: 80000,
+      solde_fcfa: 40000,
+      statut: 'en_attente_envoi',
+      cree_le: '2026-11-12T00:00:00.000Z',
+    },
+    'Annexe ENVOI',
+    'Église mère ENVOI',
+  );
+  const extraits = extraireTextePdf(pdf);
+  const texteJoint = normaliser(extraits.join(' '));
+  verifier(
+    'PDF : le message intégral est présent',
+    texteJoint.includes(normaliser(MESSAGE_LONG)),
+    texteJoint.slice(0, 200),
+  );
+  // Chaque ligne du message dans le PDF fait ≤ 94 caractères.
+  const debut = extraits.findIndex((t) => t.startsWith('Message : '));
+  const fin = extraits.findIndex(
+    (t, i) => i > debut && t === 'Chiffres du rapport',
+  );
+  const lignesMessage = extraits.slice(debut, fin === -1 ? undefined : fin);
+  verifier(
+    'PDF : chaque ligne du message ≤ 94 caractères',
+    debut !== -1 &&
+      lignesMessage.length > 1 &&
+      lignesMessage.every((l) => l.length <= 94),
+    lignesMessage.map((l) => l.length).join(','),
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Partie B — routes, serveur démarré.
 // ---------------------------------------------------------------------------
 async function creerBase(nomDb) {
@@ -241,6 +346,7 @@ async function arreterReseau(reseau) {
 
 async function main() {
   await partieA();
+  await partieD();
 
   // --- Réseau 1 : transport simulé (NODE_ENV=test + MAIL_TRANSPORT=stream).
   console.log('B. routes avec transport simulé :');
