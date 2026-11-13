@@ -38,10 +38,15 @@ import {
 
 // -- Types et aides -----------------------------------------------------------
 
-interface ChampRequis {
+// Champs déclarés par le fournisseur. `optionnel` (migration 026,
+// tranche T8) : un champ requis pour une fonction (ex. le secret de
+// signature du webhook Wave) mais pas pour l'exécution elle-même —
+// l'absence d'un champ facultatif ne bloque pas la configuration.
+export interface ChampRequis {
   nom: string;
   label: string;
   secret: boolean;
+  optionnel: boolean;
 }
 
 function parseChamps(value: unknown): ChampRequis[] {
@@ -55,6 +60,7 @@ function parseChamps(value: unknown): ChampRequis[] {
       nom: c.nom as string,
       label: typeof c.label === "string" ? c.label : (c.nom as string),
       secret: c.secret === true,
+      optionnel: c.optionnel === true,
     }));
 }
 
@@ -109,6 +115,7 @@ function configPublique(row: ConfigRow): Record<string, unknown> {
       nom: c.nom,
       label: c.label,
       secret: c.secret,
+      optionnel: c.optionnel,
       configure: configures.has(c.nom),
     })),
   };
@@ -139,6 +146,17 @@ function cryptoConfigError(reply: FastifyReply, e: unknown): boolean {
     return true;
   }
   return false;
+}
+
+/** Charge la configuration de paiement d'une église pour un fournisseur.
+ *  Exportée pour la route des webhooks (tranche T8) : le webhook résout
+ *  l'église par la contribution, puis charge sa configuration marchand. */
+export async function chargerConfigPaiement(
+  db: Pool,
+  churchId: string,
+  fournisseurCode: string,
+): Promise<{ config: ConfigRow; fournisseur: FournisseurRow } | null> {
+  return loadConfig(db, churchId, fournisseurCode);
 }
 
 async function loadConfig(
@@ -181,6 +199,16 @@ async function loadSecrets(
     [configId],
   );
   return new Map(rows.map((r) => [r.nom_champ, r]));
+}
+
+/** Charge les secrets chiffrés d'une configuration. Exportée pour la
+ *  route des webhooks (tranche T8) — le déchiffrement se fait au moment
+ *  de la vérification, jamais avant, et les valeurs ne sortent pas. */
+export async function chargerSecretsPaiement(
+  db: Pool,
+  configId: string,
+): Promise<Map<string, SecretRow>> {
+  return loadSecrets(db, configId);
 }
 
 // -- Schémas -----------------------------------------------------------------
@@ -337,8 +365,11 @@ export function registerPaiementsRoutes(app: FastifyInstance, db: Pool): void {
         }
         const existant = await loadConfig(db, churchId, data.fournisseur_code);
         if (!existant) {
+          // Un champ facultatif (optionnel: true — ex. le secret de
+          // signature du webhook Wave, migration 026) ne bloque pas la
+          // configuration : il ne sert qu'à la vérification des webhooks.
           const manquants = champs
-            .filter((c) => !data.secrets.some((s) => s.nom_champ === c.nom))
+            .filter((c) => !c.optionnel && !data.secrets.some((s) => s.nom_champ === c.nom))
             .map((c) => c.label);
           if (manquants.length > 0) {
             return reply.code(400).send({
