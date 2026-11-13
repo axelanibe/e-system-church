@@ -121,6 +121,9 @@ class MaCarte {
 /// géré par l'église ; la gestion côté admin reste la tranche T6.
 class RendezVous {
   final String id;
+  final String? memberId; // côté admin (GET /rendez-vous, T6)
+  final String? membreNom; // côté admin (joint par le serveur)
+  final String? membreMatricule; // côté admin (joint par le serveur)
   final String dateSouhaitee; // AAAA-MM-JJ
   final String? creneau;
   final String motif;
@@ -129,6 +132,9 @@ class RendezVous {
 
   const RendezVous({
     required this.id,
+    this.memberId,
+    this.membreNom,
+    this.membreMatricule,
     required this.dateSouhaitee,
     this.creneau,
     required this.motif,
@@ -141,6 +147,9 @@ class RendezVous {
     final date = brute.length >= 10 ? brute.substring(0, 10) : brute;
     return RendezVous(
       id: json['id'] as String,
+      memberId: json['member_id'] as String?,
+      membreNom: json['membre_nom'] as String?,
+      membreMatricule: json['membre_matricule'] as String?,
       dateSouhaitee: date,
       creneau: json['creneau'] as String?,
       motif: json['motif'] as String? ?? '',

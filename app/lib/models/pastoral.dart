@@ -57,6 +57,8 @@ class VisitePastorale {
   final String dateVisite;
   final String? motif;
   final String? compteRendu;
+  final String? type; // domicile | hopital (T6, nullable : anciennes visites)
+  final String? lieu; // T6
   final String statut; // planifiee | realisee | annulee
   final DateTime? createdAt;
 
@@ -67,6 +69,8 @@ class VisitePastorale {
     required this.dateVisite,
     this.motif,
     this.compteRendu,
+    this.type,
+    this.lieu,
     required this.statut,
     this.createdAt,
   });
@@ -79,9 +83,24 @@ class VisitePastorale {
         dateVisite: json['date_visite'] as String,
         motif: json['motif'] as String?,
         compteRendu: json['compte_rendu'] as String?,
+        type: json['type'] as String?,
+        lieu: json['lieu'] as String?,
         statut: json['statut'] as String? ?? 'planifiee',
         createdAt: parseDate(json['created_at'] as String?),
       );
+
+  static String labelForType(String? type) {
+    switch (type) {
+      case 'domicile':
+        return 'Domicile';
+      case 'hopital':
+        return 'Hôpital';
+      default:
+        return 'Non précisé';
+    }
+  }
+
+  String get typeLabel => labelForType(type);
 
   static String labelForStatut(String statut) {
     switch (statut) {
@@ -107,6 +126,7 @@ class Accompagnement {
   final String type; // couple | famille | malade | difficulte | autre
   final String? accompagnateurId;
   final String? description;
+  final String priorite; // basse | normale | haute | urgente (T6)
   final String statut; // en_cours | termine
   final DateTime? createdAt;
 
@@ -116,6 +136,7 @@ class Accompagnement {
     required this.type,
     this.accompagnateurId,
     this.description,
+    this.priorite = 'normale',
     required this.statut,
     this.createdAt,
   });
@@ -127,9 +148,25 @@ class Accompagnement {
         type: json['type'] as String,
         accompagnateurId: json['accompagnateur_id'] as String?,
         description: json['description'] as String?,
+        priorite: json['priorite'] as String? ?? 'normale',
         statut: json['statut'] as String? ?? 'en_cours',
         createdAt: parseDate(json['created_at'] as String?),
       );
+
+  static String labelForPriorite(String priorite) {
+    switch (priorite) {
+      case 'basse':
+        return 'Basse';
+      case 'haute':
+        return 'Haute';
+      case 'urgente':
+        return 'Urgente';
+      default:
+        return 'Normale';
+    }
+  }
+
+  String get prioriteLabel => labelForPriorite(priorite);
 
   static String labelForType(String type) {
     switch (type) {
@@ -147,4 +184,75 @@ class Accompagnement {
   }
 
   String get typeLabel => labelForType(type);
+}
+
+/// Rencontre d'accompagnement datée (`rencontres_accompagnement`, T6) :
+/// un accompagnement peut avoir plusieurs rencontres, chacune datée.
+class RencontreAccompagnement {
+  final String id;
+  final String accompagnementId;
+  final String dateRencontre; // AAAA-MM-JJ
+  final String? note;
+  final DateTime? createdAt;
+
+  const RencontreAccompagnement({
+    required this.id,
+    required this.accompagnementId,
+    required this.dateRencontre,
+    this.note,
+    this.createdAt,
+  });
+
+  factory RencontreAccompagnement.fromJson(Map<String, dynamic> json) =>
+      RencontreAccompagnement(
+        id: json['id'] as String,
+        accompagnementId: json['accompagnement_id'] as String,
+        dateRencontre: json['date_rencontre'] as String,
+        note: json['note'] as String?,
+        createdAt: parseDate(json['created_at'] as String?),
+      );
+}
+
+/// Alerte du radar des absences consécutives (T6, vue calculée
+/// `v_radar_absences`, `GET /radar-absences`) : l'alerte et la visite
+/// suggérée sont calculées par le serveur, jamais inventées ici.
+class AlerteRadar {
+  final String memberId;
+  final String membreNom;
+  final String? membreMatricule;
+  final String? membreTelephone;
+  final int absencesConsecutives;
+  final String? dernierePresence; // AAAA-MM-JJ ou null (jamais vu)
+  final String alerte;
+  final String? visiteType; // domicile (suggérée)
+  final String? visiteMotif;
+
+  const AlerteRadar({
+    required this.memberId,
+    required this.membreNom,
+    this.membreMatricule,
+    this.membreTelephone,
+    required this.absencesConsecutives,
+    this.dernierePresence,
+    required this.alerte,
+    this.visiteType,
+    this.visiteMotif,
+  });
+
+  factory AlerteRadar.fromJson(Map<String, dynamic> json) {
+    final suggeree = json['visite_suggeree'] as Map<String, dynamic>?;
+    final derniere = json['derniere_presence'] as String?;
+    return AlerteRadar(
+      memberId: json['member_id'] as String,
+      membreNom: json['membre_nom'] as String,
+      membreMatricule: json['membre_matricule'] as String?,
+      membreTelephone: json['membre_telephone'] as String?,
+      absencesConsecutives: json['absences_consecutives'] as int? ?? 0,
+      dernierePresence:
+          derniere != null && derniere.length >= 10 ? derniere.substring(0, 10) : derniere,
+      alerte: json['alerte'] as String? ?? '',
+      visiteType: suggeree?['type'] as String?,
+      visiteMotif: suggeree?['motif'] as String?,
+    );
+  }
 }

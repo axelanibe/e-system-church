@@ -1629,10 +1629,71 @@ class HttpApiService implements ApiService {
           body: {'etape': etape}));
 
   @override
-  Future<List<VisitePastorale>> getVisitesPastorales({String? statut}) async =>
+  Future<List<AlerteRadar>> getRadarAbsences({int seuil = 3}) async =>
+      _items(
+          await _call('GET', '/radar-absences',
+              query: _q({'seuil': seuil})),
+          AlerteRadar.fromJson);
+
+  @override
+  Future<List<RendezVous>> getRendezVousAdmin({String? statut}) async =>
+      _items(
+          await _call('GET', '/rendez-vous',
+              query: _q({'statut': statut})),
+          RendezVous.fromJson);
+
+  @override
+  Future<RendezVous> setRendezVousStatut(String id, String statut,
+          {String? creneau}) async =>
+      RendezVous.fromJson(await _call(
+          'PATCH', '/rendez-vous/$id/statut',
+          body: {
+            'statut': statut,
+            if (creneau != null) 'creneau': creneau,
+          }));
+
+  @override
+  Future<List<Accompagnement>> getCasOuverts(
+          {String type = 'difficulte', String? priorite}) async =>
+      _items(
+          await _call('GET', '/accompagnements/cas-ouverts',
+              query: _q({'type': type, 'priorite': priorite})),
+          Accompagnement.fromJson);
+
+  @override
+  Future<List<RencontreAccompagnement>> getRencontresAccompagnement(
+          String accompagnementId) async =>
+      _items(
+          await _call('GET', '/rencontres-accompagnement',
+              query: _q({'accompagnement_id': accompagnementId})),
+          RencontreAccompagnement.fromJson);
+
+  @override
+  Future<RencontreAccompagnement> createRencontreAccompagnement({
+    required String accompagnementId,
+    required String dateRencontre,
+    String? note,
+  }) async =>
+      RencontreAccompagnement.fromJson(
+          await _call('POST', '/rencontres-accompagnement', body: {
+        'accompagnement_id': accompagnementId,
+        'date_rencontre': dateRencontre,
+        if (note != null) 'note': note,
+      }));
+
+  @override
+  Future<Accompagnement> setAccompagnementPriorite(
+          String id, String priorite) async =>
+      Accompagnement.fromJson(await _call(
+          'PATCH', '/accompagnements/$id',
+          body: {'priorite': priorite}));
+
+  @override
+  Future<List<VisitePastorale>> getVisitesPastorales(
+          {String? statut, String? type}) async =>
       _items(
           await _call('GET', '/visites-pastorales',
-              query: _q({'statut': statut})),
+              query: _q({'statut': statut, 'type': type})),
           VisitePastorale.fromJson);
 
   @override
@@ -1641,6 +1702,8 @@ class HttpApiService implements ApiService {
     required String dateVisite,
     String? motif,
     String? compteRendu,
+    String? type,
+    String? lieu,
   }) async =>
       VisitePastorale.fromJson(
           await _call('POST', '/visites-pastorales', body: {
@@ -1648,6 +1711,8 @@ class HttpApiService implements ApiService {
         'date_visite': dateVisite,
         if (motif != null) 'motif': motif,
         if (compteRendu != null) 'compte_rendu': compteRendu,
+        if (type != null) 'type': type,
+        if (lieu != null) 'lieu': lieu,
       }));
 
   @override
@@ -1663,11 +1728,13 @@ class HttpApiService implements ApiService {
     required String memberId,
     required String type,
     String? description,
+    String priorite = 'normale',
   }) async =>
       Accompagnement.fromJson(await _call('POST', '/accompagnements', body: {
         'member_id': memberId,
         'type': type,
         if (description != null) 'description': description,
+        'priorite': priorite,
       }));
 
   // -- Serviteurs (module 7) -------------------------------------------------

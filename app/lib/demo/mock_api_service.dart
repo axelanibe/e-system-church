@@ -2845,13 +2845,125 @@ class MockApiService implements ApiService {
   }
 
   @override
-  Future<List<VisitePastorale>> getVisitesPastorales({String? statut}) async {
+  Future<List<AlerteRadar>> getRadarAbsences({int seuil = 3}) async {
+    await _latence();
+    _requireAuth();
+    // Démo : le seed ne suit pas de série d'absences, le radar est vide.
+    return const [];
+  }
+
+  @override
+  Future<List<RendezVous>> getRendezVousAdmin({String? statut}) async {
+    await _latence();
+    _requireAuth();
+    // Démo : aucune demande stockée côté démo.
+    return const [];
+  }
+
+  @override
+  Future<RendezVous> setRendezVousStatut(String id, String statut,
+      {String? creneau}) async {
+    await _latence();
+    _requireAuth();
+    throw const ApiException('Rendez-vous introuvable (démo).');
+  }
+
+  @override
+  Future<List<Accompagnement>> getCasOuverts(
+      {String type = 'difficulte', String? priorite}) async {
+    await _latence();
+    _requireAuth();
+    const ordre = {'urgente': 0, 'haute': 1, 'normale': 2, 'basse': 3};
+    var list = _data.accompagnements
+        .where((a) => a.statut == 'en_cours')
+        .toList();
+    list = _visible(list, (e) => e.id);
+    if (type != 'tous') {
+      list = list.where((a) => a.type == type).toList();
+    }
+    if (priorite != null && priorite.isNotEmpty) {
+      list = list.where((a) => a.priorite == priorite).toList();
+    }
+    list.sort((a, b) {
+      final pa = ordre[a.priorite] ?? 2;
+      final pb = ordre[b.priorite] ?? 2;
+      if (pa != pb) return pa.compareTo(pb);
+      final ca = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final cb = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return ca.compareTo(cb);
+    });
+    return List.unmodifiable(list);
+  }
+
+  /// Rencontres créées en démo (pas de seed).
+  final List<RencontreAccompagnement> _rencontres = [];
+
+  @override
+  Future<List<RencontreAccompagnement>> getRencontresAccompagnement(
+      String accompagnementId) async {
+    await _latence();
+    _requireAuth();
+    final list = _rencontres
+        .where((r) => r.accompagnementId == accompagnementId)
+        .toList()
+      ..sort((a, b) => b.dateRencontre.compareTo(a.dateRencontre));
+    return List.unmodifiable(list);
+  }
+
+  @override
+  Future<RencontreAccompagnement> createRencontreAccompagnement({
+    required String accompagnementId,
+    required String dateRencontre,
+    String? note,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final rencontre = RencontreAccompagnement(
+      id: _nextId('rencontre'),
+      accompagnementId: accompagnementId,
+      dateRencontre: dateRencontre,
+      note: note,
+      createdAt: DateTime.now(),
+    );
+    _rencontres.add(rencontre);
+    _tag(rencontre.id);
+    return rencontre;
+  }
+
+  @override
+  Future<Accompagnement> setAccompagnementPriorite(
+      String id, String priorite) async {
+    await _latence();
+    _requireAuth();
+    final i = _data.accompagnements.indexWhere((a) => a.id == id);
+    if (i < 0) throw const ApiException('Accompagnement introuvable (démo).');
+    final a = _data.accompagnements[i];
+    final maj = Accompagnement(
+      id: a.id,
+      memberId: a.memberId,
+      type: a.type,
+      accompagnateurId: a.accompagnateurId,
+      description: a.description,
+      priorite: priorite,
+      statut: a.statut,
+      createdAt: a.createdAt,
+    );
+    _data.accompagnements[i] = maj;
+    return maj;
+  }
+
+  @override
+  Future<List<VisitePastorale>> getVisitesPastorales(
+      {String? statut, String? type}) async {
     await _latence();
     _requireAuth();
     var list = _data.visites;
     list = _visible(list, (e) => e.id);
     if (statut != null && statut.isNotEmpty) {
       list = list.where((v) => v.statut == statut).toList();
+    }
+    if (type != null && type.isNotEmpty) {
+      list = list.where((v) => v.type == type).toList();
     }
     return List.unmodifiable(list);
   }
@@ -2862,6 +2974,8 @@ class MockApiService implements ApiService {
     required String dateVisite,
     String? motif,
     String? compteRendu,
+    String? type,
+    String? lieu,
   }) async {
     await _latence();
     _requireAuth();
@@ -2871,6 +2985,8 @@ class MockApiService implements ApiService {
       dateVisite: dateVisite,
       motif: motif,
       compteRendu: compteRendu,
+      type: type,
+      lieu: lieu,
       statut: 'planifiee',
       createdAt: DateTime.now(),
     );
@@ -2900,6 +3016,7 @@ class MockApiService implements ApiService {
     required String memberId,
     required String type,
     String? description,
+    String priorite = 'normale',
   }) async {
     await _latence();
     _requireAuth();
@@ -2908,6 +3025,7 @@ class MockApiService implements ApiService {
       memberId: memberId,
       type: type,
       description: description,
+      priorite: priorite,
       statut: 'en_cours',
       createdAt: DateTime.now(),
     );
