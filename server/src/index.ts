@@ -42,6 +42,7 @@ import { registerAttestationsRoutes } from "./routes/attestations.js";
 import { registerAbonnementsRoutes } from "./routes/abonnements.js";
 import { registerRapportsAnnexeRoutes } from "./routes/rapports_annexe.js";
 import { registerNettoyageTestRoutes } from "./routes/nettoyage_test.js";
+import { registerSuppressionEgliseRoutes } from "./routes/suppression_eglise.js";
 import { registerImportMembresRoutes } from "./routes/import_membres.js";
 import { registerExportsPdfRoutes } from "./routes/exports_pdf.js";
 import { registerPlanComptableRoutes } from "./routes/plan_comptable.js";
@@ -164,6 +165,7 @@ export function buildApp(db: Pool) {
   registerAbonnementsRoutes(app, db);
   registerRapportsAnnexeRoutes(app, db);
   registerNettoyageTestRoutes(app, db);
+  registerSuppressionEgliseRoutes(app, db);
   registerImportMembresRoutes(app, db);
   registerExportsPdfRoutes(app, db);
   registerPlanComptableRoutes(app, db);

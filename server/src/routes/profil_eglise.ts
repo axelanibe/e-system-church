@@ -178,16 +178,30 @@ export function registerProfilEgliseRoutes(app: FastifyInstance, db: Pool) {
     }
   });
 
-  // -- Mise à jour du profil de MON église (admin seulement). ---------------
+  // -- Mise à jour du profil d'une église : la sienne, une de ses annexes
+  //    directes (mère), ou n'importe quelle annexe (super admin). Le code
+  //    ESC-… ne change jamais. ---------------------------------------------
   app.patch(
     "/eglises/:id/profil",
-    { preHandler: [requireAuth(db), requireRole("admin_eglise")] },
+    { preHandler: [requireAuth(db), requireRole("admin_eglise", "super_admin")] },
     async (req, reply) => {
       const churchId = (req.params as { id: string }).id;
-      if (churchId !== req.session.churchId) {
+      const { rows: cibleRows } = await db.query<{ parent_church_id: string | null }>(
+        `SELECT parent_church_id FROM churches WHERE id = $1`,
+        [churchId],
+      );
+      if (cibleRows.length === 0) {
+        return reply.code(404).send({ error: "not_found", message: "Église introuvable." });
+      }
+      const parent = cibleRows[0].parent_church_id;
+      const autorise =
+        (req.session.role === "admin_eglise" && churchId === req.session.churchId) ||
+        (req.session.role === "admin_eglise" && parent === req.session.churchId) ||
+        (req.session.role === "super_admin" && parent !== null);
+      if (!autorise) {
         return reply.code(403).send({
           error: "forbidden",
-          message: "On ne modifie le profil que de sa propre église.",
+          message: "On ne modifie que le profil de sa propre église ou d'une de ses annexes directes.",
         });
       }
       const parsed = profilSchema.safeParse(req.body);
