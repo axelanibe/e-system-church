@@ -703,6 +703,8 @@ CREATE TABLE IF NOT EXISTS visites_pastorales (
     date_visite  TIMESTAMPTZ NOT NULL,
     motif        TEXT,
     compte_rendu TEXT,
+    type         TEXT CHECK (type IN ('domicile', 'hopital')),  -- migration 024 : visite à domicile ou à l'hôpital, NULL tant que non typée
+    lieu         TEXT,                                          -- migration 024 : adresse ou lieu de la visite
     statut       TEXT NOT NULL DEFAULT 'planifiee'
                  CHECK (statut IN ('planifiee','realisee','annulee')),
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -716,6 +718,7 @@ CREATE TABLE IF NOT EXISTS accompagnements (
     type             TEXT NOT NULL CHECK (type IN ('couple','famille','malade','difficulte','autre')),
     accompagnateur_id UUID REFERENCES users (id) ON DELETE SET NULL,
     description      TEXT,
+    priorite         TEXT NOT NULL DEFAULT 'normale' CHECK (priorite IN ('basse','normale','haute','urgente')),  -- migration 024 : priorité du cas
     statut           TEXT NOT NULL DEFAULT 'en_cours' CHECK (statut IN ('en_cours','termine')),
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -1093,3 +1096,53 @@ CREATE TABLE IF NOT EXISTS eglise_modules (
     PRIMARY KEY (church_id, module)
 );
 CREATE INDEX IF NOT EXISTS idx_eglise_modules_church ON eglise_modules (church_id);
+
+-- ===========================================================================
+-- Migration 024 — Radar pastoral et rendez-vous (tranche T6, Lot B)
+-- Miroir pour les nouvelles bases. Les migrations restent la référence ;
+-- ce miroir ne sert qu'au schéma initial (voir server/src/migrate.ts).
+-- ===========================================================================
+CREATE TABLE IF NOT EXISTS rencontres_accompagnement (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id         UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    accompagnement_id UUID NOT NULL REFERENCES accompagnements (id) ON DELETE CASCADE,
+    date_rencontre    DATE NOT NULL,
+    note              TEXT,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_rencontres_accompagnement
+    ON rencontres_accompagnement (accompagnement_id, date_rencontre);
+
+-- Radar des absences consécutives (3 et +) : vue calculée depuis les
+-- présences et les cultes — pas une table. Un culte compte comme une
+-- absence quand le membre n'y a pas de pointage « present ». La série
+-- s'arrête à la dernière présence ; on ne compte pas les cultes d'avant
+-- l'arrivée du membre, ni les cultes à venir. Membres « inactif » exclus.
+CREATE OR REPLACE VIEW v_radar_absences AS
+SELECT
+  m.church_id,
+  m.id AS member_id,
+  m.full_name AS membre_nom,
+  m.matricule AS membre_matricule,
+  m.phone AS membre_telephone,
+  m.email AS membre_email,
+  m.status AS membre_statut,
+  (
+    SELECT count(*)::int
+      FROM cultes c
+     WHERE c.church_id = m.church_id
+       AND c.date_heure <= now()
+       AND c.date_heure > COALESCE(derniere_presence.date_heure, m.created_at)
+  ) AS absences_consecutives,
+  derniere_presence.date_heure AS derniere_presence
+FROM members m
+LEFT JOIN LATERAL (
+  SELECT max(c2.date_heure) AS date_heure
+    FROM cultes c2
+    JOIN presences p
+      ON p.culte_id = c2.id
+     AND p.member_id = m.id
+     AND p.statut = 'present'
+   WHERE c2.church_id = m.church_id
+) derniere_presence ON true
+WHERE m.status <> 'inactif';
