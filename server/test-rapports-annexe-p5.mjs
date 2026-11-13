@@ -5,12 +5,14 @@
 // application du schéma puis des migrations avec le vrai moteur de
 // migration, démarrage de l'API, appels HTTP, droits 401/403.
 //
+// Lot B (tranche P5, envoi par courriel) : la mère n'a pas d'adresse
+// e-mail en base dans ce test, donc l'envoi ne peut pas partir — le
+// rapport reste en_attente_envoi avec envoi_email=email_mere_manquant.
+// Le cas nominal (envoi réussi, statut envoye) est couvert par
+// server/test-lot-b-p5-envoi-courriel.mjs (transport simulé).
+//
 // Usage : `node server/test-rapports-annexe-p5.mjs`
 // Variables : DATABASE_URL (ou PG*), PORT (défaut 4105).
-// Base locale : PostgreSQL est nécessaire. Sans base locale, ce test
-// ne peut pas tourner (constaté le 12 novembre 2026 : aucun PostgreSQL
-// dans cette machine). La migration 023 sera appliquée sur Render
-// après la fusion, comme les migrations 015, 016, 018, 019, 020 et 021.
 
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
@@ -71,10 +73,16 @@ async function main() {
     env: { ...process.env, DATABASE_URL },
   });
 
-  // Démarrage de l'API.
+  // Démarrage de l'API (JWT_SECRET requis : 32 caractères minimum).
   const api = spawn('node', ['dist/index.js'], {
     cwd: 'server',
-    env: { ...process.env, DATABASE_URL, PORT: String(PORT) },
+    env: {
+      ...process.env,
+      DATABASE_URL,
+      PORT: String(PORT),
+      JWT_SECRET:
+        process.env.JWT_SECRET ?? 'test-secret-rapports-p5-32-caracteres',
+    },
     stdio: 'pipe',
   });
   try {
@@ -93,26 +101,51 @@ async function main() {
     if (!pret) return;
 
     // --- Préparation : église mère et annexe ---
+    // Inscription au format actuel (schéma imbriqué eglise/admin) ;
+    // l'annexe rejoint la mère par son code, puis la mère accepte le
+    // rattachement (sinon l'annexe reste sa propre racine).
     const mere = await appel('POST', '/auth/register', null, {
-      nom_eglise: 'Église mère EXEMPLE',
-      nom_complet: 'Admin EXEMPLE',
-      email: 'admin-exemple-p5@example.com',
-      mot_de_passe: 'MotDePasse123!',
-      telephone: '+2250102030405',
+      eglise: {
+        name: 'Église mère EXEMPLE',
+        city: 'Abidjan',
+        phone: '+2250102030405',
+      },
+      admin: {
+        full_name: 'Admin EXEMPLE',
+        email: 'admin-exemple-p5@example.com',
+        password: 'MotDePasse123!',
+      },
     });
     verifier('inscription église mère', mere.statut === 201, mere.texte);
     const jetonMere = mere.json?.token;
 
     const annexe = await appel('POST', '/auth/register', null, {
-      nom_eglise: 'Annexe EXEMPLE',
-      nom_complet: 'Admin annexe EXEMPLE',
-      email: 'admin-annexe-exemple-p5@example.com',
-      mot_de_passe: 'MotDePasse123!',
-      telephone: '+2250504030201',
-      code_tutelle: mere.json?.church?.code,
+      eglise: {
+        name: 'Annexe EXEMPLE',
+        city: 'Abidjan',
+        phone: '+2250504030201',
+        parent_code: mere.json?.church?.code,
+      },
+      admin: {
+        full_name: 'Admin annexe EXEMPLE',
+        email: 'admin-annexe-exemple-p5@example.com',
+        password: 'MotDePasse123!',
+      },
     });
     verifier('inscription annexe', annexe.statut === 201, annexe.texte);
     const jetonAnnexe = annexe.json?.token;
+
+    const acceptation = await appel(
+      'POST',
+      `/rattachements/${annexe.json?.rattachement?.id}/accepter`,
+      jetonMere,
+    );
+    verifier(
+      'mère : rattachement de l’annexe accepté',
+      acceptation.statut === 200 &&
+        acceptation.json?.status === 'acceptee',
+      acceptation.texte,
+    );
 
     // --- GET /moi/eglise-mere ---
     const sansJeton = await appel('GET', '/moi/eglise-mere', null);
@@ -171,11 +204,11 @@ async function main() {
       solde_fcfa: 0,
     });
     verifier(
-      'annexe : rapport enregistré, en attente d’envoi par e-mail',
+      'annexe : rapport enregistré, en attente d’envoi par e-mail (mère sans adresse)',
       envoi.statut === 200 &&
         envoi.json?.type === 'bilan_annuel' &&
         envoi.json?.statut === 'en_attente_envoi' &&
-        envoi.json?.envoi_email === 'en_attente_lot_b',
+        envoi.json?.envoi_email === 'email_mere_manquant',
       envoi.texte,
     );
 
