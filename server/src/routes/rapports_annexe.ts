@@ -1,7 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
+import { auditLog } from "../auth.js";
+import { envoiCourrielDisponible, sendMail } from "../mailer.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
+import { formaterMontant, genererRapportPdf } from "../pdf.js";
 
 /**
  * Tranche P5 — Rapports à mon église mère : une annexe choisit le type
@@ -9,17 +12,25 @@ import { dbError, requireAuth, requireRole } from "../middleware.js";
  * vraies données et l'envoie par e-mail à son église mère, en pièce
  * jointe PDF. La mère lit les rapports reçus dans « Rapports reçus ».
  *
- * L'envoi par e-mail passe par mailer.ts (Lot B) : ce fichier ne
- * l'importe pas. En attendant, le rapport est enregistré avec le
- * statut `en_attente_envoi`, visible par la mère, et l'envoi est
- * marqué en attente du Lot B, jamais présenté comme envoyé. Le Lot B
- * branchera l'envoi (PDF + mailer) et passera le statut à `envoye`.
+ * Envoi (Lot B, tranche P5) : à la création (POST /moi/rapports-annexe),
+ * le PDF du rapport est généré depuis les données figées en base et
+ * envoyé en pièce jointe via mailer.ts à l'adresse de l'église mère
+ * (churches.email de la racine du réseau). Si l'envoi réussit, le
+ * statut passe à `envoye` ; sinon le rapport reste `en_attente_envoi`
+ * (e-mail de la mère manquant, SMTP non configuré, ou échec d'envoi)
+ * et peut être renvoyé par POST /moi/rapports-annexe/:id/envoyer.
  *
  * Aucune adresse e-mail inventée : celle de la mère se lit dans
  * churches.email, nulle tant qu'elle n'est pas renseignée en base.
  */
 
 const TYPES = ["bilan_annuel", "bilan_activite", "rapport_financier"] as const;
+
+const LIBELLES_TYPE: Record<(typeof TYPES)[number], string> = {
+  bilan_annuel: "Bilan annuel",
+  bilan_activite: "Bilan d'activité",
+  rapport_financier: "Rapport financier",
+};
 
 const envoiSchema = z.object({
   type: z.enum(TYPES),
@@ -42,6 +53,134 @@ const RACINE_SQL = `
    )
    SELECT id, name, email FROM ancetres
     WHERE parent_church_id IS NULL LIMIT 1`;
+
+/** Ligne de rapports_annexe telle que lue en base. */
+type RapportLigne = {
+  id: string;
+  type: (typeof TYPES)[number];
+  message: string | null;
+  membres: number;
+  recettes_fcfa: number;
+  depenses_fcfa: number;
+  solde_fcfa: number;
+  statut: string;
+  cree_le: string | Date;
+};
+
+/** Résultat d'une tentative d'envoi, renvoyé dans `envoi_email`. */
+type ResultatEnvoi =
+  | "envoye"
+  | "email_mere_manquant"
+  | "smtp_non_configure"
+  | "echec_envoi";
+
+// Réponse publique d'un rapport (mêmes champs que la création, plus le
+// résultat de l'envoi). L'application lit ces clés en snake_case.
+function reponseRapport(ligne: RapportLigne, envoi_email: ResultatEnvoi) {
+  return {
+    id: ligne.id,
+    type: ligne.type,
+    message: ligne.message,
+    membres: ligne.membres,
+    recettes_fcfa: ligne.recettes_fcfa,
+    depenses_fcfa: ligne.depenses_fcfa,
+    solde_fcfa: ligne.solde_fcfa,
+    statut: ligne.statut,
+    cree_le: ligne.cree_le,
+    envoi_email,
+  };
+}
+
+// Construit le PDF du rapport depuis les données figées en base (jamais
+// recalculé) et le nom du fichier joint. Réutilise genererRapportPdf.
+function construirePdfRapport(
+  rapport: RapportLigne,
+  annexeNom: string,
+  mereNom: string,
+): { pdf: Buffer; nomFichier: string } {
+  const dateEmission = new Date(rapport.cree_le).toISOString().slice(0, 10);
+  const pdf = genererRapportPdf({
+    titre: LIBELLES_TYPE[rapport.type],
+    egliseNom: annexeNom,
+    lignesMeta: [
+      `À l'attention de : ${mereNom}`,
+      `Émis le ${dateEmission}`,
+      ...(rapport.message ? [`Message : ${rapport.message}`] : []),
+    ],
+    sections: [
+      {
+        titre: "Chiffres du rapport",
+        colonnes: [
+          { titre: "Indicateur", largeur: 335 },
+          { titre: "Valeur", largeur: 160, alignerDroite: true },
+        ],
+        lignes: [
+          ["Membres", String(rapport.membres)],
+          ["Recettes", formaterMontant(rapport.recettes_fcfa)],
+          ["Dépenses", formaterMontant(rapport.depenses_fcfa)],
+        ],
+        total: ["Solde", formaterMontant(rapport.solde_fcfa)],
+        messageVide: "Aucun chiffre.",
+      },
+    ],
+    pied: "Rapport généré automatiquement par e-System Church.",
+  });
+  return { pdf, nomFichier: `rapport-annexe-${rapport.type}-${dateEmission}.pdf` };
+}
+
+// Tente l'envoi du rapport par e-mail à l'église mère (PDF en pièce
+// jointe). Ne lève jamais : le résultat dit ce qui s'est passé.
+async function tenterEnvoiRapport(
+  rapport: RapportLigne,
+  annexeNom: string,
+  mere: { nom: string; email: string | null },
+): Promise<ResultatEnvoi> {
+  if (!mere.email) return "email_mere_manquant";
+  if (!envoiCourrielDisponible()) return "smtp_non_configure";
+  const { pdf, nomFichier } = construirePdfRapport(
+    rapport,
+    annexeNom,
+    mere.nom,
+  );
+  const libelle = LIBELLES_TYPE[rapport.type];
+  const dateEmission = new Date(rapport.cree_le).toISOString().slice(0, 10);
+  const texte = [
+    "Bonjour,",
+    "",
+    `Veuillez trouver en pièce jointe le ${libelle.toLowerCase()} de ${annexeNom}, émis le ${dateEmission}.`,
+    "",
+    `Membres : ${rapport.membres}`,
+    `Recettes : ${formaterMontant(rapport.recettes_fcfa)}`,
+    `Dépenses : ${formaterMontant(rapport.depenses_fcfa)}`,
+    `Solde : ${formaterMontant(rapport.solde_fcfa)}`,
+    "",
+    "— e-System Church",
+  ].join("\n");
+  const ok = await sendMail(mere.email, `Rapport ${libelle} — ${annexeNom}`, texte, [
+    { filename: nomFichier, content: pdf, contentType: "application/pdf" },
+  ]);
+  return ok ? "envoye" : "echec_envoi";
+}
+
+// Journalise l'envoi réussi. L'audit ne doit jamais faire échouer
+// l'envoi : toute erreur est avalée.
+async function journaliserEnvoi(
+  db: Pool,
+  churchId: string,
+  userId: string | null,
+  rapport: RapportLigne,
+): Promise<void> {
+  try {
+    await auditLog(db, {
+      churchId,
+      userId,
+      action: "rapport_annexe.envoye",
+      details: { rapport_id: rapport.id, type: rapport.type },
+    });
+  } catch {
+    // L'audit ne bloque pas l'envoi.
+  }
+}
 
 export function registerRapportsAnnexeRoutes(app: FastifyInstance, db: Pool) {
   // -- Mon église mère (admin de l'église) : racine du réseau, nom et
@@ -75,9 +214,11 @@ export function registerRapportsAnnexeRoutes(app: FastifyInstance, db: Pool) {
   );
 
   // -- Envoyer un rapport à mon église mère (admin d'une annexe) : le
-  //    rapport est enregistré avec ses chiffres réels, statut
-  //    `en_attente_envoi`. Une église mère n'envoie pas de rapport à
-  //    elle-même. L'envoi par e-mail suit avec le Lot B.
+  //    rapport est enregistré avec ses chiffres réels, puis envoyé
+  //    par e-mail à l'église mère (PDF en pièce jointe). Si l'envoi
+  //    réussit, le statut passe à `envoye` ; sinon le rapport reste
+  //    `en_attente_envoi` (renvoi possible). Une église mère n'envoie
+  //    pas de rapport à elle-même.
   app.post(
     "/moi/rapports-annexe",
     { preHandler: [requireAuth(db), requireRole("admin_eglise")] },
@@ -101,7 +242,11 @@ export function registerRapportsAnnexeRoutes(app: FastifyInstance, db: Pool) {
             message: "Église introuvable.",
           });
         }
-        const mere = racines[0] as { id: string };
+        const mere = racines[0] as {
+          id: string;
+          name: string;
+          email: string | null;
+        };
         if (mere.id === req.session.churchId) {
           return reply.code(403).send({
             error: "mere_sans_mere",
@@ -127,11 +272,103 @@ export function registerRapportsAnnexeRoutes(app: FastifyInstance, db: Pool) {
             solde_fcfa,
           ],
         );
-        const ligne = rows[0] as Record<string, unknown>;
-        return reply.send({
-          ...ligne,
-          envoi_email: "en_attente_lot_b",
+        const ligne = rows[0] as RapportLigne;
+        const { rows: annexes } = await db.query(
+          `SELECT name FROM churches WHERE id = $1`,
+          [req.session.churchId],
+        );
+        const annexeNom =
+          (annexes[0] as { name: string } | undefined)?.name ?? "Église annexe";
+        const resultat = await tenterEnvoiRapport(ligne, annexeNom, {
+          nom: mere.name,
+          email: mere.email,
         });
+        if (resultat === "envoye") {
+          await db.query(
+            `UPDATE rapports_annexe SET statut = 'envoye' WHERE id = $1`,
+            [ligne.id],
+          );
+          ligne.statut = "envoye";
+          await journaliserEnvoi(
+            db,
+            req.session.churchId,
+            req.session.userId,
+            ligne,
+          );
+        }
+        return reply.send(reponseRapport(ligne, resultat));
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  // -- Renvoyer un rapport en attente (admin d'une annexe) : régénère
+  //    le PDF depuis les données figées en base et le renvoie à
+  //    l'église mère. Un rapport déjà envoyé ne se renvoie pas (409) ;
+  //    un rapport d'une autre église est introuvable (404).
+  app.post(
+    "/moi/rapports-annexe/:id/envoyer",
+    { preHandler: [requireAuth(db), requireRole("admin_eglise")] },
+    async (req, reply) => {
+      const id = (req.params as { id: string }).id;
+      try {
+        const { rows } = await db.query(
+          `SELECT id, eglise_id, eglise_mere_id, type, message, membres,
+                  recettes_fcfa, depenses_fcfa, solde_fcfa, statut, cree_le
+             FROM rapports_annexe WHERE id = $1 AND eglise_id = $2`,
+          [id, req.session.churchId],
+        );
+        if (rows.length === 0) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Rapport introuvable.",
+          });
+        }
+        const ligne = rows[0] as RapportLigne & { eglise_mere_id: string };
+        if (ligne.statut === "envoye") {
+          return reply.code(409).send({
+            error: "rapport_deja_envoye",
+            message: "Ce rapport a déjà été envoyé.",
+          });
+        }
+        const { rows: meres } = await db.query(
+          `SELECT name, email FROM churches WHERE id = $1`,
+          [ligne.eglise_mere_id],
+        );
+        const mere = meres[0] as
+          | { name: string; email: string | null }
+          | undefined;
+        if (!mere) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Église mère introuvable.",
+          });
+        }
+        const { rows: annexes } = await db.query(
+          `SELECT name FROM churches WHERE id = $1`,
+          [req.session.churchId],
+        );
+        const annexeNom =
+          (annexes[0] as { name: string } | undefined)?.name ?? "Église annexe";
+        const resultat = await tenterEnvoiRapport(ligne, annexeNom, {
+          nom: mere.name,
+          email: mere.email,
+        });
+        if (resultat === "envoye") {
+          await db.query(
+            `UPDATE rapports_annexe SET statut = 'envoye' WHERE id = $1`,
+            [id],
+          );
+          ligne.statut = "envoye";
+          await journaliserEnvoi(
+            db,
+            req.session.churchId,
+            req.session.userId,
+            ligne,
+          );
+        }
+        return reply.send(reponseRapport(ligne, resultat));
       } catch (e) {
         return dbError(reply, e);
       }
