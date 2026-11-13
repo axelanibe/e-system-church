@@ -308,6 +308,55 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
     showSuccess(context, 'Code copié : $code');
   }
 
+  /// Régénère un code d'invitation (fidèle ou tutelle) : confirmation
+  /// d'abord — l'ancien code cesse de fonctionner immédiatement. Pour le
+  /// code de tutelle, le lien de présentation publique partagé avec
+  /// l'ancien code ne fonctionne plus non plus. Après régénération,
+  /// l'église est rechargée (nouveau code affiché) et la présentation
+  /// aussi (elle se charge par le code de tutelle).
+  Future<void> _regenererCode(String type, String libelle) async {
+    final confirmer = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Régénérer le $libelle ?'),
+        content: Text(
+          type == 'tutelle'
+              ? 'L’ancien code de tutelle cessera de fonctionner '
+                  'immédiatement : les églises qui l’utilisent pour se '
+                  'rattacher à la vôtre devront utiliser le nouveau, et '
+                  'le lien de présentation publique partagé avec '
+                  'l’ancien code ne fonctionnera plus.'
+              : 'L’ancien code fidèle cessera de fonctionner '
+                  'immédiatement : les membres qui l’utilisent pour '
+                  's’inscrire dans votre église devront utiliser le '
+                  'nouveau.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Régénérer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmer != true) return;
+    if (!mounted) return;
+    try {
+      final state = context.read<AppState>();
+      final nouveau = await state.api.regenererCode(type: type);
+      await state.refreshMe();
+      if (!mounted) return;
+      _refresh();
+      showSuccess(context, 'Nouveau $libelle : $nouveau');
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
   /// Module 13 — choisit un logo (PNG/JPG, max 2 Mo), le téléverse et
   /// remplit le champ URL du logo avec l'URL renvoyée. Le champ URL reste
   /// disponible en repli.
@@ -383,8 +432,10 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
           label: 'Nom de l’église',
         ),
         const Text(
-          'Le code de l’église ne change jamais, ni les matricules, '
-          'ni les cartes existantes.',
+          'Les matricules et les cartes existantes ne changent jamais. '
+          'Les codes d’invitation, eux, peuvent être régénérés depuis la '
+          'section « Codes d’invitation » : l’ancien code cesse alors de '
+          'fonctionner immédiatement.',
           style: TextStyle(fontSize: 12),
         ),
         const SizedBox(height: 12),
@@ -669,7 +720,9 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                         'Le code fidèle permet aux membres de s’inscrire '
                         'dans votre église ; le code de tutelle permet à '
                         'une église de se rattacher à la vôtre. Touchez '
-                        'l’icône pour copier le code à transmettre.',
+                        'l’icône pour copier le code à transmettre, ou '
+                        '« Régénérer » pour en créer un nouveau — l’ancien '
+                        'code cesse alors de fonctionner immédiatement.',
                       ),
                       const SizedBox(height: 8),
                       Card(
@@ -684,12 +737,25 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                               ),
                               trailing: state.church?.codeFidele == null
                                   ? null
-                                  : IconButton(
-                                      icon:
-                                          const Icon(Icons.copy_outlined),
-                                      tooltip: 'Copier le code fidèle',
-                                      onPressed: () => _copierCode(
-                                          state.church!.codeFidele!),
+                                  : Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                              Icons.refresh_outlined),
+                                          tooltip:
+                                              'Régénérer le code fidèle',
+                                          onPressed: () => _regenererCode(
+                                              'fidele', 'code fidèle'),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                              Icons.copy_outlined),
+                                          tooltip: 'Copier le code fidèle',
+                                          onPressed: () => _copierCode(
+                                              state.church!.codeFidele!),
+                                        ),
+                                      ],
                                     ),
                             ),
                             const Divider(height: 1),
@@ -698,11 +764,24 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                                   const Icon(Icons.account_tree_outlined),
                               title: const Text('Code de tutelle'),
                               subtitle: Text(state.church?.code ?? ''),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.copy_outlined),
-                                tooltip: 'Copier le code de tutelle',
-                                onPressed: () =>
-                                    _copierCode(state.church!.code),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon:
+                                        const Icon(Icons.refresh_outlined),
+                                    tooltip:
+                                        'Régénérer le code de tutelle',
+                                    onPressed: () => _regenererCode(
+                                        'tutelle', 'code de tutelle'),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.copy_outlined),
+                                    tooltip: 'Copier le code de tutelle',
+                                    onPressed: () =>
+                                        _copierCode(state.church!.code),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
