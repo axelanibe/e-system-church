@@ -7,6 +7,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import 'medias_screen.dart';
 
 /// Module 2 — Cultes et programmes : types de culte, cultes (avec ordre
 /// du culte en détail) et événements spéciaux.
@@ -290,6 +291,25 @@ class _CultesScreenState extends State<CultesScreen> {
               onPressed: _exporterCultesPdf,
               icon: const Icon(Icons.download_outlined),
               label: const Text('Exporter en PDF'),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Card(
+            child: ListTile(
+              leading: const Icon(Icons.library_books_outlined),
+              title: const Text('Médias & bibliothèque'),
+              subtitle: const Text(
+                  'Prédications, plans de lecture, livres et prêts.'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const MediasScreen(),
+                  ),
+                );
+              },
             ),
           ),
         ),

@@ -6,6 +6,7 @@ import '../models/suppression_eglise.dart';
 import '../state/app_state.dart';
 import '../widgets/change_password_dialog.dart';
 import '../widgets/common_widgets.dart';
+import 'biens_screen.dart';
 import 'mon_eglise_screen.dart';
 import 'parametres_screen.dart';
 
@@ -217,6 +218,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) => const MonEgliseScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        const Divider(),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.home_work_outlined),
+                          title: const Text('Biens de l’église'),
+                          subtitle: const Text(
+                              'Salles, réservations, matériel et maintenance.'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const BiensScreen(),
                               ),
                             );
                           },

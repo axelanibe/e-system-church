@@ -449,7 +449,7 @@ class _PrieresScreenState extends State<PrieresScreen> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Prières & messages'),
+          title: const Text('Prières'),
           bottom: TabBar(
             isScrollable: true,
             onTap: (i) => setState(() {

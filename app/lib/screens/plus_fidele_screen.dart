@@ -86,6 +86,20 @@ class PlusFideleScreen extends StatelessWidget {
                 ),
               ),
               _LigneMenu(
+                icone: Icons.wb_sunny_outlined,
+                titre: 'Prière du jour',
+                onTap: () {
+                  onAllerAccueil?.call();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'La prière du jour est sur votre accueil.',
+                      ),
+                    ),
+                  );
+                },
+              ),
+              _LigneMenu(
                 icone: Icons.volunteer_activism_outlined,
                 titre: 'Sujet de prière privé',
                 onTap: () {

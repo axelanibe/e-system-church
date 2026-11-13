@@ -6,6 +6,7 @@ import '../models/member.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import 'enfants_screen.dart';
 import 'member_detail_screen.dart';
 
 /// Module 1 — Familles et cellules de l'église.
@@ -291,6 +292,28 @@ class _FamillesScreenState extends State<FamillesScreen> {
                     ),
                   );
                 },
+              ),
+              const SizedBox(height: 16),
+              const SectionTitle(title: 'Enfants & jeunesse'),
+              const Text(
+                'Classes, autorisations et activités des enfants.',
+              ),
+              const SizedBox(height: 12),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.child_care_outlined),
+                  title: const Text('Enfants & jeunesse'),
+                  subtitle: const Text(
+                      'Classes, autorisations et activités.'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const EnfantsScreen(),
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ),

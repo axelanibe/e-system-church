@@ -5,7 +5,6 @@ import 'package:esystem_church/models/fidele.dart';
 import 'package:esystem_church/widgets/short_drawer.dart';
 import 'package:esystem_church/state/app_state.dart';
 import 'package:esystem_church/widgets/app_bottom_bar.dart';
-import 'package:esystem_church/widgets/barre_perimetre.dart';
 import 'package:esystem_church/widgets/common_widgets.dart';
 import 'package:esystem_church/widgets/carte_membre_vedette.dart';
 import 'package:esystem_church/widgets/screen_header.dart';
@@ -196,28 +195,6 @@ void main() {
       expect(find.text('Voir ma carte de membre'), findsOneWidget);
     });
 
-    testWidgets('BarrePerimetre : 4 espaces, courant en or',
-        (tester) async {
-      await tester.pumpWidget(const MaterialApp(
-        home: Scaffold(
-          body: BarrePerimetre(courant: EspaceArtefact.egliseMere),
-        ),
-      ));
-      expect(find.text('En ligne'), findsOneWidget);
-      expect(find.text('1. Plateforme'), findsOneWidget);
-      expect(find.text('2. Église Mère'), findsOneWidget);
-      expect(find.text('3. Annexe'), findsOneWidget);
-      expect(find.text('4. Espace Membre'), findsOneWidget);
-      final conteneurs = tester.widgetList<Container>(find.byType(Container));
-      expect(
-        conteneurs.any((c) =>
-            c.decoration is BoxDecoration &&
-            (c.decoration as BoxDecoration).color == AppTheme.or),
-        isTrue,
-      );
-      expect(tester.takeException(), isNull);
-    });
-
     testWidgets('StatCard : libellé long sur une ligne, sans coupure',
         (tester) async {
       await tester.pumpWidget(MaterialApp(
@@ -245,9 +222,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets(
-        'Tiroir : les entrées de l’ancienne grille Modules, '
-        'en un seul endroit', (tester) async {
+    testWidgets('Tiroir désengorgé : 10 entrées, une par fonction',
+        (tester) async {
       // Fenêtre haute pour que tout le tiroir soit construit.
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(800, 3000);
@@ -273,20 +249,32 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Ouvrir'));
       await tester.pump();
-      // Les entrées de l'ancienne grille Modules vivent désormais
-      // dans le tiroir, une seule entrée par fonctionnalité.
+      // Les 10 entrées de la simulation (celles sans condition de
+      // rôle sont visibles ici ; Suivi pastoral, Rendez-vous et
+      // Mon abonnement demandent un rôle).
+      for (final label in [
+        'Cultes et Présences',
+        'Prières',
+        'Serviteurs',
+        'Rapports d’annexe',
+        'Mes annexes et Réseau',
+        'Modules de l’église',
+        'Réglages',
+      ]) {
+        expect(find.text(label), findsOneWidget);
+      }
+      // Les anciennes entrées ont déménagé dans leur écran parent.
       for (final label in [
         'Cultes en direct',
         'Présences',
         'Budget & caisse',
         'Prières & messages',
-        'Serviteurs',
         'Enfants & jeunesse',
         'Médias & bibliothèque',
         'Biens de l’église',
         'Rapports',
       ]) {
-        expect(find.text(label), findsOneWidget);
+        expect(find.text(label), findsNothing);
       }
       expect(find.text('Modules'), findsNothing);
     });

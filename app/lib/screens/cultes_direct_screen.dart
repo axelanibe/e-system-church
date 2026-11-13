@@ -18,6 +18,7 @@ import '../config/app_theme.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import 'cultes_screen.dart';
+import 'presences_screen.dart';
 import 'qr_scan_screen.dart';
 
 class CultesDirectScreen extends StatefulWidget {
@@ -503,6 +504,26 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                   ),
                 ],
               ),
+            ),
+          ),
+        ),
+        const SectionTitle(title: 'Feuille de présence'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Card(
+            child: ListTile(
+              leading: const Icon(Icons.how_to_reg_outlined),
+              title: const Text('Feuille de présence'),
+              subtitle: const Text(
+                  'Pointer les présents, culte par culte.'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const PresencesScreen(),
+                  ),
+                );
+              },
             ),
           ),
         ),
