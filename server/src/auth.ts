@@ -3,6 +3,7 @@ import argon2 from "argon2";
 import jwt from "jsonwebtoken";
 import type { Pool, PoolClient } from "pg";
 import { z } from "zod";
+import { seedPostesPrevisibles } from "./postes_previsibles.js";
 
 // ---------------------------------------------------------------------------
 // Constantes (mêmes règles que SanteCI Connect)
@@ -606,6 +607,9 @@ export async function seedCatalogues(
       [churchId, nom],
     );
   }
+
+  // Postes de dépense prévisibles, déjà prêts pour la trésorerie.
+  await seedPostesPrevisibles(client, churchId);
 }
 
 export const inscriptionMembreSchema = z.object({

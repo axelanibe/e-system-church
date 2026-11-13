@@ -3553,6 +3553,78 @@ class MockApiService implements ApiService {
   Future<Uint8List> exporterRapportConsolidePdf() async =>
       throw UnimplementedError('Exports PDF non gérés en démo.');
 
+  // -- Plan comptable des dépenses : non géré en démo.
+  @override
+  Future<List<CategorieDepense>> getCategoriesDepenses() async =>
+      throw UnimplementedError('Plan comptable non géré en démo.');
+
+  @override
+  Future<PosteBudgetaire> creerPostePlanComptable({
+    required String nom,
+    required String categorie,
+    String? description,
+    String? categorieId,
+    bool estRecurrente = false,
+  }) async =>
+      throw UnimplementedError('Plan comptable non géré en démo.');
+
+  @override
+  Future<PosteBudgetaire> modifierPostePlanComptable({
+    required String id,
+    String? categorieId,
+    required bool estRecurrente,
+  }) async =>
+      throw UnimplementedError('Plan comptable non géré en démo.');
+
+  @override
+  Future<List<BudgetMensuel>> getBudgetsMensuels(
+          {int? annee, int? mois, String? posteId}) async =>
+      throw UnimplementedError('Plan comptable non géré en démo.');
+
+  @override
+  Future<BudgetMensuel> creerBudgetMensuel({
+    required String posteId,
+    required int annee,
+    required int mois,
+    required int montantPrevu,
+  }) async =>
+      throw UnimplementedError('Plan comptable non géré en démo.');
+
+  @override
+  Future<void> supprimerBudgetMensuel(String id) async =>
+      throw UnimplementedError('Plan comptable non géré en démo.');
+
+  @override
+  Future<Depense> creerDepenseComplete({
+    String? posteId,
+    required int montantFcfa,
+    required String motif,
+    String? justificatifRef,
+    String? dateDepense,
+    String? departementId,
+    String? modePaiement,
+    String? fournisseurBeneficiaire,
+    String? responsableDepense,
+    String? responsableAutorisation,
+    String? devise,
+  }) async =>
+      throw UnimplementedError('Plan comptable non géré en démo.');
+
+  @override
+  Future<SuiviMensuel> getSuiviMensuel(
+          {required int annee, required int mois}) async =>
+      throw UnimplementedError('Plan comptable non géré en démo.');
+
+  @override
+  Future<RapportPlanComptable> getRapportPlanComptable(
+          {required int annee, int? mois}) async =>
+      throw UnimplementedError('Plan comptable non géré en démo.');
+
+  @override
+  Future<Uint8List> exporterRapportPlanComptablePdf(
+          {required int annee, int? mois}) async =>
+      throw UnimplementedError('Plan comptable non géré en démo.');
+
   // -- Administration --------------------------------------------------------------
 
   @override

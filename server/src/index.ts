@@ -43,6 +43,7 @@ import { registerRapportsAnnexeRoutes } from "./routes/rapports_annexe.js";
 import { registerNettoyageTestRoutes } from "./routes/nettoyage_test.js";
 import { registerImportMembresRoutes } from "./routes/import_membres.js";
 import { registerExportsPdfRoutes } from "./routes/exports_pdf.js";
+import { registerPlanComptableRoutes } from "./routes/plan_comptable.js";
 
 export function buildApp(db: Pool) {
   const app = Fastify({ logger: true });
@@ -140,6 +141,7 @@ export function buildApp(db: Pool) {
   registerNettoyageTestRoutes(app, db);
   registerImportMembresRoutes(app, db);
   registerExportsPdfRoutes(app, db);
+  registerPlanComptableRoutes(app, db);
 
   app.setNotFoundHandler((_req, reply) => {
     reply.code(404).send({ error: "not_found", message: "Route inconnue." });
