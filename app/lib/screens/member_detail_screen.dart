@@ -403,25 +403,22 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                         _parcoursCard(bapteme),
                         const SizedBox(height: 16),
                         if (!widget.lectureSeule) ...[
-                          Row(
-                            children: [
-                              Expanded(
-                                child: FilledButton.icon(
-                                  onPressed: _changerStatut,
-                                  icon: const Icon(Icons.swap_horiz),
-                                  label: const Text('Changer de statut'),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: _ajouterBapteme,
-                                  icon:
-                                      const Icon(Icons.water_drop_outlined),
-                                  label: const Text('Ajouter un baptême'),
-                                ),
-                              ),
-                            ],
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: _changerStatut,
+                              icon: const Icon(Icons.swap_horiz),
+                              label: const Text('Changer de statut'),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: _ajouterBapteme,
+                              icon: const Icon(Icons.water_drop_outlined),
+                              label: const Text('Ajouter un baptême'),
+                            ),
                           ),
                           const SizedBox(height: 16),
                         ],
@@ -523,24 +520,11 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 4),
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: 'Carte de membre — ',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(color: Colors.white70),
-                        ),
-                        TextSpan(
-                          text: _member.matricule,
-                          style: AppTheme.styleCode.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                  Text(
+                    _member.matricule,
+                    style: AppTheme.styleCode.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -555,16 +539,15 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                       textAlign: TextAlign.center,
                     ),
                   ],
-                  Text(
-                    _member.createdAt == null
-                        ? 'Membre depuis — À compléter'
-                        : 'Membre depuis ${formatDate(_member.createdAt)}',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Colors.white70),
-                    textAlign: TextAlign.center,
-                  ),
+                  if (_member.createdAt != null)
+                    Text(
+                      'Membre depuis ${formatDate(_member.createdAt)}',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: Colors.white70),
+                      textAlign: TextAlign.center,
+                    ),
                   if (!widget.carteSeule) ...[
                     const SizedBox(height: 8),
                     StatusChip(

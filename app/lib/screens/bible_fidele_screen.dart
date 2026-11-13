@@ -139,11 +139,8 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
                   ),
                 const SizedBox(height: 8),
                 Text(
-                  _testament == 0
-                      ? 'La liste complète des livres de l’Ancien Testament '
-                          's’affichera ici.'
-                      : 'La liste complète des livres du Nouveau Testament '
-                          's’affichera ici.',
+                  '${livres.length} ${livres.length > 1 ? 'livres' : 'livre'} '
+                  'dans cette liste.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 16),
@@ -187,7 +184,8 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Le texte de la Bible s’affichera ici.',
+                          'Le texte de ce passage n’est pas encore '
+                          'disponible.',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],

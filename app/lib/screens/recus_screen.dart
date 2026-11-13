@@ -36,7 +36,7 @@ class _RecusScreenState extends State<RecusScreen> {
 
   void _refresh() => setState(() => _future = _charger());
 
-  Future<void> _telecharger(Contribution c) async {
+  Future<void> _partager(Contribution c) async {
     try {
       final bytes =
           await context.read<AppState>().api.telechargerRecuPdf(c.id);
@@ -59,9 +59,12 @@ class _RecusScreenState extends State<RecusScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     if (!state.canReadFinances) {
-      return const EmptyState(
-        icon: Icons.lock_outline,
-        message: 'Votre rôle ne donne pas accès aux finances de l’église.',
+      return Scaffold(
+        appBar: AppBar(title: const Text('Reçus numérotés')),
+        body: const EmptyState(
+          icon: Icons.lock_outline,
+          message: 'Votre rôle ne donne pas accès aux finances de l’église.',
+        ),
       );
     }
     return Scaffold(
@@ -129,15 +132,16 @@ class _RecusScreenState extends State<RecusScreen> {
                               Icons.receipt_long_outlined),
                           title: Text(
                             '${c.recuNumero ?? 'Sans numéro'} — ${c.typeLabel} · ${formatMontant(c.amountFcfa, state.devise)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           subtitle: Text(
                             '${c.paymentLabel}${c.membreNom != null ? ' · ${c.membreNom}' : ''} · ${formatDate(c.createdAt)}',
                           ),
                           trailing: IconButton(
-                            icon:
-                                const Icon(Icons.description_outlined),
-                            onPressed: () => _telecharger(c),
-                            tooltip: 'Télécharger le reçu (PDF)',
+                            icon: const Icon(Icons.share_outlined),
+                            onPressed: () => _partager(c),
+                            tooltip: 'Partager le reçu (PDF)',
                           ),
                           onTap: () async {
                             await Navigator.of(context).push(

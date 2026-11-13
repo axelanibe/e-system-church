@@ -86,18 +86,6 @@ class PlusFideleScreen extends StatelessWidget {
                 ),
               ),
               _LigneMenu(
-                icone: Icons.favorite_outline,
-                titre: 'Prière du jour',
-                onTap: () {
-                  onAllerAccueil?.call();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('La prière du jour est sur votre accueil.'),
-                    ),
-                  );
-                },
-              ),
-              _LigneMenu(
                 icone: Icons.volunteer_activism_outlined,
                 titre: 'Sujet de prière privé',
                 onTap: () {
@@ -133,7 +121,7 @@ class PlusFideleScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        const SectionTitle(title: 'Démonstration'),
+        const SectionTitle(title: 'Compte'),
         Card(
           child: Column(
             children: [

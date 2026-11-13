@@ -167,9 +167,12 @@ class _CotisationsAdminScreenState extends State<CotisationsAdminScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     if (!state.canReadFinances) {
-      return const EmptyState(
-        icon: Icons.lock_outline,
-        message: 'Votre rôle ne donne pas accès aux finances de l’église.',
+      return Scaffold(
+        appBar: AppBar(title: const Text('Cotisations')),
+        body: const EmptyState(
+          icon: Icons.lock_outline,
+          message: 'Votre rôle ne donne pas accès aux finances de l’église.',
+        ),
       );
     }
     return Scaffold(
@@ -300,30 +303,28 @@ class _CotisationsAdminScreenState extends State<CotisationsAdminScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${suivi.totaux.membresPayes} membre(s) payé(s) sur ${suivi.totaux.membresTotal}',
+                  '${pluriel(suivi.totaux.membresPayes, 'membre payé', 'membres payés')} sur ${suivi.totaux.membresTotal}',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 16),
-                const SectionTitle(title: 'Par membre'),
-                if (suivi.configAbsente)
-                  const EmptyState(
-                    icon: Icons.payments_outlined,
-                    message: 'Aucune cotisation configurée : le suivi '
-                        'par membre apparaîtra dès qu’un montant sera fixé.',
-                  )
-                else if (suivi.membres.isEmpty)
-                  const EmptyState(
-                    icon: Icons.payments_outlined,
-                    message: 'Aucun membre actif pour cette période.',
-                  )
-                else
-                  ...suivi.membres.map(
-                    (ligne) => LigneCotisationTile(
-                      ligne: ligne,
-                      devise: state.devise,
+                // Sans montant fixé, la carte du haut l'explique déjà :
+                // la section Par membre n'apparaît qu'avec une config.
+                if (!suivi.configAbsente) ...[
+                  const SectionTitle(title: 'Par membre'),
+                  if (suivi.membres.isEmpty)
+                    const EmptyState(
+                      icon: Icons.payments_outlined,
+                      message: 'Aucun membre actif pour cette période.',
+                    )
+                  else
+                    ...suivi.membres.map(
+                      (ligne) => LigneCotisationTile(
+                        ligne: ligne,
+                        devise: state.devise,
+                      ),
                     ),
-                  ),
+                ],
               ],
             ),
           );

@@ -27,8 +27,7 @@ import 'rendez_vous_screen.dart';
 /// fidèle (FideleShell) fournit l'écran et la barre du bas.
 /// En-tête, carte membre premium, prochain culte avec compte à rebours
 /// et « Je serai présent », Mes accès en grille 2 par 2, Mon Parcours,
-/// chiffres réels, Mes camps, Mes attestations, Prière du jour, Sujet
-/// de prière privé, et « Tu es un don de Dieu » en bas.
+/// chiffres réels, Mes camps, Mes attestations, Sujet de prière privé,
 /// Rien d'inventé : que des données réelles, et des états vides
 /// chaleureux quand il n'y a rien. En aperçu admin (Voir l'espace
 /// fidèle), seules les données du profil se chargent, le reste montre
@@ -155,6 +154,49 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // En aperçu admin : bandeau de retour vers l'espace
+                  // admin (maquette de refonte), en plus du retour de
+                  // l'en-tête.
+                  if (context.watch<AppState>().apercuFidele) ...[
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppTheme.orClair,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppTheme.or),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.visibility_outlined,
+                            size: 18,
+                            color: AppTheme.orAttention,
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'Mode Aperçu Fidèle',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.bleuNuit,
+                              ),
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => context
+                                .read<AppState>()
+                                .sortirApercuFidele(),
+                            icon: const Icon(Icons.chevron_left, size: 18),
+                            label: const Text('Retour Admin'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   FutureBuilder<FideleProfil>(
                     future: _profilFuture,
                     builder: (context, snapshot) {
@@ -170,6 +212,13 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                         );
                       }
                       final profil = snapshot.data!;
+                      final prenom = profil.user.fullName
+                          .trim()
+                          .split(' ')
+                          .firstWhere(
+                            (e) => e.isNotEmpty,
+                            orElse: () => '',
+                          );
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -190,7 +239,7 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Bonjour, fidèle',
+                                  'Bonjour${prenom.isEmpty ? '' : ', $prenom'}',
                                   style: Theme.of(context)
                                       .textTheme
                                       .headlineSmall,
@@ -217,8 +266,7 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                                 const SizedBox(height: 8),
                                 Text(
                                   'Retrouvez ici votre carte, votre '
-                                  'parcours et vos prochains rendez vous. '
-                                  'Tout commence par vous.',
+                                  'parcours et vos prochains rendez-vous.',
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodyMedium,
@@ -308,18 +356,6 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                     onVoir: _voirMesAttestations,
                   ),
                   const SizedBox(height: 8),
-                  const SectionTitle(title: 'Prière du jour'),
-                  const SoftCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Un moment calme pour commencer la journée.'),
-                        SizedBox(height: 8),
-                        Text('Le texte s’affichera ici.'),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   const SectionTitle(title: 'Sujet de prière privé'),
                   FutureBuilder<FideleProfil>(
                     future: _profilFuture,
@@ -364,8 +400,10 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
   }
 }
 
-/// Grille 2 par 2 des accès du fidèle : Ma Bible, Mes cotisations,
-/// Mon journal, Message à mon église, Prendre rendez-vous (P4).
+/// Grille 2 par 2 des accès du fidèle, au texte complet : titres
+/// entiers, descriptions complètes, « Ouvrir » sur sa propre ligne
+/// en bas de chaque carte (maquette de refonte). « Prendre
+/// rendez-vous » est une carte pleine largeur sous la grille.
 class _GrilleAcces extends StatelessWidget {
   final VoidCallback onBible;
   final VoidCallback onCotisations;
@@ -383,42 +421,50 @@ class _GrilleAcces extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.35,
+    return Column(
       children: [
-        _TuileAcces(
-          icone: Icons.menu_book_outlined,
-          titre: 'Ma Bible',
-          sousTitre: 'Lire et rechercher, Ancien et Nouveau Testament.',
-          onTap: onBible,
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          // Cartes assez hautes pour un titre sur 2 lignes, 4 lignes
+          // de description et le lien Ouvrir, sans rien couper.
+          childAspectRatio: 0.7,
+          children: [
+            _TuileAcces(
+              icone: Icons.menu_book_outlined,
+              titre: 'Ma Bible',
+              sousTitre:
+                  'Lire et rechercher dans l’Ancien et le Nouveau Testament.',
+              onTap: onBible,
+            ),
+            _TuileAcces(
+              icone: Icons.account_balance_wallet_outlined,
+              titre: 'Mes cotisations',
+              sousTitre: 'Historique, reçus et total.',
+              onTap: onCotisations,
+            ),
+            _TuileAcces(
+              icone: Icons.edit_outlined,
+              titre: 'Mon journal',
+              sousTitre: 'Notes privées, jamais partagées.',
+              onTap: onJournal,
+            ),
+            _TuileAcces(
+              icone: Icons.mail_outline,
+              titre: 'Messagerie',
+              sousTitre: 'Messagerie privée, dans l’application.',
+              onTap: onMessages,
+            ),
+          ],
         ),
-        _TuileAcces(
-          icone: Icons.account_balance_wallet_outlined,
-          titre: 'Mes cotisations',
-          sousTitre: 'Historique, reçus et total.',
-          onTap: onCotisations,
-        ),
-        _TuileAcces(
-          icone: Icons.edit_outlined,
-          titre: 'Mon journal',
-          sousTitre: 'Notes privées, jamais envoyées.',
-          onTap: onJournal,
-        ),
-        _TuileAcces(
-          icone: Icons.mail_outline,
-          titre: 'Message à mon église',
-          sousTitre: 'Messagerie privée, dans l’application.',
-          onTap: onMessages,
-        ),
-        _TuileAcces(
+        const SizedBox(height: 12),
+        _TuileLarge(
           icone: Icons.event_available_outlined,
           titre: 'Prendre rendez-vous',
-          sousTitre: 'Demander un rendez-vous à votre pasteur.',
+          sousTitre: 'Solliciter un entretien avec votre pasteur.',
           onTap: onRendezVous,
         ),
       ],
@@ -442,35 +488,111 @@ class _TuileAcces extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icone, color: AppTheme.orFonce),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppTheme.orClair,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icone, color: AppTheme.orFonce, size: 20),
+              ),
               const SizedBox(height: 8),
               Text(
                 titre,
                 style: Theme.of(context).textTheme.titleMedium,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
               const SizedBox(height: 4),
               Expanded(
                 child: Text(
                   sousTitre,
                   style: Theme.of(context).textTheme.bodySmall,
-                  maxLines: 3,
+                  maxLines: 4,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(height: 8),
               Text(
                 'Ouvrir →',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.orFonce,
+                      color: AppTheme.orAttention,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Carte pleine largeur : icône, titre et description à gauche,
+/// lien Ouvrir à droite, sans troncature.
+class _TuileLarge extends StatelessWidget {
+  final IconData icone;
+  final String titre;
+  final String sousTitre;
+  final VoidCallback onTap;
+
+  const _TuileLarge({
+    required this.icone,
+    required this.titre,
+    required this.sousTitre,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppTheme.orClair,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icone, color: AppTheme.orFonce, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      titre,
+                      style: Theme.of(context).textTheme.titleMedium,
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      sousTitre,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Ouvrir →',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.orAttention,
                       fontWeight: FontWeight.bold,
                     ),
               ),
@@ -1082,11 +1204,6 @@ class _PriereDuJourState extends State<_PriereDuJour> {
             onPressed: _envoi ? null : _deposer,
             icon: const Icon(Icons.favorite_outline),
             label: Text(_envoi ? 'Envoi…' : 'Écrire un sujet de prière'),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Bible : emplacement prêt. Le texte sera branché depuis la source fournie par votre église, aucun verset n’est inventé ici.',
-            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),

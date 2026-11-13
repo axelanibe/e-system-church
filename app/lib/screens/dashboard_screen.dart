@@ -184,19 +184,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 if (church?.isMere ?? false) ...[
                                   const SizedBox(height: 8),
-                                  const Row(
-                                    children: [
-                                      MereBadge(),
-                                      SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          'Tête de votre réseau.',
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                  const MereBadge(),
+                                  const SizedBox(height: 4),
+                                  const Text('Tête de votre réseau.'),
                                 ],
                               ],
                             ),
@@ -226,32 +216,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Tranche P1 : aperçu de l'espace fidèle, pour voir
-                // l'application comme un fidèle la voit. Aperçu local
-                // seulement : ni la session ni le rôle ne changent.
-                SoftCard(
-                  color: AppTheme.orClair,
+                // Aperçu multi-rôles (maquette de refonte) : remplace
+                // la carte « Démonstration des deux espaces ». Même
+                // accès que l'espace 4 de la barre de périmètre.
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppTheme.bleuNuit,
+                        Color(0xFF1A355B),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Démonstration des deux espaces',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Le fidèle a sa propre interface, avec sa '
-                        'navigation à lui. Touchez le bouton pour la voir.',
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'APERÇU MULTI-RÔLES',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.or,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Espace Fidèle',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(color: Colors.white),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Prévisualisez l’interface dédiée aux '
+                                  'membres de votre assemblée.',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: Colors.white70,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.visibility_outlined,
+                            color: AppTheme.or,
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppTheme.or,
+                            foregroundColor: AppTheme.bleuNuit,
+                          ),
                           onPressed: () => context
                               .read<AppState>()
                               .entrerApercuFidele(),
-                          icon: const Icon(Icons.visibility_outlined),
-                          label: const Text('Voir l’espace fidèle'),
+                          icon: const Icon(Icons.arrow_forward),
+                          label: const Text(
+                              'Basculer vers l’espace fidèle'),
                         ),
                       ),
                     ],
@@ -274,10 +316,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             'Chiffres globaux de toutes les églises mères '
                             'ensemble, sans détail nominatif.'),
                         const SizedBox(height: 12),
-                        BoutonAvecAide(
+                        BoutonDoux(
                           label: 'Voir les chiffres de la plateforme',
-                          aide: 'Le total de toutes les églises, sans '
-                              'voir les noms des personnes.',
                           icon: Icons.public_outlined,
                           onPressed: () {
                             Navigator.of(context).push(
@@ -342,7 +382,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                               const SizedBox(height: 12),
                               if (prochain == null)
-                                const Text('Aucun culte à venir.')
+                                const Text('Aucun culte programmé ce jour.')
                               else
                                 ListTile(
                                   contentPadding: EdgeInsets.zero,
@@ -479,14 +519,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 if (data.rapport!.sousEglises.isEmpty)
                                   Text(
                                     (church?.isMere ?? false)
-                                        ? 'Aucune église rattachée pour l’instant. Créez-en une depuis « Réseau ».'
+                                        ? 'Aucune église rattachée pour l’instant. Créez-en une depuis « Voir mon réseau » ci-dessous.'
                                         : 'Votre église est une annexe : elle ne peut pas avoir de sous-église.',
                                   ),
                                 const SizedBox(height: 12),
-                                BoutonAvecAide(
+                                BoutonDoux(
                                   label: 'Voir mon réseau',
-                                  aide: 'Votre église et ses sous-églises, '
-                                      'avec leurs chiffres.',
                                   icon: Icons.account_tree_outlined,
                                   onPressed: () {
                                     Navigator.of(context).push(
@@ -498,10 +536,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   },
                                 ),
                                 const SizedBox(height: 12),
-                                BoutonAvecAide(
+                                BoutonDoux(
                                   label: 'Voir les finances en détail',
-                                  aide: 'Chaque entrée et chaque dépense, '
-                                      'église par église.',
                                   icon: Icons.account_balance_outlined,
                                   onPressed: () {
                                     Navigator.of(context).push(
@@ -516,10 +552,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 // n'existe que pour une église mère.
                                 if (church?.isMere ?? false) ...[
                                   const SizedBox(height: 12),
-                                  BoutonAvecAide(
+                                  BoutonDoux(
                                     label: 'Voir mes annexes',
-                                    aide: 'Les églises annexes rattachées à '
-                                        'la vôtre, et leurs codes.',
                                     icon: Icons.hub_outlined,
                                     onPressed: () {
                                       Navigator.of(context).push(
@@ -558,10 +592,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   'depuis votre espace.',
                                 ),
                                 const SizedBox(height: 12),
-                                BoutonAvecAide(
+                                BoutonDoux(
                                   label: 'Ouvrir les rapports',
-                                  aide: 'Vos rapports à votre église mère, '
-                                      'par e-mail, en pièce jointe PDF.',
                                   icon: Icons.email_outlined,
                                   onPressed: () {
                                     Navigator.of(context).push(
@@ -595,11 +627,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   'églises annexes.',
                                 ),
                                 const SizedBox(height: 12),
-                                BoutonAvecAide(
+                                BoutonDoux(
                                   label: 'Ouvrir les rapports reçus',
-                                  aide: 'Les rapports de vos églises '
-                                      'annexes, qui arrivent aussi par '
-                                      'e-mail.',
                                   icon: Icons.inbox_outlined,
                                   onPressed: () {
                                     Navigator.of(context).push(
@@ -616,9 +645,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ],
                         const SectionTitle(title: 'Annonces récentes'),
                         if (recentes.isEmpty)
-                          const SoftCard(
-                            child: Text(
-                                'Aucune annonce pour l’instant.'),
+                          SoftCard(
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                    'Aucune annonce pour l’instant.'),
+                                if (state.isAdmin) ...[
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: TextButton.icon(
+                                      onPressed: () => _ouvrir(context,
+                                          const AnnoncesScreen()),
+                                      icon: const Icon(
+                                          Icons.campaign_outlined),
+                                      label: const Text(
+                                          'Nouvelle annonce'),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                           )
                         else
                           SoftCard(

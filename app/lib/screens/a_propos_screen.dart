@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../config/app_config.dart';
 import '../config/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
@@ -153,8 +154,8 @@ class AProposScreen extends StatelessWidget {
                           contentPadding: EdgeInsets.zero,
                           leading: Icon(Icons.info_outline),
                           title: Text('Version'),
-                          subtitle:
-                              Text('Version en cours de construction'),
+                          subtitle: Text(
+                              'Version ${AppConfig.appVersion}'),
                         ),
                         const Divider(),
                         ListTile(

@@ -54,7 +54,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
   }
 
   /// Télécharge le reçu numéroté en PDF (contribution confirmée).
-  Future<void> _telechargerRecu(Contribution c) async {
+  Future<void> _partagerRecu(Contribution c) async {
     try {
       final bytes =
           await context.read<AppState>().api.telechargerRecuPdf(c.id);
@@ -184,7 +184,10 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                             _row(context, 'Membre',
                                 c.membreNom == null
                                     ? null
-                                    : '${c.membreNom} (${c.membreMatricule ?? ''})'),
+                                    : (c.membreMatricule == null ||
+                                            c.membreMatricule!.isEmpty)
+                                        ? c.membreNom
+                                        : '${c.membreNom} (${c.membreMatricule})'),
                             _row(context, 'Note', c.note),
                             _row(context, 'Date',
                                 formatDateTime(c.createdAt)),
@@ -197,9 +200,17 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                       FilledButton.icon(
                         onPressed: _working
                             ? null
-                            : () => _telechargerRecu(c),
-                        icon: const Icon(Icons.description_outlined),
-                        label: const Text('Télécharger le reçu (PDF)'),
+                            : () => _partagerRecu(c),
+                        icon: const Icon(Icons.share_outlined),
+                        label: const Text('Partager le reçu (PDF)'),
+                      ),
+                    ],
+                    if (c.status == 'en_attente' &&
+                        !state.canManageFinances) ...[
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Seul le pasteur confirme une contribution.',
+                        textAlign: TextAlign.center,
                       ),
                     ],
                     if (c.status == 'en_attente' &&

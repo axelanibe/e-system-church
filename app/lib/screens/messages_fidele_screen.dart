@@ -84,8 +84,8 @@ class _MessagesFideleScreenState extends State<MessagesFideleScreen> {
           if (apercu) {
             return const EmptyState(
               icon: Icons.mail_outline,
-              message: 'Aperçu : la conversation privée du fidèle '
-                  's’affichera ici.',
+              message: 'En aperçu, la conversation privée du fidèle '
+                  'ne s’affiche pas.',
             );
           }
           return AppError(
@@ -119,14 +119,13 @@ class _MessagesFideleScreenState extends State<MessagesFideleScreen> {
                         Text(
                           fil.destinataireNom ?? 'Mon église',
                           style: Theme.of(context).textTheme.titleMedium,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          'Boîte de messagerie de votre église, dans '
-                          'l’application.',
+                          'Conversation privée, dans l’application.',
                           style: Theme.of(context).textTheme.bodySmall,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],

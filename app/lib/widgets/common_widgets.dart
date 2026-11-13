@@ -60,7 +60,19 @@ String messageErreurSimple(Object error) {
       bas.contains('typeerror')) {
     return 'Quelque chose ne va pas. Vérifiez votre connexion et réessayez.';
   }
-  return brut;
+  // Dernier recours : on garde le message seulement s'il est court
+  // et lisible (le serveur renvoie parfois un message en français) ;
+  // sinon un message générique, jamais le texte technique brut.
+  if (brut.length <= 120 &&
+      !bas.contains('exception') &&
+      !bas.contains('dio') &&
+      !bas.contains('stack') &&
+      !bas.contains('error') &&
+      !bas.contains('failed') &&
+      !RegExp(r'^\d{3}\b').hasMatch(brut.trim())) {
+    return brut;
+  }
+  return 'Quelque chose ne va pas. Réessayez.';
 }
 
 /// Panneau d'erreur avec bouton « Réessayer ».

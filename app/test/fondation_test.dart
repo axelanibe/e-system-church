@@ -2,7 +2,7 @@ import 'package:esystem_church/config/app_theme.dart';
 import 'package:esystem_church/models/auth.dart';
 import 'package:esystem_church/models/church.dart';
 import 'package:esystem_church/models/fidele.dart';
-import 'package:esystem_church/screens/modules_screen.dart';
+import 'package:esystem_church/widgets/short_drawer.dart';
 import 'package:esystem_church/state/app_state.dart';
 import 'package:esystem_church/widgets/app_bottom_bar.dart';
 import 'package:esystem_church/widgets/barre_perimetre.dart';
@@ -245,9 +245,10 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Modules : toutes les icônes en bleu nuit (artefact)',
-        (tester) async {
-      // Fenêtre haute pour que toute la grille soit construite.
+    testWidgets(
+        'Tiroir : les entrées de l’ancienne grille Modules, '
+        'en un seul endroit', (tester) async {
+      // Fenêtre haute pour que tout le tiroir soit construit.
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(800, 3000);
       addTearDown(tester.view.resetPhysicalSize);
@@ -257,29 +258,37 @@ void main() {
           create: (_) => AppState(),
           child: MaterialApp(
             theme: AppTheme.theme,
-            home: const Scaffold(body: ModulesScreen()),
+            home: Scaffold(
+              drawer: TiroirCourt(onAller: (_) {}),
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                  child: const Text('Ouvrir'),
+                ),
+              ),
+            ),
           ),
         ),
       );
       await tester.pump();
-      // Les modules autrefois colorés (Cultes, Présences, Prières,
-      // Enfants, Médias) portent désormais la même icône bleu nuit.
+      await tester.tap(find.text('Ouvrir'));
+      await tester.pump();
+      // Les entrées de l'ancienne grille Modules vivent désormais
+      // dans le tiroir, une seule entrée par fonctionnalité.
       for (final label in [
-        'Familles',
-        'Cultes',
         'Cultes en direct',
         'Présences',
+        'Budget & caisse',
         'Prières & messages',
+        'Serviteurs',
         'Enfants & jeunesse',
         'Médias & bibliothèque',
+        'Biens de l’église',
+        'Rapports',
       ]) {
         expect(find.text(label), findsOneWidget);
       }
-      final icones = tester.widgetList<Icon>(find.byType(Icon));
-      expect(icones, isNotEmpty);
-      for (final icone in icones) {
-        expect(icone.color, AppTheme.bleuNuit);
-      }
+      expect(find.text('Modules'), findsNothing);
     });
   });
 }

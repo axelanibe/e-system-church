@@ -187,8 +187,7 @@ class CarteMembreVedette extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Votre carte, avec votre photo et votre matricule, '
-                    'à montrer à l’entrée de l’église.',
+                    'À montrer à l’entrée de l’église.',
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall

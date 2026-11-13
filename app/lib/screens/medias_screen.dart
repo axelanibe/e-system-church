@@ -435,9 +435,11 @@ class _MediasScreenState extends State<MediasScreen> {
                       children: [
                         const SectionTitle(title: 'Livres'),
                         if (livres.isEmpty)
-                          const EmptyState(
+                          EmptyState(
                             icon: Icons.library_books_outlined,
-                            message: 'Aucun livre pour l’instant.',
+                            message: _query.isNotEmpty
+                                ? 'Aucun livre ne correspond à la recherche.'
+                                : 'Aucun livre pour l’instant.',
                           )
                         else
                           ...livres.map((l) => ListTile(
@@ -448,7 +450,7 @@ class _MediasScreenState extends State<MediasScreen> {
                                 subtitle: Text(
                                   '${l.auteur ?? '—'}'
                                   '${l.categorie != null ? ' · ${l.categorie}' : ''}'
-                                  ' · ${l.exemplaires} exemplaire(s)',
+                                  ' · ${pluriel(l.exemplaires, 'exemplaire')}',
                                 ),
                                 trailing: IconButton(
                                   icon: const Icon(Icons.delete_outline),
@@ -461,7 +463,7 @@ class _MediasScreenState extends State<MediasScreen> {
                             .where((p) => p.statut == 'en_cours')
                             .isEmpty)
                           const EmptyState(
-                            icon: Icons.outbox_outlined,
+                            icon: Icons.book_outlined,
                             message: 'Aucun prêt en cours pour l’instant.',
                           )
                         else
@@ -469,7 +471,7 @@ class _MediasScreenState extends State<MediasScreen> {
                               .where((p) => p.statut == 'en_cours')
                               .map((p) => ListTile(
                                     leading: const CircleAvatar(
-                                      child: Icon(Icons.outbox_outlined),
+                                      child: Icon(Icons.book_outlined),
                                     ),
                                     title: Text(livresTitres[p.livreId] ??
                                         p.livreId),
@@ -494,7 +496,7 @@ class _MediasScreenState extends State<MediasScreen> {
                                     title: Text(livresTitres[p.livreId] ??
                                         p.livreId),
                                     subtitle: Text(
-                                      '${noms[p.memberId] ?? p.memberId} · ${p.statut}',
+                                      '${noms[p.memberId] ?? p.memberId} · ${p.statutLabel}',
                                     ),
                                   )),
                         ],
@@ -572,7 +574,7 @@ class _MediasScreenState extends State<MediasScreen> {
                 final choix = await showDialog<String>(
                   context: context,
                   builder: (ctx) => SimpleDialog(
-                    title: const Text('Ajouter'),
+                    title: const Text('Que voulez-vous ajouter ?'),
                     children: [
                       SimpleDialogOption(
                         onPressed: () => Navigator.of(ctx).pop('livre'),

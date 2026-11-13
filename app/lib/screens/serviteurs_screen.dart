@@ -359,7 +359,7 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
                         '${p.roleService != null ? ' · ${p.roleService}' : ''}',
                       ),
                       trailing: StatusChip(
-                        label: p.statut,
+                        label: p.statutLabel,
                         color: p.statut == 'confirme'
                             ? AppTheme.bleuNuit
                             : p.statut == 'absent'
@@ -392,7 +392,7 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
               _searchController.clear();
             }),
             tabs: const [
-              Tab(text: 'Serviteurs'),
+              Tab(text: 'Affectations'),
               Tab(text: 'Planning'),
             ],
           ),
@@ -467,7 +467,7 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
             }
           },
           icon: const Icon(Icons.add),
-          label: Text(_tab == 0 ? 'Serviteur' : 'Service'),
+          label: Text(_tab == 0 ? 'Nouveau serviteur' : 'Nouveau service'),
         ),
       ),
     );

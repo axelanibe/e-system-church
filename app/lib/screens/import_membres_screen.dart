@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../state/app_state.dart';
+import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 
 /// Tranche A — Import des listes de fidèles (admin de l'église seulement).
@@ -241,9 +242,10 @@ class _ImportMembresScreenState extends State<ImportMembresScreen> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirmer l’import'),
+        title: const Text('Vérifiez avant d’importer'),
         content: Text(
-          '${_apercu?['valides'] ?? 0} membre(s) seront créés. '
+          '${pluriel(_apercu?['valides'] ?? 0, 'membre')} '
+          '${(_apercu?['valides'] ?? 0) == 1 ? 'sera créé' : 'seront créés'}. '
           'Les doublons seront ignorés, les lignes en erreur ne seront pas créées.',
         ),
         actions: [
@@ -328,7 +330,7 @@ class _ImportMembresScreenState extends State<ImportMembresScreen> {
                           title: Text(_nomFichier!),
                           subtitle: Text(
                             _lignesXlsx != null
-                                ? '${_lignesXlsx!.length} ligne(s) lue(s) du fichier Excel'
+                                ? '${pluriel(_lignesXlsx!.length, 'ligne lue', 'lignes lues')} du fichier Excel'
                                 : 'Fichier CSV',
                           ),
                           trailing: IconButton(
@@ -483,7 +485,7 @@ class _ImportMembresScreenState extends State<ImportMembresScreen> {
                 subtitle: Text(m['matricule'] as String? ?? ''),
               )),
           if (membres.length > 20)
-            Text('… et ${membres.length - 20} autre(s).'),
+            Text('… et ${pluriel(membres.length - 20, 'autre')}.'),
           const SizedBox(height: 12),
         ],
         if (erreurs.isNotEmpty) ...[

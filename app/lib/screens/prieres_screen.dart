@@ -325,8 +325,24 @@ class _PrieresScreenState extends State<PrieresScreen> {
                             context: context,
                             builder: (ctx) => AlertDialog(
                               title: Text(d.sujet),
-                              content: Text(
-                                  'Statut actuel : ${_demandeLabel(d.statut)}'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (d.demandeurNom != null)
+                                    Text('Demandé par : ${d.demandeurNom}'),
+                                  if (d.createdAt != null)
+                                    Text(
+                                        'Le ${formatDate(d.createdAt)}'),
+                                  Text(
+                                      'Statut actuel : ${_demandeLabel(d.statut)}'),
+                                  if (d.details != null &&
+                                      d.details!.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Text(d.details!),
+                                  ],
+                                ],
+                              ),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.of(ctx).pop(),
@@ -486,7 +502,7 @@ class _PrieresScreenState extends State<PrieresScreen> {
             }
           },
           icon: const Icon(Icons.add),
-          label: Text(_tab == 0 ? 'Demande' : 'Message'),
+          label: Text(_tab == 0 ? 'Nouvelle demande' : 'Nouveau message'),
         ),
       ),
     );

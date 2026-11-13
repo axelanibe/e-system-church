@@ -9,12 +9,14 @@ Widget dialogTextField({
   TextInputType keyboardType = TextInputType.text,
   String? hintText,
   int maxLines = 1,
+  bool obscureText = false,
 }) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: TextField(
       controller: controller,
       keyboardType: keyboardType,
+      obscureText: obscureText,
       maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
@@ -232,7 +234,15 @@ Future<void> showCreateDialog({
                   Expanded(
                     child: FilledButton(
                       onPressed: () async {
-                        if (!isValid()) return;
+                        if (!isValid()) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Vérifiez les champs du formulaire.'),
+                            ),
+                          );
+                          return;
+                        }
                         Navigator.of(dialogContext).pop();
                         await onSave();
                       },

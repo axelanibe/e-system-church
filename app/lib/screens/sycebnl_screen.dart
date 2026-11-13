@@ -145,11 +145,7 @@ class _SycebnlScreenState extends State<SycebnlScreen> {
               const Divider(),
               for (final (label, valeur) in detail)
                 _ligne(label, valeur),
-              const SizedBox(height: 8),
-              const Text(
-                'À produire depuis votre comptabilité, aucun formulaire officiel à remplir.',
-                style: TextStyle(fontStyle: FontStyle.italic),
-              ),
+
             ],
             const SizedBox(height: 12),
             Row(
@@ -271,13 +267,14 @@ class _SycebnlScreenState extends State<SycebnlScreen> {
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Générer mes états financiers'),
+                    : const Text('Générer'),
               ),
             ],
           ),
           const SizedBox(height: 8),
           const Text(
-            'Les quatre états s\'affichent vides, prêts à être remplis par les chiffres de votre église.',
+            'Touchez Générer pour afficher les quatre états, remplis '
+            'par les chiffres de votre église.',
           ),
           if (etats != null) ...[
             const SectionTitle(title: 'Les quatre états, système normal'),

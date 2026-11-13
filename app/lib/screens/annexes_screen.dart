@@ -8,6 +8,7 @@ import '../models/annexe.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import 'rattachements_screen.dart';
 import 'annexe_detail_screen.dart';
 import 'codes_tutelle_screen.dart';
 
@@ -78,18 +79,6 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mes annexes'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.key_outlined),
-            tooltip: 'Codes de tutelle',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                    builder: (_) => const CodesTutelleScreen()),
-              );
-            },
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -124,6 +113,18 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                             message: _recherche.text.trim().isNotEmpty
                                 ? 'Aucune annexe ne correspond à « ${_recherche.text.trim()} ».'
                                 : 'Aucune annexe pour l’instant. Une église se rattache à vous avec votre code permanent ou un code de tutelle, depuis « Demandes de rattachement ».',
+                            actionLabel:
+                                _recherche.text.trim().isNotEmpty
+                                    ? null
+                                    : 'Voir les demandes de rattachement',
+                            onAction: _recherche.text.trim().isNotEmpty
+                                ? null
+                                : () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const RattachementsScreen(),
+                                      ),
+                                    ),
                           )
                         : RefreshIndicator(
                             onRefresh: () =>
@@ -139,14 +140,13 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                                         Icons.account_tree_outlined),
                                     title: Text(
                                       a.egliseNom,
-                                      maxLines: 1,
+                                      maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     subtitle: Text(
                                       '${a.egliseCode} · ${a.egliseVille ?? ''}'
                                       '${a.niveau == 1 ? '' : ' · niveau ${a.niveau}'}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 2,
                                     ),
                                     trailing: Column(
                                       mainAxisAlignment:
@@ -227,20 +227,24 @@ class StatMini extends StatelessWidget {
           children: [
             Icon(icon, color: color ?? AppTheme.bleuNuit),
             const SizedBox(height: 8),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.bold),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
             ),
-            Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodyMedium,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
             ),
           ],
         ),

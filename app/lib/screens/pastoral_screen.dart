@@ -874,7 +874,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
                         '${v.compteRendu != null ? ' · ${v.compteRendu}' : ''}',
                       ),
                       trailing: StatusChip(
-                        label: v.statut,
+                        label: v.statutLabel,
                         color: v.statut == 'realisee'
                             ? AppTheme.bleuNuit
                             : v.statut == 'annulee'
@@ -956,7 +956,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       ),
                       title: Text(noms[a.memberId] ?? a.memberId),
                       subtitle: Text(
-                          '${a.type} · ${a.description ?? '—'}'),
+                          '${a.typeLabel} · ${a.description ?? '—'}'),
                       trailing: StatusChip(
                         label: a.prioriteLabel,
                         color: _prioriteColor(a.priorite),
@@ -1046,10 +1046,10 @@ class _PastoralScreenState extends State<PastoralScreen> {
                 },
                 icon: const Icon(Icons.add),
                 label: Text(_tab == 2
-                    ? 'Parcours'
+                    ? 'Nouveau parcours'
                     : _tab == 3
-                        ? 'Visite'
-                        : 'Accompagnement'),
+                        ? 'Nouvelle visite'
+                        : 'Nouvel accompagnement'),
               ),
       ),
     );

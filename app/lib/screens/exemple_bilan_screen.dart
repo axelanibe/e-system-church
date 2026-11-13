@@ -24,19 +24,13 @@ class ExempleBilanScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Exemple de rapport envoyé par une église annexe à son '
-                  'église mère.',
-                  style: TextStyle(fontSize: 16),
-                ),
-                const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: AppTheme.orClair,
+                    color: AppTheme.bleuNuit,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(
@@ -44,6 +38,7 @@ class ExempleBilanScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -114,17 +109,7 @@ class ExempleBilanScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Exemple seulement. Vos vrais rapports partent de vos '
-                  'vraies données.',
-                  style: TextStyle(fontSize: 16),
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('← Retour aux rapports'),
-                ),
+
               ],
             ),
           ),

@@ -127,9 +127,9 @@ class _MembresScreenState extends State<MembresScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'actif':
-        return AppTheme.bleuNuit;
+        return AppTheme.vertFonce;
       case 'nouveau_converti':
-        return AppTheme.bleuFonce;
+        return AppTheme.orAttention;
       case 'inactif':
         return Colors.grey;
       case 'ancien':
@@ -137,6 +137,32 @@ class _MembresScreenState extends State<MembresScreen> {
       default:
         return Colors.grey;
     }
+  }
+
+  /// Initiales du membre (2 lettres, maquette) : première lettre du
+  /// prénom et du nom, ou 2 premières lettres si un seul mot.
+  String _initiales(String nomComplet) {
+    final parties = nomComplet
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (parties.isEmpty) return '?';
+    if (parties.length == 1) {
+      final mot = parties.first;
+      return mot.length >= 2
+          ? mot.substring(0, 2).toUpperCase()
+          : mot.toUpperCase();
+    }
+    return (parties.first[0] + parties.last[0]).toUpperCase();
+  }
+
+  /// Fonction à afficher dans la ligne, seulement si le membre en a
+  /// une (« Aucun » veut dire sans fonction précise).
+  String? _fonctionTexte(Member member) {
+    final f = member.fonction?.trim() ?? '';
+    if (f.isEmpty || f == 'Aucun') return null;
+    return f;
   }
 
   /// Carte des anniversaires proches (30 jours) : la liste seulement,
@@ -223,65 +249,100 @@ class _MembresScreenState extends State<MembresScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              decoration: const InputDecoration(
-                labelText: 'Rechercher (nom ou matricule)',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ),
-          _anniversairesCard(),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            // Retour à la ligne en largeur étroite : en défilement
-            // horizontal, le menu « Tous » sortait de l'écran sans indice
-            // de défilement. En large, tout tient sur une seule ligne.
-            child: Wrap(
-              spacing: 8,
+            child: Row(
               children: [
-                for (final entry in <String, String?>{
-                  'Tous': null,
-                  'Actif': 'actif',
-                  'Nouveau converti': 'nouveau_converti',
-                  'Inactif': 'inactif',
-                  'Ancien': 'ancien',
-                }.entries)
-                  ChoiceChip(
-                    label: Text(entry.key),
-                    selected: _statusFilter == entry.value,
-                    onSelected: (_) {
-                      setState(() {
-                        _statusFilter = entry.value;
-                        _future = _load();
-                      });
-                    },
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    decoration: const InputDecoration(
+                      labelText: 'Rechercher (nom ou matricule)',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                    ),
                   ),
-                DropdownButton<String?>(
-                  value: _departmentFilter,
-                  hint: const Text('Département'),
-                  items: [
-                    const DropdownMenuItem(
-                        value: null, child: Text('Tous')),
-                    for (final d in _departements ?? const <String>[])
-                      DropdownMenuItem(value: d, child: Text(d)),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _departmentFilter = value;
-                      _future = _load();
-                    });
-                  },
                 ),
-                if (state.isAdmin)
+                if (state.isAdmin) ...[
+                  const SizedBox(width: 8),
                   OutlinedButton.icon(
                     onPressed: _openImport,
                     icon: const Icon(Icons.upload_outlined),
                     label: const Text('Importer'),
                   ),
+                ],
               ],
+            ),
+          ),
+          _anniversairesCard(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            // Pastilles en défilement horizontal (maquette de refonte) :
+            // fini l'empilement de boutons, les pastilles défilent.
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final entry in <String, String?>{
+                    'Tous': null,
+                    'Actif': 'actif',
+                    'Nouveau converti': 'nouveau_converti',
+                    'Inactif': 'inactif',
+                    'Ancien': 'ancien',
+                  }.entries) ...[
+                    ChoiceChip(
+                      label: Text(entry.key),
+                      selected: _statusFilter == entry.value,
+                      onSelected: (_) {
+                        setState(() {
+                          _statusFilter = entry.value;
+                          _future = _load();
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.bordure),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  const Text(
+                    'Département :',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String?>(
+                        value: _departmentFilter,
+                        isExpanded: true,
+                        items: [
+                          const DropdownMenuItem(
+                              value: null, child: Text('Tous')),
+                          for (final d in _departements ?? const <String>[])
+                            DropdownMenuItem(value: d, child: Text(d)),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _departmentFilter = value;
+                            _future = _load();
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(
@@ -319,15 +380,16 @@ class _MembresScreenState extends State<MembresScreen> {
                     itemCount: membres.length,
                     itemBuilder: (context, index) {
                       final member = membres[index];
+                      final fonction = _fonctionTexte(member);
                       return ListTile(
                         leading: CircleAvatar(
-                          child: Text(member.fullName.isNotEmpty
-                              ? member.fullName[0].toUpperCase()
-                              : '?'),
+                          child: Text(_initiales(member.fullName)),
                         ),
                         title: Text(member.fullName),
                         subtitle: Text(
-                            '${member.matricule} · ${member.department ?? '—'}'),
+                            '${member.matricule}'
+                            '${fonction != null ? ' · $fonction' : ''}'
+                            ' · ${member.department ?? '—'}'),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -368,7 +430,7 @@ class _MembresScreenState extends State<MembresScreen> {
           ? FloatingActionButton.extended(
               onPressed: _openForm,
               icon: const Icon(Icons.person_add_outlined),
-              label: const Text('Membre'),
+              label: const Text('Nouveau membre'),
             )
           : null,
     );

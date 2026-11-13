@@ -8,6 +8,7 @@ import '../models/member.dart';
 import '../models/paiements.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
+import 'paiements_screen.dart';
 
 /// Formulaire d'enregistrement d'une contribution (dîme, offrande, don,
 /// dépense ou cotisation).
@@ -364,9 +365,16 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Aucun moyen de paiement configuré pour l’instant : '
-                      'configurez-en un dans « Mon église → Paiements ».',
+                      'Aucun moyen de paiement configuré pour l’instant.',
                       textAlign: TextAlign.center,
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const PaiementsScreen(),
+                        ),
+                      ),
+                      child: const Text('Configurer un moyen de paiement'),
                     ),
                   ],
                   const SizedBox(height: 12),

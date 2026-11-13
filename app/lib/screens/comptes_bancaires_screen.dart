@@ -200,9 +200,12 @@ class _ComptesBancairesScreenState extends State<ComptesBancairesScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     if (!state.canReadFinances) {
-      return const EmptyState(
-        icon: Icons.lock_outline,
-        message: 'Votre rôle ne donne pas accès aux finances de l’église.',
+      return Scaffold(
+        appBar: AppBar(title: const Text('Comptes bancaires')),
+        body: const EmptyState(
+          icon: Icons.lock_outline,
+          message: 'Votre rôle ne donne pas accès aux finances de l’église.',
+        ),
       );
     }
     return Scaffold(
@@ -223,8 +226,8 @@ class _ComptesBancairesScreenState extends State<ComptesBancairesScreen> {
           if (comptes.isEmpty) {
             return const EmptyState(
               icon: Icons.account_balance_outlined,
-              message: 'Aucun compte enregistré. Les comptes de la '
-                  'structure s’ajouteront ici pour le rapprochement.',
+              message: 'Aucun compte enregistré. Les comptes de l’'
+                  'église s’ajouteront ici pour le rapprochement.',
             );
           }
           return RefreshIndicator(

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../config/app_theme.dart';
 import '../state/app_state.dart';
+import '../utils/format.dart';
 import '../utils/qr_carte.dart';
 
 /// Scan réel de la carte de membre par la caméra.
@@ -181,7 +182,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                 Text(
                   _pointes == 0
                       ? 'Le scan reprend tout seul après chaque pointage.'
-                      : '$_pointes présence(s) pointée(s) pendant ce scan.',
+                      : '${pluriel(_pointes, 'présence pointée', 'présences pointées')} pendant ce scan.',
                   style: const TextStyle(color: Colors.white70),
                   textAlign: TextAlign.center,
                 ),

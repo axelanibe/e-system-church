@@ -45,6 +45,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _loading = false;
   String? _error;
   bool _obscurePassword = true;
+  bool _obscurePasswordConfirm = true;
   // Logo choisi à l'inscription (facultatif) : téléversé après la création
   // de l'église, comme dans Mon église. Sans logo, les initiales de
   // l'église s'affichent sur fond bleu nuit.
@@ -152,6 +153,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final scheme = Theme.of(context).colorScheme;
     return Card(
       color: selected ? AppTheme.orClair : null,
+      shape: selected
+          ? RoundedRectangleBorder(
+              side: const BorderSide(color: AppTheme.orAttention, width: 2),
+              borderRadius: BorderRadius.circular(12),
+            )
+          : null,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -383,10 +390,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _passwordConfirmController,
-                    obscureText: _obscurePassword,
-                    decoration: const InputDecoration(
+                    obscureText: _obscurePasswordConfirm,
+                    decoration: InputDecoration(
                       labelText: 'Confirmer le mot de passe *',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscurePasswordConfirm
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined),
+                        onPressed: () => setState(() =>
+                            _obscurePasswordConfirm =
+                                !_obscurePasswordConfirm),
+                      ),
                     ),
                     validator: (v) => v != _passwordController.text
                         ? 'Les mots de passe ne correspondent pas.'
@@ -412,7 +427,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Créer mon église'),
+                          : const Text('Inscrire mon église'),
                     ),
                   ),
                 ],

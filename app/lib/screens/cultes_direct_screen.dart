@@ -17,6 +17,7 @@ import '../state/app_state.dart';
 import '../config/app_theme.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import 'cultes_screen.dart';
 import 'qr_scan_screen.dart';
 
 class CultesDirectScreen extends StatefulWidget {
@@ -201,9 +202,15 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
           : _erreur != null
               ? AppError(message: _erreur!, onRetry: _charger)
               : _cultes.isEmpty
-                  ? const EmptyState(
+                  ? EmptyState(
                       icon: Icons.event_outlined,
                       message: 'Aucun culte planifié pour l’instant.',
+                      actionLabel: 'Planifier un culte',
+                      onAction: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const CultesScreen(),
+                        ),
+                      ),
                     )
                   : _contenu(),
     );
@@ -296,9 +303,16 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                           child: Text(
                             '${moment.ordre}',
                             style: TextStyle(
-                              color: courant || passe
-                                  ? Colors.white
-                                  : AppTheme.bleuNuit,
+                              // Chiffre en cours en bleu nuit sur or :
+                              // blanc sur or foncé, contraste limite.
+                              color: courant
+                                  ? AppTheme.bleuNuit
+                                  : passe
+                                      ? Colors.white
+                                      : AppTheme.bleuNuit,
+                              fontWeight: courant
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                             ),
                           ),
                         ),

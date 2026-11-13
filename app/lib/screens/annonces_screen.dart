@@ -133,6 +133,7 @@ class _AnnoncesScreenState extends State<AnnoncesScreen> {
     final state = context.watch<AppState>();
 
     return Scaffold(
+      appBar: AppBar(title: const Text('Annonces')),
       body: FutureBuilder<List<Announcement>>(
         future: _future,
         builder: (context, snapshot) {

@@ -316,6 +316,12 @@ class _BiensScreenState extends State<BiensScreen> {
                     for (final s in snapshot.data!) s.id: s.nom
                   };
                   if (salles.isEmpty && reservations.isEmpty) {
+                    if (_query.isNotEmpty) {
+                      return const EmptyState(
+                        icon: Icons.search_off_outlined,
+                        message: 'Aucun résultat pour cette recherche.',
+                      );
+                    }
                     return EmptyState(
                       icon: Icons.meeting_room_outlined,
                       message: 'Aucune salle pour l’instant.',
@@ -329,9 +335,11 @@ class _BiensScreenState extends State<BiensScreen> {
                       children: [
                         const SectionTitle(title: 'Salles'),
                         if (salles.isEmpty)
-                          const EmptyState(
+                          EmptyState(
                             icon: Icons.meeting_room_outlined,
-                            message: 'Aucune salle pour l’instant.',
+                            message: _query.isNotEmpty
+                                ? 'Aucune salle ne correspond à la recherche.'
+                                : 'Aucune salle pour l’instant.',
                           )
                         else
                           ...salles.map((s) => ListTile(
@@ -351,10 +359,11 @@ class _BiensScreenState extends State<BiensScreen> {
                               )),
                         const SectionTitle(title: 'Réservations'),
                         if (reservations.isEmpty)
-                          const EmptyState(
+                          EmptyState(
                             icon: Icons.event_available_outlined,
-                            message:
-                                'Aucune réservation de salle pour l’instant.',
+                            message: _query.isNotEmpty
+                                ? 'Aucune réservation ne correspond à la recherche.'
+                                : 'Aucune réservation de salle pour l’instant.',
                           )
                         else
                           ...reservations.map((r) => ListTile(
@@ -368,7 +377,7 @@ class _BiensScreenState extends State<BiensScreen> {
                                   '${r.reservePar != null ? ' · ${r.reservePar}' : ''}',
                                 ),
                                 trailing: StatusChip(
-                                  label: r.statut,
+                                  label: r.statutLabel,
                                   color: r.statut == 'annulee'
                                       ? AppTheme.rougeErreur
                                       : AppTheme.bleuNuit,
@@ -450,9 +459,11 @@ class _BiensScreenState extends State<BiensScreen> {
                       children: [
                         const SectionTitle(title: 'Matériel'),
                         if (items.isEmpty)
-                          const EmptyState(
+                          EmptyState(
                             icon: Icons.inventory_2_outlined,
-                            message: 'Aucun matériel pour l’instant.',
+                            message: _query.isNotEmpty
+                                ? 'Aucun matériel ne correspond à la recherche.'
+                                : 'Aucun matériel pour l’instant.',
                           )
                         else
                           ...items.map((m) => ListTile(
@@ -467,9 +478,11 @@ class _BiensScreenState extends State<BiensScreen> {
                               )),
                         const SectionTitle(title: 'Maintenance'),
                         if (maintenances.isEmpty)
-                          const EmptyState(
+                          EmptyState(
                             icon: Icons.build_outlined,
-                            message: 'Aucune maintenance enregistrée pour l’instant.',
+                            message: _query.isNotEmpty
+                                ? 'Aucune maintenance ne correspond à la recherche.'
+                                : 'Aucune maintenance enregistrée pour l’instant.',
                           )
                         else
                           ...maintenances.map((m) => ListTile(
@@ -551,7 +564,7 @@ class _BiensScreenState extends State<BiensScreen> {
                 final choix = await showDialog<String>(
                   context: context,
                   builder: (ctx) => SimpleDialog(
-                    title: const Text('Ajouter'),
+                    title: const Text('Que voulez-vous ajouter ?'),
                     children: [
                       SimpleDialogOption(
                         onPressed: () => Navigator.of(ctx).pop('salle'),
@@ -575,7 +588,7 @@ class _BiensScreenState extends State<BiensScreen> {
                 final choix = await showDialog<String>(
                   context: context,
                   builder: (ctx) => SimpleDialog(
-                    title: const Text('Ajouter'),
+                    title: const Text('Que voulez-vous ajouter ?'),
                     children: [
                       SimpleDialogOption(
                         onPressed: () => Navigator.of(ctx).pop('materiel'),

@@ -472,7 +472,7 @@ class _FournisseurCardState extends State<_FournisseurCard> {
                                 child:
                                     CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Text('Tester la connexion'),
+                            : const Text('Tester'),
                       ),
                     ),
                   ],

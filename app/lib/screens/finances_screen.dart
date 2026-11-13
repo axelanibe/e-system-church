@@ -25,6 +25,9 @@ class FinancesScreen extends StatefulWidget {
 class _FinancesScreenState extends State<FinancesScreen> {
   String? _typeFilter;
   String? _statusFilter;
+  /// Sous-onglet (maquette de refonte) : 0 Contributions,
+  /// 1 Finances complètes.
+  int _sousOnglet = 0;
   late Future<ContributionPage> _future;
 
   @override
@@ -87,8 +90,20 @@ class _FinancesScreenState extends State<FinancesScreen> {
     return Scaffold(
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: _SousOnglets(
+              index: _sousOnglet,
+              onChange: (i) => setState(() {
+                _sousOnglet = i;
+                if (i == 0) _future = _load();
+              }),
+            ),
+          ),
           Expanded(
-            child: FutureBuilder<ContributionPage>(
+            child: _sousOnglet == 1
+                ? const ContenuFinancesCompletes()
+                : FutureBuilder<ContributionPage>(
               future: _future,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -152,15 +167,8 @@ class _FinancesScreenState extends State<FinancesScreen> {
                           subtitle: const Text(
                               'Cotisations, banque, caisse, reçus, budgets.'),
                           trailing: const Icon(Icons.chevron_right),
-                          onTap: () async {
-                            await Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const FinancesCompletesScreen(),
-                              ),
-                            );
-                            _refresh();
-                          },
+                          onTap: () =>
+                              setState(() => _sousOnglet = 1),
                         ),
                       ),
                       Card(
@@ -196,50 +204,48 @@ class _FinancesScreenState extends State<FinancesScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Padding(
-                        padding: EdgeInsets.zero,
-                        // Retour à la ligne en largeur étroite : en défilement
-                        // horizontal, la puce « Dépenses » sortait de l'écran sans
-                        // indice de défilement. En large, tout tient sur une ligne.
-                        child: Wrap(
-                          spacing: 8,
-                          children: [
-                            for (final entry in <String, String?>{
-                              'Tous types': null,
-                              'Dîmes': 'dime',
-                              'Offrandes': 'offrande',
-                              'Dons': 'don',
-                              'Dépenses': 'depense',
-                              'Cotisations': 'cotisation',
-                            }.entries)
-                              ChoiceChip(
-                                label: Text(entry.key),
-                                selected: _typeFilter == entry.value,
-                                onSelected: (_) {
-                                  setState(() {
-                                    _typeFilter = entry.value;
-                                    _future = _load();
-                                  });
-                                },
-                              ),
-                            for (final entry in <String, String?>{
-                              'Tous statuts': null,
-                              'En attente': 'en_attente',
-                              'Confirmées': 'confirme',
-                              'Annulées': 'annule',
-                            }.entries)
-                              ChoiceChip(
-                                label: Text(entry.key),
-                                selected: _statusFilter == entry.value,
-                                onSelected: (_) {
-                                  setState(() {
-                                    _statusFilter = entry.value;
-                                    _future = _load();
-                                  });
-                                },
-                              ),
-                          ],
-                        ),
+                      _FiltresDefilants(
+                        enfants: [
+                          for (final entry in <String, String?>{
+                            'Tous types': null,
+                            'Dîmes': 'dime',
+                            'Offrandes': 'offrande',
+                            'Dons': 'don',
+                            'Dépenses': 'depense',
+                            'Cotisations': 'cotisation',
+                          }.entries)
+                            ChoiceChip(
+                              label: Text(entry.key),
+                              selected: _typeFilter == entry.value,
+                              onSelected: (_) {
+                                setState(() {
+                                  _typeFilter = entry.value;
+                                  _future = _load();
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _FiltresDefilants(
+                        enfants: [
+                          for (final entry in <String, String?>{
+                            'Tous statuts': null,
+                            'En attente': 'en_attente',
+                            'Confirmées': 'confirme',
+                            'Annulées': 'annule',
+                          }.entries)
+                            ChoiceChip(
+                              label: Text(entry.key),
+                              selected: _statusFilter == entry.value,
+                              onSelected: (_) {
+                                setState(() {
+                                  _statusFilter = entry.value;
+                                  _future = _load();
+                                });
+                              },
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       if (page.contributions.isEmpty)
@@ -292,13 +298,95 @@ class _FinancesScreenState extends State<FinancesScreen> {
           ),
         ],
       ),
-      floatingActionButton: state.canManageFinances
+      floatingActionButton: _sousOnglet == 0 && state.canManageFinances
           ? FloatingActionButton.extended(
               onPressed: _openForm,
               icon: const Icon(Icons.add),
               label: const Text('Ajouter'),
             )
           : null,
+    );
+  }
+}
+
+/// Sous-onglets Contributions / Finances complètes (maquette de
+/// refonte) : segment actif en carte blanche sur fond gris.
+class _SousOnglets extends StatelessWidget {
+  final int index;
+  final ValueChanged<int> onChange;
+
+  const _SousOnglets({required this.index, required this.onChange});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.bordure.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: [
+          for (var i = 0; i < 2; i++)
+            Expanded(
+              child: GestureDetector(
+                onTap: () => onChange(i),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: index == i ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: index == i
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    i == 0 ? 'Contributions' : 'Finances complètes',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      fontWeight:
+                          index == i ? FontWeight.bold : FontWeight.normal,
+                      color: index == i
+                          ? AppTheme.bleuNuit
+                          : AppTheme.bleuNuit.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Rangée de pastilles en défilement horizontal (maquette de refonte) :
+/// fini l'empilement de boutons, les pastilles défilent.
+class _FiltresDefilants extends StatelessWidget {
+  final List<Widget> enfants;
+
+  const _FiltresDefilants({required this.enfants});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (var i = 0; i < enfants.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            enfants[i],
+          ],
+        ],
+      ),
     );
   }
 }

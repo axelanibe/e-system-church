@@ -455,7 +455,7 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
                     final a = items[index];
                     return ListTile(
                       leading: const CircleAvatar(
-                        child: Icon(Icons.sports_soccer_outlined),
+                        child: Icon(Icons.groups_outlined),
                       ),
                       title: Text(a.titre),
                       subtitle: Text(
@@ -554,10 +554,10 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
           },
           icon: const Icon(Icons.add),
           label: Text(_tab == 0
-              ? 'Classe'
+              ? 'Nouvelle classe'
               : _tab == 1
-                  ? 'Autorisation'
-                  : 'Activité'),
+                  ? 'Nouvelle autorisation'
+                  : 'Nouvelle activité'),
         ),
       ),
     );

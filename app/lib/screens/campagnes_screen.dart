@@ -156,7 +156,7 @@ class _CampagnesScreenState extends State<CampagnesScreen> {
             Text(
               'Collecté : ${formatFcfa(c.totalCollecte)} (${c.pourcentage} %)',
             ),
-            Text('${c.nombreContributions} contribution(s) confirmée(s).'),
+            Text('${pluriel(c.nombreContributions, 'contribution confirmée', 'contributions confirmées')}.'),
           ],
         ),
         actions: [
@@ -297,7 +297,7 @@ class _CampagnesScreenState extends State<CampagnesScreen> {
           ? FloatingActionButton.extended(
               onPressed: _create,
               icon: const Icon(Icons.add),
-              label: const Text('Campagne'),
+              label: const Text('Nouvelle campagne'),
             )
           : null,
     );

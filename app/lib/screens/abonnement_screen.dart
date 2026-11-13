@@ -64,10 +64,8 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
             dureeAnnees: _dureeAnnees,
           );
       if (!mounted) return;
+      // La réduction réelle s'affiche dans la carte sous le champ.
       setState(() => _promoValidee = resultat);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('La réduction dépend du code.')),
-      );
     } on ApiException catch (e) {
       if (mounted) showApiError(context, e);
     } finally {
@@ -213,13 +211,10 @@ class _VueMere extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Essai gratuit : ${abonnement.essaiJours} jours',
+                  'Essai gratuit : ${abonnement.essaiJours} jours pour '
+                  'essayer l’application avant de payer.',
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const Text(
-                  'Pour essayer l’application avant de payer.',
-                  style: TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -369,12 +364,6 @@ class _VueMere extends StatelessWidget {
         FilledButton(
           onPressed: onRenouveler,
           child: const Text('Renouveler mon abonnement'),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Le moyen de paiement n’est pas encore décidé.',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 16),
         ),
         const SizedBox(height: 16),
         if (estMere) ...[

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../config/app_theme.dart';
 import '../models/fidele.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
@@ -106,92 +105,17 @@ class _CarteMembreSeuleState extends State<_CarteMembreSeule> {
   }
 }
 
-/// Carte en aperçu admin : espaces réservés, aucune donnée inventée.
+/// Carte en aperçu admin : pas de fausse carte avec des données
+/// inventées, un état vide qui explique.
 class _CarteApercu extends StatelessWidget {
   const _CarteApercu();
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: Card(
-            color: AppTheme.bleuNuit,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  Text(
-                    'CARTE DE MEMBRE',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: Colors.white70,
-                          letterSpacing: 1.2,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'e-System Church',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppTheme.or,
-                        ),
-                  ),
-                  const SizedBox(height: 16),
-                  const CircleAvatar(
-                    radius: 36,
-                    backgroundColor: Colors.white24,
-                    child: Icon(
-                      Icons.person_outline,
-                      size: 36,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Nom du membre',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Matricule affiché après inscription',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white70,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Nom de l’église',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                  Text(
-                    'Membre depuis — À compléter',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white70,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Aperçu : connectez-vous avec un compte fidèle pour '
-                    'voir votre carte.',
-                    style: TextStyle(color: Colors.white70),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return const EmptyState(
+      icon: Icons.badge_outlined,
+      message: 'En aperçu, la carte d’un membre n’est pas visible. '
+          'Connectez-vous avec un compte fidèle pour voir votre carte.',
     );
   }
 }

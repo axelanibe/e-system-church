@@ -112,12 +112,30 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
       _ => Colors.orange,
     };
     return Card(
-      child: ListTile(
-        leading: const Icon(Icons.swap_horiz_outlined),
-        title: Text('${t.membreNom} · ${t.ancienMatricule}'),
-        subtitle: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              children: [
+                const Icon(Icons.swap_horiz_outlined),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    t.membreNom,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                StatusChip(label: t.statusLabel, color: color),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Ancien matricule : ${t.ancienMatricule}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
             Text(
                 '${t.egliseDepartNom} (${t.egliseDepartCode}) → ${t.egliseArriveeNom} (${t.egliseArriveeCode})'),
             if (t.nouveauMatricule != null)
@@ -127,30 +145,33 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
             if (t.motif != null && t.motif!.isNotEmpty)
               Text('Motif : ${t.motif}'),
             Text(formatDate(t.createdAt)),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            StatusChip(label: t.statusLabel, color: color),
-            if (aTraiter) ...[
-              IconButton(
-                icon: const Icon(Icons.check, color: AppTheme.bleuNuit),
-                tooltip: 'Accepter',
-                onPressed: () => _decide(t.id, true),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close, color: AppTheme.rougeErreur),
-                tooltip: 'Refuser',
-                onPressed: () => _decide(t.id, false),
+            if (aTraiter || (emis && t.status == 'en_attente')) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (aTraiter) ...[
+                    OutlinedButton.icon(
+                      onPressed: () => _decide(t.id, true),
+                      icon: const Icon(Icons.check),
+                      label: const Text('Accepter'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _decide(t.id, false),
+                      icon: const Icon(Icons.close),
+                      label: const Text('Refuser'),
+                    ),
+                  ],
+                  if (emis && t.status == 'en_attente')
+                    OutlinedButton.icon(
+                      onPressed: () => _annuler(t.id),
+                      icon: const Icon(Icons.cancel_outlined),
+                      label: const Text('Annuler la demande'),
+                    ),
+                ],
               ),
             ],
-            if (emis && t.status == 'en_attente')
-              IconButton(
-                icon: const Icon(Icons.cancel_outlined, color: AppTheme.rougeErreur),
-                tooltip: 'Annuler la demande',
-                onPressed: () => _annuler(t.id),
-              ),
           ],
         ),
       ),
@@ -158,15 +179,17 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
   }
 
   Widget _section(String title, List<TransfertMembre> items,
-      {required bool aTraiter, required bool emis}) {
+      {required bool aTraiter,
+      required bool emis,
+      required String vide}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionTitle(title: title),
         if (items.isEmpty)
-          const EmptyState(
+          EmptyState(
             icon: Icons.swap_horiz_outlined,
-            message: 'Aucun transfert.',
+            message: vide,
           )
         else
           ...items.map((t) =>
@@ -251,13 +274,21 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                   ),
                 ],
                 _section('À traiter par mon église', result.aTraiter,
-                    aTraiter: true, emis: false),
+                    aTraiter: true,
+                    emis: false,
+                    vide: 'Aucun transfert à traiter.'),
                 _section('Demandes émises', result.emises,
-                    aTraiter: false, emis: true),
+                    aTraiter: false,
+                    emis: true,
+                    vide: 'Aucune demande émise.'),
                 _section('Demandes reçues', result.recues,
-                    aTraiter: false, emis: false),
+                    aTraiter: false,
+                    emis: false,
+                    vide: 'Aucune demande reçue.'),
                 _section('Historique', result.historique,
-                    aTraiter: false, emis: false),
+                    aTraiter: false,
+                    emis: false,
+                    vide: 'Aucun transfert dans l’historique.'),
               ],
             ),
           );
