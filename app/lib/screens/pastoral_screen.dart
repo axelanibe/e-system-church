@@ -633,7 +633,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
                           value: e.key, child: Text(e.value)))
                       .toList(),
                   onChanged: (v) async {
-                    if (v == null || v == a.priorite) return;
+                    if (v == null || v == priorite) return;
                     try {
                       await context
                           .read<AppState>()
@@ -1015,6 +1015,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
               for (final m in snapshot.data!.membres) m.id: m.fullName
             };
             return TabBarView(
+              physics: const NeverScrollableScrollPhysics(),
               children: [
                 _radarTab(),
                 _rdvTab(),
