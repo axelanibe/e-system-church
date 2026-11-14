@@ -3,52 +3,52 @@ import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/announcement.dart';
-import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/rapport.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
-import '../widgets/church_avatar.dart';
 import '../widgets/common_widgets.dart';
-import '../widgets/mere_badge.dart';
 import '../widgets/soft_button.dart';
 import '../widgets/soft_card.dart';
 import 'annonces_screen.dart';
-import 'annexes_screen.dart';
-import 'contribution_form_screen.dart';
 import 'cultes_screen.dart';
-import 'finances_mere_screen.dart';
 import 'member_form_screen.dart';
-import 'mes_eglises_screen.dart';
 import 'plateforme_screen.dart';
 import 'rapports_mere_screen.dart';
 import 'rapports_recus_screen.dart';
-import 'tree_screen.dart';
 
 class _DashboardData {
   final int membresTotal;
-  final Map<String, ContributionTotals> totaux;
+  final int presencesJour;
+  final int nouveauxMembres;
+  final int cotisationsMois;
   final RapportConsolide? rapport;
   final List<Announcement> annonces;
   final List<Culte> cultes;
 
   const _DashboardData({
     required this.membresTotal,
-    required this.totaux,
+    required this.presencesJour,
+    required this.nouveauxMembres,
+    required this.cotisationsMois,
     required this.rapport,
     required this.annonces,
     required this.cultes,
   });
 }
 
-/// Tableau de bord : carte « Aujourd'hui » avec le prochain culte,
-/// 4 chiffres avec pastille de couleur, « Mon réseau », annonces
-/// récentes et 4 actions rapides. Chiffres de mon église + consolidé
-/// du réseau (`GET /rapports/consolide`, admin de la mère seulement).
+/// Tableau de bord (projection, captures IMG_4027 à IMG_4031) :
+/// carte bleu nuit « Aujourd'hui » avec le prochain culte dedans,
+/// 4 chiffres réels, « Mon réseau », annonces récentes, actions
+/// rapides, puis les rapports (mère ou annexes).
+/// Chiffres de mon église + consolidé du réseau
+/// (`GET /rapports/consolide`, admin de la mère seulement).
 /// Rien d'inventé : que des données réelles, et des états vides
 /// quand il n'y a rien.
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final ValueChanged<int> onAller;
+
+  const DashboardScreen({super.key, required this.onAller});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -67,10 +67,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final state = context.read<AppState>();
     final api = state.api;
     final membres = await api.getMembers();
-    Map<String, ContributionTotals> totaux = {};
+    // Cotisations du mois en cours : le même suivi que l'écran
+    // Finances complètes (`GET /cotisations/suivi`, mois en cours),
+    // total payé, pas le total de tous les temps.
+    int cotisationsMois = 0;
     if (state.canReadFinances) {
-      final page = await api.getContributions();
-      totaux = page.totaux;
+      try {
+        final suivi = await api.getCotisationsSuivi();
+        cotisationsMois = suivi.totaux.totalPayeFcfa;
+      } catch (_) {
+        cotisationsMois = 0;
+      }
     }
     RapportConsolide? rapport;
     if (state.isAdmin) {
@@ -79,6 +86,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
       } catch (_) {
         rapport = null; // Une sous-église admin n'a pas de réseau : on ignore.
       }
+    }
+    int presencesJour = 0;
+    try {
+      final maintenant = DateTime.now();
+      final jour = '${maintenant.year}-${maintenant.month.toString().padLeft(2, '0')}-${maintenant.day.toString().padLeft(2, '0')}';
+      final stats = await api.getPresenceStats(from: jour, to: jour);
+      presencesJour = stats.presents;
+    } catch (_) {
+      presencesJour = 0; // Sans statistiques lisibles, la carte reste à 0.
+    }
+    int nouveauxMembres = 0;
+    try {
+      final page = await api.getMembers(status: 'nouveau_converti');
+      nouveauxMembres = page.total;
+    } catch (_) {
+      nouveauxMembres = 0;
     }
     final annonces = await api.getAnnonces();
     List<Culte> cultes = [];
@@ -89,19 +112,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
     return _DashboardData(
       membresTotal: membres.total,
-      totaux: totaux,
+      presencesJour: presencesJour,
+      nouveauxMembres: nouveauxMembres,
+      cotisationsMois: cotisationsMois,
       rapport: rapport,
       annonces: annonces,
       cultes: cultes,
     );
-  }
-
-  int _totalEntrees(Map<String, ContributionTotals> totaux) {
-    var sum = 0;
-    for (final entry in totaux.entries) {
-      if (entry.key != 'depense') sum += entry.value.totalFcfa;
-    }
-    return sum;
   }
 
   /// Prochain culte : le premier dont la date n'est pas passée.
@@ -154,71 +171,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SoftCard(
-                  color: AppTheme.orClair,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ChurchAvatar(church: church, radius: 28),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  church?.name ?? '—',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineSmall,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${church?.code ?? ''} · ${church?.city ?? ''} · ${state.roleLabel}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                if (church?.isMere ?? false) ...[
-                                  const SizedBox(height: 8),
-                                  const MereBadge(),
-                                  const SizedBox(height: 4),
-                                  const Text('Tête de votre réseau.'),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Changer d'église : l'écran dédié « Mes églises »
-                      // est paginé et cherchable, il remplace la liste
-                      // complète qui était dans le tiroir.
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const MesEglisesScreen(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.swap_horiz_outlined),
-                          label: const Text('Changer d’église'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
                 // Aperçu multi-rôles (maquette de refonte) : remplace
                 // la carte « Démonstration des deux espaces ». Même
-                // accès que l'espace 4 de la barre de périmètre.
+                // accès que l'espace fidèle, en aperçu avec retour.
                 Container(
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
@@ -350,16 +305,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       );
                     }
                     final data = snapshot.data!;
-                    final entrees = _totalEntrees(data.totaux);
-                    final depenses =
-                        data.totaux['depense']?.totalFcfa ?? 0;
                     final prochain = _prochainCulte(data.cultes);
                     final recentes = _annoncesRecentes(data.annonces);
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Aujourd'hui : la date du jour et le prochain culte.
-                        SoftCard(
+                        // Aujourd'hui (projection, IMG_4027) : carte
+                        // bleu nuit avec le prochain culte dedans,
+                        // puis les 4 chiffres réels. Aucun chiffre
+                        // inventé.
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                AppTheme.bleuNuit,
+                                Color(0xFF1A355B),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          padding: const EdgeInsets.all(16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -369,59 +336,99 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     'Aujourd’hui',
                                     style: Theme.of(context)
                                         .textTheme
-                                        .titleLarge,
+                                        .titleLarge
+                                        ?.copyWith(color: Colors.white),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    formatDate(DateTime.now()),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium,
+                                  const Spacer(),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.or,
+                                      borderRadius:
+                                          BorderRadius.circular(20),
+                                    ),
+                                    child: const Text(
+                                      'Prochain culte',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.bleuNuit,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              if (prochain == null)
-                                const Text('Aucun culte programmé ce jour.')
-                              else
-                                ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  leading: const CircleAvatar(
-                                    backgroundColor: AppTheme.orClair,
-                                    child: Icon(
-                                      Icons.church_outlined,
-                                      color: AppTheme.bleuNuit,
-                                    ),
-                                  ),
-                                  title: Text(
-                                    prochain.titre,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  subtitle: Text(
-                                    '${formatDateTime(prochain.date)}'
-                                    '${prochain.lieu == null || prochain.lieu!.isEmpty ? '' : ' · ${prochain.lieu}'}'
-                                    '${prochain.orateur == null || prochain.orateur!.isEmpty ? '' : ' · ${prochain.orateur}'}',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                              Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                      color: Colors.white.withValues(
+                                          alpha: 0.25)),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: TextButton.icon(
-                                  onPressed: () => _ouvrir(
-                                      context, const CultesScreen()),
-                                  icon: const Icon(
-                                      Icons.calendar_month_outlined),
-                                  label: const Text('Voir les cultes'),
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  children: [
+                                    if (prochain == null) ...[
+                                      const Icon(
+                                        Icons.calendar_today_outlined,
+                                        color: AppTheme.or,
+                                        size: 32,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Aucun culte programmé',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(color: Colors.white),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Le prochain culte s’affichera '
+                                        'ici dès qu’il sera créé.',
+                                        textAlign: TextAlign.center,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                                color: Colors.white70),
+                                      ),
+                                    ] else ...[
+                                      Text(
+                                        prochain.titre,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.center,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(color: Colors.white),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${formatDateTime(prochain.date)}'
+                                        '${prochain.lieu == null || prochain.lieu!.isEmpty ? '' : ' · ${prochain.lieu}'}'
+                                        '${prochain.orateur == null || prochain.orateur!.isEmpty ? '' : ' · ${prochain.orateur}'}',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.center,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                                color: Colors.white70),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const SectionTitle(title: 'Mon église'),
                         LayoutBuilder(
                           builder: (context, constraints) {
                             final crossAxisCount =
@@ -448,36 +455,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       'église.',
                                 ),
                                 StatCard(
-                                  label: 'Argent reçu',
-                                  value: formatFcfa(entrees),
-                                  icon: Icons.trending_up,
+                                  label: 'Présences du jour',
+                                  value: '${data.presencesJour}',
+                                  icon: Icons.how_to_reg_outlined,
                                   color: AppTheme.vertFonce,
-                                  aide: 'Montants confirmés par la '
-                                      'structure.',
+                                  aide: 'Présences pointées aujourd’hui.',
                                 ),
                                 StatCard(
-                                  label: 'Argent dépensé',
-                                  value: formatFcfa(depenses),
-                                  icon: Icons.trending_down,
-                                  color: AppTheme.rougeErreur,
-                                  aide: 'Dépenses confirmées par la '
-                                      'structure.',
-                                ),
-                                StatCard(
-                                  label: 'Annonces',
-                                  value: '${data.annonces.length}',
-                                  icon: Icons.campaign_outlined,
+                                  label: 'Cotisations du mois',
+                                  value: formatFcfa(data.cotisationsMois),
+                                  icon: Icons.savings_outlined,
                                   color: AppTheme.orFonce,
-                                  aide: 'Messages publiés pour votre '
-                                      'église. Touchez pour les lire.',
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const AnnoncesScreen(),
-                                      ),
-                                    );
-                                  },
+                                  aide: 'Cotisations payées ce mois-ci.',
+                                ),
+                                StatCard(
+                                  label: 'Nouveaux membres',
+                                  value: '${data.nouveauxMembres}',
+                                  icon: Icons.person_add_outlined,
+                                  color: AppTheme.bleuNuit,
+                                  aide: 'Nouveaux convertis inscrits dans '
+                                      'votre église.',
                                 ),
                               ],
                             );
@@ -519,126 +516,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 if (data.rapport!.sousEglises.isEmpty)
                                   Text(
                                     (church?.isMere ?? false)
-                                        ? 'Aucune église rattachée pour l’instant. Créez-en une depuis « Voir mon réseau » ci-dessous.'
+                                        ? 'Aucune église rattachée pour l’instant. Créez-en une depuis « Mes annexes et Réseau » dans le menu.'
                                         : 'Votre église est une annexe : elle ne peut pas avoir de sous-église.',
                                   ),
-                                const SizedBox(height: 12),
-                                BoutonDoux(
-                                  label: 'Voir mon réseau',
-                                  icon: Icons.account_tree_outlined,
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const TreeScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                const SizedBox(height: 12),
-                                BoutonDoux(
-                                  label: 'Voir les finances en détail',
-                                  icon: Icons.account_balance_outlined,
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const FinancesMereScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                // Une annexe n'a pas d'annexe : le bouton
-                                // n'existe que pour une église mère.
-                                if (church?.isMere ?? false) ...[
-                                  const SizedBox(height: 12),
-                                  BoutonDoux(
-                                    label: 'Voir mes annexes',
-                                    icon: Icons.hub_outlined,
-                                    onPressed: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              const AnnexesScreen(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                        // Tranche P5 : rapports à mon église mère, pour
-                        // une annexe ; rapports reçus, pour une mère.
-                        // Textes repris mot pour mot de la projection.
-                        if (state.isAdmin &&
-                            !(church?.isMere ?? false)) ...[
-                          const SectionTitle(title: 'Mon église mère'),
-                          SoftCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Rapports à mon église mère',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium,
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Contactez votre église mère et envoyez '
-                                  'vos rapports par e-mail, directement '
-                                  'depuis votre espace.',
-                                ),
-                                const SizedBox(height: 12),
-                                BoutonDoux(
-                                  label: 'Ouvrir les rapports',
-                                  icon: Icons.email_outlined,
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const RapportsMereScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        if (state.isAdmin &&
-                            (church?.isMere ?? false)) ...[
-                          const SectionTitle(title: 'Mes églises annexes'),
-                          SoftCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Rapports reçus',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium,
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Lisez les rapports envoyés par vos '
-                                  'églises annexes.',
-                                ),
-                                const SizedBox(height: 12),
-                                BoutonDoux(
-                                  label: 'Ouvrir les rapports reçus',
-                                  icon: Icons.inbox_outlined,
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const RapportsRecusScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
                               ],
                             ),
                           ),
@@ -717,67 +597,197 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                // Actions rapides : seulement celles que le rôle
-                // permet, chacune ouvre directement son écran de
-                // création. Sans aucune action permise, rien ne
-                // s'affiche.
+                // Actions rapides (projection, IMG_4030) : grille
+                // 2 colonnes, icône or, titre et sous-titre. Les 4
+                // de la projection : Ajouter un membre, Nouveau
+                // culte, Nouvelle annonce, Voir les finances (onglet
+                // Finances, pas un écran en double). La création
+                // d'une contribution se fait depuis l'onglet Finances.
+                // Seulement celles que le rôle permet ; sans aucune
+                // action permise, rien ne s'affiche.
                 if (state.canManageMembers ||
-                    state.canManageFinances ||
+                    state.canReadFinances ||
                     state.isAdmin) ...[
                   const SectionTitle(title: 'Actions rapides'),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final crossAxisCount =
+                          constraints.maxWidth > 600 ? 4 : 2;
+                      return GridView.count(
+                        crossAxisCount: crossAxisCount,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childAspectRatio: 1.1,
+                        children: [
+                          if (state.canManageMembers)
+                            _ActionRapide(
+                              icone: Icons.person_add_outlined,
+                              titre: 'Ajouter un membre',
+                              sousTitre:
+                                  'Création guidée en 3 étapes',
+                              onTap: () => _ouvrir(
+                                  context, const MemberFormScreen()),
+                            ),
+                          if (state.canManageMembers)
+                            _ActionRapide(
+                              icone: Icons.church_outlined,
+                              titre: 'Nouveau culte',
+                              sousTitre: 'Conducteur et pointage QR',
+                              onTap: () => _ouvrir(
+                                  context, const CultesScreen()),
+                            ),
+                          if (state.isAdmin)
+                            _ActionRapide(
+                              icone: Icons.campaign_outlined,
+                              titre: 'Nouvelle annonce',
+                              sousTitre:
+                                  'Publiée pour toute la structure',
+                              onTap: () => _ouvrir(
+                                  context, const AnnoncesScreen()),
+                            ),
+                          if (state.canReadFinances)
+                            _ActionRapide(
+                              icone:
+                                  Icons.account_balance_wallet_outlined,
+                              titre: 'Voir les finances',
+                              sousTitre: 'Cotisations, caisse et reçus',
+                              onTap: () => widget.onAller(2),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+                // Tranche P5 : rapports à mon église mère, pour
+                // une annexe ; rapports reçus, pour une mère.
+                // Textes repris mot pour mot de la projection.
+                if (state.isAdmin &&
+                    !(church?.isMere ?? false)) ...[
+                  const SectionTitle(title: 'Mon église mère'),
                   SoftCard(
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (state.canManageMembers)
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(
-                                Icons.person_add_outlined),
-                            title: const Text('Nouveau membre'),
-                            trailing: const Icon(
-                                Icons.chevron_right_outlined),
-                            onTap: () => _ouvrir(
-                                context, const MemberFormScreen()),
-                          ),
-                        if (state.canManageFinances)
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(
-                                Icons.add_circle_outline),
-                            title: const Text('Nouvelle contribution'),
-                            trailing: const Icon(
-                                Icons.chevron_right_outlined),
-                            onTap: () => _ouvrir(context,
-                                const ContributionFormScreen()),
-                          ),
-                        if (state.canManageMembers)
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading:
-                                const Icon(Icons.church_outlined),
-                            title: const Text('Nouveau culte'),
-                            trailing: const Icon(
-                                Icons.chevron_right_outlined),
-                            onTap: () => _ouvrir(
-                                context, const CultesScreen()),
-                          ),
-                        if (state.isAdmin)
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(
-                                Icons.campaign_outlined),
-                            title: const Text('Nouvelle annonce'),
-                            trailing: const Icon(
-                                Icons.chevron_right_outlined),
-                            onTap: () => _ouvrir(
-                                context, const AnnoncesScreen()),
-                          ),
+                        Text(
+                          'Rapports à mon église mère',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Contactez votre église mère et envoyez '
+                          'vos rapports par e-mail, directement '
+                          'depuis votre espace.',
+                        ),
+                        const SizedBox(height: 12),
+                        BoutonDoux(
+                          label: 'Ouvrir les rapports',
+                          icon: Icons.email_outlined,
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const RapportsMereScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (state.isAdmin &&
+                    (church?.isMere ?? false)) ...[
+                  const SectionTitle(title: 'Mes églises annexes'),
+                  SoftCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Rapports reçus',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Lisez les rapports envoyés par vos '
+                          'églises annexes.',
+                        ),
+                        const SizedBox(height: 12),
+                        BoutonDoux(
+                          label: 'Ouvrir les rapports reçus',
+                          icon: Icons.inbox_outlined,
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const RapportsRecusScreen(),
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
                 ],
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Une action rapide : carte avec icône or, titre et sous-titre
+/// (projection, IMG_4030). Toute la carte est cliquable.
+class _ActionRapide extends StatelessWidget {
+  final IconData icone;
+  final String titre;
+  final String sousTitre;
+  final VoidCallback onTap;
+
+  const _ActionRapide({
+    required this.icone,
+    required this.titre,
+    required this.sousTitre,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icone, color: AppTheme.orFonce, size: 28),
+              const SizedBox(height: 8),
+              Text(
+                titre,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                sousTitre,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
           ),
         ),
       ),

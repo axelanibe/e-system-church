@@ -7,30 +7,30 @@ import 'church_avatar.dart';
 import 'mere_badge.dart';
 import '../screens/a_propos_screen.dart';
 import '../screens/abonnement_screen.dart';
-import '../screens/annonces_screen.dart';
-import '../screens/mes_eglises_screen.dart';
-import '../screens/biens_screen.dart';
 import '../screens/cultes_direct_screen.dart';
-import '../screens/enfants_screen.dart';
-import '../screens/finances_complement_screen.dart';
-import '../screens/medias_screen.dart';
-import '../screens/mon_eglise_screen.dart';
+import '../screens/mes_eglises_screen.dart';
+import '../screens/modules_screen.dart';
 import '../screens/pastoral_screen.dart';
-import '../screens/presences_screen.dart';
 import '../screens/prieres_screen.dart';
-import '../screens/rapports_screen.dart';
+import '../screens/rapports_recus_screen.dart';
+import '../screens/rendez_vous_admin_screen.dart';
+import '../screens/annexes_screen.dart';
 import '../screens/serviteurs_screen.dart';
-import '../screens/plateforme_screen.dart';
-import '../screens/rapports_mere_screen.dart';
-import '../screens/rattachements_screen.dart';
 import '../screens/settings_screen.dart';
-import '../screens/transferts_screen.dart';
 
-/// Tiroir court : l'église courante seule, jamais la liste complète.
-/// Pour changer d'église, une seule entrée, « Changer d'église », qui
-/// ouvre un écran dédié. Les entrées en jargon portent une courte
-/// explication en dessous, pour qu'un nouveau responsable comprenne
-/// où il va avant de toucher.
+/// Tiroir désengorgé (simulation tiroir désengorgé, modèle projection) :
+/// 10 entrées essentielles, une par ligne avec un titre et un sous-titre,
+/// icônes or sur fond bleu nuit. Une seule entrée par fonction, jamais
+/// de doublon avec la barre du bas (Accueil, Membres, Finances,
+/// Départements). Les autres fonctions restent accessibles depuis leur
+/// écran parent : Annonces depuis l'accueil, Présences depuis Cultes,
+/// Budget & caisse depuis Finances, Enfants & jeunesse depuis
+/// Départements, Médias depuis Cultes, Biens et Mon église depuis
+/// Réglages, Transferts et Demandes depuis Mes annexes et Réseau,
+/// Statistiques et exports depuis Rapports d'annexe. La Plateforme a
+/// sa propre connexion, elle ne se rejoint pas depuis une église.
+/// L'en-tête montre l'église courante ; le toucher change d'église
+/// (même espace seulement, règle de bascule).
 class TiroirCourt extends StatelessWidget {
   /// Aller à un onglet de la barre du bas (0 Accueil, 1 Membres,
   /// 2 Finances, 3 Départements).
@@ -45,6 +45,38 @@ class TiroirCourt extends StatelessWidget {
     );
   }
 
+  Widget _entree({
+    required IconData icone,
+    required String titre,
+    required String sousTitre,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icone, color: AppTheme.or),
+      title: Text(
+        titre,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      subtitle: Text(
+        sousTitre,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(color: Colors.white70, fontSize: 14),
+      ),
+      trailing: const Icon(
+        Icons.chevron_right,
+        color: Colors.white54,
+      ),
+      onTap: onTap,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
@@ -53,218 +85,178 @@ class TiroirCourt extends StatelessWidget {
         .where((v) => (v ?? '').isNotEmpty)
         .join(' · ');
     return Drawer(
+      backgroundColor: AppTheme.bleuNuit,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          Container(
-            color: AppTheme.bleuNuit,
-            padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ChurchAvatar(church: church, radius: 24),
-                const SizedBox(height: 8),
-                Text(
-                  church?.name ?? 'e-System Church',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(color: Colors.white),
-                ),
-                if (church?.isMere ?? false) ...[
-                  const SizedBox(height: 6),
-                  const MereBadge(),
-                ],
-                const SizedBox(height: 4),
-                if (codeVille.isNotEmpty)
+          InkWell(
+            onTap: () => _ouvrir(context, const MesEglisesScreen()),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ChurchAvatar(church: church, radius: 24),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        tooltip: 'Fermer',
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
                   Text(
-                    codeVille,
+                    church?.name ?? 'e-System Church',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(color: Colors.white),
+                  ),
+                  if (church?.isMere ?? false) ...[
+                    const SizedBox(height: 6),
+                    const MereBadge(),
+                  ],
+                  const SizedBox(height: 4),
+                  if (codeVille.isNotEmpty)
+                    Text(
+                      codeVille,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTheme.styleCode.copyWith(
+                        color: Colors.white70,
+                      ),
+                    ),
+                  Text(
+                    state.user?.fullName ?? '',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context)
                         .textTheme
-                        .bodyMedium
+                        .bodySmall
+                        ?.copyWith(color: Colors.white),
+                  ),
+                  Text(
+                    state.roleLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
                         ?.copyWith(color: Colors.white70),
                   ),
-                Text(
-                  state.user?.fullName ?? '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: Colors.white),
-                ),
-                Text(
-                  state.roleLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: Colors.white70),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.swap_horiz_outlined,
+                        size: 16,
+                        color: AppTheme.or,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Changer d’église',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.swap_horiz_outlined),
-            title: const Text('Changer d’église'),
-            subtitle: const Text(
-                'Voir une autre de vos églises, par nom ou code'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _ouvrir(context, const MesEglisesScreen()),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.campaign_outlined),
-            title: const Text('Annonces'),
-            subtitle: const Text('Messages pour votre église'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _ouvrir(context, const AnnoncesScreen()),
-          ),
-          ListTile(
-            leading: const Icon(Icons.church_outlined),
-            title: const Text('Mon église'),
-            subtitle: const Text('Présentation et horaires des cultes'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _ouvrir(context, const MonEgliseScreen()),
-          ),
-          ListTile(
-            leading: const Icon(Icons.timer_outlined),
-            title: const Text('Cultes en direct'),
-            subtitle: const Text('Conducteur chronométré, transposition, portes.'),
-            trailing: const Icon(Icons.chevron_right),
+          const Divider(color: Colors.white24, height: 1),
+          _entree(
+            icone: Icons.church_outlined,
+            titre: 'Cultes et Présences',
+            sousTitre: 'Pointage QR et compteurs portes',
             onTap: () => _ouvrir(context, const CultesDirectScreen()),
           ),
-          ListTile(
-            leading: const Icon(Icons.how_to_reg_outlined),
-            title: const Text('Présences'),
-            subtitle: const Text('Feuille de présence par culte et statistiques.'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _ouvrir(context, const PresencesScreen()),
-          ),
-          ListTile(
-            leading: const Icon(Icons.account_balance_outlined),
-            title: const Text('Budget & caisse'),
-            subtitle: const Text('Postes, budgets, dépenses, caisse et rapport financier.'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _ouvrir(context, const FinancesComplementScreen()),
-          ),
-          ListTile(
-            leading: const Icon(Icons.volunteer_activism_outlined),
-            title: const Text('Prières & messages'),
-            subtitle: const Text('Demandes de prière et messages internes.'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _ouvrir(context, const PrieresScreen()),
-          ),
           if (state.canManageMembers)
-            ListTile(
-              leading: const Icon(Icons.route_outlined),
-              title: const Text('Suivi pastoral'),
-              subtitle: const Text('Parcours des nouveaux, visites et accompagnements.'),
-              trailing: const Icon(Icons.chevron_right),
+            _entree(
+              icone: Icons.shield_outlined,
+              titre: 'Suivi pastoral',
+              sousTitre: 'Radar d’absences et visites',
               onTap: () => _ouvrir(context, const PastoralScreen()),
             ),
-          ListTile(
-            leading: const Icon(Icons.handshake_outlined),
-            title: const Text('Serviteurs'),
-            subtitle: const Text('Affectations par département et planning des services.'),
-            trailing: const Icon(Icons.chevron_right),
+          if (state.canManageMembers)
+            _entree(
+              icone: Icons.event_available_outlined,
+              titre: 'Rendez-vous',
+              sousTitre: 'Demandes et créneaux pastoraux',
+              onTap: () =>
+                  _ouvrir(context, const RendezVousAdminScreen()),
+            ),
+          _entree(
+            icone: Icons.favorite_outline,
+            titre: 'Prières',
+            sousTitre: 'Sujets confidentiels et équipe',
+            onTap: () => _ouvrir(context, const PrieresScreen()),
+          ),
+          _entree(
+            icone: Icons.handshake_outlined,
+            titre: 'Serviteurs',
+            sousTitre: 'Affectations et fonctions',
             onTap: () => _ouvrir(context, const ServiteursScreen()),
           ),
-          ListTile(
-            leading: const Icon(Icons.child_care_outlined),
-            title: const Text('Enfants & jeunesse'),
-            subtitle: const Text('Classes, autorisations de sortie et activités.'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _ouvrir(context, const EnfantsScreen()),
+          _entree(
+            icone: Icons.description_outlined,
+            titre: 'Rapports d’annexe',
+            sousTitre: 'Bilans PDF périodiques',
+            onTap: () => _ouvrir(context, const RapportsRecusScreen()),
           ),
-          ListTile(
-            leading: const Icon(Icons.mic_outlined),
-            title: const Text('Médias & bibliothèque'),
-            subtitle: const Text('Prédications, plans de lecture, livres et prêts.'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _ouvrir(context, const MediasScreen()),
-          ),
-          ListTile(
-            leading: const Icon(Icons.meeting_room_outlined),
-            title: const Text('Biens de l’église'),
-            subtitle: const Text('Salles, réservations, matériel et maintenance.'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _ouvrir(context, const BiensScreen()),
-          ),
-          ListTile(
-            leading: const Icon(Icons.assessment_outlined),
-            title: const Text('Rapports'),
-            subtitle: const Text('Statistiques globales et export CSV.'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _ouvrir(context, const RapportsScreen()),
-          ),
-          ListTile(
-            leading: const Icon(Icons.group_add_outlined),
-            title: const Text('Demandes pour rejoindre une église'),
-            subtitle: const Text('Personnes qui veulent vous rejoindre'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _ouvrir(context, const RattachementsScreen()),
-          ),
-          if (state.isSuperAdmin)
-            ListTile(
-              leading: const Icon(Icons.public_outlined),
-              title: const Text('Plateforme'),
-              subtitle: const Text('Chiffres de toutes les églises'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _ouvrir(context, const PlateformeScreen()),
-            ),
-          if (state.canManageMembers)
-            ListTile(
-              leading: const Icon(Icons.sync_alt_outlined),
-              title: const Text('Transferts de membres'),
-              subtitle: const Text('Déplacer un membre vers une église'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _ouvrir(context, const TransfertsScreen()),
-            ),
-          ListTile(
-            leading: const Icon(Icons.settings_outlined),
-            title: const Text('Réglages'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _ouvrir(context, const SettingsScreen()),
+          _entree(
+            icone: Icons.account_tree_outlined,
+            titre: 'Mes annexes et Réseau',
+            sousTitre: 'Branches, tutelle et transferts',
+            onTap: () => _ouvrir(context, const AnnexesScreen()),
           ),
           if (state.isAdmin)
-            ListTile(
-              leading: const Icon(Icons.payments_outlined),
-              title: const Text('Mon abonnement'),
-              subtitle:
-                  const Text('Plan, durée et renouvellement'),
-              trailing: const Icon(Icons.chevron_right),
+            _entree(
+              icone: Icons.payments_outlined,
+              titre: 'Mon abonnement',
+              sousTitre: 'État et renouvellement de l’abonnement',
               onTap: () => _ouvrir(context, const AbonnementScreen()),
             ),
-          // Tranche P5 : rapports à mon église mère. Une annexe
-          // seulement : une église mère n'a pas de mère à qui envoyer
-          // ses rapports, elle lit les siens dans « Rapports reçus »
-          // sur son accueil.
-          if (state.isAdmin && !(church?.isMere ?? false))
-            ListTile(
-              leading: const Icon(Icons.email_outlined),
-              title: const Text('Rapports à mon église mère'),
-              subtitle:
-                  const Text('Envoyez vos rapports à votre église mère'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _ouvrir(context, const RapportsMereScreen()),
-            ),
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: const Text('À propos de e-System Church'),
-            trailing: const Icon(Icons.chevron_right),
+          _entree(
+            icone: Icons.grid_view_outlined,
+            titre: 'Modules de l’église',
+            sousTitre: 'Noyau et modules activables',
+            onTap: () => _ouvrir(context, const ModulesScreen()),
+          ),
+          _entree(
+            icone: Icons.settings_outlined,
+            titre: 'Réglages',
+            sousTitre: 'Profil, clés, rôles et mode test',
+            onTap: () => _ouvrir(context, const SettingsScreen()),
+          ),
+          const Divider(color: Colors.white24, height: 1),
+          _entree(
+            icone: Icons.info_outline,
+            titre: 'À propos de e-System Church',
+            sousTitre: 'L’église sans frontière',
             onTap: () => _ouvrir(context, const AProposScreen()),
           ),
-          const Divider(),
           ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Se déconnecter'),
+            leading: const Icon(Icons.logout, color: AppTheme.rougeErreur),
+            title: const Text(
+              'Se déconnecter',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppTheme.rougeErreur,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             onTap: () async {
               Navigator.of(context).pop();
               await context.read<AppState>().logout();

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
-import '../models/fidele.dart';
 import '../models/member.dart';
 import '../models/pastoral.dart';
 import '../state/app_state.dart';
@@ -10,10 +9,11 @@ import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
 
-/// Module 6 — Suivi pastoral : radar des absences, rendez-vous côté
-/// admin, parcours des nouveaux convertis, visites pastorales et
-/// accompagnements (T6 : radar, rendez-vous, visites typées, rencontres
-/// datées, priorité, cas ouverts).
+/// Module 6 — Suivi pastoral : radar des absences, parcours des
+/// nouveaux convertis, visites pastorales et accompagnements (T6 :
+/// radar, visites typées, rencontres datées, priorité, cas ouverts).
+/// Les rendez-vous ont leur propre écran (« Rendez-vous » dans le
+/// tiroir), une seule entrée par fonction.
 class PastoralScreen extends StatefulWidget {
   const PastoralScreen({super.key});
 
@@ -37,13 +37,6 @@ const _etapesOrdre = [
   'integre',
 ];
 
-const _rdvStatuts = {
-  'en_attente': 'En attente',
-  'confirme': 'Confirmé',
-  'refuse': 'Refusé',
-  'annule': 'Annulé',
-};
-
 const _priorites = {
   'basse': 'Basse',
   'normale': 'Normale',
@@ -62,12 +55,10 @@ class _PastoralScreenState extends State<PastoralScreen> {
   String _query = '';
 
   int _seuil = 3;
-  String? _rdvStatut;
   String? _visiteType;
   bool _casOuverts = false;
 
   late Future<List<AlerteRadar>> _radarFuture;
-  late Future<List<RendezVous>> _rdvFuture;
   late Future<List<ParcoursNouveau>> _parcoursFuture;
   late Future<List<VisitePastorale>> _visitesFuture;
   late Future<List<Accompagnement>> _accompagnementsFuture;
@@ -78,7 +69,6 @@ class _PastoralScreenState extends State<PastoralScreen> {
     super.initState();
     final api = context.read<AppState>().api;
     _radarFuture = api.getRadarAbsences(seuil: _seuil);
-    _rdvFuture = api.getRendezVousAdmin();
     _parcoursFuture = api.getParcoursNouveaux();
     _visitesFuture = api.getVisitesPastorales();
     _accompagnementsFuture = api.getAccompagnements();
@@ -95,12 +85,11 @@ class _PastoralScreenState extends State<PastoralScreen> {
     final api = context.read<AppState>().api;
     setState(() {
       if (_tab == 0) _radarFuture = api.getRadarAbsences(seuil: _seuil);
-      if (_tab == 1) _rdvFuture = api.getRendezVousAdmin(statut: _rdvStatut);
-      if (_tab == 2) _parcoursFuture = api.getParcoursNouveaux();
-      if (_tab == 3) {
+      if (_tab == 1) _parcoursFuture = api.getParcoursNouveaux();
+      if (_tab == 2) {
         _visitesFuture = api.getVisitesPastorales(type: _visiteType);
       }
-      if (_tab == 4) {
+      if (_tab == 3) {
         _accompagnementsFuture = _casOuverts
             ? api.getCasOuverts()
             : api.getAccompagnements();
@@ -238,162 +227,6 @@ class _PastoralScreenState extends State<PastoralScreen> {
                         },
                         child: const Text('Visite'),
                       ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _changerStatutRdv(RendezVous rdv, String statut) async {
-    final api = context.read<AppState>().api;
-    String? creneau;
-    if (statut == 'confirme') {
-      final creneauController = TextEditingController();
-      await showCreateDialog(
-        context: context,
-        title: 'Confirmer le rendez-vous',
-        saveLabel: 'Confirmer',
-        fields: [
-          dialogTextField(
-            controller: creneauController,
-            label: 'Créneau confirmé',
-            hintText: 'Ex. Samedi 10 h',
-          ),
-        ],
-        isValid: () => creneauController.text.trim().isNotEmpty,
-        onSave: () async {
-          creneau = creneauController.text.trim();
-        },
-      );
-      if (creneau == null) return;
-    }
-    try {
-      await api.setRendezVousStatut(
-        rdv.id,
-        statut,
-        creneau: creneau,
-      );
-      if (mounted) {
-        showSuccess(
-            context, 'Rendez-vous ${_rdvStatuts[statut]!.toLowerCase()}.');
-      }
-      _refresh();
-    } catch (e) {
-      if (mounted) showApiError(context, e);
-    }
-  }
-
-  Future<void> _showRendezVous(RendezVous rdv) async {
-    final nom = rdv.membreNom ?? rdv.memberId ?? '—';
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(nom),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Date souhaitée : ${afficherDate(rdv.dateSouhaitee)}'),
-            if (rdv.creneau != null) Text('Créneau : ${rdv.creneau}'),
-            Text('Motif : ${rdv.motif}'),
-            Text('Statut : ${_rdvStatuts[rdv.statut] ?? rdv.statut}'),
-          ],
-        ),
-        actions: [
-          if (rdv.statut == 'en_attente') ...[
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                _changerStatutRdv(rdv, 'confirme');
-              },
-              child: const Text('Confirmer'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                _changerStatutRdv(rdv, 'refuse');
-              },
-              child: const Text('Refuser'),
-            ),
-          ],
-          if (rdv.statut == 'confirme')
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                _changerStatutRdv(rdv, 'annule');
-              },
-              child: const Text('Annuler'),
-            ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Fermer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _rdvTab() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: _filtreChips(
-            valeurs: [null, ..._rdvStatuts.keys],
-            selection: _rdvStatut,
-            label: (v) => v == null ? 'Tous' : _rdvStatuts[v]!,
-            onSelect: (v) => setState(() => _rdvStatut = v),
-          ),
-        ),
-        Expanded(
-          child: FutureBuilder<List<RendezVous>>(
-            future: _rdvFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const AppLoading();
-              }
-              if (snapshot.hasError) {
-                return AppError(
-                  message: snapshot.error.toString(),
-                  onRetry: _refresh,
-                );
-              }
-              final items = snapshot.data!;
-              if (items.isEmpty) {
-                return const EmptyState(
-                  icon: Icons.calendar_month_outlined,
-                  message: 'Aucun rendez-vous pour l’instant.',
-                );
-              }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final r = items[index];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.calendar_month_outlined),
-                      ),
-                      title: Text(r.membreNom ?? r.memberId ?? '—'),
-                      subtitle: Text(
-                        '${afficherDate(r.dateSouhaitee)}'
-                        '${r.creneau != null ? ' · ${r.creneau}' : ''} · ${r.motif}',
-                      ),
-                      trailing: StatusChip(
-                        label: _rdvStatuts[r.statut] ?? r.statut,
-                        color: r.statut == 'confirme'
-                            ? AppTheme.bleuNuit
-                            : r.statut == 'en_attente'
-                                ? Colors.orange
-                                : AppTheme.rougeErreur,
-                      ),
-                      onTap: () => _showRendezVous(r),
                     );
                   },
                 ),
@@ -976,7 +809,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Suivi pastoral'),
@@ -989,7 +822,6 @@ class _PastoralScreenState extends State<PastoralScreen> {
             }),
             tabs: const [
               Tab(text: 'Radar'),
-              Tab(text: 'Rendez-vous'),
               Tab(text: 'Parcours'),
               Tab(text: 'Visites'),
               Tab(text: 'Accompagnements'),
@@ -1018,7 +850,6 @@ class _PastoralScreenState extends State<PastoralScreen> {
               physics: const NeverScrollableScrollPhysics(),
               children: [
                 _radarTab(),
-                _rdvTab(),
                 _parcoursTab(noms),
                 _visitesTab(noms),
                 _accompagnementsTab(noms),
@@ -1026,16 +857,16 @@ class _PastoralScreenState extends State<PastoralScreen> {
             );
           },
         ),
-        floatingActionButton: _tab < 2
+        floatingActionButton: _tab < 1
             ? null
             : FloatingActionButton.extended(
                 onPressed: () async {
                   try {
                     final membres = await _membres();
                     if (!mounted) return;
-                    if (_tab == 2) {
+                    if (_tab == 1) {
                       await _createParcours(membres);
-                    } else if (_tab == 3) {
+                    } else if (_tab == 2) {
                       await _createVisite(membres);
                     } else {
                       await _createAccompagnement(membres);
@@ -1045,9 +876,9 @@ class _PastoralScreenState extends State<PastoralScreen> {
                   }
                 },
                 icon: const Icon(Icons.add),
-                label: Text(_tab == 2
+                label: Text(_tab == 1
                     ? 'Nouveau parcours'
-                    : _tab == 3
+                    : _tab == 2
                         ? 'Nouvelle visite'
                         : 'Nouvel accompagnement'),
               ),

@@ -9,6 +9,8 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import 'rattachements_screen.dart';
+import 'transferts_screen.dart';
+import 'tree_screen.dart';
 import 'annexe_detail_screen.dart';
 import 'codes_tutelle_screen.dart';
 
@@ -97,6 +99,59 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                 _debounce?.cancel();
                 _load(q: value.trim());
               },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.swap_horiz_outlined),
+                    title: const Text('Transferts de membres'),
+                    subtitle: const Text(
+                        'Déplacer un membre vers une autre église du réseau.'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const TransfertsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.account_tree_outlined),
+                    title: const Text('Arbre du réseau'),
+                    subtitle: const Text(
+                        'Hiérarchie des églises mères et annexes.'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const TreeScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.group_add_outlined),
+                    title: const Text('Demandes de rattachement'),
+                    subtitle: const Text(
+                        'Églises qui demandent à se rattacher à vous.'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const RattachementsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(

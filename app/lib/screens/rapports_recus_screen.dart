@@ -7,6 +7,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import 'exemple_bilan_screen.dart';
+import 'rapports_screen.dart';
 
 /// Rapports reçus (tranche P5) : l'église mère lit ici les rapports
 /// envoyés par ses églises annexes, qui arrivent aussi par e-mail.
@@ -80,6 +81,23 @@ class _RapportsRecusScreenState extends State<RapportsRecusScreen> {
                         'Les rapports envoyés par vos églises annexes '
                         'arrivent ici, et aussi par e-mail.',
                         style: TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(height: 16),
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.assessment_outlined),
+                          title: const Text('Statistiques et exports'),
+                          subtitle: const Text(
+                              'Chiffres du réseau, exports CSV et PDF.'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const RapportsScreen(),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                       const SizedBox(height: 16),
                       if (rapports.isEmpty)
