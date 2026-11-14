@@ -172,9 +172,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Logo de l'application (projection couleurs du
-                // logo) : en-tête de l'accueil administrateur.
-                const EnteteMarque(),
+                // En-tête de l'espace connecté : nom et logo de
+                // l'église (règle d'Axel, 14 novembre 2026), pas le
+                // logo e-System Church en grand.
+                EnteteEspace(eglise: church),
                 const SizedBox(height: 16),
                 // Aperçu multi-rôles (maquette de refonte) : remplace
                 // la carte « Démonstration des deux espaces ». Même

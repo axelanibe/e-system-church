@@ -155,9 +155,12 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo de l'application (projection couleurs du
-                  // logo) : en-tête de l'accueil fidèle.
-                  const EnteteMarque(),
+                  // En-tête de l'espace connecté : nom et logo de
+                  // l'église (règle d'Axel, 14 novembre 2026), pas le
+                  // logo e-System Church en grand.
+                  EnteteEspace(
+                    eglise: context.watch<AppState>().church,
+                  ),
                   const SizedBox(height: 12),
                   // En aperçu admin : bandeau de retour vers l'espace
                   // admin (maquette de refonte), en plus du retour de
