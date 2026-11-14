@@ -199,7 +199,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'APERÇU MULTI-RÔLES',
+                                  'APERÇU FIDÈLE',
                                   style: TextStyle(
                                     fontFamily: 'Inter',
                                     fontSize: 11,
@@ -248,7 +248,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               .entrerApercuFidele(),
                           icon: const Icon(Icons.arrow_forward),
                           label: const Text(
-                              'Basculer vers l’espace fidèle'),
+                              'Aperçu de l’espace fidèle'),
                         ),
                       ),
                     ],

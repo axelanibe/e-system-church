@@ -680,7 +680,9 @@ class _ProchainCulte extends StatelessWidget {
                     child: Text(
                       'À venir',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.white,
+                        // T13, D02 : jamais de texte blanc sur or (2,24:1).
+                        // Bleu nuit sur or : 7,36:1.
+                        color: AppTheme.bleuNuit,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -958,7 +960,9 @@ class _EtapeParcours extends StatelessWidget {
             backgroundColor:
                 faite ? AppTheme.or : Theme.of(context).colorScheme.surfaceContainerHighest,
             child: faite
-                ? const Icon(Icons.check, size: 16, color: Colors.white)
+                // T13, D02 : jamais de blanc sur or (2,24:1, icône
+                // 16 px incluse). Bleu nuit sur or : 7,36:1.
+                ? const Icon(Icons.check, size: 16, color: AppTheme.bleuNuit)
                 : Text(
                     '$numero',
                     style: Theme.of(context).textTheme.bodySmall,
