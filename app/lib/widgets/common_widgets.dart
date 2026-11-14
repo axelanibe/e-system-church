@@ -286,7 +286,10 @@ class StatCard extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 aide!,
-                maxLines: 1,
+                // 3 lignes : le tableau de bord réserve la hauteur
+                // pour 3 lignes d'aide (grille 2 colonnes, ratio
+                // 0,85) ; à 1 ligne les aides étaient tronquées.
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall,
               ),

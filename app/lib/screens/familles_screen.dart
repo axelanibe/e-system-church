@@ -211,46 +211,51 @@ class _FamillesScreenState extends State<FamillesScreen> {
     required String message,
     String? hint,
   }) {
+    // L'état vide est au-dessus de sections fixes (Fiche d'un membre,
+    // Enfants & jeunesse) : sur un petit écran il déborde sur elles.
+    // On le rend défilant au lieu de laisser les textes se chevaucher.
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.violetProfond.withValues(alpha: 0.06),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                size: 40,
-                color: AppTheme.violetProfond,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.violetProfond,
-              ),
-            ),
-            if (hint != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                hint,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppTheme.violetProfond.withValues(alpha: 0.7),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppTheme.violetProfond.withValues(alpha: 0.06),
+                  shape: BoxShape.circle,
                 ),
-                textAlign: TextAlign.center,
+                child: Icon(
+                  icon,
+                  size: 40,
+                  color: AppTheme.violetProfond,
+                ),
               ),
+              const SizedBox(height: 16),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.violetProfond,
+                ),
+              ),
+              if (hint != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  hint,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.violetProfond.withValues(alpha: 0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

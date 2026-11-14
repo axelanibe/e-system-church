@@ -829,6 +829,10 @@ class _PastoralScreenState extends State<PastoralScreen> {
           ],
           bottom: TabBar(
             isScrollable: true,
+            // Les 4 libellés doivent tenir sur 390 px sans que le
+            // dernier soit coupé au bord droit : on resserre les
+            // marges latérales des onglets au lieu de renommer.
+            labelPadding: const EdgeInsets.symmetric(horizontal: 8),
             onTap: (i) => setState(() {
               _tab = i;
               _query = '';

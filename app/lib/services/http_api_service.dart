@@ -136,9 +136,17 @@ class HttpApiService implements ApiService {
         'hors_ligne',
       );
     }
-    final Map<String, dynamic> data = res.body.isEmpty
-        ? <String, dynamic>{}
-        : jsonDecode(res.body) as Map<String, dynamic>;
+    // Les routes à tableau nu (GET /moi/rapports-annexe/recus,
+    // GET /budgets-mensuels) renvoient un JSON qui n'est pas un
+    // objet : on enveloppe la liste pour garder le type de retour
+    // (la liste se lit ensuite via `data['items']`, comme `_items`).
+    final dynamic brut =
+        res.body.isEmpty ? <String, dynamic>{} : jsonDecode(res.body);
+    final Map<String, dynamic> data = brut is Map<String, dynamic>
+        ? brut
+        : brut is List<dynamic>
+            ? <String, dynamic>{'items': brut}
+            : <String, dynamic>{};
     if (res.statusCode >= 200 && res.statusCode < 300) return data;
     if (res.statusCode == 401 &&
         rafraichir &&
@@ -560,12 +568,9 @@ class HttpApiService implements ApiService {
   }
 
   @override
-  Future<List<RapportAnnexe>> getRapportsRecus() async {
-    final data = await _call('GET', '/moi/rapports-annexe/recus');
-    return (data as List<dynamic>)
-        .map((e) => RapportAnnexe.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
+  Future<List<RapportAnnexe>> getRapportsRecus() async => _items(
+      await _call('GET', '/moi/rapports-annexe/recus'),
+      RapportAnnexe.fromJson);
 
   @override
   Future<RendezVous> demanderRendezVous({
