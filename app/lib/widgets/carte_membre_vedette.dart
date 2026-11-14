@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../config/app_theme.dart';
 import '../models/fidele.dart';
+import '../services/preferences_locales.dart';
 import 'church_avatar.dart';
 import 'mere_badge.dart';
 
@@ -39,6 +41,13 @@ class CarteMembreVedette extends StatelessWidget {
         ? '${church.code}:${profil.matricule}'
         : (profil.matricule ?? '');
     final photoUrl = profil.user.photoUrl;
+    // T12 (US16) : en mode économique, la photo réseau n'est pas chargée.
+    // Lecture nullable : les tests pompent parfois la carte sans le
+    // fournisseur de préférences, le mode économique vaut alors faux.
+    final photoAffichee =
+        (context.watch<PreferencesLocales?>()?.modeEconomique ?? false)
+            ? null
+            : photoUrl;
     // Carte du modèle : dégradé bleu nuit, barre or en haut.
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -65,10 +74,10 @@ class CarteMembreVedette extends StatelessWidget {
                       CircleAvatar(
                         radius: 32,
                         backgroundColor: Colors.white24,
-                        backgroundImage: photoUrl != null
-                            ? NetworkImage(photoUrl)
+                        backgroundImage: photoAffichee != null
+                            ? NetworkImage(photoAffichee)
                             : null,
-                        child: photoUrl == null
+                        child: photoAffichee == null
                             ? Text(
                                 _initiales(profil.user.fullName),
                                 style: const TextStyle(

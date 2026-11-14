@@ -137,10 +137,18 @@ class ConsultationSensible {
         _ => ressource,
       };
 
+  /// Nom du lecteur, alias de [userNom] : la route T12
+  /// (`/consultations-sensibles`) renvoie `lecteur`, celle de T11
+  /// (`/audit/consultations`) renvoie `user_nom`.
+  String? get lecteur => userNom;
+
+  /// Date de création au format texte, alias de [createdAt].
+  String get creeLe => createdAt?.toIso8601String() ?? '';
+
   factory ConsultationSensible.fromJson(Map<String, dynamic> json) =>
       ConsultationSensible(
         id: json['id'] as String,
-        userNom: json['user_nom'] as String?,
+        userNom: json['user_nom'] as String? ?? json['lecteur'] as String?,
         ressource: json['ressource'] as String? ?? '',
         ressourceId: json['ressource_id'] as String?,
         ressourceNom: json['ressource_nom'] as String?,

@@ -83,7 +83,7 @@ class ModulesScreen extends StatelessWidget {
     (
       'US restantes et dette',
       'US4 à US17 restantes et dette.',
-      'T12 · À venir',
+      'T12 · Construit, en ligne',
       Icons.receipt_long_outlined,
     ),
     (

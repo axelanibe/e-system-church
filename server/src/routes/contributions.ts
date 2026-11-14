@@ -125,9 +125,28 @@ export async function confirmerContribution(
         SET status = 'confirme', recu_numero = $3, recu_emis_le = now(),
             valide_par = $4
       WHERE id = $1 AND church_id = $2
-      RETURNING id, type, amount_fcfa, status, recu_numero`,
+      RETURNING id, type, amount_fcfa, status, recu_numero, promesse_id`,
     [contributionId, churchId, recuNumero, opts.validePar],
   );
+  // T12 (US4) : la confirmation d'un versement marque son échéance reçue.
+  if (rows[0].promesse_id) {
+    await client.query(
+      `UPDATE echeances_promesses SET statut = 'recu'
+        WHERE contribution_id = $1 AND statut = 'en_attente'`,
+      [contributionId],
+    );
+    const { rows: reste } = await client.query(
+      `SELECT count(*)::text AS n FROM echeances_promesses
+        WHERE promesse_id = $1 AND statut = 'en_attente'`,
+      [rows[0].promesse_id],
+    );
+    if (Number(reste[0]?.n ?? 0) === 0) {
+      await client.query(
+        `UPDATE promesses SET statut = 'terminee' WHERE id = $1 AND statut = 'en_cours'`,
+        [rows[0].promesse_id],
+      );
+    }
+  }
   const libelle = LIBELLES_TYPE[contribution.type as string] ?? contribution.type;
   await client.query(
     `INSERT INTO caisse_mouvements

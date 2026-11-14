@@ -39,6 +39,7 @@ import '../models/rattachement.dart';
 import '../models/serviteurs.dart';
 import '../models/stats.dart';
 import '../models/sycebnl.dart';
+import '../models/us_restantes.dart';
 
 /// Erreur renvoyée par l'API (ou par le service en mode démo).
 /// `code` est le code d'erreur du serveur (`code_2fa_requis`,
@@ -1172,6 +1173,13 @@ abstract class ApiService {
     // T10 : signataires configurables, vides par défaut.
     String? signataireNominations,
     String? signataireProcesVerbaux,
+    // T12 (US8, US11, US14). `effacerDimeSuggere` remet la dîme à vide
+    // (désactivée) ; sans lui, un montant null ne touche pas au champ.
+    int? montantDimeSuggere,
+    bool effacerDimeSuggere = false,
+    bool? transparenceVisibleMembres,
+    int? seuilInactiviteSemaines,
+    int? seuilBaisseContributionsPct,
   });
 
   Future<List<RoleEglise>> getRoles();
@@ -1395,4 +1403,80 @@ abstract class ApiService {
 
   /// Rejoue une seule action hors ligne.
   Future<ActionHorsLigne> rejouerActionHorsLigne(String id);
+
+  // -- US4 à US17 restantes (T12) --------------------------------------------
+  Future<List<Promesse>> getPromesses({String? memberId});
+  Future<Promesse> getPromesse(String id);
+  Future<Promesse> createPromesse({
+    required String memberId,
+    required int montantTotalFcfa,
+    String? dateDebut,
+    int nbVersements = 1,
+  });
+  Future<Promesse> annulerPromesse(String id);
+  Future<Map<String, dynamic>> verserPromesse({
+    required String promesseId,
+    required String echeanceId,
+    required int amountFcfa,
+    required String paymentMethod,
+    String? paymentRef,
+    String? note,
+  });
+
+  Future<List<DonNature>> getDonsNature({String? typeDon});
+  Future<DonNature> createDonNature({
+    String? memberId,
+    required String description,
+    int quantite = 1,
+    String? unite,
+    String typeDon = 'materiel',
+    double? heures,
+    String? dateDon,
+    bool anonyme = false,
+  });
+
+  Future<List<Visiteur>> getVisiteurs({String? statut});
+  Future<Visiteur> createVisiteur({
+    required String nom,
+    String? dateVenue,
+    String? telephone,
+    String? email,
+    String? moyenContact,
+  });
+  Future<Visiteur> devenirMembre(String visiteurId, String memberId);
+
+  Future<List<EvenementVie>> getEvenementsVie({int jours = 30});
+  Future<void> masquerEvenementsVie(List<String> types);
+
+  Future<Transparence> getTransparence({String? periode});
+
+  Future<CartePortefeuille> getCartePortefeuille();
+
+  Future<MesConsentements> getMesConsentements();
+  Future<MesConsentements> saveMesConsentements({
+    bool? whatsapp,
+    bool? smsRepli,
+  });
+  Future<List<WhatsappConsentement>> getWhatsappConsentements();
+
+  Future<List<AlerteMere>> getAlertesMere({String? statut});
+  Future<Map<String, dynamic>> detecterAlertes();
+  Future<AlerteMere> traiterAlerte(String id);
+
+  Future<List<ListeConfigurable>> getListesConfigurables({String? type});
+  Future<ListeConfigurable> createListeConfigurable({
+    required String type,
+    required String libelle,
+    String? niveau,
+  });
+  Future<ListeConfigurable> updateListeConfigurable(
+    String id, {
+    bool? archive,
+  });
+  Future<void> deleteListeConfigurable(String id);
+  Future<List<String>> getStatutsMembre();
+
+  Future<List<ConsultationSensible>> getConsultationsSensibles();
+  Future<List<ConsultationSensible>> getMesConsultations();
+  Future<void> journaliserConsultation(String ressource, {String? ressourceId});
 }
