@@ -22,7 +22,7 @@ import '../screens/settings_screen.dart';
 
 /// Tiroir désengorgé (simulation tiroir désengorgé, modèle projection) :
 /// 11 entrées essentielles, une par ligne avec un titre et un sous-titre,
-/// icônes or sur fond bleu nuit. Une seule entrée par fonction, jamais
+/// icônes or sur fond violet profond. Une seule entrée par fonction, jamais
 /// de doublon avec la barre du bas (Accueil, Membres, Finances,
 /// Départements). Les autres fonctions restent accessibles depuis leur
 /// écran parent : Annonces depuis l'accueil, Présences depuis Cultes,
@@ -87,7 +87,7 @@ class TiroirCourt extends StatelessWidget {
         .where((v) => (v ?? '').isNotEmpty)
         .join(' · ');
     return Drawer(
-      backgroundColor: AppTheme.bleuNuit,
+      backgroundColor: AppTheme.violetProfond,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [

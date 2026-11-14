@@ -107,7 +107,7 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
   Widget _transfertTile(TransfertMembre t,
       {required bool aTraiter, required bool emis}) {
     final color = switch (t.status) {
-      'accepte' => AppTheme.bleuNuit,
+      'accepte' => AppTheme.violetProfond,
       'refuse' || 'annule' => AppTheme.rougeErreur,
       _ => Colors.orange,
     };

@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/app_config.dart';
 import '../config/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/logo_app.dart';
 
 /// À propos : ce qu'est e-System Church, son objectif, son utilité,
 /// son créateur et son contact. Textes repris mot pour mot de la
@@ -39,30 +40,16 @@ class AProposScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: AppTheme.bleuNuit,
+                    color: AppTheme.violetProfond,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Column(
+                  child: const Column(
                     children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppTheme.or, width: 2),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Text(
-                          'eS',
-                          style: TextStyle(
-                            color: AppTheme.or,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
+                      // Logo de l'application (projection couleurs du
+                      // logo), dans le héros violet.
+                      LogoApp(taille: 96),
+                      SizedBox(height: 12),
+                      Text(
                         'e-System Church',
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -71,8 +58,8 @@ class AProposScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
+                      SizedBox(height: 4),
+                      Text(
                         '« L’église sans frontière »',
                         textAlign: TextAlign.center,
                         style: TextStyle(

@@ -309,7 +309,7 @@ class StatMini extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color ?? AppTheme.bleuNuit),
+            Icon(icon, color: color ?? AppTheme.violetProfond),
             const SizedBox(height: 8),
             FittedBox(
               fit: BoxFit.scaleDown,

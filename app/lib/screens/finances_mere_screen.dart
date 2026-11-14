@@ -248,7 +248,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                     value: formatFcfa(rapport.entreesFcfa),
                     // Bleu nuit : le vert vif Colors.green est
                     // illisible en texte sur fond clair.
-                    color: AppTheme.bleuNuit,
+                    color: AppTheme.violetProfond,
                   ),
                 ),
                 Expanded(
@@ -266,7 +266,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                     value: formatFcfa(rapport.soldeFcfa),
                     // Présences : le bleu vif Colors.blue est illisible
                     // en texte sur fond clair.
-                    color: AppTheme.bleuNuit,
+                    color: AppTheme.violetProfond,
                   ),
                 ),
               ],

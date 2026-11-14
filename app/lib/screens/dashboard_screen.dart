@@ -8,6 +8,7 @@ import '../models/rapport.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/logo_app.dart';
 import '../widgets/soft_button.dart';
 import '../widgets/soft_card.dart';
 import 'annonces_screen.dart';
@@ -38,7 +39,7 @@ class _DashboardData {
 }
 
 /// Tableau de bord (projection, captures IMG_4027 à IMG_4031) :
-/// carte bleu nuit « Aujourd'hui » avec le prochain culte dedans,
+/// carte violet profond « Aujourd'hui » avec le prochain culte dedans,
 /// 4 chiffres réels, « Mon réseau », annonces récentes, actions
 /// rapides, puis les rapports (mère ou annexes).
 /// Chiffres de mon église + consolidé du réseau
@@ -171,6 +172,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // En-tête de l'espace connecté : nom et logo de
+                // l'église (règle d'Axel, 14 novembre 2026), pas le
+                // logo e-System Church en grand.
+                EnteteEspace(eglise: church),
+                const SizedBox(height: 16),
                 // Aperçu multi-rôles (maquette de refonte) : remplace
                 // la carte « Démonstration des deux espaces ». Même
                 // accès que l'espace fidèle, en aperçu avec retour.
@@ -180,8 +186,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        AppTheme.bleuNuit,
-                        Color(0xFF1A355B),
+                        AppTheme.violetProfond,
+                        AppTheme.violetSecondaire,
                       ],
                     ),
                     borderRadius: BorderRadius.circular(16),
@@ -241,7 +247,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: FilledButton.icon(
                           style: FilledButton.styleFrom(
                             backgroundColor: AppTheme.or,
-                            foregroundColor: AppTheme.bleuNuit,
+                            foregroundColor: AppTheme.violetProfond,
                           ),
                           onPressed: () => context
                               .read<AppState>()
@@ -311,7 +317,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         // Aujourd'hui (projection, IMG_4027) : carte
-                        // bleu nuit avec le prochain culte dedans,
+                        // violet profond avec le prochain culte dedans,
                         // puis les 4 chiffres réels. Aucun chiffre
                         // inventé.
                         Container(
@@ -320,8 +326,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                AppTheme.bleuNuit,
-                                Color(0xFF1A355B),
+                                AppTheme.violetProfond,
+                                AppTheme.violetSecondaire,
                               ],
                             ),
                             borderRadius: BorderRadius.circular(16),
@@ -353,7 +359,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       style: TextStyle(
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.bold,
-                                        color: AppTheme.bleuNuit,
+                                        color: AppTheme.violetProfond,
                                       ),
                                     ),
                                   ),
@@ -450,7 +456,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   label: 'Membres',
                                   value: '${data.membresTotal}',
                                   icon: Icons.people_outline,
-                                  color: AppTheme.bleuNuit,
+                                  color: AppTheme.violetProfond,
                                   aide: 'Personnes inscrites dans votre '
                                       'église.',
                                 ),
@@ -472,7 +478,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   label: 'Nouveaux membres',
                                   value: '${data.nouveauxMembres}',
                                   icon: Icons.person_add_outlined,
-                                  color: AppTheme.bleuNuit,
+                                  color: AppTheme.violetProfond,
                                   aide: 'Nouveaux convertis inscrits dans '
                                       'votre église.',
                                 ),

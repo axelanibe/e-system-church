@@ -16,13 +16,14 @@ import 'package:provider/provider.dart';
 
 void main() {
   group('Thème fondation', () {
-    test('palette de l\'artefact tranchée', () {
-      expect(AppTheme.fondPapier, const Color(0xFFF5F6FA));
-      expect(AppTheme.bordure, const Color(0xFFD9DEE6));
-      expect(AppTheme.bleuNuit, const Color(0xFF0B1F3A));
-      expect(AppTheme.or, const Color(0xFFD4A72C));
+    test('palette du logo tranchée', () {
+      expect(AppTheme.fondPapier, const Color(0xFFF6F2FB));
+      expect(AppTheme.bordure, const Color(0xFFDDD3EE));
+      expect(AppTheme.violetProfond, const Color(0xFF2A0059));
+      expect(AppTheme.violetSecondaire, const Color(0xFF3D0073));
+      expect(AppTheme.or, const Color(0xFFE8B820));
       expect(AppTheme.orFonce, const Color(0xFF8A6A12));
-      expect(AppTheme.orClair, const Color(0xFFF7F0DA));
+      expect(AppTheme.orClair, const Color(0xFFF7ECC8));
       expect(AppTheme.rougeErreur, const Color(0xFFB3261E));
       expect(AppTheme.vertFonce, const Color(0xFF0C5B40));
       expect(AppTheme.bleuFonce, const Color(0xFF1B4F72));
@@ -38,17 +39,17 @@ void main() {
       }
 
       const fond = AppTheme.fondPapier;
-      expect(contraste(AppTheme.bleuNuit, fond), greaterThanOrEqualTo(4.5));
+      expect(contraste(AppTheme.violetProfond, fond), greaterThanOrEqualTo(4.5));
       expect(contraste(AppTheme.orFonce, fond), greaterThanOrEqualTo(4.5));
       expect(contraste(AppTheme.rougeErreur, fond),
           greaterThanOrEqualTo(4.5));
       expect(contraste(AppTheme.vertFonce, fond),
           greaterThanOrEqualTo(4.5));
-      expect(contraste(Colors.white, AppTheme.bleuNuit),
+      expect(contraste(Colors.white, AppTheme.violetProfond),
           greaterThanOrEqualTo(4.5));
-      expect(contraste(AppTheme.bleuNuit, AppTheme.or),
+      expect(contraste(AppTheme.violetProfond, AppTheme.or),
           greaterThanOrEqualTo(4.5));
-      expect(contraste(AppTheme.bleuNuit, AppTheme.orClair),
+      expect(contraste(AppTheme.violetProfond, AppTheme.orClair),
           greaterThanOrEqualTo(4.5));
     });
 

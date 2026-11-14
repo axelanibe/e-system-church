@@ -319,7 +319,7 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
                       label: r.statutLabel,
                       color: r.statut == 'annulee'
                           ? AppTheme.rougeErreur
-                          : AppTheme.bleuNuit,
+                          : AppTheme.violetProfond,
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline),
@@ -387,7 +387,7 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
                       label: d.statutLabel,
                       color: d.statut == 'rejetee'
                           ? AppTheme.rougeErreur
-                          : AppTheme.bleuNuit,
+                          : AppTheme.violetProfond,
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline),
@@ -455,7 +455,7 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
                     StatusChip(
                       label: pv.statutLabel,
                       color: pv.statut == 'signe'
-                          ? AppTheme.bleuNuit
+                          ? AppTheme.violetProfond
                           : Colors.grey,
                     ),
                     if (pv.statut == 'brouillon')

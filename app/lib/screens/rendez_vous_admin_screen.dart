@@ -205,7 +205,7 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
                         trailing: StatusChip(
                           label: _rdvStatuts[r.statut] ?? r.statut,
                           color: r.statut == 'confirme'
-                              ? AppTheme.bleuNuit
+                              ? AppTheme.violetProfond
                               : r.statut == 'en_attente'
                                   ? Colors.orange
                                   : AppTheme.rougeErreur,

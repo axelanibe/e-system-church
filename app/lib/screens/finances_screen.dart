@@ -70,7 +70,7 @@ class _FinancesScreenState extends State<FinancesScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'confirme':
-        return AppTheme.bleuNuit;
+        return AppTheme.violetProfond;
       case 'en_attente':
         return Colors.orange;
       case 'annule':
@@ -205,7 +205,7 @@ class _FinancesScreenState extends State<FinancesScreen> {
                                       : Icons.trending_up,
                                   color: type == 'depense'
                                       ? AppTheme.rougeErreur
-                                      : AppTheme.bleuNuit,
+                                      : AppTheme.violetProfond,
                                 ),
                             ],
                           );
@@ -453,8 +453,8 @@ class _SousOnglets extends StatelessWidget {
                       fontWeight:
                           index == i ? FontWeight.bold : FontWeight.normal,
                       color: index == i
-                          ? AppTheme.bleuNuit
-                          : AppTheme.bleuNuit.withValues(alpha: 0.6),
+                          ? AppTheme.violetProfond
+                          : AppTheme.violetProfond.withValues(alpha: 0.6),
                     ),
                   ),
                 ),

@@ -35,6 +35,12 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # Icône ESC simplifiée d'e-System Church (projection couleurs du
+  # logo, validée par Axel le 14 novembre 2026 ; correction du même
+  # jour : c'est l'icône ESC qui va dans l'application, pas le logo
+  # complet).
+  assets:
+    - assets/icone-esc.png
   # Polices de l'artefact, embarquées dans le build (aucun
   # téléchargement à l'exécution, site statique et APK autonomes).
   # Fichiers TTF officiels Google Fonts, poids utilisés par le thème.

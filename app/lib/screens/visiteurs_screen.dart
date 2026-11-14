@@ -202,7 +202,7 @@ class _VisiteursScreenState extends State<VisiteursScreen> {
                     trailing: v.statut == 'devenu_membre'
                         ? StatusChip(
                             label: t.devenirMembre,
-                            color: AppTheme.bleuNuit)
+                            color: AppTheme.violetProfond)
                         : TextButton(
                             onPressed: () => _devenirMembre(v),
                             child: Text(t.devenirMembre),

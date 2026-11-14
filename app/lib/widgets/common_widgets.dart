@@ -134,7 +134,7 @@ class BandeauLectureSeule extends StatelessWidget {
               'Abonnement expiré : l’application est en lecture seule. '
               'Renouvelez-le pour modifier à nouveau.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.bleuNuit,
+                    color: AppTheme.violetProfond,
                     fontWeight: FontWeight.bold,
                   ),
             ),
@@ -263,7 +263,7 @@ class StatCard extends StatelessWidget {
                 label.toUpperCase(),
                 maxLines: 1,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppTheme.bleuNuit.withValues(alpha: 0.7),
+                      color: AppTheme.violetProfond.withValues(alpha: 0.7),
                       fontWeight: FontWeight.bold,
                     ),
               ),
@@ -278,7 +278,7 @@ class StatCard extends StatelessWidget {
                 style: AppTheme.styleCode.copyWith(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: color ?? AppTheme.bleuNuit,
+                  color: color ?? AppTheme.violetProfond,
                 ),
               ),
             ),

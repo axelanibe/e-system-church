@@ -87,7 +87,7 @@ class _CartePortefeuilleScreenState extends State<CartePortefeuilleScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               Card(
-                color: AppTheme.bleuNuit,
+                color: AppTheme.violetProfond,
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(

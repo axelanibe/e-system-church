@@ -30,7 +30,7 @@ class ExempleBilanScreen extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: AppTheme.bleuNuit,
+                    color: AppTheme.violetProfond,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(

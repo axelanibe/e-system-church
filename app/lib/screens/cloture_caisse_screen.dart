@@ -138,14 +138,14 @@ class _ClotureCaisseScreenState extends State<ClotureCaisseScreen> {
                           value: formatMontant(
                               donnees.solde.solde, state.devise),
                           icon: Icons.account_balance_wallet_outlined,
-                          color: AppTheme.bleuNuit,
+                          color: AppTheme.violetProfond,
                         ),
                         StatCard(
                           label: 'Entrées',
                           value: formatMontant(
                               donnees.solde.entrees, state.devise),
                           icon: Icons.trending_up,
-                          color: AppTheme.bleuNuit,
+                          color: AppTheme.violetProfond,
                         ),
                         StatCard(
                           label: 'Sorties',
@@ -277,12 +277,12 @@ class _ClotureCaisseScreenState extends State<ClotureCaisseScreen> {
                                 fontWeight: FontWeight.bold,
                                 color: cloture.ecartFcfa != 0
                                     ? AppTheme.rougeErreur
-                                    : AppTheme.bleuNuit,
+                                    : AppTheme.violetProfond,
                               ),
                             ),
                             const StatusChip(
                               label: 'Verrouillée',
-                              color: AppTheme.bleuNuit,
+                              color: AppTheme.violetProfond,
                             ),
                           ],
                         ),

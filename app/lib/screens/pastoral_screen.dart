@@ -115,7 +115,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
           ? Colors.orange
           : priorite == 'basse'
               ? Colors.grey
-              : AppTheme.bleuNuit;
+              : AppTheme.violetProfond;
 
   Widget _filtreChips({
     required List<String?> valeurs,
@@ -710,7 +710,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       trailing: StatusChip(
                         label: v.statutLabel,
                         color: v.statut == 'realisee'
-                            ? AppTheme.bleuNuit
+                            ? AppTheme.violetProfond
                             : v.statut == 'annulee'
                                 ? AppTheme.rougeErreur
                                 : Colors.orange,

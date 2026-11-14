@@ -129,7 +129,7 @@ class _CodesTutelleScreenState extends State<CodesTutelleScreen> {
                               StatusChip(
                                 label: c.statusLabel,
                                 color: c.estActif
-                                    ? AppTheme.bleuNuit
+                                    ? AppTheme.violetProfond
                                     : AppTheme.rougeErreur,
                               ),
                               IconButton(

@@ -397,7 +397,7 @@ class _CheckinEnfantsScreenState extends State<CheckinEnfantsScreen> {
             Text(
               _message!,
               style: TextStyle(
-                color: _succes ? AppTheme.bleuNuit : AppTheme.rougeErreur,
+                color: _succes ? AppTheme.violetProfond : AppTheme.rougeErreur,
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,

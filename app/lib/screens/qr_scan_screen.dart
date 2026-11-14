@@ -187,7 +187,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
           ),
           Container(
             width: double.infinity,
-            color: AppTheme.bleuNuit,
+            color: AppTheme.violetProfond,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -249,7 +249,7 @@ class _ErreurCamera extends StatelessWidget {
           const Icon(
             Icons.no_photography_outlined,
             size: 64,
-            color: AppTheme.bleuNuit,
+            color: AppTheme.violetProfond,
           ),
           const SizedBox(height: 16),
           Text(

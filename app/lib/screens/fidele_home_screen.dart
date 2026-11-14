@@ -13,6 +13,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/carte_membre_vedette.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/logo_app.dart';
 import '../widgets/soft_card.dart';
 import 'bible_fidele_screen.dart';
 import 'carte_fidele_screen.dart';
@@ -154,6 +155,13 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // En-tête de l'espace connecté : nom et logo de
+                  // l'église (règle d'Axel, 14 novembre 2026), pas le
+                  // logo e-System Church en grand.
+                  EnteteEspace(
+                    eglise: context.watch<AppState>().church,
+                  ),
+                  const SizedBox(height: 12),
                   // En aperçu admin : bandeau de retour vers l'espace
                   // admin (maquette de refonte), en plus du retour de
                   // l'en-tête.
@@ -181,7 +189,7 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                                 fontFamily: 'Inter',
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.bleuNuit,
+                                color: AppTheme.violetProfond,
                               ),
                             ),
                           ),
@@ -651,7 +659,7 @@ class _ProchainCulte extends StatelessWidget {
         final theme = Theme.of(context);
         return Container(
           decoration: BoxDecoration(
-            color: AppTheme.bleuNuit,
+            color: AppTheme.violetProfond,
             borderRadius: BorderRadius.circular(16),
           ),
           padding: const EdgeInsets.all(20),
@@ -682,7 +690,7 @@ class _ProchainCulte extends StatelessWidget {
                       style: theme.textTheme.bodySmall?.copyWith(
                         // T13, D02 : jamais de texte blanc sur or (2,24:1).
                         // Bleu nuit sur or : 7,36:1.
-                        color: AppTheme.bleuNuit,
+                        color: AppTheme.violetProfond,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -962,7 +970,7 @@ class _EtapeParcours extends StatelessWidget {
             child: faite
                 // T13, D02 : jamais de blanc sur or (2,24:1, icône
                 // 16 px incluse). Bleu nuit sur or : 7,36:1.
-                ? const Icon(Icons.check, size: 16, color: AppTheme.bleuNuit)
+                ? const Icon(Icons.check, size: 16, color: AppTheme.violetProfond)
                 : Text(
                     '$numero',
                     style: Theme.of(context).textTheme.bodySmall,

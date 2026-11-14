@@ -12,11 +12,11 @@ import '../state/app_state.dart';
 /// Accessibilité (11 novembre 2026) : une église sans couleur, ou avec
 /// une couleur claire comme l'or, avait des initiales blanches sur fond
 /// clair, ratio ~1,5:1, invisibles. Le fond de repli est désormais le
-/// bleu nuit, et la couleur du texte est celle, blanc ou bleu nuit,
+/// violet profond, et la couleur du texte est celle, blanc ou violet profond,
 /// dont le contraste avec le fond est le plus fort. Un seuil fixe sur la
-/// luminosité ne suffit pas : l'or #D4A72C a une luminosité
-/// moyenne, mais du blanc dessus ne contraste qu'à 2,24:1, et du
-/// bleu nuit dessus à 7,36:1.
+/// luminosité ne suffit pas : l'or du logo #E8B820 a une luminosité
+/// moyenne, mais du blanc dessus ne contraste qu'à 1,86:1, et du
+/// violet profond dessus à 9,1:1.
 class ChurchAvatar extends StatelessWidget {
   final Church? church;
   final double radius;
@@ -32,13 +32,13 @@ class ChurchAvatar extends StatelessWidget {
     return (clair + 0.05) / (sombre + 0.05);
   }
 
-  /// Couleur de texte la plus lisible sur [fond] : blanc ou bleu nuit.
-  /// Ex. sur or #D4A72C, le blanc ne vaut que 2,24:1, le bleu nuit
-  /// 7,36:1, c'est le meilleur des deux.
+  /// Couleur de texte la plus lisible sur [fond] : blanc ou violet profond.
+  /// Ex. sur or #E8B820, le blanc ne vaut que 1,86:1, le violet profond
+  /// 9,1:1, c'est le meilleur des deux.
   static Color texteSur(Color fond) =>
-      _contraste(fond, Colors.white) >= _contraste(fond, AppTheme.bleuNuit)
+      _contraste(fond, Colors.white) >= _contraste(fond, AppTheme.violetProfond)
           ? Colors.white
-          : AppTheme.bleuNuit;
+          : AppTheme.violetProfond;
 
   @override
   Widget build(BuildContext context) {
@@ -46,12 +46,12 @@ class ChurchAvatar extends StatelessWidget {
     if (c == null) {
       return CircleAvatar(
         radius: radius,
-        backgroundColor: AppTheme.bleuNuit,
+        backgroundColor: AppTheme.violetProfond,
         child: const Icon(Icons.church_outlined, color: Colors.white),
       );
     }
-    // Fond de repli bleu nuit quand l'église n'a pas de couleur.
-    final fond = c.couleur ?? AppTheme.bleuNuit;
+    // Fond de repli violet profond quand l'église n'a pas de couleur.
+    final fond = c.couleur ?? AppTheme.violetProfond;
     final logoUrl = c.logoUrl;
     // T12 (US16) : en mode économique, le logo réseau n'est pas chargé.
     // Lecture nullable : les tests pompent parfois l'avatar sans le

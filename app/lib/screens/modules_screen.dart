@@ -220,7 +220,7 @@ class ModulesScreen extends StatelessWidget {
                   'T1 à T13',
                   style: AppTheme.styleCode.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.bleuNuit,
+                    color: AppTheme.violetProfond,
                   ),
                 ),
               ),
@@ -303,7 +303,7 @@ class ModulesScreen extends StatelessWidget {
                                   style: AppTheme.styleCode.copyWith(
                                     color: etat.contains('À venir')
                                         ? Colors.grey.shade700
-                                        : AppTheme.bleuNuit,
+                                        : AppTheme.violetProfond,
                                   ),
                                 ),
                               ),

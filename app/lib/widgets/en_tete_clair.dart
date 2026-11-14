@@ -1,37 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_theme.dart';
-
-/// Logo « eS » : pastille bleu nuit cerclée d'or, comme l'artefact.
-class LogoES extends StatelessWidget {
-  const LogoES({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: AppTheme.bleuNuit,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.or, width: 2),
-      ),
-      alignment: Alignment.center,
-      child: const Text(
-        'eS',
-        style: TextStyle(
-          fontFamily: 'PlusJakartaSans',
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: AppTheme.or,
-        ),
-      ),
-    );
-  }
-}
+import 'logo_app.dart';
 
 /// En-tête clair, en haut de chaque coquille : titre de l'écran,
-/// sous-titre quand l'écran en a un, et le logo « eS ».
+/// sous-titre quand l'écran en a un, et l'icône ESC.
 /// [leading] est le bouton de gauche : menu du tiroir dans les
 /// coquilles, retour sur les écrans poussés.
 class EnTeteClair extends StatelessWidget {
@@ -81,7 +54,7 @@ class EnTeteClair extends StatelessWidget {
                         .bodySmall
                         ?.copyWith(
                           color:
-                              AppTheme.bleuNuit.withValues(alpha: 0.7),
+                              AppTheme.violetProfond.withValues(alpha: 0.7),
                         ),
                   ),
                 ],
@@ -89,7 +62,9 @@ class EnTeteClair extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          const LogoES(),
+          // Icône ESC (48x48 arrondie) à la place du texte « eS »
+          // (correction d'Axel, 14 novembre 2026).
+          const LogoApp(taille: 48),
         ],
       ),
     );

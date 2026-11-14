@@ -281,14 +281,14 @@ class _CotisationsAdminScreenState extends State<CotisationsAdminScreen> {
                           value: formatMontant(
                               suivi.totaux.totalDuFcfa, state.devise),
                           icon: Icons.payments_outlined,
-                          color: AppTheme.bleuNuit,
+                          color: AppTheme.violetProfond,
                         ),
                         StatCard(
                           label: 'Total payé',
                           value: formatMontant(
                               suivi.totaux.totalPayeFcfa, state.devise),
                           icon: Icons.trending_up,
-                          color: AppTheme.bleuNuit,
+                          color: AppTheme.violetProfond,
                         ),
                         StatCard(
                           label: 'Reste à payer',
@@ -356,7 +356,7 @@ class LigneCotisationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final couleur = switch (ligne.statut) {
-      'payee' => AppTheme.bleuNuit,
+      'payee' => AppTheme.violetProfond,
       'partielle' => Colors.orange,
       _ => AppTheme.rougeErreur,
     };

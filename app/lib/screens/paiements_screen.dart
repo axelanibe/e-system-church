@@ -320,7 +320,7 @@ class _FournisseurCardState extends State<_FournisseurCard> {
     final statutColor = config == null
         ? scheme.onSurfaceVariant
         : config.actif
-            ? AppTheme.bleuNuit
+            ? AppTheme.violetProfond
             : Colors.orange;
     return Card(
       child: Padding(
@@ -441,7 +441,7 @@ class _FournisseurCardState extends State<_FournisseurCard> {
                     style: TextStyle(
                       color: _messageIsError
                           ? scheme.error
-                          : AppTheme.bleuNuit,
+                          : AppTheme.violetProfond,
                     ),
                     textAlign: TextAlign.center,
                   ),

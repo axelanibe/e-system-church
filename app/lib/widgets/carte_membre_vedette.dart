@@ -10,7 +10,7 @@ import 'mere_badge.dart';
 
 /// Carte de membre en vedette, en tête de l'espace fidèle : la plus
 /// belle chose de l'écran, comme une carte bancaire dans une application
-/// grand public. Dégradé bleu nuit, barre or en haut, matricule en
+/// grand public. Dégradé violet profond, barre or en haut, matricule en
 /// mono, comme la carte du modèle. Photo ou initiales, nom en grand,
 /// matricule, église, QR en miniature. Rien d'inventé : que des
 /// données réelles du profil. La photo n'apparaît que si elle a été
@@ -48,7 +48,7 @@ class CarteMembreVedette extends StatelessWidget {
         (context.watch<PreferencesLocales?>()?.modeEconomique ?? false)
             ? null
             : photoUrl;
-    // Carte du modèle : dégradé bleu nuit, barre or en haut.
+    // Carte du modèle : dégradé violet profond, barre or en haut.
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -56,7 +56,7 @@ class CarteMembreVedette extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppTheme.bleuNuit, Color(0xFF16324F)],
+            colors: [AppTheme.violetProfond, AppTheme.violetSecondaire],
           ),
         ),
         child: Column(
@@ -185,7 +185,7 @@ class CarteMembreVedette extends StatelessWidget {
                       onPressed: onVoirCarte,
                       style: FilledButton.styleFrom(
                         backgroundColor: AppTheme.or,
-                        foregroundColor: AppTheme.bleuNuit,
+                        foregroundColor: AppTheme.violetProfond,
                       ),
                       icon: const Icon(Icons.badge_outlined),
                       label: const Text(
