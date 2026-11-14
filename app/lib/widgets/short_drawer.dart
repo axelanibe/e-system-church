@@ -248,7 +248,7 @@ class TiroirCourt extends StatelessWidget {
             icone: Icons.grid_view_outlined,
             titre: 'Modules de l’église',
             sousTitre: 'Noyau et modules activables',
-            onTap: () => _ouvrir(context, const ModulesScreen()),
+            onTap: () => _ouvrir(context, ModulesScreen(onAller: onAller)),
           ),
           _entree(
             icone: Icons.settings_outlined,

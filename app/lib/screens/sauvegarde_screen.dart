@@ -199,11 +199,6 @@ class _SauvegardeScreenState extends State<SauvegardeScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Sauvegardes',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
                   if (_sauvegardes.isEmpty)
                     const Card(
                       child: Padding(
