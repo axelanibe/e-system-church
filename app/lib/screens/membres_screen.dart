@@ -8,6 +8,7 @@ import '../models/anniversaire.dart';
 import '../models/member.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/liste_avec_fab.dart';
 import '../widgets/dialog_helpers.dart';
 import 'member_detail_screen.dart';
 import 'member_form_screen.dart';
@@ -383,57 +384,61 @@ class _MembresScreenState extends State<MembresScreen> {
                         ? 'Aucun membre ne correspond à « ${_filtreLocal.isNotEmpty ? _filtreLocal : _query} ».'
                         : 'Aucun membre trouvé.',
                     actionLabel: state.canManageMembers
-                        ? 'Ajouter un membre'
+                        // T13, D05 : un seul libellé, « Nouveau membre »,
+                        // comme le FAB et le titre du formulaire.
+                        ? 'Nouveau membre'
                         : null,
                     onAction:
                         state.canManageMembers ? _openForm : null,
                   );
                 }
-                return RefreshIndicator(
-                  onRefresh: () async => _refresh(),
-                  child: ListView.builder(
-                    itemCount: membres.length,
-                    itemBuilder: (context, index) {
-                      final member = membres[index];
-                      final fonction = _fonctionTexte(member);
-                      return ListTile(
-                        leading: CircleAvatar(
-                          child: Text(_initiales(member.fullName)),
-                        ),
-                        title: Text(member.fullName),
-                        subtitle: Text(
-                            '${member.matricule}'
-                            '${fonction != null ? ' · $fonction' : ''}'
-                            ' · ${member.department ?? '—'}'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            StatusChip(
-                              label: member.statutAffiche,
-                              color: _statusColor(member.estAncien
-                                  ? 'ancien'
-                                  : member.status),
-                            ),
-                            if (state.canManageMembers)
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                tooltip: 'Supprimer',
-                                onPressed: () => _deleteMember(member),
+                return ListeAvecFab(
+                  child: RefreshIndicator(
+                    onRefresh: () async => _refresh(),
+                    child: ListView.builder(
+                      itemCount: membres.length,
+                      itemBuilder: (context, index) {
+                        final member = membres[index];
+                        final fonction = _fonctionTexte(member);
+                        return ListTile(
+                          leading: CircleAvatar(
+                            child: Text(_initiales(member.fullName)),
+                          ),
+                          title: Text(member.fullName),
+                          subtitle: Text(
+                              '${member.matricule}'
+                              '${fonction != null ? ' · $fonction' : ''}'
+                              ' · ${member.department ?? '—'}'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              StatusChip(
+                                label: member.statutAffiche,
+                                color: _statusColor(member.estAncien
+                                    ? 'ancien'
+                                    : member.status),
                               ),
-                          ],
-                        ),
-                        onTap: () async {
-                          final changed =
-                              await Navigator.of(context).push<bool>(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  MemberDetailScreen(member: member),
-                            ),
-                          );
-                          if (changed == true && mounted) _refresh();
-                        },
-                      );
-                    },
+                              if (state.canManageMembers)
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  tooltip: 'Supprimer',
+                                  onPressed: () => _deleteMember(member),
+                                ),
+                            ],
+                          ),
+                          onTap: () async {
+                            final changed =
+                                await Navigator.of(context).push<bool>(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    MemberDetailScreen(member: member),
+                              ),
+                            );
+                            if (changed == true && mounted) _refresh();
+                          },
+                        );
+                      },
+                    ),
                   ),
                 );
               },

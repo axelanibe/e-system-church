@@ -7,6 +7,7 @@ import '../models/prieres.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/liste_avec_fab.dart';
 import '../widgets/dialog_helpers.dart';
 
 /// Module 5 — Demandes de prière et messages internes.
@@ -286,94 +287,96 @@ class _PrieresScreenState extends State<PrieresScreen> {
                   onAction: () => _createDemande(membres),
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final d = items[index];
-                    return Card(
-                      child: ListTile(
-                        leading: const CircleAvatar(
-                          child: Icon(Icons.volunteer_activism_outlined),
-                        ),
-                        title: Text(d.sujet),
-                        subtitle: Text(
-                          '${d.demandeurNom ?? '—'}'
-                          '${d.confidentiel ? ' · Confidentiel' : ''}'
-                          '${d.details != null ? ' · ${d.details}' : ''}'
-                          ' · ${afficherDateTime(d.createdAt)}',
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            StatusChip(
-                              label: _demandeLabel(d.statut),
-                              color: _demandeColor(d.statut),
-                            ),
-                            if (peutGerer)
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                tooltip: 'Supprimer',
-                                onPressed: () => _deleteDemande(d),
+              return ListeAvecFab(
+                child: RefreshIndicator(
+                  onRefresh: () async => _refresh(),
+                  child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final d = items[index];
+                      return Card(
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.volunteer_activism_outlined),
+                          ),
+                          title: Text(d.sujet),
+                          subtitle: Text(
+                            '${d.demandeurNom ?? '—'}'
+                            '${d.confidentiel ? ' · Confidentiel' : ''}'
+                            '${d.details != null ? ' · ${d.details}' : ''}'
+                            ' · ${afficherDateTime(d.createdAt)}',
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              StatusChip(
+                                label: _demandeLabel(d.statut),
+                                color: _demandeColor(d.statut),
                               ),
-                          ],
-                        ),
-                        onTap: peutGerer ? () async {
-                          String? choix;
-                          await showDialog<void>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: Text(d.sujet),
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (d.demandeurNom != null)
-                                    Text('Demandé par : ${d.demandeurNom}'),
-                                  if (d.createdAt != null)
+                              if (peutGerer)
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  tooltip: 'Supprimer',
+                                  onPressed: () => _deleteDemande(d),
+                                ),
+                            ],
+                          ),
+                          onTap: peutGerer ? () async {
+                            String? choix;
+                            await showDialog<void>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: Text(d.sujet),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (d.demandeurNom != null)
+                                      Text('Demandé par : ${d.demandeurNom}'),
+                                    if (d.createdAt != null)
+                                      Text(
+                                          'Le ${formatDate(d.createdAt)}'),
                                     Text(
-                                        'Le ${formatDate(d.createdAt)}'),
-                                  Text(
-                                      'Statut actuel : ${_demandeLabel(d.statut)}'),
-                                  if (d.details != null &&
-                                      d.details!.isNotEmpty) ...[
-                                    const SizedBox(height: 8),
-                                    Text(d.details!),
+                                        'Statut actuel : ${_demandeLabel(d.statut)}'),
+                                    if (d.details != null &&
+                                        d.details!.isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      Text(d.details!),
+                                    ],
                                   ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop(),
+                                    child: const Text('Fermer'),
+                                  ),
+                                  if (d.statut != 'en_cours')
+                                    TextButton(
+                                      onPressed: () {
+                                        choix = 'en_cours';
+                                        Navigator.of(ctx).pop();
+                                      },
+                                      child: const Text('Passer en cours'),
+                                    ),
+                                  if (d.statut != 'terminee')
+                                    TextButton(
+                                      onPressed: () {
+                                        choix = 'terminee';
+                                        Navigator.of(ctx).pop();
+                                      },
+                                      child: const Text('Marquer terminée'),
+                                    ),
                                 ],
                               ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(),
-                                  child: const Text('Fermer'),
-                                ),
-                                if (d.statut != 'en_cours')
-                                  TextButton(
-                                    onPressed: () {
-                                      choix = 'en_cours';
-                                      Navigator.of(ctx).pop();
-                                    },
-                                    child: const Text('Passer en cours'),
-                                  ),
-                                if (d.statut != 'terminee')
-                                  TextButton(
-                                    onPressed: () {
-                                      choix = 'terminee';
-                                      Navigator.of(ctx).pop();
-                                    },
-                                    child: const Text('Marquer terminée'),
-                                  ),
-                              ],
-                            ),
-                          );
-                          if (choix != null) {
-                            await _setDemandeStatut(d, choix!);
-                          }
-                        } : null,
-                      ),
-                    );
-                  },
+                            );
+                            if (choix != null) {
+                              await _setDemandeStatut(d, choix!);
+                            }
+                          } : null,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               );
             },
@@ -418,22 +421,24 @@ class _PrieresScreenState extends State<PrieresScreen> {
                   onAction: () => _createMessage(membres),
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final m = items[index];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.mail_outline),
-                      ),
-                      title: Text(m.sujet),
-                      subtitle: Text(
-                        '${m.destinataireId != null ? 'À : ${noms[m.destinataireId] ?? '—'} · ' : ''}${m.corps} · ${afficherDateTime(m.createdAt)}',
-                      ),
-                    );
-                  },
+              return ListeAvecFab(
+                child: RefreshIndicator(
+                  onRefresh: () async => _refresh(),
+                  child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final m = items[index];
+                      return ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.mail_outline),
+                        ),
+                        title: Text(m.sujet),
+                        subtitle: Text(
+                          '${m.destinataireId != null ? 'À : ${noms[m.destinataireId] ?? '—'} · ' : ''}${m.corps} · ${afficherDateTime(m.createdAt)}',
+                        ),
+                      );
+                    },
+                  ),
                 ),
               );
             },

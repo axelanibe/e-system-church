@@ -35,6 +35,27 @@ numérotées de `../db/migrations/` (s'il y en a) :
 npm run migrate
 ```
 
+Procédure unique (T13, P0-3) : toujours `npm run migrate` complet,
+jamais un fichier seul — la migration 028 a échoué en production parce
+qu'un fichier seul était exécuté sans le schéma préalable (PR #89).
+Règles d'écriture, doublons 001/005/011 et numéros manquants 017/027 :
+voir `../db/migrations/README.md`. Garde-fou :
+`server/test-migrations-t13.mjs` (index avant sa table, doublons,
+`migrate.ts` rejoué deux fois = no-op).
+
+## Tester
+
+```bash
+npm run typecheck   # tsc --noEmit, 0 erreur
+npm test            # boucle server/run-tests.mjs : chaque test-*.mjs
+                    # dans l'ordre, sauf les 9 échecs préexistants listés
+                    # dans run-tests.mjs et dans .github/workflows/server.yml
+```
+
+La CI (workflow `Server`) fait la même chose sur PostgreSQL éphémère :
+`npm ci`, `typecheck`, `build`, puis la boucle des tests. Base locale :
+PostgreSQL nécessaire pour la plupart des tests.
+
 ## Démarrer
 
 ```bash

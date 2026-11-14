@@ -108,6 +108,43 @@ class AppError extends StatelessWidget {
   }
 }
 
+/// Bandeau persistant « lecture seule » (T13, D04) : abonnement expiré,
+/// consultation possible, écritures bloquées. À placer en tête des
+/// coquilles admin et fidèle, sous l'en-tête, tant que l'état est actif.
+/// Le texte reprend celui de l'écran Mon abonnement, sans rien inventer.
+class BandeauLectureSeule extends StatelessWidget {
+  const BandeauLectureSeule({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: AppTheme.orClair,
+      child: Row(
+        children: [
+          const Icon(
+            Icons.lock_outline,
+            size: 18,
+            color: AppTheme.orFonce,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Abonnement expiré : l’application est en lecture seule. '
+              'Renouvelez-le pour modifier à nouveau.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.bleuNuit,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// État vide (liste sans élément).
 class EmptyState extends StatelessWidget {
   final IconData icon;

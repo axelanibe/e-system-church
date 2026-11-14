@@ -218,7 +218,9 @@ class TiroirCourt extends StatelessWidget {
             ),
           if (state.isAdmin)
             _entree(
-              icone: Icons.shield_outlined,
+              // T13, D09 : icône unique par fonction — le bouclier
+              // est déjà celui du Suivi pastoral.
+              icone: Icons.verified_user_outlined,
               titre: 'Confiance',
               sousTitre: 'Sauvegarde, hors ligne, 2FA, audit',
               onTap: () => _ouvrir(context, const ConfianceScreen()),

@@ -44,8 +44,9 @@ class AppTheme {
 
   /// Or d'attention, états actifs et éléments d'attention sur fond
   /// clair (maquette de refonte, 13 novembre 2026). Contraste
-  /// 3,03:1 sur papier : libellés gras et icônes seulement, jamais
-  /// le corps de texte.
+  /// 3,03:1 sur papier : icônes et bordures seulement, jamais le
+  /// corps de texte ni les libellés de navigation (T13, D03 : les
+  /// libellés actifs utilisent l'or foncé, 5,06:1 sur blanc).
   static const Color orAttention = Color(0xFFB8860B);
 
   /// Or clair, fonds doux (badge « Église mère », indicateurs).
@@ -150,8 +151,12 @@ class AppTheme {
         indicatorSize: TabBarIndicatorSize.tab,
       ),
       // Barre du bas : l'onglet actif se voit au premier coup d'œil,
-      // pastille or, icône bleu nuit, libellé or d'attention gras.
-      // Inactif : bleu nuit à 55 %, jamais d'or pâle.
+      // pastille or, icône bleu nuit, libellé or foncé gras.
+      // Contrastes recalculés (T13, D03, WCAG 2.2 AA, fond blanc) :
+      // actif or foncé #8A6A12 = 5,06:1 ; inactif bleu nuit à 75 % =
+      // 7,37:1. L'or d'attention (3,25:1 à 11 px) et le bleu nuit à
+      // 55 % (3,79:1) n'atteignent pas les 4,5:1 exigés pour du
+      // texte de 11 px, qui n'est pas du « grand texte ».
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white,
         indicatorColor: or,
@@ -160,7 +165,7 @@ class AppTheme {
           return IconThemeData(
             color: selected
                 ? bleuNuit
-                : bleuNuit.withValues(alpha: 0.55),
+                : bleuNuit.withValues(alpha: 0.75),
           );
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
@@ -171,8 +176,8 @@ class AppTheme {
             fontWeight:
                 selected ? FontWeight.bold : FontWeight.normal,
             color: selected
-                ? orAttention
-                : bleuNuit.withValues(alpha: 0.55),
+                ? orFonce
+                : bleuNuit.withValues(alpha: 0.75),
           );
         }),
       ),

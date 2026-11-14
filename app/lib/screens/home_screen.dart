@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
 import '../widgets/app_bottom_bar.dart';
+import '../widgets/common_widgets.dart';
 import '../widgets/en_tete_clair.dart';
 import '../widgets/short_drawer.dart';
 import 'dashboard_screen.dart';
@@ -128,6 +129,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
+                // T13, D04 : abonnement expiré, bandeau persistant.
+                if (state.lectureSeule) const BandeauLectureSeule(),
                 Expanded(child: _screenFor(courant, state.church?.id)),
               ],
             ),
