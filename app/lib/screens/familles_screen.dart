@@ -5,6 +5,7 @@ import '../models/membres_complement.dart';
 import '../models/member.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/liste_avec_fab.dart';
 import '../widgets/dialog_helpers.dart';
 import 'enfants_screen.dart';
 import 'member_detail_screen.dart';
@@ -228,29 +229,31 @@ class _FamillesScreenState extends State<FamillesScreen> {
                   onAction: () => _createFamille(membres),
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: familles.length,
-                  itemBuilder: (context, index) {
-                    final famille = familles[index];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.family_restroom_outlined),
-                      ),
-                      title: Text(famille.nom),
-                      subtitle: Text(
-                        '${famille.chefFamilleId != null ? 'Chef : ${noms[famille.chefFamilleId] ?? '—'}' : 'Sans chef désigné'}'
-                        '${famille.telephone != null ? ' · ${famille.telephone}' : ''}'
-                        '${famille.adresse != null ? ' · ${famille.adresse}' : ''}',
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        tooltip: 'Supprimer',
-                        onPressed: () => _deleteFamille(famille),
-                      ),
-                    );
-                  },
+              return ListeAvecFab(
+                child: RefreshIndicator(
+                  onRefresh: () async => _refresh(),
+                  child: ListView.builder(
+                    itemCount: familles.length,
+                    itemBuilder: (context, index) {
+                      final famille = familles[index];
+                      return ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.family_restroom_outlined),
+                        ),
+                        title: Text(famille.nom),
+                        subtitle: Text(
+                          '${famille.chefFamilleId != null ? 'Chef : ${noms[famille.chefFamilleId] ?? '—'}' : 'Sans chef désigné'}'
+                          '${famille.telephone != null ? ' · ${famille.telephone}' : ''}'
+                          '${famille.adresse != null ? ' · ${famille.adresse}' : ''}',
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          tooltip: 'Supprimer',
+                          onPressed: () => _deleteFamille(famille),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               );
             },
@@ -357,30 +360,32 @@ class _FamillesScreenState extends State<FamillesScreen> {
                   onAction: () => _createCellule(membres),
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final c = items[index];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.groups_outlined),
-                      ),
-                      title: Text(c.nom),
-                      subtitle: Text(
-                        '${c.quartier ?? '—'}'
-                        '${c.responsableMemberId != null ? ' · ${noms[c.responsableMemberId] ?? '—'}' : ''}'
-                        '${c.jourReunion != null ? ' · ${c.jourReunion}' : ''}'
-                        '${c.heureReunion != null ? ' à ${c.heureReunion}' : ''}',
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        tooltip: 'Supprimer',
-                        onPressed: () => _deleteCellule(c),
-                      ),
-                    );
-                  },
+              return ListeAvecFab(
+                child: RefreshIndicator(
+                  onRefresh: () async => _refresh(),
+                  child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final c = items[index];
+                      return ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.groups_outlined),
+                        ),
+                        title: Text(c.nom),
+                        subtitle: Text(
+                          '${c.quartier ?? '—'}'
+                          '${c.responsableMemberId != null ? ' · ${noms[c.responsableMemberId] ?? '—'}' : ''}'
+                          '${c.jourReunion != null ? ' · ${c.jourReunion}' : ''}'
+                          '${c.heureReunion != null ? ' à ${c.heureReunion}' : ''}',
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          tooltip: 'Supprimer',
+                          onPressed: () => _deleteCellule(c),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               );
             },

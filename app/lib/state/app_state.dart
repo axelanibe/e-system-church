@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
+import '../models/abonnement.dart';
 import '../models/auth.dart';
 import '../models/church.dart';
 import '../models/fidele.dart';
@@ -30,6 +31,17 @@ class AppState extends ChangeNotifier {
   String? _role;
   List<Membership> _eglises = [];
 
+  /// Abonnement de l'église active, chargé après connexion (T13, D04).
+  /// Null tant qu'il n'a pas été chargé : la lecture seule n'est alors
+  /// jamais supposée.
+  Abonnement? _abonnement;
+  Abonnement? get abonnement => _abonnement;
+
+  /// Vrai quand l'abonnement est expiré et la grâce de 30 jours passée :
+  /// l'application passe en lecture seule (consultation possible,
+  /// écritures bloquées). Faux par défaut, jamais supposé.
+  bool get lectureSeule => _abonnement?.lectureSeule ?? false;
+
   // Tous les modules sont affichés pour toutes les églises (règle
   // du 11/11/2026) : plus de chargement ni de filtre par module.
   bool get initialized => _initialized;
@@ -46,12 +58,17 @@ class AppState extends ChangeNotifier {
   String get devise => _church?.devise ?? 'FCFA';
 
   /// L'utilisateur peut gérer les membres (création comprise).
+  /// Jamais en lecture seule (abonnement expiré) : les FAB « Ajouter »
+  /// et « Nouveau membre » disparaissent alors d'eux-mêmes, partout où
+  /// ils sont déjà conditionnés à ce droit (T13, D04).
   bool get canManageMembers =>
-      _role == 'admin_eglise' || _role == 'responsable_culte';
+      !lectureSeule &&
+      (_role == 'admin_eglise' || _role == 'responsable_culte');
 
   /// L'utilisateur peut voir et saisir les finances.
+  /// Jamais en lecture seule (T13, D04).
   bool get canManageFinances =>
-      _role == 'admin_eglise' || _role == 'tresorier';
+      !lectureSeule && (_role == 'admin_eglise' || _role == 'tresorier');
 
   /// L'utilisateur peut lire les finances.
   bool get canReadFinances =>
@@ -146,12 +163,14 @@ class AppState extends ChangeNotifier {
       try {
         final me = await _api.me();
         _applyMe(me);
+        await _chargerAbonnement();
       } catch (_) {
         // JWT expiré : une rotation suffit, sans ressaisir le mot de passe.
         // Les jetons sont persistés par `onTokensRefreshed`.
         try {
           final refreshed = await _api.refresh();
           _applyAuth(refreshed);
+          await _chargerAbonnement();
         } catch (_) {
           _token = null;
           _refreshToken = null;
@@ -180,6 +199,23 @@ class AppState extends ChangeNotifier {
     _eglises = me.eglises;
   }
 
+  /// Charge l'abonnement de l'église active (T13, D04). Sans jamais
+  /// faire échouer la connexion : hors ligne, rôle sans abonnement ou
+  /// route indisponible laissent simplement la lecture seule à faux.
+  Future<void> _chargerAbonnement() async {
+    try {
+      _abonnement = await _api.getMonAbonnement();
+    } catch (_) {
+      _abonnement = null;
+    }
+  }
+
+  /// Recharge l'abonnement (après renouvellement, par exemple).
+  Future<void> refreshAbonnement() async {
+    await _chargerAbonnement();
+    notifyListeners();
+  }
+
   Future<void> login(
       {required String identifiant,
       required String password,
@@ -192,6 +228,7 @@ class AppState extends ChangeNotifier {
       code2fa: code2fa,
     );
     _applyAuth(result);
+    await _chargerAbonnement();
     await _store.saveToken(result.token);
     if (result.refreshToken != null) {
       await _store.saveRefreshToken(result.refreshToken!);
@@ -226,6 +263,7 @@ class AppState extends ChangeNotifier {
       logoFilename: logoFilename,
     );
     _applyAuth(result);
+    await _chargerAbonnement();
     await _store.saveToken(result.token);
     if (result.refreshToken != null) {
       await _store.saveRefreshToken(result.refreshToken!);
@@ -249,6 +287,7 @@ class AppState extends ChangeNotifier {
     );
     if (result.auth != null) {
       _applyAuth(result.auth!);
+      await _chargerAbonnement();
       await _store.saveToken(result.auth!.token);
       if (result.auth!.refreshToken != null) {
         await _store.saveRefreshToken(result.auth!.refreshToken!);
@@ -285,6 +324,7 @@ class AppState extends ChangeNotifier {
     );
     if (result.auth != null) {
       _applyAuth(result.auth!);
+      await _chargerAbonnement();
       await _store.saveToken(result.auth!.token);
       if (result.auth!.refreshToken != null) {
         await _store.saveRefreshToken(result.auth!.refreshToken!);
@@ -298,6 +338,7 @@ class AppState extends ChangeNotifier {
   Future<void> refreshMe() async {
     final me = await _api.me();
     _applyMe(me);
+    await _chargerAbonnement();
     notifyListeners();
   }
 
@@ -321,6 +362,7 @@ class AppState extends ChangeNotifier {
     _role = null;
     _eglises = [];
     _apercuFidele = false;
+    _abonnement = null;
     await _store.clearToken();
     await _store.clearRefreshToken();
     notifyListeners();
@@ -339,6 +381,7 @@ class AppState extends ChangeNotifier {
     _role = null;
     _eglises = [];
     _apercuFidele = false;
+    _abonnement = null;
     await _store.clearToken();
     await _store.clearRefreshToken();
     _api = _buildApi();

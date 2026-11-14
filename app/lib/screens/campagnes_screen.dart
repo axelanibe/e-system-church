@@ -6,6 +6,7 @@ import '../models/campagne.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/liste_avec_fab.dart';
 import '../widgets/dialog_helpers.dart';
 
 /// Campagnes de collecte, US2 : objectif, période, progression.
@@ -204,91 +205,93 @@ class _CampagnesScreenState extends State<CampagnesScreen> {
               message: 'Aucune campagne pour l’instant.',
             );
           }
-          return RefreshIndicator(
-            onRefresh: () async => _refresh(),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                for (final c in campagnes)
-                  Card(
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () => _afficherDetail(c),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  c.nom,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              StatusChip(
-                                label: c.statutLabel,
-                                color: _statutColor(c.statut),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${formatDateSeule(c.dateDebut)} — ${formatDateSeule(c.dateFin)}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          const SizedBox(height: 12),
-                          LinearProgressIndicator(
-                            value: (c.pourcentage / 100).clamp(0.0, 1.0),
-                            minHeight: 8,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            c.depasse
-                                ? 'Objectif dépassé : ${formatFcfa(c.totalCollecte)} collectés sur ${formatFcfa(c.objectifFcfa)} (${c.pourcentage} %).'
-                                : '${formatFcfa(c.totalCollecte)} collectés sur ${formatFcfa(c.objectifFcfa)} (${c.pourcentage} %).',
-                            style: TextStyle(
-                              fontWeight:
-                                  c.depasse ? FontWeight.bold : FontWeight.normal,
-                              color: c.depasse
-                                  ? AppTheme.bleuNuit
-                                  : null,
-                            ),
-                          ),
-                          Text(
-                            pluriel(c.nombreContributions,
-                                'contribution confirmée',
-                                'contributions confirmées'),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          if (state.canManageFinances &&
-                              c.statut != 'cloturee')
+          return ListeAvecFab(
+            child: RefreshIndicator(
+              onRefresh: () async => _refresh(),
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  for (final c in campagnes)
+                    Card(
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () => _afficherDetail(c),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Row(
                               children: [
-                                if (c.statut == 'brouillon')
-                                  TextButton.icon(
-                                    onPressed: () => _activer(c),
-                                    icon: const Icon(Icons.play_arrow),
-                                    label: const Text('Activer'),
+                                Expanded(
+                                  child: Text(
+                                    c.nom,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                TextButton.icon(
-                                  onPressed: () => _cloturer(c),
-                                  icon: const Icon(Icons.lock_outline),
-                                  label: const Text('Clôturer'),
+                                ),
+                                StatusChip(
+                                  label: c.statutLabel,
+                                  color: _statutColor(c.statut),
                                 ),
                               ],
                             ),
-                        ],
+                            const SizedBox(height: 4),
+                            Text(
+                              '${formatDateSeule(c.dateDebut)} — ${formatDateSeule(c.dateFin)}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 12),
+                            LinearProgressIndicator(
+                              value: (c.pourcentage / 100).clamp(0.0, 1.0),
+                              minHeight: 8,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              c.depasse
+                                  ? 'Objectif dépassé : ${formatFcfa(c.totalCollecte)} collectés sur ${formatFcfa(c.objectifFcfa)} (${c.pourcentage} %).'
+                                  : '${formatFcfa(c.totalCollecte)} collectés sur ${formatFcfa(c.objectifFcfa)} (${c.pourcentage} %).',
+                              style: TextStyle(
+                                fontWeight:
+                                    c.depasse ? FontWeight.bold : FontWeight.normal,
+                                color: c.depasse
+                                    ? AppTheme.bleuNuit
+                                    : null,
+                              ),
+                            ),
+                            Text(
+                              pluriel(c.nombreContributions,
+                                  'contribution confirmée',
+                                  'contributions confirmées'),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            if (state.canManageFinances &&
+                                c.statut != 'cloturee')
+                              Row(
+                                children: [
+                                  if (c.statut == 'brouillon')
+                                    TextButton.icon(
+                                      onPressed: () => _activer(c),
+                                      icon: const Icon(Icons.play_arrow),
+                                      label: const Text('Activer'),
+                                    ),
+                                  TextButton.icon(
+                                    onPressed: () => _cloturer(c),
+                                    icon: const Icon(Icons.lock_outline),
+                                    label: const Text('Clôturer'),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },
