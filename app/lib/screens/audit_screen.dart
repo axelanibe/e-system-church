@@ -102,6 +102,10 @@ class _AuditScreenState extends State<AuditScreen> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<String>(
+                          // Sans isExpanded, le bouton prend la largeur de
+                          // son plus long libellé et déborde de 208 px sur
+                          // un téléphone (test d'écran T13).
+                          isExpanded: true,
                           initialValue: _filtreAction,
                           decoration: const InputDecoration(
                             labelText: 'Action',

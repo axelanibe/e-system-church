@@ -3702,11 +3702,11 @@ class FauxApiService implements ApiService {
   }
 
   // -- Gouvernance, secrétariat, documents, action sociale (T10) ------------
-  // Non gérée en démo (mode démo supprimé en T12) : même forme que les
-  // attestations non gérées en démo.
+  // Listes servies vides (T13) pour pomper les écrans ; créations,
+  // modifications et suppressions restent non gérées par le faux service.
   @override
   Future<List<ReunionConseil>> getReunionsConseil({String? statut}) async {
-    throw UnimplementedError('Gouvernance non gérée en démo.');
+    return const [];
   }
 
   @override
@@ -3727,7 +3727,7 @@ class FauxApiService implements ApiService {
 
   @override
   Future<List<Decision>> getDecisions({String? statut, String? reunionId}) async {
-    throw UnimplementedError('Gouvernance non gérée en démo.');
+    return const [];
   }
 
   @override
@@ -3748,7 +3748,7 @@ class FauxApiService implements ApiService {
 
   @override
   Future<List<Mandat>> getMandats({String? statut}) async {
-    throw UnimplementedError('Gouvernance non gérée en démo.');
+    return const [];
   }
 
   @override
@@ -3774,7 +3774,7 @@ class FauxApiService implements ApiService {
 
   @override
   Future<List<ProcesVerbal>> getProcesVerbaux({String? statut, String? reunionId}) async {
-    throw UnimplementedError('Gouvernance non gérée en démo.');
+    return const [];
   }
 
   @override
@@ -3801,7 +3801,7 @@ class FauxApiService implements ApiService {
   @override
   Future<List<GouvernanceDocument>> getDocuments(
       {String? q, String? categorie, String? sens}) async {
-    throw UnimplementedError('Gouvernance non gérée en démo.');
+    return const [];
   }
 
   @override
@@ -3824,7 +3824,7 @@ class FauxApiService implements ApiService {
 
   @override
   Future<List<Beneficiaire>> getBeneficiaires({String? statut}) async {
-    throw UnimplementedError('Gouvernance non gérée en démo.');
+    return const [];
   }
 
   @override
@@ -3845,7 +3845,7 @@ class FauxApiService implements ApiService {
 
   @override
   Future<List<Aide>> getAides({String? beneficiaireId, String? statut}) async {
-    throw UnimplementedError('Gouvernance non gérée en démo.');
+    return const [];
   }
 
   @override
@@ -3871,7 +3871,7 @@ class FauxApiService implements ApiService {
 
   @override
   Future<List<BienPatrimoine>> getBiensPatrimoine({String? categorie}) async {
-    throw UnimplementedError('Gouvernance non gérée en démo.');
+    return const [];
   }
 
   @override
@@ -3893,7 +3893,7 @@ class FauxApiService implements ApiService {
 
   @override
   Future<List<MaintenancePatrimoine>> getMaintenancePatrimoine({String? bienId}) async {
-    throw UnimplementedError('Gouvernance non gérée en démo.');
+    return const [];
   }
 
   @override
@@ -5028,11 +5028,26 @@ class FauxApiService implements ApiService {
 
   @override
   Future<Transparence> getTransparence({String? periode}) async =>
-      throw UnimplementedError('Transparence non gérée par le faux service.');
+      const Transparence(
+        eglise: 'Église EXEMPLE',
+        periode: '2026-11',
+        totauxParType: [],
+        depensesParPoste: [],
+        totalRecettesFcfa: 0,
+        totalDepensesFcfa: 0,
+        soldeFcfa: 0,
+      );
 
   @override
-  Future<CartePortefeuille> getCartePortefeuille() async => throw UnimplementedError(
-      'Carte portefeuille non gérée par le faux service.');
+  Future<CartePortefeuille> getCartePortefeuille() async =>
+      const CartePortefeuille(
+        nom: 'Membre EXEMPLE',
+        matricule: 'M-EX-0001',
+        egliseNom: 'Église EXEMPLE',
+        egliseCode: 'ESC-EXEMPLE',
+        qrDonnees: 'ESC-EXEMPLE:M-EX-0001',
+        note: 'Carte EXEMPLE, aucun compte portefeuille branché.',
+      );
 
   @override
   Future<MesConsentements> getMesConsentements() async =>

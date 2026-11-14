@@ -172,9 +172,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // En démo, l'URL d'API est 'demo' et DemoAppState.setApiBaseUrl est
-    // sans effet (aucun serveur) : le champ et le bouton sont désactivés.
-    final isDemo = context.watch<AppState>().apiBaseUrl == 'demo';
     final state = context.watch<AppState>();
     final estEgliseTest =
         state.isAdmin && (state.church?.name.startsWith('TEST') ?? false);
@@ -343,7 +340,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         TextField(
                           controller: _urlController,
-                          enabled: !isDemo,
                           keyboardType: TextInputType.url,
                           decoration: const InputDecoration(
                             labelText: 'URL de l’API',
@@ -352,7 +348,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         const SizedBox(height: 12),
                         FilledButton(
-                          onPressed: (isDemo || _saving) ? null : _saveUrl,
+                          onPressed: _saving ? null : _saveUrl,
                           child: const Text('Enregistrer l’URL'),
                         ),
                         const SizedBox(height: 8),

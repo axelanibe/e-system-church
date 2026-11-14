@@ -42,10 +42,16 @@ await admin.end();
 
 const db = new Client({ connectionString: DB });
 await db.connect();
-await db.query(readFileSync("../db/schema.sql", "utf8"));
-for (const f of readdirSync("../db/migrations").sort()) {
-  if (f.endsWith(".sql"))
-    await db.query(readFileSync(`../db/migrations/${f}`, "utf8"));
+// Chemins relatifs au fichier, pas au répertoire de lancement (T13) :
+// le script démarre l'API avec cwd 'server', donc '../db/...' ne peut
+// pas être relatif au répertoire courant.
+await db.query(
+    readFileSync(new URL('../db/schema.sql', import.meta.url), 'utf8'));
+for (const f of readdirSync(new URL('../db/migrations', import.meta.url))
+    .sort()) {
+  if (f.endsWith('.sql'))
+    await db.query(readFileSync(
+        new URL(`../db/migrations/${f}`, import.meta.url), 'utf8'));
 }
 const hash = await argon2.hash("Test1234!");
 const q = async (sql, p = []) => (await db.query(sql, p)).rows;
