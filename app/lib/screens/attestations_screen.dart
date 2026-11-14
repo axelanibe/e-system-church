@@ -9,11 +9,11 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 
-/// US3 + tranche B — Attestations, côté trésorier / admin : choix de
+/// US3 + tranche B + T10 — Attestations, côté trésorier / admin : choix de
 /// l'année et du type, génération des attestations de dons, émission
-/// individuelle d'une attestation de mariage, de naissance ou de baptême,
-/// liste, PDF, correction avec motif (nouvelle attestation, ancienne
-/// annulée). PDF exclusivement, jamais d'autre format.
+/// individuelle d'une attestation de mariage, de naissance, de baptême ou
+/// d'un certificat de membre, liste, PDF, correction avec motif (nouvelle
+/// attestation, ancienne annulée). PDF exclusivement, jamais d'autre format.
 class AttestationsScreen extends StatefulWidget {
   const AttestationsScreen({super.key});
 
@@ -21,7 +21,7 @@ class AttestationsScreen extends StatefulWidget {
   State<AttestationsScreen> createState() => _AttestationsScreenState();
 }
 
-const _typesEvenement = ['mariage', 'naissance', 'bapteme'];
+const _typesEvenement = ['mariage', 'naissance', 'bapteme', 'membre'];
 
 class _AttestationsScreenState extends State<AttestationsScreen> {
   late int _annee;
@@ -472,6 +472,7 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                       DropdownMenuItem(value: 'mariage', child: Text('Mariage')),
                       DropdownMenuItem(value: 'naissance', child: Text('Naissance')),
                       DropdownMenuItem(value: 'bapteme', child: Text('Baptême')),
+                      DropdownMenuItem(value: 'membre', child: Text('Membre')),
                     ],
                     onChanged: (t) => setState(() {
                       _typeFiltre = t;

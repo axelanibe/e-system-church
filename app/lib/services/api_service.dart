@@ -17,6 +17,7 @@ import '../models/enfants.dart';
 import '../models/fidele.dart';
 import '../models/finances.dart';
 import '../models/frequentation.dart';
+import '../models/gouvernance.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
@@ -918,6 +919,128 @@ abstract class ApiService {
     String? realisePar,
   });
 
+  // -- Gouvernance, secrétariat, documents, action sociale (T10) ------------
+  Future<List<ReunionConseil>> getReunionsConseil({String? statut});
+
+  Future<ReunionConseil> createReunionConseil({
+    required String titre,
+    required String dateReunion,
+    String? lieu,
+    String? ordreDuJour,
+    String statut = 'prevue',
+  });
+
+  Future<void> deleteReunionConseil(String id);
+
+  Future<List<Decision>> getDecisions({String? statut, String? reunionId});
+
+  Future<Decision> createDecision({
+    String? reunionId,
+    required String titre,
+    String? description,
+    String? dateDecision,
+    String statut = 'adoptee',
+  });
+
+  Future<void> deleteDecision(String id);
+
+  /// Mandats en cours (`statut: 'en_cours'`) ou tous les mandats
+  /// (les nominations : l'historique des nominations).
+  Future<List<Mandat>> getMandats({String? statut});
+
+  Future<Mandat> createMandat({
+    required String memberId,
+    required String fonction,
+    required String dateDebut,
+    String? dateFin,
+    String? decisionId,
+  });
+
+  Future<Mandat> terminerMandat(String id);
+
+  Future<void> deleteMandat(String id);
+
+  Future<List<ProcesVerbal>> getProcesVerbaux({String? statut, String? reunionId});
+
+  Future<ProcesVerbal> createProcesVerbal({
+    String? reunionId,
+    String? numero,
+    required String contenu,
+    String? datePv,
+    String? signataire,
+  });
+
+  Future<ProcesVerbal> signerProcesVerbal(String id, {required String signataire});
+
+  Future<void> deleteProcesVerbal(String id);
+
+  /// Documents classés, avec recherche et filtres (catégorie, sens).
+  Future<List<GouvernanceDocument>> getDocuments(
+      {String? q, String? categorie, String? sens});
+
+  Future<GouvernanceDocument> createDocument({
+    required String titre,
+    String categorie = 'autre',
+    String? sens,
+    String? reference,
+    String? fichierUrl,
+    String? description,
+    String? dateDocument,
+  });
+
+  Future<void> deleteDocument(String id);
+
+  Future<List<Beneficiaire>> getBeneficiaires({String? statut});
+
+  Future<Beneficiaire> createBeneficiaire({
+    required String nom,
+    String? telephone,
+    String? adresse,
+    String? besoin,
+    String? memberId,
+  });
+
+  Future<void> deleteBeneficiaire(String id);
+
+  Future<List<Aide>> getAides({String? beneficiaireId, String? statut});
+
+  Future<Aide> createAide({
+    required String beneficiaireId,
+    required String typeAide,
+    int? montantFcfa,
+    String? dateAide,
+    String? description,
+  });
+
+  Future<Aide> marquerAideVersee(String id);
+
+  Future<void> deleteAide(String id);
+
+  // -- Patrimoine (T10, avec les biens) ---------------------------------------
+  Future<List<BienPatrimoine>> getBiensPatrimoine({String? categorie});
+
+  Future<BienPatrimoine> createBienPatrimoine({
+    required String nom,
+    required String categorie,
+    int? valeurFcfa,
+    String? assurance,
+    String? photoUrl,
+    String? codeInventaire,
+  });
+
+  Future<void> deleteBienPatrimoine(String id);
+
+  Future<List<MaintenancePatrimoine>> getMaintenancePatrimoine({String? bienId});
+
+  Future<MaintenancePatrimoine> createMaintenancePatrimoine({
+    required String bienId,
+    required String description,
+    String? dateMaintenance,
+    int? coutFcfa,
+    String? realisePar,
+    String? depenseId,
+  });
+
   // -- Statistiques et export (module 11) ------------------------------------
   Future<StatsGlobales> getStatsGlobales();
 
@@ -1040,6 +1163,9 @@ abstract class ApiService {
     String? mtnNumero,
     String? devise,
     String? fuseauHoraire,
+    // T10 : signataires configurables, vides par défaut.
+    String? signataireNominations,
+    String? signataireProcesVerbaux,
   });
 
   Future<List<RoleEglise>> getRoles();

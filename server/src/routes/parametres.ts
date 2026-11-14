@@ -25,6 +25,11 @@ const parametresSchema = z.object({
   mtn_numero: z.string().max(30).optional(),
   devise: z.string().min(2).max(10).optional(),
   fuseau_horaire: z.string().max(60).optional(),
+  // T10 : signataires configurables, vides par défaut. La règle de
+  // signature (pasteur seul, conseil…) n'est pas tranchée : aucun
+  // signataire n'est inventé, l'admin les renseigne ou les laisse vides.
+  signataire_nominations: z.string().max(200).optional(),
+  signataire_proces_verbaux: z.string().max(200).optional(),
 });
 
 const roleSchema = z.object({

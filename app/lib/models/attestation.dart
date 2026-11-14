@@ -11,7 +11,7 @@ class Attestation {
   final String id;
   final String numero;
   final int annee;
-  final String type; // don | mariage | naissance | bapteme
+  final String type; // don | mariage | naissance | bapteme | membre
   final String? memberId;
   final String? membreNom;
   final String? membreMatricule;
@@ -59,6 +59,7 @@ class Attestation {
         'mariage' => 'Mariage',
         'naissance' => 'Naissance',
         'bapteme' => 'Baptême',
+        'membre' => 'Membre',
         _ => 'Dons',
       };
 

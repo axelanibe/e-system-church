@@ -15,11 +15,12 @@ import '../screens/prieres_screen.dart';
 import '../screens/rapports_recus_screen.dart';
 import '../screens/rendez_vous_admin_screen.dart';
 import '../screens/annexes_screen.dart';
+import '../screens/gouvernance_screen.dart';
 import '../screens/serviteurs_screen.dart';
 import '../screens/settings_screen.dart';
 
 /// Tiroir désengorgé (simulation tiroir désengorgé, modèle projection) :
-/// 10 entrées essentielles, une par ligne avec un titre et un sous-titre,
+/// 11 entrées essentielles, une par ligne avec un titre et un sous-titre,
 /// icônes or sur fond bleu nuit. Une seule entrée par fonction, jamais
 /// de doublon avec la barre du bas (Accueil, Membres, Finances,
 /// Départements). Les autres fonctions restent accessibles depuis leur
@@ -207,6 +208,13 @@ class TiroirCourt extends StatelessWidget {
             sousTitre: 'Affectations et fonctions',
             onTap: () => _ouvrir(context, const ServiteursScreen()),
           ),
+          if (state.canManageMembers)
+            _entree(
+              icone: Icons.verified_outlined,
+              titre: 'Gouvernance',
+              sousTitre: 'Mandats, conseil, documents',
+              onTap: () => _ouvrir(context, const GouvernanceScreen()),
+            ),
           _entree(
             icone: Icons.description_outlined,
             titre: 'Rapports d’annexe',

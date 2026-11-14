@@ -65,7 +65,7 @@ class ModulesScreen extends StatelessWidget {
     (
       'Gouvernance',
       'Mandats, nominations, procès-verbaux, documents.',
-      'T10 · À venir',
+      'T10 · Construit, en ligne',
       Icons.verified_outlined,
     ),
     (

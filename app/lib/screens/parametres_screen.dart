@@ -39,6 +39,9 @@ class _ParametresScreenState extends State<ParametresScreen> {
   final _mtnController = TextEditingController();
   final _deviseController = TextEditingController();
   final _fuseauController = TextEditingController();
+  // T10 : signataires configurables, vides par défaut (règle non tranchée).
+  final _signataireNominationsController = TextEditingController();
+  final _signataireProcesVerbauxController = TextEditingController();
   bool _saving = false;
 
   @override
@@ -64,6 +67,8 @@ class _ParametresScreenState extends State<ParametresScreen> {
     _mtnController.dispose();
     _deviseController.dispose();
     _fuseauController.dispose();
+    _signataireNominationsController.dispose();
+    _signataireProcesVerbauxController.dispose();
     super.dispose();
   }
 
@@ -102,6 +107,8 @@ class _ParametresScreenState extends State<ParametresScreen> {
             mtnNumero: _opt(_mtnController),
             devise: _opt(_deviseController),
             fuseauHoraire: _opt(_fuseauController),
+            signataireNominations: _opt(_signataireNominationsController),
+            signataireProcesVerbaux: _opt(_signataireProcesVerbauxController),
           );
       if (mounted) showSuccess(context, 'Paramètres enregistrés.');
       _refresh();
@@ -314,6 +321,10 @@ class _ParametresScreenState extends State<ParametresScreen> {
         _mtnController.text = p.mtnNumero ?? '';
         _deviseController.text = p.devise ?? '';
         _fuseauController.text = p.fuseauHoraire ?? '';
+        _signataireNominationsController.text =
+            p.signataireNominations ?? '';
+        _signataireProcesVerbauxController.text =
+            p.signataireProcesVerbaux ?? '';
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -351,6 +362,19 @@ class _ParametresScreenState extends State<ParametresScreen> {
             dialogTextField(controller: _deviseController, label: 'Devise'),
             dialogTextField(
                 controller: _fuseauController, label: 'Fuseau horaire'),
+            const SectionTitle(title: 'Gouvernance'),
+            const Text(
+              'Qui signe les nominations et les procès-verbaux. À compléter par l’église.',
+              style: TextStyle(fontSize: 12),
+            ),
+            dialogTextField(
+              controller: _signataireNominationsController,
+              label: 'Signataire des nominations',
+            ),
+            dialogTextField(
+              controller: _signataireProcesVerbauxController,
+              label: 'Signataire des procès-verbaux',
+            ),
             const SizedBox(height: 8),
             FilledButton(
               onPressed: _saving ? null : _save,

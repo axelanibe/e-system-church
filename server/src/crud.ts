@@ -278,11 +278,15 @@ export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions):
           return reply.code(400).send({ error: "invalid_reference", message });
         }
       }
-      const cols = ["church_id", ...opts.columns];
+      // Seules les colonnes fournies sont insérées : un champ facultatif
+      // absent laisse le DEFAULT de la base s'appliquer (ex. date du
+      // jour), au lieu d'écraser le DEFAULT par un NULL explicite.
+      const present = opts.columns.filter((c) => data[c] !== undefined);
+      const cols = ["church_id", ...present];
       const placeholders = cols.map((_, i) => `$${i + 1}`).join(", ");
       const values: unknown[] = [
         req.session.churchId,
-        ...opts.columns.map((c) => data[c] ?? null),
+        ...present.map((c) => data[c]),
       ];
       const { rows } = await db.query(
         `INSERT INTO ${opts.table} (${cols.join(", ")})

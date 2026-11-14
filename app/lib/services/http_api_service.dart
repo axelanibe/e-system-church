@@ -22,6 +22,7 @@ import '../models/enfants.dart';
 import '../models/fidele.dart';
 import '../models/finances.dart';
 import '../models/frequentation.dart';
+import '../models/gouvernance.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
@@ -2224,6 +2225,276 @@ class HttpApiService implements ApiService {
         if (realisePar != null) 'realise_par': realisePar,
       }));
 
+  // -- Gouvernance, secrétariat, documents, action sociale (T10) ------------
+  @override
+  Future<List<ReunionConseil>> getReunionsConseil({String? statut}) async =>
+      _items(
+          await _call('GET', '/reunions-conseil',
+              query: _q({'statut': statut})),
+          ReunionConseil.fromJson);
+
+  @override
+  Future<ReunionConseil> createReunionConseil({
+    required String titre,
+    required String dateReunion,
+    String? lieu,
+    String? ordreDuJour,
+    String statut = 'prevue',
+  }) async =>
+      ReunionConseil.fromJson(await _call('POST', '/reunions-conseil', body: {
+        'titre': titre,
+        'date_reunion': dateReunion,
+        if (lieu != null) 'lieu': lieu,
+        if (ordreDuJour != null) 'ordre_du_jour': ordreDuJour,
+        'statut': statut,
+      }));
+
+  @override
+  Future<void> deleteReunionConseil(String id) async {
+    await _call('DELETE', '/reunions-conseil/$id');
+  }
+
+  @override
+  Future<List<Decision>> getDecisions({String? statut, String? reunionId}) async =>
+      _items(
+          await _call('GET', '/decisions',
+              query: _q({'statut': statut, 'reunion_id': reunionId})),
+          Decision.fromJson);
+
+  @override
+  Future<Decision> createDecision({
+    String? reunionId,
+    required String titre,
+    String? description,
+    String? dateDecision,
+    String statut = 'adoptee',
+  }) async =>
+      Decision.fromJson(await _call('POST', '/decisions', body: {
+        if (reunionId != null) 'reunion_id': reunionId,
+        'titre': titre,
+        if (description != null) 'description': description,
+        if (dateDecision != null) 'date_decision': dateDecision,
+        'statut': statut,
+      }));
+
+  @override
+  Future<void> deleteDecision(String id) async {
+    await _call('DELETE', '/decisions/$id');
+  }
+
+  @override
+  Future<List<Mandat>> getMandats({String? statut}) async => _items(
+      await _call('GET', '/mandats', query: _q({'statut': statut})),
+      Mandat.fromJson);
+
+  @override
+  Future<Mandat> createMandat({
+    required String memberId,
+    required String fonction,
+    required String dateDebut,
+    String? dateFin,
+    String? decisionId,
+  }) async =>
+      Mandat.fromJson(await _call('POST', '/mandats', body: {
+        'member_id': memberId,
+        'fonction': fonction,
+        'date_debut': dateDebut,
+        if (dateFin != null) 'date_fin': dateFin,
+        if (decisionId != null) 'decision_id': decisionId,
+      }));
+
+  @override
+  Future<Mandat> terminerMandat(String id) async => Mandat.fromJson(
+      await _call('PATCH', '/mandats/$id', body: {'statut': 'termine'}));
+
+  @override
+  Future<void> deleteMandat(String id) async {
+    await _call('DELETE', '/mandats/$id');
+  }
+
+  @override
+  Future<List<ProcesVerbal>> getProcesVerbaux({String? statut, String? reunionId}) async =>
+      _items(
+          await _call('GET', '/proces-verbaux',
+              query: _q({'statut': statut, 'reunion_id': reunionId})),
+          ProcesVerbal.fromJson);
+
+  @override
+  Future<ProcesVerbal> createProcesVerbal({
+    String? reunionId,
+    String? numero,
+    required String contenu,
+    String? datePv,
+    String? signataire,
+  }) async =>
+      ProcesVerbal.fromJson(await _call('POST', '/proces-verbaux', body: {
+        if (reunionId != null) 'reunion_id': reunionId,
+        if (numero != null) 'numero': numero,
+        'contenu': contenu,
+        if (datePv != null) 'date_pv': datePv,
+        if (signataire != null) 'signataire': signataire,
+      }));
+
+  @override
+  Future<ProcesVerbal> signerProcesVerbal(String id, {required String signataire}) async =>
+      ProcesVerbal.fromJson(await _call('PATCH', '/proces-verbaux/$id',
+          body: {'statut': 'signe', 'signataire': signataire}));
+
+  @override
+  Future<void> deleteProcesVerbal(String id) async {
+    await _call('DELETE', '/proces-verbaux/$id');
+  }
+
+  @override
+  Future<List<GouvernanceDocument>> getDocuments(
+          {String? q, String? categorie, String? sens}) async =>
+      _items(
+          await _call('GET', '/documents',
+              query: _q({'q': q, 'categorie': categorie, 'sens': sens})),
+          GouvernanceDocument.fromJson);
+
+  @override
+  Future<GouvernanceDocument> createDocument({
+    required String titre,
+    String categorie = 'autre',
+    String? sens,
+    String? reference,
+    String? fichierUrl,
+    String? description,
+    String? dateDocument,
+  }) async =>
+      GouvernanceDocument.fromJson(await _call('POST', '/documents', body: {
+        'titre': titre,
+        'categorie': categorie,
+        if (sens != null) 'sens': sens,
+        if (reference != null) 'reference': reference,
+        if (fichierUrl != null) 'fichier_url': fichierUrl,
+        if (description != null) 'description': description,
+        if (dateDocument != null) 'date_document': dateDocument,
+      }));
+
+  @override
+  Future<void> deleteDocument(String id) async {
+    await _call('DELETE', '/documents/$id');
+  }
+
+  @override
+  Future<List<Beneficiaire>> getBeneficiaires({String? statut}) async =>
+      _items(
+          await _call('GET', '/beneficiaires',
+              query: _q({'statut': statut})),
+          Beneficiaire.fromJson);
+
+  @override
+  Future<Beneficiaire> createBeneficiaire({
+    required String nom,
+    String? telephone,
+    String? adresse,
+    String? besoin,
+    String? memberId,
+  }) async =>
+      Beneficiaire.fromJson(await _call('POST', '/beneficiaires', body: {
+        'nom': nom,
+        if (telephone != null) 'telephone': telephone,
+        if (adresse != null) 'adresse': adresse,
+        if (besoin != null) 'besoin': besoin,
+        if (memberId != null) 'member_id': memberId,
+      }));
+
+  @override
+  Future<void> deleteBeneficiaire(String id) async {
+    await _call('DELETE', '/beneficiaires/$id');
+  }
+
+  @override
+  Future<List<Aide>> getAides({String? beneficiaireId, String? statut}) async =>
+      _items(
+          await _call('GET', '/aides',
+              query: _q({'beneficiaire_id': beneficiaireId, 'statut': statut})),
+          Aide.fromJson);
+
+  @override
+  Future<Aide> createAide({
+    required String beneficiaireId,
+    required String typeAide,
+    int? montantFcfa,
+    String? dateAide,
+    String? description,
+  }) async =>
+      Aide.fromJson(await _call('POST', '/aides', body: {
+        'beneficiaire_id': beneficiaireId,
+        'type_aide': typeAide,
+        if (montantFcfa != null) 'montant_fcfa': montantFcfa,
+        if (dateAide != null) 'date_aide': dateAide,
+        if (description != null) 'description': description,
+      }));
+
+  @override
+  Future<Aide> marquerAideVersee(String id) async => Aide.fromJson(
+      await _call('PATCH', '/aides/$id', body: {'statut': 'versee'}));
+
+  @override
+  Future<void> deleteAide(String id) async {
+    await _call('DELETE', '/aides/$id');
+  }
+
+  // -- Patrimoine (T10, avec les biens) ---------------------------------------
+  @override
+  Future<List<BienPatrimoine>> getBiensPatrimoine({String? categorie}) async =>
+      _items(
+          await _call('GET', '/biens-patrimoine',
+              query: _q({'categorie': categorie})),
+          BienPatrimoine.fromJson);
+
+  @override
+  Future<BienPatrimoine> createBienPatrimoine({
+    required String nom,
+    required String categorie,
+    int? valeurFcfa,
+    String? assurance,
+    String? photoUrl,
+    String? codeInventaire,
+  }) async =>
+      BienPatrimoine.fromJson(await _call('POST', '/biens-patrimoine', body: {
+        'nom': nom,
+        'categorie': categorie,
+        if (valeurFcfa != null) 'valeur_fcfa': valeurFcfa,
+        if (assurance != null) 'assurance': assurance,
+        if (photoUrl != null) 'photo_url': photoUrl,
+        if (codeInventaire != null) 'code_inventaire': codeInventaire,
+      }));
+
+  @override
+  Future<void> deleteBienPatrimoine(String id) async {
+    await _call('DELETE', '/biens-patrimoine/$id');
+  }
+
+  @override
+  Future<List<MaintenancePatrimoine>> getMaintenancePatrimoine({String? bienId}) async =>
+      _items(
+          await _call('GET', '/maintenance-patrimoine',
+              query: _q({'bien_id': bienId})),
+          MaintenancePatrimoine.fromJson);
+
+  @override
+  Future<MaintenancePatrimoine> createMaintenancePatrimoine({
+    required String bienId,
+    required String description,
+    String? dateMaintenance,
+    int? coutFcfa,
+    String? realisePar,
+    String? depenseId,
+  }) async =>
+      MaintenancePatrimoine.fromJson(
+          await _call('POST', '/maintenance-patrimoine', body: {
+        'bien_id': bienId,
+        'description': description,
+        if (dateMaintenance != null) 'date_maintenance': dateMaintenance,
+        if (coutFcfa != null) 'cout_fcfa': coutFcfa,
+        if (realisePar != null) 'realise_par': realisePar,
+        if (depenseId != null) 'depense_id': depenseId,
+      }));
+
   // -- Statistiques et export (module 11) ------------------------------------
   @override
   Future<StatsGlobales> getStatsGlobales() async =>
@@ -2501,6 +2772,8 @@ class HttpApiService implements ApiService {
     String? mtnNumero,
     String? devise,
     String? fuseauHoraire,
+    String? signataireNominations,
+    String? signataireProcesVerbaux,
   }) async =>
       EgliseParametres.fromJson(await _call('PATCH', '/parametres', body: {
         if (adresse != null) 'adresse': adresse,
@@ -2513,6 +2786,10 @@ class HttpApiService implements ApiService {
         if (mtnNumero != null) 'mtn_numero': mtnNumero,
         if (devise != null) 'devise': devise,
         if (fuseauHoraire != null) 'fuseau_horaire': fuseauHoraire,
+        if (signataireNominations != null)
+          'signataire_nominations': signataireNominations,
+        if (signataireProcesVerbaux != null)
+          'signataire_proces_verbaux': signataireProcesVerbaux,
       }));
 
   @override
