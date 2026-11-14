@@ -758,11 +758,17 @@ class HttpApiService implements ApiService {
 
   @override
   Future<MemberPage> getMembers(
-      {String? q, String? department, String? status}) async {
+      {String? q,
+      String? department,
+      String? status,
+      int? limit,
+      int? offset}) async {
     final data = await _call('GET', '/membres', query: {
       if (q != null && q.isNotEmpty) 'q': q,
       if (department != null) 'department': department,
       if (status != null) 'status': status,
+      if (limit != null) 'limit': '$limit',
+      if (offset != null) 'offset': '$offset',
     });
     return MemberPage(
       total: (data['total'] as num).toInt(),

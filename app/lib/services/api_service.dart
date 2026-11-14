@@ -297,7 +297,12 @@ abstract class ApiService {
   Future<void> annulerTransfert(String id);
 
   // -- Membres ---------------------------------------------------------------
-  Future<MemberPage> getMembers({String? q, String? department, String? status});
+  Future<MemberPage> getMembers(
+      {String? q,
+      String? department,
+      String? status,
+      int? limit,
+      int? offset});
 
   Future<Member> getMember(String id);
 

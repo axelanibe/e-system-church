@@ -10,6 +10,7 @@ import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/liste_avec_fab.dart';
 import '../widgets/dialog_helpers.dart';
+import 'cartes_membres_screen.dart';
 import 'member_detail_screen.dart';
 import 'member_form_screen.dart';
 import 'import_membres_screen.dart';
@@ -270,6 +271,18 @@ class _MembresScreenState extends State<MembresScreen> {
                     onPressed: _openImport,
                     icon: const Icon(Icons.upload_outlined),
                     label: const Text('Importer'),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const CartesMembresScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.print_outlined),
+                    label: const Text('Cartes'),
                   ),
                 ],
                 if (state.canManageMembers) ...[

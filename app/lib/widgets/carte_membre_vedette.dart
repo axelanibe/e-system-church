@@ -11,7 +11,7 @@ import 'mere_badge.dart';
 /// Carte de membre en vedette, en tête de l'espace fidèle : la plus
 /// belle chose de l'écran, comme une carte bancaire dans une application
 /// grand public. Dégradé violet profond, barre or en haut, matricule en
-/// mono, comme la carte du modèle. Photo ou initiales, nom en grand,
+/// or et en mono, comme la carte du modèle. Photo ou initiales, nom en grand,
 /// matricule, église, QR en miniature. Rien d'inventé : que des
 /// données réelles du profil. La photo n'apparaît que si elle a été
 /// fournie (migration 018), sinon les initiales. Le bouton ouvre la
@@ -161,7 +161,7 @@ class CarteMembreVedette extends StatelessWidget {
                                 TextSpan(
                                   text: profil.matricule,
                                   style: AppTheme.styleCode.copyWith(
-                                    color: Colors.white,
+                                    color: AppTheme.or,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
