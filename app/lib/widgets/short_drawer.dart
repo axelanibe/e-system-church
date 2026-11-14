@@ -22,9 +22,12 @@ import '../screens/settings_screen.dart';
 
 /// Tiroir désengorgé (simulation tiroir désengorgé, modèle projection) :
 /// 11 entrées essentielles, une par ligne avec un titre et un sous-titre,
-/// icônes or sur fond violet profond. Une seule entrée par fonction, jamais
-/// de doublon avec la barre du bas (Accueil, Membres, Finances,
-/// Départements). Les autres fonctions restent accessibles depuis leur
+/// dans le style clair de la maquette d'Axel (14 novembre 2026) :
+/// icône violet profond sur fond teinté 6 %, titre semi-bold sombre,
+/// sous-titre atténué, petit chevron discret. Le fond est clair
+/// (thème du tiroir, blanc), jamais sombre : un texte sombre y est
+/// illisible. Une seule entrée par fonction, jamais de doublon avec
+/// la barre du bas (Accueil, Membres, Finances, Départements). Les autres fonctions restent accessibles depuis leur
 /// écran parent : Annonces depuis l'accueil, Présences depuis Cultes,
 /// Budget & caisse depuis Finances, Enfants & jeunesse depuis
 /// Départements, Médias depuis Cultes, Biens et Mon église depuis
@@ -47,35 +50,69 @@ class TiroirCourt extends StatelessWidget {
     );
   }
 
+  /// Entrée claire, style de la maquette d'Axel : icône violet
+  /// profond sur fond teinté 6 %, titre semi-bold, sous-titre
+  /// atténué, petit chevron discret. Le `Expanded(column: false)`
+  /// de la maquette est une erreur (Expanded n'a pas ce paramètre),
+  /// il n'est pas repris.
   Widget _entree({
     required IconData icone,
     required String titre,
     required String sousTitre,
     required VoidCallback onTap,
   }) {
-    return ListTile(
-      leading: Icon(icone, color: AppTheme.or),
-      title: Text(
-        titre,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.violetProfond.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icone, color: AppTheme.violetProfond, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    titre,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.violetProfond,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    sousTitre,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: AppTheme.texteSecondaire,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppTheme.texteSecondaire,
+              size: 18,
+            ),
+          ],
         ),
       ),
-      subtitle: Text(
-        sousTitre,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(color: Colors.white70, fontSize: 14),
-      ),
-      trailing: const Icon(
-        Icons.chevron_right,
-        color: Colors.white54,
-      ),
-      onTap: onTap,
     );
   }
 
@@ -87,7 +124,6 @@ class TiroirCourt extends StatelessWidget {
         .where((v) => (v ?? '').isNotEmpty)
         .join(' · ');
     return Drawer(
-      backgroundColor: AppTheme.violetProfond,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -105,7 +141,8 @@ class TiroirCourt extends StatelessWidget {
                       ChurchAvatar(church: church, radius: 24),
                       const Spacer(),
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
+                        icon: const Icon(Icons.close,
+                            color: AppTheme.violetProfond),
                         tooltip: 'Fermer',
                         onPressed: () => Navigator.of(context).pop(),
                       ),
@@ -116,10 +153,7 @@ class TiroirCourt extends StatelessWidget {
                     church?.name ?? 'e-System Church',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(color: Colors.white),
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
                   if (church?.isMere ?? false) ...[
                     const SizedBox(height: 6),
@@ -131,18 +165,13 @@ class TiroirCourt extends StatelessWidget {
                       codeVille,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTheme.styleCode.copyWith(
-                        color: Colors.white70,
-                      ),
+                      style: AppTheme.styleCode,
                     ),
                   Text(
                     state.user?.fullName ?? '',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: Colors.white),
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                   Text(
                     state.roleLabel,
@@ -151,7 +180,7 @@ class TiroirCourt extends StatelessWidget {
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
-                        ?.copyWith(color: Colors.white70),
+                        ?.copyWith(color: AppTheme.texteSecondaire),
                   ),
                   const SizedBox(height: 8),
                   const Row(
@@ -159,13 +188,13 @@ class TiroirCourt extends StatelessWidget {
                       Icon(
                         Icons.swap_horiz_outlined,
                         size: 16,
-                        color: AppTheme.or,
+                        color: AppTheme.violetProfond,
                       ),
                       SizedBox(width: 6),
                       Text(
                         'Changer d’église',
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: AppTheme.texteSecondaire,
                           fontSize: 13,
                         ),
                       ),
@@ -175,7 +204,7 @@ class TiroirCourt extends StatelessWidget {
               ),
             ),
           ),
-          const Divider(color: Colors.white24, height: 1),
+          const Divider(color: AppTheme.bordure, height: 1),
           _entree(
             icone: Icons.church_outlined,
             titre: 'Cultes et Présences',
@@ -256,7 +285,7 @@ class TiroirCourt extends StatelessWidget {
             sousTitre: 'Profil, clés, rôles et mode test',
             onTap: () => _ouvrir(context, const SettingsScreen()),
           ),
-          const Divider(color: Colors.white24, height: 1),
+          const Divider(color: AppTheme.bordure, height: 1),
           _entree(
             icone: Icons.info_outline,
             titre: 'À propos de e-System Church',

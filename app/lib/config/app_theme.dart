@@ -72,6 +72,10 @@ class AppTheme {
   /// Bordures claires, champs et cartes.
   static const Color bordure = Color(0xFFDDD3EE);
 
+  /// Texte secondaire atténué sur fond clair (tiroir clair, maquette
+  /// d'Axel, 14 novembre 2026) : #5A4A72 mesuré sur le logo.
+  static const Color texteSecondaire = Color(0xFF5A4A72);
+
   /// Rouge, erreurs et alertes seulement, sur papier 6,05:1.
   static const Color rougeErreur = Color(0xFFB3261E);
 
