@@ -1,56 +1,56 @@
-// Service API factice — DÉMO UNIQUEMENT.
+// Service API factice — TESTS UNIQUEMENT.
 //
 // Implémente la même interface que le vrai [ApiService] (`lib/services/`)
 // mais ne fait AUCUN appel réseau : tout est en mémoire, sur les données
-// fictives de `mock_data.dart` (réseau « Grâce Divine »).
-// Utilisé uniquement par `lib/main_demo.dart` via `DemoAppState`.
+// fictives de `faux_donnees.dart`. Utilisé uniquement par les tests.
 // L'application réelle (`lib/main.dart`) n'importe jamais ce fichier.
 
 import 'dart:typed_data';
 
-import '../models/abonnement.dart';
-import '../models/attestation.dart';
-import '../models/annexe.dart';
-import '../models/anniversaire.dart';
-import '../models/announcement.dart';
-import '../models/auth.dart';
-import '../models/biens.dart';
-import '../models/gouvernance.dart';
-import '../models/church.dart';
-import '../models/code_tutelle.dart';
-import '../models/campagne.dart';
-import '../models/contribution.dart';
-import '../models/cultes.dart';
-import '../models/checkin_enfant.dart';
-import '../models/confiance.dart';
-import '../models/enfants.dart';
-import '../models/fidele.dart';
-import '../models/finances.dart';
-import '../models/frequentation.dart';
-import '../models/medias.dart';
-import '../models/member.dart';
-import '../models/membres_complement.dart';
-import '../models/nettoyage_test.dart';
-import '../models/suppression_eglise.dart';
-import '../models/paiements.dart';
-import '../models/parametres.dart';
-import '../models/pastoral.dart';
-import '../models/plateforme.dart';
-import '../models/acces_plateforme.dart';
-import '../models/presences.dart';
-import '../models/prieres.dart';
-import '../models/profil.dart';
-import '../models/rapport.dart';
-import '../models/rapport_annexe.dart';
-import '../models/rattachement.dart';
-import '../models/serviteurs.dart';
-import '../models/stats.dart';
-import '../models/sycebnl.dart';
-import '../models/transfert.dart';
-import '../services/api_service.dart';
-import 'mock_data.dart';
+import 'package:esystem_church/models/abonnement.dart';
+import 'package:esystem_church/models/attestation.dart';
+import 'package:esystem_church/models/annexe.dart';
+import 'package:esystem_church/models/anniversaire.dart';
+import 'package:esystem_church/models/announcement.dart';
+import 'package:esystem_church/models/auth.dart';
+import 'package:esystem_church/models/biens.dart';
+import 'package:esystem_church/models/gouvernance.dart';
+import 'package:esystem_church/models/church.dart';
+import 'package:esystem_church/models/code_tutelle.dart';
+import 'package:esystem_church/models/campagne.dart';
+import 'package:esystem_church/models/contribution.dart';
+import 'package:esystem_church/models/cultes.dart';
+import 'package:esystem_church/models/checkin_enfant.dart';
+import 'package:esystem_church/models/confiance.dart';
+import 'package:esystem_church/models/enfants.dart';
+import 'package:esystem_church/models/fidele.dart';
+import 'package:esystem_church/models/finances.dart';
+import 'package:esystem_church/models/frequentation.dart';
+import 'package:esystem_church/models/medias.dart';
+import 'package:esystem_church/models/member.dart';
+import 'package:esystem_church/models/membres_complement.dart';
+import 'package:esystem_church/models/nettoyage_test.dart';
+import 'package:esystem_church/models/suppression_eglise.dart';
+import 'package:esystem_church/models/paiements.dart';
+import 'package:esystem_church/models/parametres.dart';
+import 'package:esystem_church/models/pastoral.dart';
+import 'package:esystem_church/models/plateforme.dart';
+import 'package:esystem_church/models/acces_plateforme.dart';
+import 'package:esystem_church/models/presences.dart';
+import 'package:esystem_church/models/prieres.dart';
+import 'package:esystem_church/models/profil.dart';
+import 'package:esystem_church/models/rapport.dart';
+import 'package:esystem_church/models/rapport_annexe.dart';
+import 'package:esystem_church/models/rattachement.dart';
+import 'package:esystem_church/models/serviteurs.dart';
+import 'package:esystem_church/models/stats.dart';
+import 'package:esystem_church/models/sycebnl.dart';
+import 'package:esystem_church/models/transfert.dart';
+import 'package:esystem_church/models/us_restantes.dart';
+import 'package:esystem_church/services/api_service.dart';
+import 'faux_donnees.dart';
 
-class MockApiService implements ApiService {
+class FauxApiService implements ApiService {
   final DemoSeed _data = DemoSeed();
 
   /// Église de chaque élément du seed ou créé en démo, par identifiant.
@@ -72,7 +72,7 @@ class MockApiService implements ApiService {
     ),
   ];
 
-  MockApiService() {
+  FauxApiService() {
     _tagSeed();
   }
 
@@ -4156,6 +4156,11 @@ class MockApiService implements ApiService {
     String? fuseauHoraire,
     String? signataireNominations,
     String? signataireProcesVerbaux,
+    int? montantDimeSuggere,
+    bool effacerDimeSuggere = false,
+    bool? transparenceVisibleMembres,
+    int? seuilInactiviteSemaines,
+    int? seuilBaisseContributionsPct,
   }) async {
     await _latence();
     _requireAuth();
@@ -4948,4 +4953,146 @@ class MockApiService implements ApiService {
   Future<ActionHorsLigne> rejouerActionHorsLigne(String id) async {
     throw UnimplementedError('File hors ligne non gérée en démo.');
   }
+  // -- US4 à US17 restantes (T12) : non gérées par le faux service,
+  //    les écrans T12 ne sont pas pompés dans les tests. ---------------
+  @override
+  Future<List<Promesse>> getPromesses({String? memberId}) async => const [];
+
+  @override
+  Future<Promesse> getPromesse(String id) async =>
+      throw UnimplementedError('Promesses non gérées par le faux service.');
+
+  @override
+  Future<Promesse> createPromesse({
+    required String memberId,
+    required int montantTotalFcfa,
+    String? dateDebut,
+    int nbVersements = 1,
+  }) async =>
+      throw UnimplementedError('Promesses non gérées par le faux service.');
+
+  @override
+  Future<Promesse> annulerPromesse(String id) async =>
+      throw UnimplementedError('Promesses non gérées par le faux service.');
+
+  @override
+  Future<Map<String, dynamic>> verserPromesse({
+    required String promesseId,
+    required String echeanceId,
+    required int amountFcfa,
+    required String paymentMethod,
+    String? paymentRef,
+    String? note,
+  }) async =>
+      throw UnimplementedError('Promesses non gérées par le faux service.');
+
+  @override
+  Future<List<DonNature>> getDonsNature({String? typeDon}) async => const [];
+
+  @override
+  Future<DonNature> createDonNature({
+    String? memberId,
+    required String description,
+    int quantite = 1,
+    String? unite,
+    String typeDon = 'materiel',
+    double? heures,
+    String? dateDon,
+    bool anonyme = false,
+  }) async =>
+      throw UnimplementedError('Dons en nature non gérés par le faux service.');
+
+  @override
+  Future<List<Visiteur>> getVisiteurs({String? statut}) async => const [];
+
+  @override
+  Future<Visiteur> createVisiteur({
+    required String nom,
+    String? dateVenue,
+    String? telephone,
+    String? email,
+    String? moyenContact,
+  }) async =>
+      throw UnimplementedError('Visiteurs non gérés par le faux service.');
+
+  @override
+  Future<Visiteur> devenirMembre(String visiteurId, String memberId) async =>
+      throw UnimplementedError('Visiteurs non gérés par le faux service.');
+
+  @override
+  Future<List<EvenementVie>> getEvenementsVie({int jours = 30}) async =>
+      const [];
+
+  @override
+  Future<void> masquerEvenementsVie(List<String> types) async {}
+
+  @override
+  Future<Transparence> getTransparence({String? periode}) async =>
+      throw UnimplementedError('Transparence non gérée par le faux service.');
+
+  @override
+  Future<CartePortefeuille> getCartePortefeuille() async => throw UnimplementedError(
+      'Carte portefeuille non gérée par le faux service.');
+
+  @override
+  Future<MesConsentements> getMesConsentements() async =>
+      const MesConsentements(whatsapp: false, smsRepli: false, evenementsVieMasques: []);
+
+  @override
+  Future<MesConsentements> saveMesConsentements({
+    bool? whatsapp,
+    bool? smsRepli,
+  }) async =>
+      const MesConsentements(whatsapp: false, smsRepli: false, evenementsVieMasques: []);
+
+  @override
+  Future<List<WhatsappConsentement>> getWhatsappConsentements() async =>
+      const [];
+
+  @override
+  Future<List<AlerteMere>> getAlertesMere({String? statut}) async => const [];
+
+  @override
+  Future<Map<String, dynamic>> detecterAlertes() async => const {};
+
+  @override
+  Future<AlerteMere> traiterAlerte(String id) async =>
+      throw UnimplementedError('Alertes non gérées par le faux service.');
+
+  @override
+  Future<List<ListeConfigurable>> getListesConfigurables({String? type}) async =>
+      const [];
+
+  @override
+  Future<ListeConfigurable> createListeConfigurable({
+    required String type,
+    required String libelle,
+    String? niveau,
+  }) async =>
+      throw UnimplementedError('Listes non gérées par le faux service.');
+
+  @override
+  Future<ListeConfigurable> updateListeConfigurable(
+    String id, {
+    bool? archive,
+  }) async =>
+      throw UnimplementedError('Listes non gérées par le faux service.');
+
+  @override
+  Future<void> deleteListeConfigurable(String id) async {}
+
+  @override
+  Future<List<String>> getStatutsMembre() async => const ['membre'];
+
+  @override
+  Future<List<ConsultationSensible>> getConsultationsSensibles() async =>
+      const [];
+
+  @override
+  Future<List<ConsultationSensible>> getMesConsultations() async => const [];
+
+  @override
+  Future<void> journaliserConsultation(String ressource,
+          {String? ressourceId}) async =>
+      throw UnimplementedError('Consultations non gérées par le faux service.');
 }

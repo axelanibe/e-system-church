@@ -9,10 +9,13 @@ import '../widgets/common_widgets.dart';
 import 'campagnes_screen.dart';
 import 'contribution_form_screen.dart';
 import 'attestations_screen.dart';
+import 'dons_nature_screen.dart';
 import 'finances_completes_screen.dart';
 import 'finances_complement_screen.dart';
 import 'finances_mere_screen.dart';
+import 'promesses_screen.dart';
 import 'receipt_screen.dart';
+import 'transparence_screen.dart';
 
 /// Finances de mon église : totaux par type, liste avec filtres, ajout
 /// d'une contribution, reçu avec confirmation / annulation.
@@ -235,6 +238,57 @@ class _FinancesScreenState extends State<FinancesScreen> {
                               ),
                             );
                             _refresh();
+                          },
+                        ),
+                      ),
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.handshake_outlined),
+                          title: const Text('Promesses de don'),
+                          subtitle: const Text(
+                              'Engagements avec échéancier et versements.'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const PromessesScreen(),
+                              ),
+                            );
+                            _refresh();
+                          },
+                        ),
+                      ),
+                      Card(
+                        child: ListTile(
+                          leading:
+                              const Icon(Icons.card_giftcard_outlined),
+                          title: const Text('Dons en nature'),
+                          subtitle: const Text(
+                              'Matériel, nourriture, temps. Hors totaux financiers.'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const DonsNatureScreen(),
+                              ),
+                            );
+                            _refresh();
+                          },
+                        ),
+                      ),
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.visibility_outlined),
+                          title: const Text('Transparence financière'),
+                          subtitle: const Text(
+                              'Totaux agrégés par type et par poste.'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const TransparenceScreen(),
+                              ),
+                            );
                           },
                         ),
                       ),

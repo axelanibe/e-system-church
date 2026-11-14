@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Thème unique de e-System Church, partagé par l'application réelle
-/// (`lib/main.dart`) et la version démo (`lib/main_demo.dart`).
+/// Thème unique de e-System Church, partagé par toute l'application
+/// (`lib/main.dart`). Le mode démo a été supprimé (T12) : il n'y a plus
+/// de version démo.
 ///
 /// Palette de l'artefact, tranchée par Axel le 12 novembre 2026 :
 /// bleu nuit #0B1F3A, or #D4A72C, or foncé #8A6A12, fond papier

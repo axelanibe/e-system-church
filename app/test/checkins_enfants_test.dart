@@ -1,5 +1,5 @@
-import 'package:esystem_church/demo/mock_api_service.dart';
-import 'package:esystem_church/demo/mock_data.dart';
+import 'faux_api_service.dart';
+import 'faux_donnees.dart';
 import 'package:esystem_church/models/checkin_enfant.dart';
 import 'package:esystem_church/services/api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,7 +58,7 @@ void main() {
 
   group('repli démo', () {
     test('liste du jour vide, sans effet', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
         password: DemoAccounts.password,
@@ -67,7 +67,7 @@ void main() {
     });
 
     test('check-in refusé en démo', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
         password: DemoAccounts.password,

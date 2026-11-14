@@ -1,32 +1,31 @@
-// DONNÉES FICTIVES — DÉMO UNIQUEMENT.
+// DONNÉES FICTIVES — TESTS UNIQUEMENT.
 //
 // Ces données n'ont rien de réel : le réseau « Grâce Divine », ses églises,
-// ses membres, ses montants et ses noms sont inventés pour présenter
-// l'application. Ce fichier n'est utilisé QUE par la version démo
-// (`lib/main_demo.dart` + `lib/demo/mock_api_service.dart`).
+// ses membres, ses montants et ses noms sont inventés pour les tests.
+// Ce fichier n'est utilisé QUE par `test/faux_api_service.dart`.
 // L'application réelle (`lib/main.dart`) n'y touche jamais : elle n'affiche
 // que les données de l'API, et ses listes vides restent vides.
 
-import '../models/announcement.dart';
-import '../models/biens.dart';
-import '../models/church.dart';
-import '../models/contribution.dart';
-import '../models/cultes.dart';
-import '../models/enfants.dart';
-import '../models/fidele.dart';
-import '../models/finances.dart';
-import '../models/medias.dart';
-import '../models/member.dart';
-import '../models/membres_complement.dart';
-import '../models/paiements.dart';
-import '../models/parametres.dart';
-import '../models/pastoral.dart';
-import '../models/presences.dart';
-import '../models/prieres.dart';
-import '../models/profil.dart';
-import '../models/rattachement.dart';
-import '../models/serviteurs.dart';
-import '../models/transfert.dart';
+import 'package:esystem_church/models/announcement.dart';
+import 'package:esystem_church/models/biens.dart';
+import 'package:esystem_church/models/church.dart';
+import 'package:esystem_church/models/contribution.dart';
+import 'package:esystem_church/models/cultes.dart';
+import 'package:esystem_church/models/enfants.dart';
+import 'package:esystem_church/models/fidele.dart';
+import 'package:esystem_church/models/finances.dart';
+import 'package:esystem_church/models/medias.dart';
+import 'package:esystem_church/models/member.dart';
+import 'package:esystem_church/models/membres_complement.dart';
+import 'package:esystem_church/models/paiements.dart';
+import 'package:esystem_church/models/parametres.dart';
+import 'package:esystem_church/models/pastoral.dart';
+import 'package:esystem_church/models/presences.dart';
+import 'package:esystem_church/models/prieres.dart';
+import 'package:esystem_church/models/profil.dart';
+import 'package:esystem_church/models/rattachement.dart';
+import 'package:esystem_church/models/serviteurs.dart';
+import 'package:esystem_church/models/transfert.dart';
 
 /// Identifiants stables des églises fictives.
 class DemoIds {

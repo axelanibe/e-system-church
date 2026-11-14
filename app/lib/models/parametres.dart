@@ -16,6 +16,11 @@ class EgliseParametres {
   // T10 : signataires configurables, vides par défaut.
   final String? signataireNominations;
   final String? signataireProcesVerbaux;
+  // T12 (US8, US11, US14) : dîme suggérée, transparence, seuils d'alerte.
+  final int? montantDimeSuggere;
+  final bool transparenceVisibleMembres;
+  final int seuilInactiviteSemaines;
+  final int seuilBaisseContributionsPct;
   final String? egliseNom;
   final String? egliseCode;
 
@@ -32,6 +37,10 @@ class EgliseParametres {
     this.fuseauHoraire,
     this.signataireNominations,
     this.signataireProcesVerbaux,
+    this.montantDimeSuggere,
+    this.transparenceVisibleMembres = false,
+    this.seuilInactiviteSemaines = 4,
+    this.seuilBaisseContributionsPct = 30,
     this.egliseNom,
     this.egliseCode,
   });
@@ -50,6 +59,19 @@ class EgliseParametres {
         fuseauHoraire: json['fuseau_horaire'] as String?,
         signataireNominations: json['signataire_nominations'] as String?,
         signataireProcesVerbaux: json['signataire_proces_verbaux'] as String?,
+        montantDimeSuggere: json['montant_dime_suggere'] == null
+            ? null
+            : (json['montant_dime_suggere'] as num).toInt(),
+        transparenceVisibleMembres:
+            json['transparence_visible_membres'] as bool? ?? false,
+        seuilInactiviteSemaines:
+            json['seuil_inactivite_semaines'] == null
+                ? 4
+                : (json['seuil_inactivite_semaines'] as num).toInt(),
+        seuilBaisseContributionsPct:
+            json['seuil_baisse_contributions_pct'] == null
+                ? 30
+                : (json['seuil_baisse_contributions_pct'] as num).toInt(),
         egliseNom: json['eglise_nom'] as String?,
         egliseCode: json['eglise_code'] as String?,
       );
