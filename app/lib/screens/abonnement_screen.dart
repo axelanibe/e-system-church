@@ -255,15 +255,16 @@ class _VueMere extends StatelessWidget {
                         contentPadding: EdgeInsets.zero,
                         value: duree,
                         title: Text(
-                          '$duree ${duree == 1 ? 'an' : 'ans'}',
+                          '$duree ${duree == 1 ? 'an' : 'ans'} '
+                          '${formatFcfa(tarif)}',
                           style: const TextStyle(fontSize: 16),
                         ),
-                        subtitle: Text(
-                          ancien == null
-                              ? formatFcfa(tarif)
-                              : '${formatFcfa(tarif)}, au lieu de ${formatFcfa(ancien)}',
-                          style: const TextStyle(fontSize: 16),
-                        ),
+                        subtitle: ancien == null
+                            ? null
+                            : Text(
+                                'au lieu de ${formatFcfa(ancien)}',
+                                style: const TextStyle(fontSize: 16),
+                              ),
                       );
                     }).toList(),
                   ),
