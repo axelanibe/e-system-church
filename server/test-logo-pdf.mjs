@@ -1,7 +1,8 @@
 /* Test local tranche logo église — décodeur d'image et intégration du
  * logo dans les PDF, sans base de données ni API.
- * Usage (depuis server/) : node test-logo-pdf.mjs
- * Node 24 lit directement les .ts (type stripping) : aucune compilation.
+ * Usage (depuis server/) : npm run build && node test-logo-pdf.mjs
+ * Les imports visent dist/ (compilé) : la CI tourne sous Node 20, qui ne
+ * lit pas les .ts directement (Node 24 le fait, d'où le piège).
  */
 import { deflateSync } from "node:zlib";
 import {
@@ -9,12 +10,12 @@ import {
   genererAttestationPdf,
   genererRapportPdf,
   genererRecuPdf,
-} from "./src/pdf.ts";
+} from "./dist/pdf.js";
 import {
   chargerLogo,
   decoderImage,
   dimensionsJpeg,
-} from "./src/logo_pdf.ts";
+} from "./dist/logo_pdf.js";
 
 let ok = 0;
 let ko = 0;
