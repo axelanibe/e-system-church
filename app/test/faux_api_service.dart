@@ -1472,7 +1472,11 @@ class FauxApiService implements ApiService {
 
   @override
   Future<MemberPage> getMembers(
-      {String? q, String? department, String? status}) async {
+      {String? q,
+      String? department,
+      String? status,
+      int? limit,
+      int? offset}) async {
     await _latence();
     _requireAuth();
     var list = _data.membersOf(_churchId);
@@ -1490,7 +1494,13 @@ class FauxApiService implements ApiService {
     if (status != null && status.isNotEmpty) {
       list = list.where((m) => m.status == status).toList();
     }
-    return MemberPage(total: list.length, membres: List.unmodifiable(list));
+    final total = list.length;
+    final debut = (offset ?? 0).clamp(0, total);
+    final fin = limit == null
+        ? total
+        : (debut + limit).clamp(0, total);
+    return MemberPage(
+        total: total, membres: List.unmodifiable(list.sublist(debut, fin)));
   }
 
   @override

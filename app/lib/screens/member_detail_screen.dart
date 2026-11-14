@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../models/frequentation.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
+import '../widgets/carte_membre_visuelle.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
 import 'member_form_screen.dart';
@@ -446,145 +446,15 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
   }
 
   /// Visuel de la carte de membre, réutilisé par la fiche complète et
-  /// par la page Carte seule (P1). Photo, nom, matricule, église,
-  /// Membre depuis, QR. Rien d'autre.
+  /// par la page Carte seule (P1). Le visuel vit dans
+  /// [CarteMembreVisuelle], modèle CONNEXION PROPHÉTIQUE.
   Widget _carteVisuelle(BuildContext context, String qrData) {
-    final nomEglise = context.read<AppState>().church?.name;
-    // Carte du modèle : dégradé bleu nuit, barre or en haut,
-    // matricule en mono. Photo, nom, matricule, église,
-    // Membre depuis, QR. Rien d'autre.
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppTheme.bleuNuit, Color(0xFF16324F)],
-          ),
-        ),
-        child: Column(
-          children: [
-            Container(height: 6, color: AppTheme.or),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  Text(
-                    'CARTE DE MEMBRE',
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelLarge
-                        ?.copyWith(
-                          color: Colors.white70,
-                          letterSpacing: 1.2,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'e-System Church',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(
-                          color: AppTheme.or,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 16),
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: Colors.white24,
-                    backgroundImage: _member.photoUrl != null
-                        ? NetworkImage(_member.photoUrl!)
-                        : null,
-                    child: _member.photoUrl == null
-                        ? Text(
-                            _member.fullName.isNotEmpty
-                                ? _member.fullName[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(
-                                fontSize: 32, color: Colors.white),
-                          )
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _member.fullName,
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall
-                        ?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _member.matricule,
-                    style: AppTheme.styleCode.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  if (nomEglise != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      nomEglise,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: Colors.white),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                  if (_member.createdAt != null)
-                    Text(
-                      'Membre depuis ${formatDate(_member.createdAt)}',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: Colors.white70),
-                      textAlign: TextAlign.center,
-                    ),
-                  if (!widget.carteSeule) ...[
-                    const SizedBox(height: 8),
-                    StatusChip(
-                      label: _member.statutAffiche,
-                      color: _statusColor(
-                          _member.estAncien ? 'ancien' : _member.status),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: QrImageView(
-                      data: qrData,
-                      version: QrVersions.auto,
-                      size: 180,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _member.matricule,
-                    style: AppTheme.styleCode.copyWith(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+    return CarteMembreVisuelle(
+      member: _member,
+      qrData: qrData,
+      avecStatut: !widget.carteSeule,
+      couleurStatut:
+          _statusColor(_member.estAncien ? 'ancien' : _member.status),
     );
   }
 

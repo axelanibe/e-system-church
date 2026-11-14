@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../config/app_theme.dart';
 import '../state/app_state.dart';
+import 'cartes_membres_screen.dart';
 import 'confiance_screen.dart';
 import 'cultes_direct_screen.dart';
 import 'gouvernance_screen.dart';
@@ -60,6 +61,13 @@ class ModulesScreen extends StatelessWidget {
       'Fiche unique, création guidée, anniversaires.',
       'T4 · Construit',
       Icons.people_outline,
+    ),
+    (
+      'cartes',
+      'Cartes de membre',
+      'Voir les cartes et les imprimer.',
+      'Admin · Construit',
+      Icons.print_outlined,
     ),
     (
       'cultes',
@@ -163,6 +171,8 @@ class ModulesScreen extends StatelessWidget {
         context.read<AppState>().entrerApercuFidele();
       case 'cultes':
         _pousser(context, const CultesDirectScreen());
+      case 'cartes':
+        _pousser(context, const CartesMembresScreen());
       case 'pastoral':
         _pousser(context, const PastoralScreen());
       case 'bible':
