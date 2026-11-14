@@ -120,6 +120,21 @@ export function invalidInput(reply: FastifyReply, error: z.ZodError): void {
   });
 }
 
+/**
+ * Erreur métier porteuse d'un code et d'un statut HTTP. Les routes la
+ * traduisent en réponse ; le rejeu hors ligne (T11) réutilise les mêmes
+ * fonctions métier et attrape la même erreur.
+ */
+export class ErreurMetier extends Error {
+  readonly code: string;
+  readonly statut: number;
+  constructor(code: string, message: string, statut = 400) {
+    super(message);
+    this.code = code;
+    this.statut = statut;
+  }
+}
+
 /** Vrai si la ligne `id` existe dans `table` pour cette église. */
 export async function existsInChurch(
   db: Pool,

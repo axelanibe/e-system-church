@@ -95,14 +95,17 @@ class RoleEglise {
   String get roleLabel => labelForRole(role);
 }
 
-/// Entrée du journal d'audit (`GET /parametres/audit` :
-/// `{ items: [{ id, action, details, created_at, utilisateur }] }`).
+/// Entrée du journal d'audit (`GET /audit` :
+/// `{ items: [{ id, action, details, created_at, user_nom, hash,
+/// hash_precedent }] }`). Lecture seule, chaîne de hachage (T11).
 class AuditEntree {
   final String id;
   final String action;
   final Map<String, dynamic>? details;
   final DateTime? createdAt;
   final String? utilisateur;
+  final String? hash;
+  final String? hashPrecedent;
 
   const AuditEntree({
     required this.id,
@@ -110,6 +113,8 @@ class AuditEntree {
     this.details,
     this.createdAt,
     this.utilisateur,
+    this.hash,
+    this.hashPrecedent,
   });
 
   factory AuditEntree.fromJson(Map<String, dynamic> json) => AuditEntree(
@@ -117,7 +122,10 @@ class AuditEntree {
         action: json['action'] as String,
         details: (json['details'] as Map?)?.cast<String, dynamic>(),
         createdAt: parseDate(json['created_at'] as String?),
-        utilisateur: json['utilisateur'] as String?,
+        utilisateur: (json['utilisateur'] as String?) ??
+            json['user_nom'] as String?,
+        hash: json['hash'] as String?,
+        hashPrecedent: json['hash_precedent'] as String?,
       );
 }
 

@@ -47,6 +47,7 @@ import { registerImportMembresRoutes } from "./routes/import_membres.js";
 import { registerExportsPdfRoutes } from "./routes/exports_pdf.js";
 import { registerPlanComptableRoutes } from "./routes/plan_comptable.js";
 import { registerGouvernanceRoutes } from "./routes/gouvernance.js";
+import { registerConfianceRoutes } from "./routes/confiance.js";
 
 export function buildApp(db: Pool) {
   const app = Fastify({ logger: true });
@@ -171,6 +172,7 @@ export function buildApp(db: Pool) {
   registerExportsPdfRoutes(app, db);
   registerPlanComptableRoutes(app, db);
   registerGouvernanceRoutes(app, db);
+  registerConfianceRoutes(app, db);
 
   app.setNotFoundHandler((_req, reply) => {
     reply.code(404).send({ error: "not_found", message: "Route inconnue." });

@@ -161,27 +161,7 @@ export function registerParametresRoutes(app: FastifyInstance, db: Pool) {
     },
   );
 
-  // -- Journal d'audit de mon église (lecture seule, admin). -----------------
-  app.get(
-    "/parametres/audit",
-    { preHandler: [requireAuth(db), requireRole(...ADMIN)] },
-    async (req, reply) => {
-      const limit = Math.min(Math.max(Number((req.query as { limit?: string }).limit ?? 50) || 50, 1), 100);
-      const offset = Math.max(Number((req.query as { offset?: string }).offset ?? 0) || 0, 0);
-      try {
-        const { rows } = await db.query(
-          `SELECT a.id, a.action, a.details, a.created_at, u.full_name AS utilisateur
-             FROM audit_logs a
-             LEFT JOIN users u ON u.id = a.user_id
-            WHERE a.church_id = $1
-            ORDER BY a.created_at DESC
-            LIMIT $2 OFFSET $3`,
-          [req.session.churchId, limit, offset],
-        );
-        return reply.send({ items: rows });
-      } catch (e) {
-        return dbError(reply, e);
-      }
-    },
-  );
+  // -- Journal d'audit de mon église : `GET /audit` (T11, routes
+  // confiance.ts) remplace l'ancienne route `/parametres/audit`,
+  // supprimée : même journal, avec la chaîne de hachage en plus.
 }

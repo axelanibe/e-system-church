@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
+import '../services/api_service.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 import 'forgot_password_screen.dart';
@@ -39,14 +40,17 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _identifiantController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _code2faController = TextEditingController();
   bool _loading = false;
   String? _error;
   bool _obscurePassword = true;
+  bool _demande2fa = false;
 
   @override
   void dispose() {
     _identifiantController.dispose();
     _passwordController.dispose();
+    _code2faController.dispose();
     super.dispose();
   }
 
@@ -60,10 +64,19 @@ class _LoginScreenState extends State<LoginScreen> {
       await context.read<AppState>().login(
             identifiant: _identifiantController.text.trim(),
             password: _passwordController.text,
+            code2fa: _demande2fa ? _code2faController.text.trim() : null,
           );
     } catch (e) {
       if (mounted) {
-        setState(() => _error = messageErreurSimple(e));
+        // 2FA active : le serveur demande le code, on affiche le champ.
+        if (e is ApiException && e.code == 'code_2fa_requis') {
+          setState(() {
+            _demande2fa = true;
+            _error = 'Saisissez votre code à 6 chiffres.';
+          });
+        } else {
+          setState(() => _error = messageErreurSimple(e));
+        }
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -141,6 +154,28 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
+                  if (_demande2fa) ...[
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _code2faController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _login(),
+                      decoration: const InputDecoration(
+                        labelText: 'Code à 6 chiffres',
+                        prefixIcon: Icon(Icons.phonelink_lock_outlined),
+                        border: OutlineInputBorder(),
+                        counterText: '',
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().length != 6) {
+                          return 'Le code compte 6 chiffres.';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
                   if (_error != null) ...[
                     const SizedBox(height: 12),
                     Text(

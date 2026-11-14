@@ -15,6 +15,7 @@ import '../models/cultes.dart';
 import '../models/checkin_enfant.dart';
 import '../models/enfants.dart';
 import '../models/fidele.dart';
+import '../models/confiance.dart';
 import '../models/finances.dart';
 import '../models/frequentation.dart';
 import '../models/gouvernance.dart';
@@ -40,11 +41,15 @@ import '../models/stats.dart';
 import '../models/sycebnl.dart';
 
 /// Erreur renvoyée par l'API (ou par le service en mode démo).
+/// `code` est le code d'erreur du serveur (`code_2fa_requis`,
+/// `hors_ligne`…) quand il existe : les écrans décident avec lui,
+/// pas avec le texte du message.
 class ApiException implements Exception {
   final String message;
   final int? statusCode;
+  final String? code;
 
-  const ApiException(this.message, [this.statusCode]);
+  const ApiException(this.message, [this.statusCode, this.code]);
 
   @override
   String toString() => message;
@@ -63,7 +68,8 @@ abstract class ApiService {
   Future<AuthResult> login(
       {required String identifiant,
       required String password,
-      bool plateforme = false});
+      bool plateforme = false,
+      String? code2fa});
 
   Future<AuthResult> register({
     required String churchName,
@@ -1172,7 +1178,7 @@ abstract class ApiService {
 
   Future<RoleEglise> setRole(String userId, String role);
 
-  Future<List<AuditEntree>> getAudit();
+  Future<List<AuditEntree>> getAudit({String? action, String? userId});
 
   // -- Présentation et identité de l'église (module 13) ----------------------
   Future<ProfilEglise> getPresentation(String code);
@@ -1310,4 +1316,83 @@ abstract class ApiService {
   });
 
   Future<void> deleteAnnonce(String id);
+
+  // -- Confiance (T11) -------------------------------------------------------
+  /// État 2FA du compte (`GET /2fa/etat`).
+  Future<bool> getEtat2fa();
+
+  /// Démarre la 2FA : renvoie l'URI otpauth (QR) et le secret, une
+  /// seule fois (`POST /2fa/demarrer`). Le secret est chiffré côté
+  /// serveur, jamais stocké en clair.
+  Future<Demarrage2fa> demarrer2fa();
+
+  /// Confirme l'activation 2FA avec un code à 6 chiffres.
+  Future<void> verifier2fa(String code);
+
+  /// Désactive la 2FA avec un code à 6 chiffres valide.
+  Future<void> desactiver2fa(String code);
+
+  /// Vérifie la chaîne de hachage du journal d'audit.
+  Future<VerificationAudit> verifierAudit();
+
+  /// Lectures sensibles journalisées (`GET /consultations`, US17).
+  Future<List<ConsultationSensible>> getConsultations();
+
+  /// Crée une sauvegarde chiffrée de l'église (`POST /sauvegardes`).
+  Future<Sauvegarde> creerSauvegarde();
+
+  /// Liste les sauvegardes de l'église.
+  Future<List<Sauvegarde>> getSauvegardes();
+
+  /// Restaure une sauvegarde : les données de l'église reviennent à
+  /// l'état sauvegardé (le journal d'audit n'est jamais réécrit).
+  Future<void> restaurerSauvegarde(String id);
+
+  /// Paramètres de confiance de l'église (`GET /confiance/parametres`).
+  /// La clé du fournisseur n'est jamais renvoyée.
+  Future<ParametresConfiance> getParametresConfiance();
+
+  /// Modifie les paramètres de confiance : fréquence de sauvegarde,
+  /// fournisseur de notification, clé, plafond mensuel.
+  Future<ParametresConfiance> patchParametresConfiance({
+    String? sauvegardeFrequence,
+    String? sauvegardeHeure,
+    bool? notificationsActives,
+    String? notificationFournisseur,
+    String? notificationCle,
+    int? notificationPlafondMensuel,
+  });
+
+  /// Notifications de la boîte d'envoi (`GET /notifications`).
+  Future<List<NotificationConfiance>> getNotifications(
+      {String? statut, String? canal});
+
+  /// Crée une notification en file (`POST /notifications`). Tant
+  /// qu'aucun fournisseur n'est choisi, rien n'est envoyé.
+  Future<NotificationConfiance> createNotification({
+    required String canal,
+    required String titre,
+    required String message,
+    String? userId,
+  });
+
+  /// Déclenche l'envoi d'une notification en attente.
+  Future<NotificationConfiance> envoyerNotification(String id);
+
+  /// Soumet une action hors ligne au serveur (`POST /file-hors-ligne`) :
+  /// idempotente par `cleClient`, jamais appliquée deux fois.
+  Future<ActionHorsLigne> soumettreActionHorsLigne({
+    required String typeAction,
+    required Map<String, dynamic> charge,
+    required String cleClient,
+  });
+
+  /// File d'attente hors ligne du serveur (`GET /file-hors-ligne`).
+  Future<List<ActionHorsLigne>> getActionsHorsLigne({String? statut});
+
+  /// Rejoue toute la file hors ligne du serveur, dans l'ordre.
+  Future<RejeuFile> rejouerFileHorsLigne();
+
+  /// Rejoue une seule action hors ligne.
+  Future<ActionHorsLigne> rejouerActionHorsLigne(String id);
 }

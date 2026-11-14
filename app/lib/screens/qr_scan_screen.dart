@@ -3,6 +3,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_theme.dart';
+import '../services/api_service.dart';
+import '../services/file_hors_ligne_service.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../utils/qr_carte.dart';
@@ -83,6 +85,29 @@ class _QrScanScreenState extends State<QrScanScreen> {
         'Présence pointée : ${presence.membreNom ?? lecture.matricule}.',
         succes: true,
       );
+    } on ApiException catch (e) {
+      // Hors ligne : le pointage est mis en file sur l'appareil,
+      // il sera rejoué à la reconnexion, sans doublon.
+      if (e.code == 'hors_ligne' && state.user != null) {
+        await FileHorsLigneService().ajouter(
+          state.user!.id,
+          typeAction: 'presence.pointer',
+          charge: {
+            'matricule': lecture.matricule,
+            'culte_id': widget.culteId,
+            'statut': 'present',
+            'mode': 'scan_qr',
+          },
+        );
+        if (!mounted) return;
+        setState(() => _pointes++);
+        _afficher(
+          'Hors ligne : présence enregistrée, elle sera envoyée à la reconnexion.',
+          succes: true,
+        );
+        return;
+      }
+      _afficher(e.toString(), succes: false);
     } catch (e) {
       _afficher(e.toString(), succes: false);
     }

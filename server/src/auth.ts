@@ -3,7 +3,9 @@ import argon2 from "argon2";
 import jwt from "jsonwebtoken";
 import type { Pool, PoolClient } from "pg";
 import { z } from "zod";
+import { decryptSecret } from "./paiements_crypto.js";
 import { seedPostesPrevisibles } from "./postes_previsibles.js";
+import { verifierCodeTOTP } from "./totp.js";
 
 // ---------------------------------------------------------------------------
 // Constantes (mêmes règles que SanteCI Connect)
@@ -80,6 +82,9 @@ export const loginSchema = z
     channel: z.enum(["web", "mobile"]).default("web"),
     /** Choisir parmi ses églises (un utilisateur peut appartenir à plusieurs). */
     church_id: z.string().uuid().optional(),
+    /** Code TOTP à 6 chiffres (2FA, T11) : exigé quand le compte a la
+     *  double authentification active, ignoré sinon. */
+    code_2fa: z.string().regex(/^\d{6}$/).optional(),
     /** Connexion Plateforme : seuls les comptes avec un accès Plateforme
      *  (super_admin ou aide_plateforme) sont acceptés ; la connexion
      *  normale refuse au contraire ces comptes (chaque interface est
@@ -135,6 +140,8 @@ export type LoginResult =
         | "password_not_set"
         | "pas_acces_plateforme"
         | "plateforme_seulement"
+        | "code_2fa_requis"
+        | "code_2fa_invalide"
         | "no_church";
     };
 
@@ -374,15 +381,154 @@ export async function generateMatricule(
 }
 
 // ---------------------------------------------------------------------------
-// Journal d'audit (table audit_logs : church_id, user_id, action, details)
 // ---------------------------------------------------------------------------
+// Journal d'audit (table audit_logs : church_id, user_id, action, details)
+// Tranche T11 — immuabilité et hash chaîné :
+// - chaque ligne porte hash = SHA-256 de son contenu + hash_precedent
+//   (le hash de la ligne précédente de la même église) : toute
+//   modification d'une ligne casse la chaîne, détectée par
+//   GET /audit/verifier ;
+// - un verrou consultatif par église sérialise les écritures, sinon deux
+//   insertions concurrentes liraient le même hash précédent et la chaîne
+//   bifurquerait ;
+// - un déclencheur base (migration 029) refuse UPDATE et DELETE ;
+// - les lignes créées avant T11 ont un hash NULL (avant la chaîne) et
+//   sont ignorées par la vérification.
+// ---------------------------------------------------------------------------
+
+/** JSON canonique : clés triées récursivement, pour un hash stable. */
+function jsonCanonique(valeur: unknown): string {
+  if (valeur === null || typeof valeur !== "object") {
+    return JSON.stringify(valeur) ?? "null";
+  }
+  if (Array.isArray(valeur)) {
+    return `[${valeur.map(jsonCanonique).join(",")}]`;
+  }
+  const objet = valeur as Record<string, unknown>;
+  return `{${Object.keys(objet)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${jsonCanonique(objet[k])}`)
+    .join(",")}}`;
+}
+
+/** Empreinte SHA-256 d'une ligne d'audit (même calcul à l'écriture et à la vérification). */
+export function empreinteAudit(entree: {
+  hashPrecedent: string | null;
+  churchId: string | null;
+  userId: string | null;
+  action: string;
+  details: unknown;
+  createdAt: string;
+}): string {
+  return createHash("sha256")
+    .update(
+      jsonCanonique({
+        hash_precedent: entree.hashPrecedent,
+        church_id: entree.churchId,
+        user_id: entree.userId,
+        action: entree.action,
+        details: entree.details,
+        created_at: entree.createdAt,
+      }),
+    )
+    .digest("hex");
+}
+
 export async function auditLog(
   client: Pool | PoolClient,
   opts: { churchId: string | null; userId: string | null; action: string; details?: unknown },
 ): Promise<void> {
-  await client.query(
-    `INSERT INTO audit_logs (church_id, user_id, action, details) VALUES ($1, $2, $3, $4)`,
-    [opts.churchId, opts.userId, opts.action, JSON.stringify(opts.details ?? {})],
+  const ecrire = async (c: PoolClient) => {
+    await c.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
+      opts.churchId ?? "plateforme",
+    ]);
+    const precedent = await c.query<{ hash: string | null }>(
+      `SELECT hash FROM audit_logs WHERE church_id IS NOT DISTINCT FROM $1 ORDER BY seq DESC LIMIT 1`,
+      [opts.churchId],
+    );
+    const hashPrecedent = precedent.rows[0]?.hash ?? null;
+    const createdAt = new Date().toISOString();
+    const details = opts.details ?? {};
+    const hash = empreinteAudit({
+      hashPrecedent,
+      churchId: opts.churchId,
+      userId: opts.userId,
+      action: opts.action,
+      details,
+      createdAt,
+    });
+    await c.query(
+      `INSERT INTO audit_logs (church_id, user_id, action, details, hash, hash_precedent, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [opts.churchId, opts.userId, opts.action, JSON.stringify(details), hash, hashPrecedent, createdAt],
+    );
+  };
+  // Client déjà en transaction (ex. inscription) : on écrit dans sa
+  // transaction, le verrou est libéré à son commit. Sinon on ouvre
+  // notre propre transaction.
+  if (typeof (client as PoolClient).release === "function") {
+    await ecrire(client as PoolClient);
+    return;
+  }
+  const pool = client as Pool;
+  const c = await pool.connect();
+  try {
+    await c.query("BEGIN");
+    await ecrire(c);
+    await c.query("COMMIT");
+  } catch (e) {
+    await c.query("ROLLBACK");
+    throw e;
+  } finally {
+    c.release();
+  }
+}
+
+/** Vérifie la chaîne d'audit d'une église, dans l'ordre des écritures. */
+export function verifierChaineAudit(lignes: {
+  id: string;
+  church_id: string | null;
+  user_id: string | null;
+  action: string;
+  details: unknown;
+  hash: string | null;
+  hash_precedent: string | null;
+  created_at: string | Date;
+}[]): { ok: boolean; total: number; verifies: number; ruptureId: string | null } {
+  let dernierHash: string | null = null;
+  let verifies = 0;
+  for (const ligne of lignes) {
+    if (!ligne.hash) continue; // Avant la chaîne (lignes antérieures à T11).
+    verifies += 1;
+    const cree = ligne.created_at instanceof Date ? ligne.created_at.toISOString() : ligne.created_at;
+    const attendu = empreinteAudit({
+      hashPrecedent: ligne.hash_precedent,
+      churchId: ligne.church_id,
+      userId: ligne.user_id,
+      action: ligne.action,
+      details: ligne.details,
+      createdAt: cree,
+    });
+    if (ligne.hash_precedent !== dernierHash || ligne.hash !== attendu) {
+      return { ok: false, total: lignes.length, verifies, ruptureId: ligne.id };
+    }
+    dernierHash = ligne.hash;
+  }
+  return { ok: true, total: lignes.length, verifies, ruptureId: null };
+}
+
+// ---------------------------------------------------------------------------
+// Lectures sensibles (US17, T11) : la lecture d'une fiche sensible est
+// journalisée à part, consultable par l'admin (GET /audit/consultations).
+// ---------------------------------------------------------------------------
+export async function logConsultationSensible(
+  db: Pool,
+  opts: { churchId: string; userId: string | null; ressource: string; ressourceId?: string | null },
+): Promise<void> {
+  await db.query(
+    `INSERT INTO consultations_sensibles (church_id, user_id, ressource, ressource_id)
+     VALUES ($1, $2, $3, $4)`,
+    [opts.churchId, opts.userId, opts.ressource, opts.ressourceId ?? null],
   );
 }
 
@@ -874,7 +1020,7 @@ export const ROLES_PLATEFORME = ["super_admin", "aide_plateforme"] as const;
 export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
   const parsed = loginSchema.safeParse(rawInput);
   if (!parsed.success) return { ok: false, reason: "invalid_input" };
-  const { identifiant, email, password, channel, church_id, plateforme } = parsed.data;
+  const { identifiant, email, password, channel, church_id, plateforme, code_2fa } = parsed.data;
   // Identifiant : e-mail ou numéro de téléphone. Un e-mail saisi en
   // majuscules trouve son compte (minuscules) ; un téléphone est
   // normalisé avant la recherche. Un même message d'erreur couvre les
@@ -908,6 +1054,38 @@ export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
   if (!passwordOk) return recordFailure(db, user);
 
   await db.query(`UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = $1`, [user.id]);
+
+  // Double authentification (T11) : quand le compte l'a activée, la
+  // connexion exige en plus le code TOTP à 6 chiffres. Un code faux
+  // compte comme un échec (verrouillage après 5 échecs, même règle).
+  const deuxFa = await db.query(
+    `SELECT secret_chiffre, secret_iv, secret_tag FROM auth_2fa WHERE user_id = $1 AND actif = TRUE`,
+    [user.id],
+  );
+  if ((deuxFa.rowCount ?? 0) > 0) {
+    if (!code_2fa) return { ok: false, reason: "code_2fa_requis" };
+    let secretClair: string;
+    try {
+      secretClair = decryptSecret({
+        valeur_chiffree: deuxFa.rows[0].secret_chiffre as string,
+        iv: deuxFa.rows[0].secret_iv as string,
+        tag: deuxFa.rows[0].secret_tag as string,
+      });
+    } catch {
+      return { ok: false, reason: "code_2fa_invalide" };
+    }
+    if (!verifierCodeTOTP(secretClair, code_2fa)) {
+      // Le compteur d'échecs vient d'être remis à zéro (mot de passe
+      // correct) : le code faux est le premier échec de cette tentative.
+      const verrouille = await recordFailedAttempt(db, {
+        id: user.id as string,
+        failed_logins: 0,
+      });
+      return verrouille
+        ? { ok: false, reason: "locked" }
+        : { ok: false, reason: "code_2fa_invalide" };
+    }
+  }
 
   const eglises = await chargerEglises(db, user.id as string);
 

@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import { z } from "zod";
 import { auditLog } from "../auth.js";
 import {
+  ErreurMetier,
   READ_ALL,
   WRITE_STD,
   existsInChurch,
@@ -19,6 +20,83 @@ import { dbError, requireAuth, requireRole } from "../middleware.js";
  */
 
 const uuid = z.string().uuid();
+
+export const pointerSchema = z.object({
+  matricule: z.string().min(1).max(30).optional(),
+  member_id: uuid.optional(),
+  event_id: uuid.optional(),
+  culte_id: uuid.optional(),
+  statut: z.enum(["present", "absent", "excuse"]).default("present"),
+  mode: z.enum(["manuel", "liste", "scan_qr"]).default("scan_qr"),
+});
+
+export type PointerPresenceDonnees = z.infer<typeof pointerSchema>;
+
+/**
+ * Pointage partagé par la route POST /presences/pointer et par le rejeu
+ * hors ligne (T11) : même résolution du membre, même unicité (un seul
+ * pointage par membre et par culte / événement), même journalisation.
+ */
+export async function pointerPresence(
+  db: Pool,
+  churchId: string,
+  userId: string,
+  data: PointerPresenceDonnees,
+): Promise<Record<string, unknown>> {
+  if (!data.matricule && !data.member_id) {
+    throw new ErreurMetier("invalid_input", "Matricule ou membre requis.");
+  }
+  if (!data.event_id && !data.culte_id) {
+    throw new ErreurMetier("invalid_input", "Culte ou événement requis.");
+  }
+  let memberId = data.member_id ?? null;
+  let membreNom: string | null = null;
+  if (!memberId && data.matricule) {
+    const { rows } = await db.query(
+      `SELECT id, full_name FROM members WHERE matricule = $1 AND church_id = $2`,
+      [data.matricule, churchId],
+    );
+    if (rows.length === 0) {
+      throw new ErreurMetier("not_found", "Aucun membre avec ce matricule.", 404);
+    }
+    memberId = rows[0].id as string;
+    membreNom = rows[0].full_name as string;
+  } else if (memberId) {
+    const { rows } = await db.query(
+      `SELECT full_name FROM members WHERE id = $1 AND church_id = $2`,
+      [memberId, churchId],
+    );
+    if (rows.length === 0) {
+      throw new ErreurMetier("not_found", "Membre introuvable.", 404);
+    }
+    membreNom = rows[0].full_name as string;
+  }
+  const { rows } = await db.query(
+    `INSERT INTO presences (church_id, event_id, culte_id, member_id, statut, mode, pointe_par)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (member_id, event_id) WHERE event_id IS NOT NULL
+       DO UPDATE SET statut = EXCLUDED.statut, mode = EXCLUDED.mode, pointe_at = now(), pointe_par = EXCLUDED.pointe_par
+     RETURNING *`,
+    [churchId, data.event_id ?? null, data.culte_id ?? null, memberId, data.statut, data.mode, userId],
+  ).catch(async () => {
+    // Conflit sur le culte (l'index partiel event_id ne s'applique pas).
+    return db.query(
+      `INSERT INTO presences (church_id, event_id, culte_id, member_id, statut, mode, pointe_par)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (member_id, culte_id) WHERE culte_id IS NOT NULL
+         DO UPDATE SET statut = EXCLUDED.statut, mode = EXCLUDED.mode, pointe_at = now(), pointe_par = EXCLUDED.pointe_par
+       RETURNING *`,
+      [churchId, data.event_id ?? null, data.culte_id ?? null, memberId, data.statut, data.mode, userId],
+    );
+  });
+  await auditLog(db, {
+    churchId,
+    userId,
+    action: "presence.pointee",
+    details: { membre_id: memberId, statut: data.statut, mode: data.mode },
+  });
+  return { ...rows[0], membre_nom: membreNom };
+}
 
 export function registerPresencesRoutes(app: FastifyInstance, db: Pool) {
   registerCrud(app, db, {
@@ -56,14 +134,6 @@ export function registerPresencesRoutes(app: FastifyInstance, db: Pool) {
 
   // -- Pointage : par matricule (scan QR) ou member_id ; crée ou met à jour
   //    le pointage (un seul pointage par membre et par culte / événement). --
-  const pointerSchema = z.object({
-    matricule: z.string().min(1).max(30).optional(),
-    member_id: uuid.optional(),
-    event_id: uuid.optional(),
-    culte_id: uuid.optional(),
-    statut: z.enum(["present", "absent", "excuse"]).default("present"),
-    mode: z.enum(["manuel", "liste", "scan_qr"]).default("scan_qr"),
-  });
   app.post(
     "/presences/pointer",
     { preHandler: [requireAuth(db), requireRole(...WRITE_STD)] },
@@ -73,78 +143,18 @@ export function registerPresencesRoutes(app: FastifyInstance, db: Pool) {
         invalidInput(reply, parsed.error);
         return;
       }
-      const data = parsed.data;
-      if (!data.matricule && !data.member_id) {
-        return reply.code(400).send({ error: "invalid_input", message: "Matricule ou membre requis." });
-      }
-      if (!data.event_id && !data.culte_id) {
-        return reply.code(400).send({ error: "invalid_input", message: "Culte ou événement requis." });
-      }
       try {
-        let memberId = data.member_id ?? null;
-        let membreNom: string | null = null;
-        if (!memberId && data.matricule) {
-          const { rows } = await db.query(
-            `SELECT id, full_name FROM members WHERE matricule = $1 AND church_id = $2`,
-            [data.matricule, req.session.churchId],
-          );
-          if (rows.length === 0) {
-            return reply.code(404).send({ error: "not_found", message: "Aucun membre avec ce matricule." });
-          }
-          memberId = rows[0].id as string;
-          membreNom = rows[0].full_name as string;
-        } else if (memberId) {
-          const { rows } = await db.query(
-            `SELECT full_name FROM members WHERE id = $1 AND church_id = $2`,
-            [memberId, req.session.churchId],
-          );
-          if (rows.length === 0) {
-            return reply.code(404).send({ error: "not_found", message: "Membre introuvable." });
-          }
-          membreNom = rows[0].full_name as string;
-        }
-        const { rows } = await db.query(
-          `INSERT INTO presences (church_id, event_id, culte_id, member_id, statut, mode, pointe_par)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
-           ON CONFLICT (member_id, event_id) WHERE event_id IS NOT NULL
-             DO UPDATE SET statut = EXCLUDED.statut, mode = EXCLUDED.mode, pointe_at = now(), pointe_par = EXCLUDED.pointe_par
-           RETURNING *`,
-          [
-            req.session.churchId,
-            data.event_id ?? null,
-            data.culte_id ?? null,
-            memberId,
-            data.statut,
-            data.mode,
-            req.session.userId,
-          ],
-        ).catch(async () => {
-          // Conflit sur le culte (l'index partiel event_id ne s'applique pas).
-          return db.query(
-            `INSERT INTO presences (church_id, event_id, culte_id, member_id, statut, mode, pointe_par)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
-             ON CONFLICT (member_id, culte_id) WHERE culte_id IS NOT NULL
-               DO UPDATE SET statut = EXCLUDED.statut, mode = EXCLUDED.mode, pointe_at = now(), pointe_par = EXCLUDED.pointe_par
-             RETURNING *`,
-            [
-              req.session.churchId,
-              data.event_id ?? null,
-              data.culte_id ?? null,
-              memberId,
-              data.statut,
-              data.mode,
-              req.session.userId,
-            ],
-          );
-        });
-        await auditLog(db, {
-          churchId: req.session.churchId,
-          userId: req.session.userId,
-          action: "presence.pointee",
-          details: { membre_id: memberId, statut: data.statut, mode: data.mode },
-        });
-        return reply.send({ ...rows[0], membre_nom: membreNom });
+        const presence = await pointerPresence(
+          db,
+          req.session.churchId,
+          req.session.userId,
+          parsed.data,
+        );
+        return reply.send(presence);
       } catch (e) {
+        if (e instanceof ErreurMetier) {
+          return reply.code(e.statut).send({ error: e.code, message: e.message });
+        }
         return dbError(reply, e);
       }
     },

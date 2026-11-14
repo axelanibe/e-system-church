@@ -71,7 +71,7 @@ class ModulesScreen extends StatelessWidget {
     (
       'Réglages et confiance',
       'Sauvegarde, hors ligne, 2FA, journal d’audit.',
-      'T11 · À venir',
+      'T11 · Construit, en ligne',
       Icons.wb_sunny_outlined,
     ),
     (
