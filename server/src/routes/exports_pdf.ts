@@ -9,6 +9,7 @@ import {
   genererRapportPdf,
   type SectionRapport,
 } from "../pdf.js";
+import { chargerLogo, type LogoPdf } from "../logo_pdf.js";
 
 /**
  * Tranche C — Exports PDF (finances, cultes, rapports consolidés).
@@ -106,6 +107,17 @@ async function nomEglise(db: Pool, churchId: string): Promise<string> {
   return `${rows[0].name} (${rows[0].code})`;
 }
 
+/** Logo de l'église pour l'en-tête des exports PDF, null sans logo. */
+async function logoEglise(db: Pool, churchId: string): Promise<LogoPdf | null> {
+  const { rows } = await db.query(
+    `SELECT logo_url FROM churches WHERE id = $1`,
+    [churchId],
+  );
+  return chargerLogo(
+    (rows[0] as { logo_url: string | null } | undefined)?.logo_url ?? null,
+  );
+}
+
 export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
   // -- Détail finances : contributions et dépenses confirmées. -------------
   app.get(
@@ -120,6 +132,7 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
       const { from, to } = parsed.data;
       try {
         const egliseNom = await nomEglise(db, req.session.churchId);
+        const logo = await logoEglise(db, req.session.churchId);
         const conditions = [`c.church_id = $1`, `c.status = 'confirme'`];
         const values: unknown[] = [req.session.churchId];
         if (from) {
@@ -225,6 +238,7 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
         const pdf = genererRapportPdf({
           titre: "Détail des finances",
           egliseNom,
+          logo,
           lignesMeta: [
             libellePeriode(from, to),
             `Émis le ${aujourdhui()}`,
@@ -259,6 +273,7 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
       const year = annee ?? new Date().getFullYear();
       try {
         const egliseNom = await nomEglise(db, req.session.churchId);
+        const logo = await logoEglise(db, req.session.churchId);
         const conditions = [`c.church_id = $1`];
         const values: unknown[] = [req.session.churchId];
         if (from) {
@@ -325,6 +340,7 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
         const pdf = genererRapportPdf({
           titre: "Résumé des finances",
           egliseNom,
+          logo,
           lignesMeta: [
             `${libellePeriode(from, to, annee)} · Budgets : année ${year}`,
             `Émis le ${aujourdhui()}`,
@@ -515,6 +531,7 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
       const year = annee ?? new Date().getFullYear();
       try {
         const egliseNom = await nomEglise(db, req.session.churchId);
+        const logo = await logoEglise(db, req.session.churchId);
         const { produits, charges, resultat, ouverture, cloture } =
           await sommesSycebnl(db, req.session.churchId, year);
         const pied =
@@ -633,6 +650,7 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
         const pdf = genererRapportPdf({
           titre: titres[etat] ?? "État SYCEBNL",
           egliseNom,
+          logo,
           lignesMeta: [
             `Exercice ${year}`,
             `Émis le ${aujourdhui()}`,
@@ -693,6 +711,7 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
       const { from, to } = parsed.data;
       try {
         const egliseNom = await nomEglise(db, req.session.churchId);
+        const logo = await logoEglise(db, req.session.churchId);
         const conditions = [`cu.church_id = $1`];
         const values: unknown[] = [req.session.churchId];
         if (from) {
@@ -729,6 +748,7 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
         const pdf = genererRapportPdf({
           titre: "Cultes et présences",
           egliseNom,
+          logo,
           lignesMeta: [
             libellePeriode(from, to),
             `Émis le ${aujourdhui()}`,
@@ -785,7 +805,7 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
     async (req, reply) => {
       try {
         const { rows: churchRows } = await db.query(
-          `SELECT id, code, name, city FROM churches WHERE id = $1`,
+          `SELECT id, code, name, city, logo_url FROM churches WHERE id = $1`,
           [req.session.churchId],
         );
         const church = churchRows[0];
@@ -794,6 +814,7 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
             .code(404)
             .send({ error: "not_found", message: "Église introuvable." });
         }
+        const logo = await chargerLogo(church.logo_url ?? null);
         const { rows: propresRows } = await db.query(
           `SELECT
              (SELECT count(*)::int FROM members m WHERE m.church_id = $1 AND m.status = 'actif') AS membres_actifs,
@@ -832,6 +853,7 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
         const pdf = genererRapportPdf({
           titre: "Rapport consolidé",
           egliseNom: `${church.name} (${church.code})`,
+          logo,
           lignesMeta: [`Émis le ${aujourdhui()}`],
           sections: [
             {

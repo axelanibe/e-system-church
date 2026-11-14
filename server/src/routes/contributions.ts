@@ -5,6 +5,7 @@ import { auditLog } from "../auth.js";
 import { ErreurMetier, READ_ALL } from "../crud.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
 import { genererRecuPdf } from "../pdf.js";
+import { chargerLogo } from "../logo_pdf.js";
 import { verifierCampagneAffectation } from "./campagnes.js";
 
 /**
@@ -594,7 +595,8 @@ export function registerContributionsRoutes(app: FastifyInstance, db: Pool) {
                   c.recu_numero, c.recu_emis_le, c.created_at, c.campagne_id,
                   ca.nom AS campagne_nom,
                   c.member_id, m.full_name AS membre_nom, m.matricule AS membre_matricule,
-                  ch.name AS eglise_nom, ch.code AS eglise_code
+                  ch.name AS eglise_nom, ch.code AS eglise_code,
+                  ch.logo_url AS eglise_logo_url
              FROM contributions c
              LEFT JOIN members m ON m.id = c.member_id
              LEFT JOIN campagnes ca ON ca.id = c.campagne_id
@@ -624,9 +626,13 @@ export function registerContributionsRoutes(app: FastifyInstance, db: Pool) {
             message: "Reçu non émis : la contribution n'est pas confirmée.",
           });
         }
+        const logo = await chargerLogo(
+          contribution.eglise_logo_url ?? null,
+        );
         const pdf = genererRecuPdf({
           egliseNom: contribution.eglise_nom,
           egliseCode: contribution.eglise_code,
+          logo,
           numero: contribution.recu_numero,
           dateEmission: formaterDateCourte(String(contribution.recu_emis_le)),
           membreNom: contribution.membre_nom ?? null,

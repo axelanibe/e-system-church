@@ -5,6 +5,7 @@ import { auditLog } from "../auth.js";
 import { envoiCourrielDisponible, sendMail } from "../mailer.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
 import { formaterMontant, genererRapportPdf } from "../pdf.js";
+import { chargerLogo, type LogoPdf } from "../logo_pdf.js";
 
 /**
  * Tranche P5 — Rapports à mon église mère : une annexe choisit le type
@@ -133,11 +134,13 @@ export function construirePdfRapport(
   rapport: RapportLigne,
   annexeNom: string,
   mereNom: string,
+  logo?: LogoPdf | null,
 ): { pdf: Buffer; nomFichier: string } {
   const dateEmission = new Date(rapport.cree_le).toISOString().slice(0, 10);
   const pdf = genererRapportPdf({
     titre: LIBELLES_TYPE[rapport.type],
     egliseNom: annexeNom,
+    logo: logo ?? null,
     lignesMeta: [
       `À l'attention de : ${mereNom}`,
       `Émis le ${dateEmission}`,
@@ -170,6 +173,7 @@ async function tenterEnvoiRapport(
   rapport: RapportLigne,
   annexeNom: string,
   mere: { nom: string; email: string | null },
+  logo?: LogoPdf | null,
 ): Promise<ResultatEnvoi> {
   if (!mere.email) return "email_mere_manquant";
   if (!envoiCourrielDisponible()) return "smtp_non_configure";
@@ -177,6 +181,7 @@ async function tenterEnvoiRapport(
     rapport,
     annexeNom,
     mere.nom,
+    logo ?? null,
   );
   const libelle = LIBELLES_TYPE[rapport.type];
   const dateEmission = new Date(rapport.cree_le).toISOString().slice(0, 10);
@@ -310,15 +315,24 @@ export function registerRapportsAnnexeRoutes(app: FastifyInstance, db: Pool) {
         );
         const ligne = rows[0] as RapportLigne;
         const { rows: annexes } = await db.query(
-          `SELECT name FROM churches WHERE id = $1`,
+          `SELECT name, logo_url FROM churches WHERE id = $1`,
           [req.session.churchId],
         );
         const annexeNom =
           (annexes[0] as { name: string } | undefined)?.name ?? "Église annexe";
-        const resultat = await tenterEnvoiRapport(ligne, annexeNom, {
-          nom: mere.name,
-          email: mere.email,
-        });
+        const logo = await chargerLogo(
+          (annexes[0] as { logo_url: string | null } | undefined)?.logo_url ??
+            null,
+        );
+        const resultat = await tenterEnvoiRapport(
+          ligne,
+          annexeNom,
+          {
+            nom: mere.name,
+            email: mere.email,
+          },
+          logo,
+        );
         if (resultat === "envoye") {
           await db.query(
             `UPDATE rapports_annexe SET statut = 'envoye' WHERE id = $1`,
@@ -382,15 +396,24 @@ export function registerRapportsAnnexeRoutes(app: FastifyInstance, db: Pool) {
           });
         }
         const { rows: annexes } = await db.query(
-          `SELECT name FROM churches WHERE id = $1`,
+          `SELECT name, logo_url FROM churches WHERE id = $1`,
           [req.session.churchId],
         );
         const annexeNom =
           (annexes[0] as { name: string } | undefined)?.name ?? "Église annexe";
-        const resultat = await tenterEnvoiRapport(ligne, annexeNom, {
-          nom: mere.name,
-          email: mere.email,
-        });
+        const logo = await chargerLogo(
+          (annexes[0] as { logo_url: string | null } | undefined)?.logo_url ??
+            null,
+        );
+        const resultat = await tenterEnvoiRapport(
+          ligne,
+          annexeNom,
+          {
+            nom: mere.name,
+            email: mere.email,
+          },
+          logo,
+        );
         if (resultat === "envoye") {
           await db.query(
             `UPDATE rapports_annexe SET statut = 'envoye' WHERE id = $1`,
