@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../config/app_config.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/logo_app.dart';
 
 /// Connexion séparée de la Plateforme, dans la même application :
 /// pour l'admin de la plateforme et ses aides seulement. Les églises
@@ -66,8 +67,7 @@ class _LoginPlateformeScreenState extends State<LoginPlateformeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(Icons.admin_panel_settings,
-                      size: 64, color: scheme.primary),
+                  const Center(child: LogoApp(taille: 104)),
                   const SizedBox(height: 16),
                   Text(
                     'Plateforme',
