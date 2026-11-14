@@ -146,8 +146,15 @@ class _TransparenceScreenState extends State<TransparenceScreen> {
                 SectionTitle(title: t.parType),
                 Card(
                   child: Column(
-                    children: d.totauxParType
-                        .map((l) => ListTile(
+                    children: d.totauxParType.isEmpty
+                        ? [
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Text(t.aucuneDonneePeriode),
+                            ),
+                          ]
+                        : d.totauxParType
+                            .map((l) => ListTile(
                               title: Text(_libelleType(l.type)),
                               subtitle: Text('${l.nombre}'),
                               trailing: Text(
@@ -163,8 +170,15 @@ class _TransparenceScreenState extends State<TransparenceScreen> {
                 SectionTitle(title: t.parPoste),
                 Card(
                   child: Column(
-                    children: d.depensesParPoste
-                        .map((l) => ListTile(
+                    children: d.depensesParPoste.isEmpty
+                        ? [
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Text(t.aucuneDonneePeriode),
+                            ),
+                          ]
+                        : d.depensesParPoste
+                            .map((l) => ListTile(
                               title: Text(l.poste,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis),

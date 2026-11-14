@@ -22,6 +22,10 @@ class ServiteursScreen extends StatefulWidget {
 
 class _ServiteursScreenState extends State<ServiteursScreen> {
   int _tab = 0;
+
+  // L'onglet Affectations est-il vide ? Sert à masquer le FAB quand
+  // l'état vide affiche déjà le bouton de création (un seul bouton).
+  bool _serviteursVides = false;
   final _searchController = TextEditingController();
   String _query = '';
   String? _departementFilter;
@@ -241,6 +245,13 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
               final items = snapshot.data!
                   .where((s) => _matches(noms[s.memberId] ?? s.memberId))
                   .toList();
+              if (items.isEmpty != _serviteursVides) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _serviteursVides != items.isEmpty) {
+                    setState(() => _serviteursVides = items.isEmpty);
+                  }
+                });
+              }
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.volunteer_activism_outlined,
@@ -450,30 +461,35 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
             );
           },
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            try {
-              final membres = (await _membresFuture).membres;
-              if (!mounted) return;
-              if (_tab == 0) {
-                final departements = await _departementsFuture;
-                if (mounted) {
-                  await _createServiteur(membres, departements);
-                }
-              } else {
-                final serviteurs = await _serviteursFuture;
-                final cultes = await _cultesFuture;
-                if (!mounted) return;
-                final noms = {for (final m in membres) m.id: m.fullName};
-                await _createPlanning(serviteurs, cultes, noms);
-              }
-            } catch (e) {
-              if (context.mounted) showApiError(context, e);
-            }
-          },
-          icon: const Icon(Icons.add),
-          label: Text(_tab == 0 ? 'Nouveau serviteur' : 'Nouveau service'),
-        ),
+        floatingActionButton: (_tab == 0 && _serviteursVides)
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () async {
+                  try {
+                    final membres = (await _membresFuture).membres;
+                    if (!mounted) return;
+                    if (_tab == 0) {
+                      final departements = await _departementsFuture;
+                      if (mounted) {
+                        await _createServiteur(membres, departements);
+                      }
+                    } else {
+                      final serviteurs = await _serviteursFuture;
+                      final cultes = await _cultesFuture;
+                      if (!mounted) return;
+                      final noms = {
+                        for (final m in membres) m.id: m.fullName
+                      };
+                      await _createPlanning(serviteurs, cultes, noms);
+                    }
+                  } catch (e) {
+                    if (context.mounted) showApiError(context, e);
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: Text(
+                    _tab == 0 ? 'Nouveau serviteur' : 'Nouveau service'),
+              ),
       ),
     );
   }

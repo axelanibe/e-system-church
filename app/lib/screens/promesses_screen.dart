@@ -28,6 +28,10 @@ class PromessesScreen extends StatefulWidget {
 class _PromessesScreenState extends State<PromessesScreen> {
   late Future<List<Promesse>> _future;
 
+  // La liste est-elle vide ? Sert à masquer le FAB quand l'état vide
+  // affiche déjà le bouton de création (un seul bouton, pas deux).
+  bool _listeVide = false;
+
   @override
   void initState() {
     super.initState();
@@ -188,11 +192,13 @@ class _PromessesScreenState extends State<PromessesScreen> {
     final t = T12Strings(context.watch<PreferencesLocales>().estAnglais);
     return Scaffold(
       appBar: AppBar(title: Text(t.promesses)),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _creer,
-        icon: const Icon(Icons.add),
-        label: Text(t.nouvellePromesse),
-      ),
+      floatingActionButton: _listeVide
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _creer,
+              icon: const Icon(Icons.add),
+              label: Text(t.nouvellePromesse),
+            ),
       body: FutureBuilder<List<Promesse>>(
         future: _future,
         builder: (context, snapshot) {
@@ -204,9 +210,20 @@ class _PromessesScreenState extends State<PromessesScreen> {
                 message: t.erreurChargement, onRetry: _refresh);
           }
           final items = snapshot.data ?? const [];
+          if (items.isEmpty != _listeVide) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _listeVide != items.isEmpty) {
+                setState(() => _listeVide = items.isEmpty);
+              }
+            });
+          }
           if (items.isEmpty) {
             return EmptyState(
-                icon: Icons.handshake_outlined, message: t.vide);
+              icon: Icons.handshake_outlined,
+              message: t.videPromesses,
+              actionLabel: t.nouvellePromesse,
+              onAction: _creer,
+            );
           }
           return RefreshIndicator(
             onRefresh: () async => _refresh(),

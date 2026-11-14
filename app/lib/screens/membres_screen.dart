@@ -314,9 +314,9 @@ class _MembresScreenState extends State<MembresScreen> {
                   for (final entry in <String, String?>{
                     'Tous': null,
                     'Actif': 'actif',
-                    'Nouveau converti': 'nouveau_converti',
+                    'Nouveaux': 'nouveau_converti',
                     'Inactif': 'inactif',
-                    'Ancien': 'ancien',
+                    'Anciens': 'ancien',
                   }.entries) ...[
                     ChoiceChip(
                       label: Text(entry.key),
@@ -391,18 +391,13 @@ class _MembresScreenState extends State<MembresScreen> {
                 final membres =
                     page.membres.where(_correspondRecherche).toList();
                 if (membres.isEmpty) {
+                  // E-M6 : un seul bouton de création quand la liste
+                  // est vide, le FAB ; l'état vide n'a pas d'action.
                   return EmptyState(
                     icon: Icons.people_outline,
                     message: _filtreLocal.isNotEmpty || _query.isNotEmpty
                         ? 'Aucun membre ne correspond à « ${_filtreLocal.isNotEmpty ? _filtreLocal : _query} ».'
-                        : 'Aucun membre trouvé.',
-                    actionLabel: state.canManageMembers
-                        // T13, D05 : un seul libellé, « Nouveau membre »,
-                        // comme le FAB et le titre du formulaire.
-                        ? 'Nouveau membre'
-                        : null,
-                    onAction:
-                        state.canManageMembers ? _openForm : null,
+                        : 'Aucun membre enregistré',
                   );
                 }
                 return ListeAvecFab(

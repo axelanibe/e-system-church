@@ -450,48 +450,58 @@ class _GrilleAcces extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          // Cartes assez hautes pour un titre sur 2 lignes, 4 lignes
-          // de description et le lien Ouvrir, sans rien couper.
-          childAspectRatio: 0.7,
-          children: [
-            _TuileAcces(
-              icone: Icons.menu_book_outlined,
-              titre: 'Ma Bible',
-              sousTitre:
-                  'Lire et rechercher dans l’Ancien et le Nouveau Testament.',
-              onTap: onBible,
-            ),
-            _TuileAcces(
-              icone: Icons.account_balance_wallet_outlined,
-              titre: 'Mes cotisations',
-              sousTitre: 'Historique, reçus et total.',
-              onTap: onCotisations,
-            ),
-            _TuileAcces(
-              icone: Icons.edit_outlined,
-              titre: 'Mon journal',
-              sousTitre: 'Notes privées, jamais partagées.',
-              onTap: onJournal,
-            ),
-            _TuileAcces(
-              icone: Icons.school_outlined,
-              titre: 'École biblique',
-              sousTitre: 'Cours, leçons et ma progression.',
-              onTap: onEcole,
-            ),
-            _TuileAcces(
-              icone: Icons.mail_outline,
-              titre: 'Messagerie',
-              sousTitre: 'Messagerie privée, dans l’application.',
-              onTap: onMessages,
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Hauteur fixe ~230 px, quel que soit l'écran : assez pour
+            // un titre sur 2 lignes, 4 lignes de description et le
+            // lien Ouvrir, sans le vide de l'ancien ratio 0,7
+            // (~330 px de vide à 1280 px). Un ratio fixe de 1,3
+            // déborderait sur téléphone 390 px, la hauteur fixe non.
+            // (T9 : la tuile « École biblique » est ajoutée en 4e
+            // position, après « Mon journal ».)
+            final largeurTuile = (constraints.maxWidth - 12) / 2;
+            return GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: largeurTuile / 230,
+              children: [
+                _TuileAcces(
+                  icone: Icons.menu_book_outlined,
+                  titre: 'Ma Bible',
+                  sousTitre:
+                      'Lire et rechercher dans l’Ancien et le Nouveau Testament.',
+                  onTap: onBible,
+                ),
+                _TuileAcces(
+                  icone: Icons.account_balance_wallet_outlined,
+                  titre: 'Mes cotisations',
+                  sousTitre: 'Historique, reçus et total.',
+                  onTap: onCotisations,
+                ),
+                _TuileAcces(
+                  icone: Icons.edit_outlined,
+                  titre: 'Mon journal',
+                  sousTitre: 'Notes privées, jamais partagées.',
+                  onTap: onJournal,
+                ),
+                _TuileAcces(
+                  icone: Icons.school_outlined,
+                  titre: 'École biblique',
+                  sousTitre: 'Cours, leçons et ma progression.',
+                  onTap: onEcole,
+                ),
+                _TuileAcces(
+                  icone: Icons.mail_outline,
+                  titre: 'Messagerie',
+                  sousTitre: 'Messagerie privée, dans l’application.',
+                  onTap: onMessages,
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 12),
         _TuileLarge(
@@ -545,13 +555,11 @@ class _TuileAcces extends StatelessWidget {
                 maxLines: 2,
               ),
               const SizedBox(height: 4),
-              Expanded(
-                child: Text(
-                  sousTitre,
-                  style: Theme.of(context).textTheme.bodySmall,
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                ),
+              Text(
+                sousTitre,
+                style: Theme.of(context).textTheme.bodySmall,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 8),
               Text(

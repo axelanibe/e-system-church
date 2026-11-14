@@ -74,13 +74,6 @@ class GouvernanceScreen extends StatelessWidget {
           ),
           _carte(
             context: context,
-            icone: Icons.event_available_outlined,
-            titre: 'Réunions et décisions',
-            sousTitre: 'Réunions du conseil, décisions et procès-verbaux.',
-            ecran: const ReunionsConseilScreen(),
-          ),
-          _carte(
-            context: context,
             icone: Icons.description_outlined,
             titre: 'Procès-verbaux',
             sousTitre: 'Les réunions du bureau produisent leur procès-verbal.',
@@ -92,6 +85,13 @@ class GouvernanceScreen extends StatelessWidget {
             titre: 'Documents',
             sousTitre: 'Statuts, règlements, modèles et courriers.',
             ecran: const DocumentsScreen(),
+          ),
+          _carte(
+            context: context,
+            icone: Icons.event_available_outlined,
+            titre: 'Réunions et décisions',
+            sousTitre: 'Réunions du conseil, décisions et procès-verbaux.',
+            ecran: const ReunionsConseilScreen(),
           ),
           _carte(
             context: context,
