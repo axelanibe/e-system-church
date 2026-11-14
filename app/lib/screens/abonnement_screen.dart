@@ -210,11 +210,15 @@ class _VueMere extends StatelessWidget {
                   style: const TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 12),
+                const Text(
+                  'Essai gratuit',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
                 Text(
-                  'Essai gratuit : ${abonnement.essaiJours} jours pour '
+                  '${abonnement.essaiJours} jours pour '
                   'essayer l’application avant de payer.',
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 12),
                 Text(

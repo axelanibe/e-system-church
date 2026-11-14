@@ -20,6 +20,10 @@ class PrieresScreen extends StatefulWidget {
 
 class _PrieresScreenState extends State<PrieresScreen> {
   int _tab = 0;
+
+  // L'onglet Demandes est-il vide ? Sert à masquer le FAB quand
+  // l'état vide affiche déjà le bouton de création (un seul bouton).
+  bool _demandesVides = false;
   final _searchController = TextEditingController();
   String _query = '';
   String? _statutFilter;
@@ -277,6 +281,13 @@ class _PrieresScreenState extends State<PrieresScreen> {
               final items = snapshot.data!
                   .where((d) => _matches(d.sujet))
                   .toList();
+              if (items.isEmpty != _demandesVides) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _demandesVides != items.isEmpty) {
+                    setState(() => _demandesVides = items.isEmpty);
+                  }
+                });
+              }
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.volunteer_activism_outlined,
@@ -492,23 +503,26 @@ class _PrieresScreenState extends State<PrieresScreen> {
             );
           },
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            try {
-              final membres = (await _membresFuture).membres;
-              if (!mounted) return;
-              if (_tab == 0) {
-                await _createDemande(membres);
-              } else {
-                await _createMessage(membres);
-              }
-            } catch (e) {
-              if (context.mounted) showApiError(context, e);
-            }
-          },
-          icon: const Icon(Icons.add),
-          label: Text(_tab == 0 ? 'Nouvelle demande' : 'Nouveau message'),
-        ),
+        floatingActionButton: (_tab == 0 && _demandesVides)
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () async {
+                  try {
+                    final membres = (await _membresFuture).membres;
+                    if (!mounted) return;
+                    if (_tab == 0) {
+                      await _createDemande(membres);
+                    } else {
+                      await _createMessage(membres);
+                    }
+                  } catch (e) {
+                    if (context.mounted) showApiError(context, e);
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: Text(
+                    _tab == 0 ? 'Nouvelle demande' : 'Nouveau message'),
+              ),
       ),
     );
   }

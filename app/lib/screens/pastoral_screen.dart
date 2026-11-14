@@ -815,9 +815,13 @@ class _PastoralScreenState extends State<PastoralScreen> {
         appBar: AppBar(
           title: const Text('Suivi pastoral'),
           actions: [
-            IconButton(
+            // Libellé visible, pas une icône seule (E-R7).
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+              ),
               icon: const Icon(Icons.cake_outlined),
-              tooltip: 'Événements de vie',
+              label: const Text('Événements de vie'),
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(

@@ -6,13 +6,11 @@ import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 import 'a_propos_screen.dart';
 import 'camps_fidele_screen.dart';
-import 'carte_portefeuille_screen.dart';
 import 'cotisations_screen.dart';
 import 'journal_screen.dart';
 import 'mes_attestations_screen.dart';
 import 'parametres_fidele_screen.dart';
 import 'rendez_vous_screen.dart';
-import 'transparence_screen.dart';
 
 /// Menu Plus du fidèle (tranches P1, P2, P4).
 /// Ordre de la projection : Prendre rendez-vous, Mon journal,
@@ -88,24 +86,6 @@ class PlusFideleScreen extends StatelessWidget {
                 ),
               ),
               _LigneMenu(
-                icone: Icons.visibility_outlined,
-                titre: 'Transparence financière',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const TransparenceScreen(),
-                  ),
-                ),
-              ),
-              _LigneMenu(
-                icone: Icons.account_balance_wallet_outlined,
-                titre: 'Carte dans le portefeuille',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const CartePortefeuilleScreen(),
-                  ),
-                ),
-              ),
-              _LigneMenu(
                 icone: Icons.wb_sunny_outlined,
                 titre: 'Prière du jour',
                 onTap: () {
@@ -155,7 +135,7 @@ class PlusFideleScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        const SectionTitle(title: 'Compte'),
+        const SectionTitle(title: 'Démonstration'),
         Card(
           child: Column(
             children: [
