@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../config/app_config.dart';
 import '../services/api_service.dart';
 import '../state/app_state.dart';
+import '../widgets/app_logo.dart';
 import '../widgets/common_widgets.dart';
 import 'forgot_password_screen.dart';
 import 'login_plateforme_screen.dart';
@@ -98,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(Icons.church, size: 64, color: scheme.primary),
+                  const AppLogo(),
                   const SizedBox(height: 16),
                   Text(
                     AppConfig.appName,
