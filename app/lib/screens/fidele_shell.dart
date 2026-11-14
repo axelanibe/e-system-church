@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
 import '../widgets/app_bottom_bar.dart';
+import '../widgets/common_widgets.dart';
 import '../widgets/en_tete_clair.dart';
 import 'bible_fidele_screen.dart';
 import 'carte_fidele_screen.dart';
@@ -114,6 +115,9 @@ class _FideleShellState extends State<FideleShell> {
                         )
                       : null,
                 ),
+                // T13, D04 : abonnement expiré, bandeau persistant.
+                if (context.watch<AppState>().lectureSeule)
+                  const BandeauLectureSeule(),
                 Expanded(child: ecran),
               ],
             ),
