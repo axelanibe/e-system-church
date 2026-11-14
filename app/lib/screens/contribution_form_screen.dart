@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/campagne.dart';
 import '../models/member.dart';
 import '../models/paiements.dart';
+import '../services/api_service.dart';
+import '../services/file_hors_ligne_service.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import 'paiements_screen.dart';
@@ -44,6 +46,7 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
   List<Campagne> _campagnes = [];
   bool _loading = false;
   String? _error;
+  String? _message;
 
   @override
   void initState() {
@@ -135,23 +138,55 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
       _loading = true;
       _error = null;
     });
+    final state = context.read<AppState>();
     try {
       if (_viaMoyenConfigure) {
         await _executerPaiement(amount);
       } else {
-        await context.read<AppState>().api.createContribution(
-              type: _type,
-              amountFcfa: amount,
-              paymentMethod: _paymentMethod,
-              paymentRef: _refController.text.trim().isEmpty
-                  ? null
-                  : _refController.text.trim(),
-              memberId: _memberId,
-              campagneId: _type == 'depense' ? null : _campagneId,
-              note: _noteController.text.trim().isEmpty
-                  ? null
-                  : _noteController.text.trim(),
+        try {
+          await state.api.createContribution(
+                type: _type,
+                amountFcfa: amount,
+                paymentMethod: _paymentMethod,
+                paymentRef: _refController.text.trim().isEmpty
+                    ? null
+                    : _refController.text.trim(),
+                memberId: _memberId,
+                campagneId: _type == 'depense' ? null : _campagneId,
+                note: _noteController.text.trim().isEmpty
+                    ? null
+                    : _noteController.text.trim(),
+              );
+        } on ApiException catch (e) {
+          // Hors ligne : la saisie est mise en file sur l'appareil,
+          // elle sera rejouée à la reconnexion, sans doublon.
+          if (e.code == 'hors_ligne' && state.user != null) {
+            await FileHorsLigneService().ajouter(
+              state.user!.id,
+              typeAction: 'contribution.creer',
+              charge: {
+                'type': _type,
+                'amount_fcfa': amount,
+                'payment_method': _paymentMethod,
+                if (_refController.text.trim().isNotEmpty)
+                  'payment_ref': _refController.text.trim(),
+                if (_memberId != null) 'member_id': _memberId,
+                if (_type != 'depense' && _campagneId != null)
+                  'campagne_id': _campagneId,
+                if (_noteController.text.trim().isNotEmpty)
+                  'note': _noteController.text.trim(),
+              },
             );
+            if (mounted) {
+              setState(() {
+                _message =
+                    'Hors ligne : contribution enregistrée, elle sera envoyée à la reconnexion.';
+              });
+            }
+            return;
+          }
+          rethrow;
+        }
         if (mounted) Navigator.of(context).pop(_type);
       }
     } catch (e) {
@@ -451,6 +486,14 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                       _error!,
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.error),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  if (_message != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      _message!,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                   ],

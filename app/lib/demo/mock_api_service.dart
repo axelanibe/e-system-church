@@ -22,6 +22,7 @@ import '../models/campagne.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/checkin_enfant.dart';
+import '../models/confiance.dart';
 import '../models/enfants.dart';
 import '../models/fidele.dart';
 import '../models/finances.dart';
@@ -450,7 +451,8 @@ class MockApiService implements ApiService {
   Future<AuthResult> login(
       {required String identifiant,
       required String password,
-      bool plateforme = false}) async {
+      bool plateforme = false,
+      String? code2fa}) async {
     await _latence();
     final idBrut = identifiant.trim();
     final mail = idBrut.toLowerCase();
@@ -4206,7 +4208,7 @@ class MockApiService implements ApiService {
   }
 
   @override
-  Future<List<AuditEntree>> getAudit() async {
+  Future<List<AuditEntree>> getAudit({String? action, String? userId}) async {
     await _latence();
     _requireAuth();
     return List.unmodifiable(_visible(_data.audit, (e) => e.id));
@@ -4835,5 +4837,115 @@ class MockApiService implements ApiService {
           'On ne révoque pas l’accès d’un admin de la plateforme.');
     }
     _accesPlateforme.removeAt(index);
+  }
+
+  // -- Confiance (T11) : non gérée en démo, sauf les lectures vides. --------
+  @override
+  Future<bool> getEtat2fa() async => false;
+
+  @override
+  Future<Demarrage2fa> demarrer2fa() async {
+    throw UnimplementedError('2FA non gérée en démo.');
+  }
+
+  @override
+  Future<void> verifier2fa(String code) async {
+    throw UnimplementedError('2FA non gérée en démo.');
+  }
+
+  @override
+  Future<void> desactiver2fa(String code) async {
+    throw UnimplementedError('2FA non gérée en démo.');
+  }
+
+  @override
+  Future<VerificationAudit> verifierAudit() async =>
+      const VerificationAudit(ok: true, total: 0, verifies: 0);
+
+  @override
+  Future<List<ConsultationSensible>> getConsultations() async => const [];
+
+  @override
+  Future<Sauvegarde> creerSauvegarde() async {
+    throw UnimplementedError('Sauvegarde non gérée en démo.');
+  }
+
+  @override
+  Future<List<Sauvegarde>> getSauvegardes() async => const [];
+
+  @override
+  Future<void> restaurerSauvegarde(String id) async {
+    throw UnimplementedError('Sauvegarde non gérée en démo.');
+  }
+
+  @override
+  Future<ParametresConfiance> getParametresConfiance() async =>
+      const ParametresConfiance(
+        sauvegardeFrequence: 'jamais',
+        sauvegardeHeure: '03:00',
+        notificationPlafondMensuel: 0,
+        notificationsActives: false,
+        notificationsConfigurees: false,
+      );
+
+  @override
+  Future<ParametresConfiance> patchParametresConfiance({
+    String? sauvegardeFrequence,
+    String? sauvegardeHeure,
+    bool? notificationsActives,
+    String? notificationFournisseur,
+    String? notificationCle,
+    int? notificationPlafondMensuel,
+  }) async =>
+      ParametresConfiance(
+        sauvegardeFrequence: sauvegardeFrequence ?? 'jamais',
+        sauvegardeHeure: sauvegardeHeure ?? '03:00',
+        notificationFournisseur: notificationFournisseur,
+        notificationPlafondMensuel: notificationPlafondMensuel ?? 0,
+        notificationsActives: notificationsActives ?? false,
+        notificationsConfigurees: notificationFournisseur != null,
+      );
+
+  @override
+  Future<List<NotificationConfiance>> getNotifications(
+          {String? statut, String? canal}) async =>
+      const [];
+
+  @override
+  Future<NotificationConfiance> createNotification({
+    required String canal,
+    required String titre,
+    required String message,
+    String? userId,
+  }) async {
+    throw UnimplementedError('Notifications non gérées en démo.');
+  }
+
+  @override
+  Future<NotificationConfiance> envoyerNotification(String id) async {
+    throw UnimplementedError('Notifications non gérées en démo.');
+  }
+
+  @override
+  Future<ActionHorsLigne> soumettreActionHorsLigne({
+    required String typeAction,
+    required Map<String, dynamic> charge,
+    required String cleClient,
+  }) async {
+    throw UnimplementedError('File hors ligne non gérée en démo.');
+  }
+
+  @override
+  Future<List<ActionHorsLigne>> getActionsHorsLigne(
+          {String? statut}) async =>
+      const [];
+
+  @override
+  Future<RejeuFile> rejouerFileHorsLigne() async =>
+      const RejeuFile(rejouees: 0, echouees: 0);
+
+  @override
+  Future<ActionHorsLigne> rejouerActionHorsLigne(String id) async {
+    throw UnimplementedError('File hors ligne non gérée en démo.');
   }
 }

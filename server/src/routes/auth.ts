@@ -82,7 +82,11 @@ export function registerAuthRoutes(app: FastifyInstance, db: Pool) {
                       ? "Ce compte n'a accès qu'à la Plateforme : utilisez la connexion Plateforme."
                       : result.reason === "no_church"
                         ? "Votre demande de liaison n'a pas encore été validée par votre église."
-                        : "Identifiant ou mot de passe incorrect.";
+                        : result.reason === "code_2fa_requis"
+                          ? "Double authentification : saisissez le code à 6 chiffres de votre application d'authentification."
+                          : result.reason === "code_2fa_invalide"
+                            ? "Code de double authentification incorrect."
+                            : "Identifiant ou mot de passe incorrect.";
         return reply.code(status).send({ error: result.reason, message });
       }
       return reply.send({

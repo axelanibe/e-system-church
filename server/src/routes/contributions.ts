@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Pool, PoolClient } from "pg";
 import { z } from "zod";
 import { auditLog } from "../auth.js";
-import { READ_ALL } from "../crud.js";
+import { ErreurMetier, READ_ALL } from "../crud.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
 import { genererRecuPdf } from "../pdf.js";
 import { verifierCampagneAffectation } from "./campagnes.js";
@@ -199,6 +199,68 @@ const listQuerySchema = z.object({
 const READ_ROLES = ["admin_eglise", "tresorier", "responsable_culte"];
 const WRITE_ROLES = ["admin_eglise", "tresorier"];
 
+/**
+ * Enregistrement d'une contribution partagé par la route POST
+ * /contributions et par le rejeu hors ligne (T11) : mêmes contrôles
+ * (cotisation liée à un membre, membre de l'église, campagne active),
+ * même statut initial en_attente, même journalisation.
+ */
+export async function creerContribution(
+  db: Pool,
+  churchId: string,
+  userId: string,
+  data: z.infer<typeof createSchema>,
+): Promise<Record<string, unknown>> {
+  // Une cotisation est le paiement d'un membre : pas de cotisation
+  // anonyme (le suivi payé / reste est par membre).
+  if (data.type === "cotisation" && !data.member_id) {
+    throw new ErreurMetier("invalid_input", "Une cotisation est liée à un membre.");
+  }
+  // Le membre éventuel doit appartenir à mon église.
+  if (data.member_id) {
+    const member = await db.query(
+      `SELECT id FROM members WHERE id = $1 AND church_id = $2`,
+      [data.member_id, churchId],
+    );
+    if (member.rowCount === 0) {
+      throw new ErreurMetier("invalid_reference", "Ce membre n'appartient pas à votre église.");
+    }
+  }
+  // Une contribution affectée à une campagne : campagne active de
+  // mon église, jamais une dépense, jamais une autre église.
+  if (data.campagne_id) {
+    const erreur = await verifierCampagneAffectation(db, churchId, data.campagne_id, data.type);
+    if (erreur) {
+      throw new ErreurMetier(erreur.error, erreur.message, erreur.code);
+    }
+  }
+  const { rows } = await db.query(
+    `INSERT INTO contributions
+       (church_id, member_id, type, amount_fcfa, payment_method, payment_ref, status, received_by, note, campagne_id)
+     VALUES ($1, $2, $3, $4, $5, $6, 'en_attente', $7, $8, $9)
+     RETURNING id, church_id, member_id, type, amount_fcfa, payment_method,
+               payment_ref, status, note, campagne_id, created_at`,
+    [
+      churchId,
+      data.member_id ?? null,
+      data.type,
+      data.amount_fcfa,
+      data.payment_method,
+      data.payment_ref ?? null,
+      userId,
+      data.note ?? null,
+      data.campagne_id ?? null,
+    ],
+  );
+  await auditLog(db, {
+    churchId,
+    userId,
+    action: "contribution.enregistree",
+    details: { contribution_id: rows[0].id, type: data.type, amount_fcfa: data.amount_fcfa },
+  });
+  return rows[0] as Record<string, unknown>;
+}
+
 export function registerContributionsRoutes(app: FastifyInstance, db: Pool) {
   app.get(
     "/contributions",
@@ -339,65 +401,18 @@ export function registerContributionsRoutes(app: FastifyInstance, db: Pool) {
           details: parsed.error.issues.map((i) => i.message),
         });
       }
-      const data = parsed.data;
       try {
-        // Une cotisation est le paiement d'un membre : pas de cotisation
-        // anonyme (le suivi payé / reste est par membre).
-        if (data.type === "cotisation" && !data.member_id) {
-          return reply.code(400).send({
-            error: "invalid_input",
-            message: "Une cotisation est liée à un membre.",
-          });
-        }
-        // Le membre éventuel doit appartenir à mon église.
-        if (data.member_id) {
-          const member = await db.query(
-            `SELECT id FROM members WHERE id = $1 AND church_id = $2`,
-            [data.member_id, req.session.churchId],
-          );
-          if (member.rowCount === 0) {
-            return reply.code(400).send({
-              error: "invalid_reference",
-              message: "Ce membre n'appartient pas à votre église.",
-            });
-          }
-        }
-        // Une contribution affectée à une campagne : campagne active de
-        // mon église, jamais une dépense, jamais une autre église.
-        if (data.campagne_id) {
-          const erreur = await verifierCampagneAffectation(
-            db, req.session.churchId, data.campagne_id, data.type,
-          );
-          if (erreur) {
-            return reply.code(erreur.code).send({ error: erreur.error, message: erreur.message });
-          }
-        }
-        const { rows } = await db.query(
-          `INSERT INTO contributions
-             (church_id, member_id, type, amount_fcfa, payment_method, payment_ref, status, received_by, note, campagne_id)
-           VALUES ($1, $2, $3, $4, $5, $6, 'en_attente', $7, $8, $9)
-           RETURNING id, church_id, member_id, type, amount_fcfa, payment_method,
-                     payment_ref, status, note, campagne_id, created_at`,
-          [
-            req.session.churchId,
-            data.member_id ?? null,
-            data.type,
-            data.amount_fcfa,
-            data.payment_method,
-            data.payment_ref ?? null,
-            req.session.userId,
-            data.note ?? null,
-            data.campagne_id ?? null,
-          ],
+        const contribution = await creerContribution(
+          db,
+          req.session.churchId,
+          req.session.userId,
+          parsed.data,
         );
-        await auditLog(db, {
-          churchId: req.session.churchId,
-          userId: req.session.userId,
-          action: "contribution.enregistree",
-          details: { contribution_id: rows[0].id, type: data.type, amount_fcfa: data.amount_fcfa },
-        });
-        return reply.code(201).send(rows[0]);
+        return reply.code(201).send(contribution);
       } catch (e) {
+        if (e instanceof ErreurMetier) {
+          return reply.code(e.statut).send({ error: e.code, message: e.message });
+        }
         return dbError(reply, e);
       }
     },

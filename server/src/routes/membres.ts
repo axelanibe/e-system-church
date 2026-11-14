@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
-import { auditLog, generateMatricule, normalizeMatricule, normalizeSexe } from "../auth.js";
+import { auditLog, generateMatricule, logConsultationSensible, normalizeMatricule, normalizeSexe } from "../auth.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
 
 /**
@@ -171,6 +171,14 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
         if (rows.length === 0) {
           return reply.code(404).send({ error: "not_found", message: "Membre introuvable." });
         }
+        // Lecture sensible (US17, T11) : la fiche d'un membre est
+        // journalisée à part, consultable par l'admin.
+        await logConsultationSensible(db, {
+          churchId: req.session.churchId,
+          userId: req.session.userId,
+          ressource: "membre",
+          ressourceId: rows[0].id as string,
+        });
         return reply.send(rows[0]);
       } catch (e) {
         return dbError(reply, e);

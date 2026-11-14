@@ -183,11 +183,13 @@ class AppState extends ChangeNotifier {
   Future<void> login(
       {required String identifiant,
       required String password,
-      bool plateforme = false}) async {
+      bool plateforme = false,
+      String? code2fa}) async {
     final result = await _api.login(
       identifiant: identifiant,
       password: password,
       plateforme: plateforme,
+      code2fa: code2fa,
     );
     _applyAuth(result);
     await _store.saveToken(result.token);

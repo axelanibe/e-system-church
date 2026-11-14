@@ -18,6 +18,7 @@ import '../models/code_tutelle.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/checkin_enfant.dart';
+import '../models/confiance.dart';
 import '../models/enfants.dart';
 import '../models/fidele.dart';
 import '../models/finances.dart';
@@ -123,10 +124,16 @@ class HttpApiService implements ApiService {
       }
     } on TimeoutException {
       throw const ApiException(
-          'Le serveur ne répond pas. Vérifiez l’URL de l’API dans Réglages.');
+        'Le serveur ne répond pas. Vérifiez l’URL de l’API dans Réglages.',
+        null,
+        'hors_ligne',
+      );
     } on SocketException {
       throw const ApiException(
-          'Impossible de joindre le serveur. Vérifiez l’URL de l’API dans Réglages.');
+        'Impossible de joindre le serveur. Vérifiez l’URL de l’API dans Réglages.',
+        null,
+        'hors_ligne',
+      );
     }
     final Map<String, dynamic> data = res.body.isEmpty
         ? <String, dynamic>{}
@@ -146,6 +153,7 @@ class HttpApiService implements ApiService {
     throw ApiException(
       (data['message'] as String?) ?? 'Erreur ${res.statusCode}.',
       res.statusCode,
+      data['error'] as String?,
     );
   }
 
@@ -224,12 +232,14 @@ class HttpApiService implements ApiService {
   Future<AuthResult> login(
       {required String identifiant,
       required String password,
-      bool plateforme = false}) async {
+      bool plateforme = false,
+      String? code2fa}) async {
     final data = await _call('POST', '/auth/login', body: {
       'identifiant': identifiant,
       'password': password,
       'plateforme': plateforme,
       'channel': _channel,
+      if (code2fa != null && code2fa.isNotEmpty) 'code_2fa': code2fa,
     });
     final result = AuthResult.fromJson(data);
     _token = result.token;
@@ -2512,10 +2522,16 @@ class HttpApiService implements ApiService {
           .timeout(const Duration(seconds: 20));
     } on TimeoutException {
       throw const ApiException(
-          'Le serveur ne répond pas. Vérifiez l’URL de l’API dans Réglages.');
+        'Le serveur ne répond pas. Vérifiez l’URL de l’API dans Réglages.',
+        null,
+        'hors_ligne',
+      );
     } on SocketException {
       throw const ApiException(
-          'Impossible de joindre le serveur. Vérifiez l’URL de l’API dans Réglages.');
+        'Impossible de joindre le serveur. Vérifiez l’URL de l’API dans Réglages.',
+        null,
+        'hors_ligne',
+      );
     }
     if (res.statusCode >= 200 && res.statusCode < 300) return res.body;
     String message = 'Erreur ${res.statusCode}.';
@@ -2810,8 +2826,9 @@ class HttpApiService implements ApiService {
   }
 
   @override
-  Future<List<AuditEntree>> getAudit() async {
-    final data = await _call('GET', '/parametres/audit');
+  Future<List<AuditEntree>> getAudit({String? action, String? userId}) async {
+    final data = await _call('GET', '/audit',
+        query: _q({'action': action, 'user_id': userId}));
     return (data['items'] as List<dynamic>)
         .map((e) => AuditEntree.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -3055,4 +3072,135 @@ class HttpApiService implements ApiService {
   Future<void> deleteAnnonce(String id) async {
     await _call('DELETE', '/annonces/$id');
   }
+
+  // -- Confiance (T11) -------------------------------------------------------
+  @override
+  Future<bool> getEtat2fa() async {
+    final data = await _call('GET', '/2fa/etat');
+    return data['actif'] as bool? ?? false;
+  }
+
+  @override
+  Future<Demarrage2fa> demarrer2fa() async =>
+      Demarrage2fa.fromJson(await _call('POST', '/2fa/demarrer'));
+
+  @override
+  Future<void> verifier2fa(String code) async {
+    await _call('POST', '/2fa/verifier', body: {'code': code});
+  }
+
+  @override
+  Future<void> desactiver2fa(String code) async {
+    await _call('POST', '/2fa/desactiver', body: {'code': code});
+  }
+
+  @override
+  Future<VerificationAudit> verifierAudit() async =>
+      VerificationAudit.fromJson(
+          await _call('GET', '/audit/verifier-chaine'));
+
+  @override
+  Future<List<ConsultationSensible>> getConsultations() async => _items(
+      await _call('GET', '/consultations'), ConsultationSensible.fromJson);
+
+  @override
+  Future<Sauvegarde> creerSauvegarde() async =>
+      Sauvegarde.fromJson(await _call('POST', '/sauvegardes'));
+
+  @override
+  Future<List<Sauvegarde>> getSauvegardes() async =>
+      _items(await _call('GET', '/sauvegardes'), Sauvegarde.fromJson);
+
+  @override
+  Future<void> restaurerSauvegarde(String id) async {
+    await _call('POST', '/sauvegardes/$id/restaurer');
+  }
+
+  @override
+  Future<ParametresConfiance> getParametresConfiance() async =>
+      ParametresConfiance.fromJson(
+          await _call('GET', '/confiance/parametres'));
+
+  @override
+  Future<ParametresConfiance> patchParametresConfiance({
+    String? sauvegardeFrequence,
+    String? sauvegardeHeure,
+    bool? notificationsActives,
+    String? notificationFournisseur,
+    String? notificationCle,
+    int? notificationPlafondMensuel,
+  }) async =>
+      ParametresConfiance.fromJson(
+          await _call('PATCH', '/confiance/parametres', body: {
+        if (sauvegardeFrequence != null)
+          'sauvegarde_frequence': sauvegardeFrequence,
+        if (sauvegardeHeure != null) 'sauvegarde_heure': sauvegardeHeure,
+        if (notificationsActives != null)
+          'notifications_actives': notificationsActives,
+        if (notificationFournisseur != null)
+          'notification_fournisseur': notificationFournisseur,
+        if (notificationCle != null) 'notification_cle': notificationCle,
+        if (notificationPlafondMensuel != null)
+          'notification_plafond_mensuel': notificationPlafondMensuel,
+      }));
+
+  @override
+  Future<List<NotificationConfiance>> getNotifications(
+          {String? statut, String? canal}) async =>
+      _items(
+        await _call('GET', '/notifications',
+            query: _q({'statut': statut, 'canal': canal})),
+        NotificationConfiance.fromJson,
+      );
+
+  @override
+  Future<NotificationConfiance> createNotification({
+    required String canal,
+    required String titre,
+    required String message,
+    String? userId,
+  }) async =>
+      NotificationConfiance.fromJson(
+          await _call('POST', '/notifications', body: {
+        'canal': canal,
+        'titre': titre,
+        'message': message,
+        if (userId != null) 'user_id': userId,
+      }));
+
+  @override
+  Future<NotificationConfiance> envoyerNotification(String id) async =>
+      NotificationConfiance.fromJson(
+          await _call('POST', '/notifications/$id/envoyer'));
+
+  @override
+  Future<ActionHorsLigne> soumettreActionHorsLigne({
+    required String typeAction,
+    required Map<String, dynamic> charge,
+    required String cleClient,
+  }) async =>
+      ActionHorsLigne.fromJson(
+          await _call('POST', '/file-hors-ligne', body: {
+        'type_action': typeAction,
+        'charge': charge,
+        'cle_client': cleClient,
+      }));
+
+  @override
+  Future<List<ActionHorsLigne>> getActionsHorsLigne(
+          {String? statut}) async =>
+      _items(
+        await _call('GET', '/file-hors-ligne',
+            query: _q({'statut': statut})),
+        ActionHorsLigne.fromJson,
+      );
+
+  @override
+  Future<RejeuFile> rejouerFileHorsLigne() async => RejeuFile.fromJson(
+      await _call('POST', '/file-hors-ligne/rejouer-tout'));
+
+  @override
+  Future<ActionHorsLigne> rejouerActionHorsLigne(String id) async =>
+      ActionHorsLigne.fromJson(
+          await _call('POST', '/file-hors-ligne/$id/rejouer'));
 }

@@ -118,11 +118,13 @@ class DemoAppState extends AppState {
   Future<void> login(
       {required String identifiant,
       required String password,
-      bool plateforme = false}) async {
+      bool plateforme = false,
+      String? code2fa}) async {
     final result = await _demoApi.login(
       identifiant: identifiant,
       password: password,
       plateforme: plateforme,
+      code2fa: code2fa,
     );
     _applyAuth(result);
     notifyListeners();

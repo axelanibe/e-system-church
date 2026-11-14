@@ -15,6 +15,7 @@ import '../screens/prieres_screen.dart';
 import '../screens/rapports_recus_screen.dart';
 import '../screens/rendez_vous_admin_screen.dart';
 import '../screens/annexes_screen.dart';
+import '../screens/confiance_screen.dart';
 import '../screens/gouvernance_screen.dart';
 import '../screens/serviteurs_screen.dart';
 import '../screens/settings_screen.dart';
@@ -214,6 +215,13 @@ class TiroirCourt extends StatelessWidget {
               titre: 'Gouvernance',
               sousTitre: 'Mandats, conseil, documents',
               onTap: () => _ouvrir(context, const GouvernanceScreen()),
+            ),
+          if (state.isAdmin)
+            _entree(
+              icone: Icons.shield_outlined,
+              titre: 'Confiance',
+              sousTitre: 'Sauvegarde, hors ligne, 2FA, audit',
+              onTap: () => _ouvrir(context, const ConfianceScreen()),
             ),
           _entree(
             icone: Icons.description_outlined,

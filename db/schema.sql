@@ -315,9 +315,27 @@ CREATE TABLE audit_logs (
     user_id     UUID REFERENCES users (id) ON DELETE SET NULL,
     action      TEXT NOT NULL,                      -- ex. 'contribution.confirmee'
     details     JSONB NOT NULL DEFAULT '{}'::jsonb,
+    -- T11 : hash chaîné (chaque ligne scelle la précédente).
+    hash            TEXT,
+    hash_precedent  TEXT,
+    seq             BIGSERIAL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_audit_church ON audit_logs (church_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_hash ON audit_logs (church_id, created_at, id);
+
+-- T11 : immuabilité du journal d'audit (aucune modification ni
+-- suppression). Les lignes créées avant T11 ont un hash NULL.
+CREATE OR REPLACE FUNCTION audit_logs_immutable() RETURNS trigger AS $$
+BEGIN
+  RAISE EXCEPTION 'audit_immutable : le journal d''audit ne se modifie pas.';
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_audit_logs_immutable ON audit_logs;
+CREATE TRIGGER trg_audit_logs_immutable
+  BEFORE UPDATE OR DELETE ON audit_logs
+  FOR EACH ROW EXECUTE FUNCTION audit_logs_immutable();
 
 -- ---------------------------------------------------------------------------
 -- Historique des imports de fidèles (tranche A) : un rapport par import
@@ -1150,6 +1168,127 @@ CREATE INDEX IF NOT EXISTS idx_maintenance_patrimoine_church
     ON maintenance_patrimoine (church_id, bien_id);
 
 -- ---------------------------------------------------------------------------
+-- Tranche T11 — Socle de confiance (migration 029, même définition) :
+-- lectures sensibles, 2FA TOTP, sauvegardes chiffrées, notifications
+-- (boîte d'envoi, aucun fournisseur branché), file hors ligne, RLS.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS consultations_sensibles (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id     UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    user_id       UUID REFERENCES users (id) ON DELETE SET NULL,
+    ressource     TEXT NOT NULL,
+    ressource_id  UUID,
+    action        TEXT NOT NULL DEFAULT 'lecture',
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_consultations_church
+    ON consultations_sensibles (church_id, created_at);
+
+CREATE TABLE IF NOT EXISTS auth_2fa (
+    user_id         UUID PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+    church_id       UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    secret_chiffre  TEXT NOT NULL,
+    secret_iv       TEXT NOT NULL,
+    secret_tag      TEXT NOT NULL,
+    actif           BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    verified_at     TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_auth_2fa_church ON auth_2fa (church_id, actif);
+
+CREATE TABLE IF NOT EXISTS sauvegardes (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id       UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    cree_par        UUID REFERENCES users (id) ON DELETE SET NULL,
+    taille_octets   INT NOT NULL CHECK (taille_octets >= 0),
+    empreinte       TEXT NOT NULL,
+    nb_tables       INT NOT NULL DEFAULT 0 CHECK (nb_tables >= 0),
+    tables          TEXT[] NOT NULL DEFAULT '{}',
+    contenu_chiffre TEXT NOT NULL,
+    iv              TEXT NOT NULL,
+    tag             TEXT NOT NULL,
+    statut          TEXT NOT NULL DEFAULT 'ok'
+                    CHECK (statut IN ('ok', 'restauree')),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_sauvegardes_church ON sauvegardes (church_id, created_at);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id   UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    user_id     UUID REFERENCES users (id) ON DELETE SET NULL,
+    canal       TEXT NOT NULL DEFAULT 'push' CHECK (canal IN ('push', 'sms')),
+    titre       TEXT NOT NULL,
+    message     TEXT NOT NULL,
+    statut      TEXT NOT NULL DEFAULT 'en_attente'
+                CHECK (statut IN ('en_attente', 'envoyee', 'echouee', 'non_configurée')),
+    erreur      TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    envoyee_at  TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_church ON notifications (church_id, created_at);
+
+CREATE TABLE IF NOT EXISTS actions_hors_ligne (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id     UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    user_id       UUID REFERENCES users (id) ON DELETE SET NULL,
+    type_action   TEXT NOT NULL
+                  CHECK (type_action IN ('presence.pointer', 'contribution.creer')),
+    charge        JSONB NOT NULL DEFAULT '{}'::jsonb,
+    cle_client    TEXT NOT NULL,
+    statut        TEXT NOT NULL DEFAULT 'en_attente'
+                  CHECK (statut IN ('en_attente', 'rejouee', 'echouee')),
+    erreur        TEXT,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    rejoue_at     TIMESTAMPTZ,
+    UNIQUE (church_id, cle_client)
+);
+CREATE INDEX IF NOT EXISTS idx_actions_hors_ligne_church
+    ON actions_hors_ligne (church_id, statut, created_at);
+
+-- RLS : deuxième ligne de défense (voir migration 029). Le rôle
+-- propriétaire contourne la RLS : aucun comportement actuel ne change.
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE consultations_sensibles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auth_2fa ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sauvegardes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE actions_hors_ligne ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'isolement_eglise' AND tablename = 'audit_logs') THEN
+    CREATE POLICY isolement_eglise ON audit_logs
+      USING (church_id = current_setting('app.church_id', true)::uuid)
+      WITH CHECK (church_id = current_setting('app.church_id', true)::uuid);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'isolement_eglise' AND tablename = 'consultations_sensibles') THEN
+    CREATE POLICY isolement_eglise ON consultations_sensibles
+      USING (church_id = current_setting('app.church_id', true)::uuid)
+      WITH CHECK (church_id = current_setting('app.church_id', true)::uuid);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'isolement_eglise' AND tablename = 'auth_2fa') THEN
+    CREATE POLICY isolement_eglise ON auth_2fa
+      USING (church_id = current_setting('app.church_id', true)::uuid)
+      WITH CHECK (church_id = current_setting('app.church_id', true)::uuid);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'isolement_eglise' AND tablename = 'sauvegardes') THEN
+    CREATE POLICY isolement_eglise ON sauvegardes
+      USING (church_id = current_setting('app.church_id', true)::uuid)
+      WITH CHECK (church_id = current_setting('app.church_id', true)::uuid);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'isolement_eglise' AND tablename = 'notifications') THEN
+    CREATE POLICY isolement_eglise ON notifications
+      USING (church_id = current_setting('app.church_id', true)::uuid)
+      WITH CHECK (church_id = current_setting('app.church_id', true)::uuid);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'isolement_eglise' AND tablename = 'actions_hors_ligne') THEN
+    CREATE POLICY isolement_eglise ON actions_hors_ligne
+      USING (church_id = current_setting('app.church_id', true)::uuid)
+      WITH CHECK (church_id = current_setting('app.church_id', true)::uuid);
+  END IF;
+END $$;
+
+-- ---------------------------------------------------------------------------
 -- Module 11 — Rapports et statistiques : vue par église (agrégats)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE VIEW v_stats_eglise AS
@@ -1200,6 +1339,17 @@ CREATE TABLE IF NOT EXISTS eglise_parametres (
     -- T10 : signataires configurables, vides par défaut.
     signataire_nominations     TEXT,
     signataire_proces_verbaux  TEXT,
+    -- T11 : notifications (aucun fournisseur branché) et sauvegarde auto.
+    notification_fournisseur       TEXT,
+    notification_cle_chiffree      TEXT,
+    notification_cle_iv            TEXT,
+    notification_cle_tag           TEXT,
+    notification_plafond_mensuel   INT NOT NULL DEFAULT 0,
+    notifications_actives          BOOLEAN NOT NULL DEFAULT FALSE,
+    sauvegarde_frequence           TEXT NOT NULL DEFAULT 'jamais'
+                                   CHECK (sauvegarde_frequence IN ('jamais', 'quotidienne', 'hebdomadaire')),
+    sauvegarde_heure               TEXT NOT NULL DEFAULT '03:00',
+    sauvegarde_auto_derniere_at    TIMESTAMPTZ,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_parametres_church ON eglise_parametres (church_id);
