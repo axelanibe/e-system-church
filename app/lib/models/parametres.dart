@@ -13,6 +13,9 @@ class EgliseParametres {
   final String? mtnNumero;
   final String? devise;
   final String? fuseauHoraire;
+  // T10 : signataires configurables, vides par défaut.
+  final String? signataireNominations;
+  final String? signataireProcesVerbaux;
   final String? egliseNom;
   final String? egliseCode;
 
@@ -27,6 +30,8 @@ class EgliseParametres {
     this.mtnNumero,
     this.devise,
     this.fuseauHoraire,
+    this.signataireNominations,
+    this.signataireProcesVerbaux,
     this.egliseNom,
     this.egliseCode,
   });
@@ -43,6 +48,8 @@ class EgliseParametres {
         mtnNumero: json['mtn_numero'] as String?,
         devise: json['devise'] as String?,
         fuseauHoraire: json['fuseau_horaire'] as String?,
+        signataireNominations: json['signataire_nominations'] as String?,
+        signataireProcesVerbaux: json['signataire_proces_verbaux'] as String?,
         egliseNom: json['eglise_nom'] as String?,
         egliseCode: json['eglise_code'] as String?,
       );

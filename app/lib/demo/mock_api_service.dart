@@ -15,6 +15,7 @@ import '../models/anniversaire.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
+import '../models/gouvernance.dart';
 import '../models/church.dart';
 import '../models/code_tutelle.dart';
 import '../models/campagne.dart';
@@ -3698,6 +3699,213 @@ class MockApiService implements ApiService {
     return maintenance;
   }
 
+  // -- Gouvernance, secrétariat, documents, action sociale (T10) ------------
+  // Non gérée en démo (mode démo supprimé en T12) : même forme que les
+  // attestations non gérées en démo.
+  @override
+  Future<List<ReunionConseil>> getReunionsConseil({String? statut}) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<ReunionConseil> createReunionConseil({
+    required String titre,
+    required String dateReunion,
+    String? lieu,
+    String? ordreDuJour,
+    String statut = 'prevue',
+  }) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<void> deleteReunionConseil(String id) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<List<Decision>> getDecisions({String? statut, String? reunionId}) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<Decision> createDecision({
+    String? reunionId,
+    required String titre,
+    String? description,
+    String? dateDecision,
+    String statut = 'adoptee',
+  }) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<void> deleteDecision(String id) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<List<Mandat>> getMandats({String? statut}) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<Mandat> createMandat({
+    required String memberId,
+    required String fonction,
+    required String dateDebut,
+    String? dateFin,
+    String? decisionId,
+  }) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<Mandat> terminerMandat(String id) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<void> deleteMandat(String id) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<List<ProcesVerbal>> getProcesVerbaux({String? statut, String? reunionId}) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<ProcesVerbal> createProcesVerbal({
+    String? reunionId,
+    String? numero,
+    required String contenu,
+    String? datePv,
+    String? signataire,
+  }) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<ProcesVerbal> signerProcesVerbal(String id, {required String signataire}) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<void> deleteProcesVerbal(String id) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<List<GouvernanceDocument>> getDocuments(
+      {String? q, String? categorie, String? sens}) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<GouvernanceDocument> createDocument({
+    required String titre,
+    String categorie = 'autre',
+    String? sens,
+    String? reference,
+    String? fichierUrl,
+    String? description,
+    String? dateDocument,
+  }) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<void> deleteDocument(String id) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<List<Beneficiaire>> getBeneficiaires({String? statut}) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<Beneficiaire> createBeneficiaire({
+    required String nom,
+    String? telephone,
+    String? adresse,
+    String? besoin,
+    String? memberId,
+  }) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<void> deleteBeneficiaire(String id) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<List<Aide>> getAides({String? beneficiaireId, String? statut}) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<Aide> createAide({
+    required String beneficiaireId,
+    required String typeAide,
+    int? montantFcfa,
+    String? dateAide,
+    String? description,
+  }) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<Aide> marquerAideVersee(String id) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<void> deleteAide(String id) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<List<BienPatrimoine>> getBiensPatrimoine({String? categorie}) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<BienPatrimoine> createBienPatrimoine({
+    required String nom,
+    required String categorie,
+    int? valeurFcfa,
+    String? assurance,
+    String? photoUrl,
+    String? codeInventaire,
+  }) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<void> deleteBienPatrimoine(String id) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<List<MaintenancePatrimoine>> getMaintenancePatrimoine({String? bienId}) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
+  @override
+  Future<MaintenancePatrimoine> createMaintenancePatrimoine({
+    required String bienId,
+    required String description,
+    String? dateMaintenance,
+    int? coutFcfa,
+    String? realisePar,
+    String? depenseId,
+  }) async {
+    throw UnimplementedError('Gouvernance non gérée en démo.');
+  }
+
   // -- Statistiques et export ------------------------------------------------------
 
   @override
@@ -3944,6 +4152,8 @@ class MockApiService implements ApiService {
     String? mtnNumero,
     String? devise,
     String? fuseauHoraire,
+    String? signataireNominations,
+    String? signataireProcesVerbaux,
   }) async {
     await _latence();
     _requireAuth();
@@ -3960,6 +4170,10 @@ class MockApiService implements ApiService {
       mtnNumero: mtnNumero ?? p.mtnNumero,
       devise: devise ?? p.devise,
       fuseauHoraire: fuseauHoraire ?? p.fuseauHoraire,
+      signataireNominations:
+          signataireNominations ?? p.signataireNominations,
+      signataireProcesVerbaux:
+          signataireProcesVerbaux ?? p.signataireProcesVerbaux,
       egliseNom: p.egliseNom,
       egliseCode: p.egliseCode,
     );

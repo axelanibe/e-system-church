@@ -34,20 +34,22 @@ import { genererAttestationEvenementPdf, genererAttestationPdf } from "../pdf.js
 const TYPES_DONS = ["dime", "offrande", "don"] as const;
 const LIBELLES: Record<string, string> = { dime: "Dîme", offrande: "Offrande", don: "Don" };
 
-/** Types d'attestation (colonne `type`, migration 016). */
-const TYPES_ATTESTATION = ["don", "mariage", "naissance", "bapteme"] as const;
+/** Types d'attestation (colonne `type`, migration 016 ; 'membre' ajouté en T10, migration 028). */
+const TYPES_ATTESTATION = ["don", "mariage", "naissance", "bapteme", "membre"] as const;
 type TypeAttestation = (typeof TYPES_ATTESTATION)[number];
 const PREFIXES: Record<TypeAttestation, string> = {
   don: "ATT",
   mariage: "MAR",
   naissance: "NAI",
   bapteme: "BAP",
+  membre: "MEM",
 };
 const LIBELLES_TYPES: Record<TypeAttestation, string> = {
   don: "Attestation annuelle de dons",
   mariage: "Attestation de mariage",
   naissance: "Attestation de naissance",
   bapteme: "Attestation de baptême",
+  membre: "Certificat de membre",
 };
 
 const genererSchema = z.object({
@@ -85,7 +87,7 @@ const champsEvenement = {
 };
 
 const emettreSchema = z.object({
-  type: z.enum(["mariage", "naissance", "bapteme"]),
+  type: z.enum(["mariage", "naissance", "bapteme", "membre"]),
   member_id: z.string().uuid(),
   date_evenement: dateEvenementSchema,
   ...champsEvenement,
@@ -127,7 +129,7 @@ interface ContenuEvenement {
   personne_nom: string;
   personne_matricule: string | null;
   eglise: { nom: string; code: string; logo_url: string | null };
-  type: "mariage" | "naissance" | "bapteme";
+  type: "mariage" | "naissance" | "bapteme" | "membre";
   date_evenement: string; // AAAA-MM-JJ
   lieu: string | null;
   officiant: string | null;

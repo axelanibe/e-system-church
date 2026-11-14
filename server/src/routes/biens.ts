@@ -17,6 +17,59 @@ import {
 const uuid = z.string().uuid();
 
 export function registerBiensRoutes(app: FastifyInstance, db: Pool) {
+  // Tranche T10 — Patrimoine : bâtiments et biens avec valeur,
+  // assurance, photo et code d'inventaire ; maintenance reliée aux
+  // dépenses (depense_id facultatif, dépense de la même église).
+  registerCrud(app, db, {
+    base: "/biens-patrimoine",
+    table: "biens_patrimoine",
+    columns: ["nom", "categorie", "valeur_fcfa", "assurance", "photo_url", "code_inventaire"],
+    createSchema: z.object({
+      nom: z.string().min(2).max(200),
+      categorie: z.enum(["batiment", "terrain", "vehicule", "equipement", "autre"]),
+      valeur_fcfa: z.number().int().min(0).max(10_000_000_000).optional(),
+      assurance: z.string().max(300).optional(),
+      photo_url: z.string().url().max(500).optional(),
+      code_inventaire: z.string().max(60).optional(),
+    }),
+    readRoles: READ_ALL,
+    writeRoles: WRITE_STD,
+    audit: "bien_patrimoine",
+    filters: { categorie: "categorie" },
+    searchColumn: "nom",
+  });
+
+  registerCrud(app, db, {
+    base: "/maintenance-patrimoine",
+    table: "maintenance_patrimoine",
+    columns: ["bien_id", "date_maintenance", "description", "cout_fcfa", "realise_par", "depense_id"],
+    createSchema: z.object({
+      bien_id: uuid,
+      date_maintenance: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date au format AAAA-MM-JJ.").optional(),
+      description: z.string().min(2).max(1000),
+      cout_fcfa: z.number().int().min(0).max(100_000_000).optional(),
+      realise_par: z.string().max(200).optional(),
+      depense_id: uuid.optional(),
+    }),
+    readRoles: READ_ALL,
+    writeRoles: WRITE_STD,
+    audit: "maintenance_patrimoine",
+    filters: { bien_id: "bien_id" },
+    orderBy: "date_maintenance DESC",
+    validate: async (db2, churchId, data) => {
+      if (!(await existsInChurch(db2, "biens_patrimoine", churchId, data.bien_id as string))) {
+        return "Bien introuvable dans votre église.";
+      }
+      if (
+        data.depense_id &&
+        !(await existsInChurch(db2, "depenses", churchId, data.depense_id as string))
+      ) {
+        return "Dépense introuvable dans votre église.";
+      }
+      return null;
+    },
+  });
+
   registerCrud(app, db, {
     base: "/salles",
     table: "salles",
