@@ -37,6 +37,12 @@ class T12Strings {
   // -- États -----------------------------------------------------------------
   String get chargement => _t('Chargement…', 'Loading…');
   String get vide => _t('Rien pour le moment.', 'Nothing yet.');
+  String get videPromesses =>
+      _t('Aucune promesse pour l’instant.', 'No pledges yet.');
+  String get videDonsNature =>
+      _t('Aucun don en nature pour l’instant.', 'No in-kind gifts yet.');
+  String get aucuneDonneePeriode =>
+      _t('Aucune donnée pour cette période.', 'No data for this period.');
   String get erreurChargement => _t('Chargement impossible.', 'Could not load.');
   String get enregistre => _t('Enregistré.', 'Saved.');
   String get montantInvalide => _t('Montant invalide.', 'Invalid amount.');

@@ -22,6 +22,10 @@ class DonsNatureScreen extends StatefulWidget {
 
 class _DonsNatureScreenState extends State<DonsNatureScreen> {
   late Future<List<DonNature>> _future;
+
+  // La liste est-elle vide ? Sert à masquer le FAB quand l'état vide
+  // affiche déjà le bouton de création (un seul bouton, pas deux).
+  bool _listeVide = false;
   Map<String, String> _nomsMembres = const {};
 
   @override
@@ -149,11 +153,13 @@ class _DonsNatureScreenState extends State<DonsNatureScreen> {
     final t = T12Strings(context.watch<PreferencesLocales>().estAnglais);
     return Scaffold(
       appBar: AppBar(title: Text(t.donsNature)),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _creer,
-        icon: const Icon(Icons.add),
-        label: Text(t.nouveauDonNature),
-      ),
+      floatingActionButton: _listeVide
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _creer,
+              icon: const Icon(Icons.add),
+              label: Text(t.nouveauDonNature),
+            ),
       body: Column(
         children: [
           Padding(
@@ -177,9 +183,20 @@ class _DonsNatureScreenState extends State<DonsNatureScreen> {
                       message: t.erreurChargement, onRetry: _refresh);
                 }
                 final items = snapshot.data ?? const [];
+                if (items.isEmpty != _listeVide) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _listeVide != items.isEmpty) {
+                      setState(() => _listeVide = items.isEmpty);
+                    }
+                  });
+                }
                 if (items.isEmpty) {
                   return EmptyState(
-                      icon: Icons.card_giftcard_outlined, message: t.vide);
+                    icon: Icons.card_giftcard_outlined,
+                    message: t.videDonsNature,
+                    actionLabel: t.nouveauDonNature,
+                    onAction: _creer,
+                  );
                 }
                 return RefreshIndicator(
                   onRefresh: () async => _refresh(),

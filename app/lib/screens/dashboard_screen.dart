@@ -493,38 +493,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               crossAxisAlignment:
                                   CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Total de mes églises',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                    '${pluriel(data.rapport!.totauxReseau.membresActifs, 'membre actif', 'membres actifs')} · '
-                                    '${pluriel(data.rapport!.totauxReseau.nombreContributions, 'contribution')} · '
-                                    '${formatFcfa(data.rapport!.totauxReseau.totalFcfa)}'),
-                                const SizedBox(height: 12),
-                                const Divider(),
-                                ...data.rapport!.sousEglises.map(
-                                  (s) => ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    leading: const Icon(
-                                        Icons.account_tree_outlined),
-                                    title: Text(s.egliseNom),
-                                    subtitle: Text(
-                                        '${s.membresActifs} membres · ${formatFcfa(s.totalFcfa)}'
-                                        '${s.niveau == 1 ? '' : ' · niveau ${s.niveau}'}'),
-                                    trailing: Text(
-                                        '${s.nombreContributions} contributions'),
-                                  ),
-                                ),
-                                if (data.rapport!.sousEglises.isEmpty)
+                                if (data.rapport!.sousEglises.isEmpty) ...[
+                                  if (church?.isMere ?? false) ...[
+                                    // État vide de la projection, mot pour mot.
+                                    Center(
+                                      child: Text(
+                                        'Aucun établissement relié',
+                                        textAlign: TextAlign.center,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    const Center(
+                                      child: Text(
+                                        'Les établissements de votre réseau apparaîtront ici.',
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ] else
+                                    const Text(
+                                      'Votre église est une annexe : elle ne peut pas avoir de sous-église.',
+                                    ),
+                                ] else ...[
                                   Text(
-                                    (church?.isMere ?? false)
-                                        ? 'Aucune église rattachée pour l’instant. Créez-en une depuis « Mes annexes et Réseau » dans le menu.'
-                                        : 'Votre église est une annexe : elle ne peut pas avoir de sous-église.',
+                                    'Total de mes églises',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium,
                                   ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                      '${pluriel(data.rapport!.totauxReseau.membresActifs, 'membre actif', 'membres actifs')} · '
+                                      '${pluriel(data.rapport!.totauxReseau.nombreContributions, 'contribution')} · '
+                                      '${formatFcfa(data.rapport!.totauxReseau.totalFcfa)}'),
+                                  const SizedBox(height: 12),
+                                  const Divider(),
+                                  ...data.rapport!.sousEglises.map(
+                                    (s) => ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      leading: const Icon(
+                                          Icons.account_tree_outlined),
+                                      title: Text(s.egliseNom),
+                                      subtitle: Text(
+                                          '${s.membresActifs} membres · ${formatFcfa(s.totalFcfa)}'
+                                          '${s.niveau == 1 ? '' : ' · niveau ${s.niveau}'}'),
+                                      trailing: Text(
+                                          '${s.nombreContributions} contributions'),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -536,22 +555,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               crossAxisAlignment:
                                   CrossAxisAlignment.start,
                               children: [
+                                // État vide de la projection, mot pour mot.
+                                Text(
+                                  'Aucune annonce',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium,
+                                ),
+                                const SizedBox(height: 4),
                                 const Text(
-                                    'Aucune annonce pour l’instant.'),
-                                if (state.isAdmin) ...[
-                                  const SizedBox(height: 8),
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: TextButton.icon(
-                                      onPressed: () => _ouvrir(context,
-                                          const AnnoncesScreen()),
-                                      icon: const Icon(
-                                          Icons.campaign_outlined),
-                                      label: const Text(
-                                          'Nouvelle annonce'),
-                                    ),
-                                  ),
-                                ],
+                                  'Les annonces publiées par la structure apparaîtront ici.',
+                                ),
                               ],
                             ),
                           )

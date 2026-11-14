@@ -38,7 +38,8 @@ class AProposScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(24),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 20, horizontal: 18),
                   decoration: BoxDecoration(
                     color: AppTheme.violetProfond,
                     borderRadius: BorderRadius.circular(16),
@@ -47,7 +48,7 @@ class AProposScreen extends StatelessWidget {
                     children: [
                       // Logo de l'application (projection couleurs du
                       // logo), dans le héros violet.
-                      LogoApp(taille: 96),
+                      LogoApp(taille: 88),
                       SizedBox(height: 12),
                       Text(
                         'e-System Church',
@@ -58,13 +59,13 @@ class AProposScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 4),
+                      SizedBox(height: 6),
                       Text(
                         '« L’église sans frontière »',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppTheme.or,
-                          fontSize: 16,
+                          fontSize: 15,
                         ),
                       ),
                     ],

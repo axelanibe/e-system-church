@@ -199,7 +199,7 @@ class _ContenuFinancesCompletesState
                           label: 'Sorties du jour',
                           value: formatMontant(d.sortiesJour, state.devise),
                           icon: Icons.trending_down,
-                          color: AppTheme.rougeErreur,
+                          color: AppTheme.violetProfond,
                         ),
                       ],
                     );

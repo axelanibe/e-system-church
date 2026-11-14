@@ -278,7 +278,7 @@ void main() {
         tester,
         const PromessesScreen(),
         titre: 'Promesses de don',
-        attendus: ['Rien pour le moment.'],
+        attendus: ['Aucune promesse pour l’instant.', 'Nouvelle promesse'],
       );
     });
 
@@ -287,7 +287,10 @@ void main() {
         tester,
         const DonsNatureScreen(),
         titre: 'Dons en nature',
-        attendus: ['Rien pour le moment.'],
+        attendus: [
+          'Aucun don en nature pour l’instant.',
+          'Nouveau don en nature'
+        ],
       );
     });
 
