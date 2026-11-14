@@ -298,12 +298,12 @@ class _FournisseurCardState extends State<_FournisseurCard> {
 
   /// Adresse du webhook à enregistrer chez le fournisseur (tranche T8) :
   /// seuls Wave, Orange Money et MTN ont un webhook ; l'adresse est celle
-  /// de l'API que l'appli utilise. En démo (base 'demo'), pas de webhook.
+  /// de l'API que l'appli utilise.
   String? get _urlWebhook {
     const avecWebhook = {'wave', 'orange_money', 'mtn_momo'};
     if (!avecWebhook.contains(widget.fournisseur.code)) return null;
     final base = context.read<AppState>().apiBaseUrl;
-    if (base == 'demo' || base.isEmpty) return null;
+    if (base.isEmpty) return null;
     return '$base/webhooks/${widget.fournisseur.code}';
   }
 
