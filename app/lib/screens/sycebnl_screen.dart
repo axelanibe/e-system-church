@@ -196,10 +196,6 @@ class _SycebnlScreenState extends State<SycebnlScreen> {
               child: const Text('← Retour aux finances'),
             ),
           ),
-          const Text(
-            'Les quatre états du système normal, à produire depuis la comptabilité de votre église.',
-          ),
-          const SizedBox(height: 12),
           const Card(
             color: AppTheme.fondPapier,
             child: Padding(

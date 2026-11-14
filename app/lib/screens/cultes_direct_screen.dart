@@ -598,7 +598,11 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             const SizedBox(height: 4),
-                            if (_stats!.parMembre.isEmpty)
+                            // Pas de deuxième phrase quand les deux
+                            // listes sont vides : la première section
+                            // l'affiche déjà.
+                            if (_stats!.parMembre.isEmpty &&
+                                _stats!.parCulte.isNotEmpty)
                               const Text(
                                   'Aucune présence enregistrée pour l’instant.')
                             else
