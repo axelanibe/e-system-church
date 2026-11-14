@@ -17,8 +17,10 @@ import '../models/checkin_enfant.dart';
 import '../models/enfants.dart';
 import '../models/ecole_biblique.dart';
 import '../models/fidele.dart';
+import '../models/confiance.dart';
 import '../models/finances.dart';
 import '../models/frequentation.dart';
+import '../models/gouvernance.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
@@ -39,13 +41,18 @@ import '../models/rattachement.dart';
 import '../models/serviteurs.dart';
 import '../models/stats.dart';
 import '../models/sycebnl.dart';
+import '../models/us_restantes.dart';
 
 /// Erreur renvoyée par l'API (ou par le service en mode démo).
+/// `code` est le code d'erreur du serveur (`code_2fa_requis`,
+/// `hors_ligne`…) quand il existe : les écrans décident avec lui,
+/// pas avec le texte du message.
 class ApiException implements Exception {
   final String message;
   final int? statusCode;
+  final String? code;
 
-  const ApiException(this.message, [this.statusCode]);
+  const ApiException(this.message, [this.statusCode, this.code]);
 
   @override
   String toString() => message;
@@ -64,7 +71,8 @@ abstract class ApiService {
   Future<AuthResult> login(
       {required String identifiant,
       required String password,
-      bool plateforme = false});
+      bool plateforme = false,
+      String? code2fa});
 
   Future<AuthResult> register({
     required String churchName,
@@ -291,7 +299,12 @@ abstract class ApiService {
   Future<void> annulerTransfert(String id);
 
   // -- Membres ---------------------------------------------------------------
-  Future<MemberPage> getMembers({String? q, String? department, String? status});
+  Future<MemberPage> getMembers(
+      {String? q,
+      String? department,
+      String? status,
+      int? limit,
+      int? offset});
 
   Future<Member> getMember(String id);
 
@@ -1028,6 +1041,128 @@ abstract class ApiService {
     String? realisePar,
   });
 
+  // -- Gouvernance, secrétariat, documents, action sociale (T10) ------------
+  Future<List<ReunionConseil>> getReunionsConseil({String? statut});
+
+  Future<ReunionConseil> createReunionConseil({
+    required String titre,
+    required String dateReunion,
+    String? lieu,
+    String? ordreDuJour,
+    String statut = 'prevue',
+  });
+
+  Future<void> deleteReunionConseil(String id);
+
+  Future<List<Decision>> getDecisions({String? statut, String? reunionId});
+
+  Future<Decision> createDecision({
+    String? reunionId,
+    required String titre,
+    String? description,
+    String? dateDecision,
+    String statut = 'adoptee',
+  });
+
+  Future<void> deleteDecision(String id);
+
+  /// Mandats en cours (`statut: 'en_cours'`) ou tous les mandats
+  /// (les nominations : l'historique des nominations).
+  Future<List<Mandat>> getMandats({String? statut});
+
+  Future<Mandat> createMandat({
+    required String memberId,
+    required String fonction,
+    required String dateDebut,
+    String? dateFin,
+    String? decisionId,
+  });
+
+  Future<Mandat> terminerMandat(String id);
+
+  Future<void> deleteMandat(String id);
+
+  Future<List<ProcesVerbal>> getProcesVerbaux({String? statut, String? reunionId});
+
+  Future<ProcesVerbal> createProcesVerbal({
+    String? reunionId,
+    String? numero,
+    required String contenu,
+    String? datePv,
+    String? signataire,
+  });
+
+  Future<ProcesVerbal> signerProcesVerbal(String id, {required String signataire});
+
+  Future<void> deleteProcesVerbal(String id);
+
+  /// Documents classés, avec recherche et filtres (catégorie, sens).
+  Future<List<GouvernanceDocument>> getDocuments(
+      {String? q, String? categorie, String? sens});
+
+  Future<GouvernanceDocument> createDocument({
+    required String titre,
+    String categorie = 'autre',
+    String? sens,
+    String? reference,
+    String? fichierUrl,
+    String? description,
+    String? dateDocument,
+  });
+
+  Future<void> deleteDocument(String id);
+
+  Future<List<Beneficiaire>> getBeneficiaires({String? statut});
+
+  Future<Beneficiaire> createBeneficiaire({
+    required String nom,
+    String? telephone,
+    String? adresse,
+    String? besoin,
+    String? memberId,
+  });
+
+  Future<void> deleteBeneficiaire(String id);
+
+  Future<List<Aide>> getAides({String? beneficiaireId, String? statut});
+
+  Future<Aide> createAide({
+    required String beneficiaireId,
+    required String typeAide,
+    int? montantFcfa,
+    String? dateAide,
+    String? description,
+  });
+
+  Future<Aide> marquerAideVersee(String id);
+
+  Future<void> deleteAide(String id);
+
+  // -- Patrimoine (T10, avec les biens) ---------------------------------------
+  Future<List<BienPatrimoine>> getBiensPatrimoine({String? categorie});
+
+  Future<BienPatrimoine> createBienPatrimoine({
+    required String nom,
+    required String categorie,
+    int? valeurFcfa,
+    String? assurance,
+    String? photoUrl,
+    String? codeInventaire,
+  });
+
+  Future<void> deleteBienPatrimoine(String id);
+
+  Future<List<MaintenancePatrimoine>> getMaintenancePatrimoine({String? bienId});
+
+  Future<MaintenancePatrimoine> createMaintenancePatrimoine({
+    required String bienId,
+    required String description,
+    String? dateMaintenance,
+    int? coutFcfa,
+    String? realisePar,
+    String? depenseId,
+  });
+
   // -- Statistiques et export (module 11) ------------------------------------
   Future<StatsGlobales> getStatsGlobales();
 
@@ -1150,13 +1285,23 @@ abstract class ApiService {
     String? mtnNumero,
     String? devise,
     String? fuseauHoraire,
+    // T10 : signataires configurables, vides par défaut.
+    String? signataireNominations,
+    String? signataireProcesVerbaux,
+    // T12 (US8, US11, US14). `effacerDimeSuggere` remet la dîme à vide
+    // (désactivée) ; sans lui, un montant null ne touche pas au champ.
+    int? montantDimeSuggere,
+    bool effacerDimeSuggere = false,
+    bool? transparenceVisibleMembres,
+    int? seuilInactiviteSemaines,
+    int? seuilBaisseContributionsPct,
   });
 
   Future<List<RoleEglise>> getRoles();
 
   Future<RoleEglise> setRole(String userId, String role);
 
-  Future<List<AuditEntree>> getAudit();
+  Future<List<AuditEntree>> getAudit({String? action, String? userId});
 
   // -- Présentation et identité de l'église (module 13) ----------------------
   Future<ProfilEglise> getPresentation(String code);
@@ -1294,4 +1439,159 @@ abstract class ApiService {
   });
 
   Future<void> deleteAnnonce(String id);
+
+  // -- Confiance (T11) -------------------------------------------------------
+  /// État 2FA du compte (`GET /2fa/etat`).
+  Future<bool> getEtat2fa();
+
+  /// Démarre la 2FA : renvoie l'URI otpauth (QR) et le secret, une
+  /// seule fois (`POST /2fa/demarrer`). Le secret est chiffré côté
+  /// serveur, jamais stocké en clair.
+  Future<Demarrage2fa> demarrer2fa();
+
+  /// Confirme l'activation 2FA avec un code à 6 chiffres.
+  Future<void> verifier2fa(String code);
+
+  /// Désactive la 2FA avec un code à 6 chiffres valide.
+  Future<void> desactiver2fa(String code);
+
+  /// Vérifie la chaîne de hachage du journal d'audit.
+  Future<VerificationAudit> verifierAudit();
+
+  /// Lectures sensibles journalisées (`GET /consultations`, US17).
+  Future<List<ConsultationSensible>> getConsultations();
+
+  /// Crée une sauvegarde chiffrée de l'église (`POST /sauvegardes`).
+  Future<Sauvegarde> creerSauvegarde();
+
+  /// Liste les sauvegardes de l'église.
+  Future<List<Sauvegarde>> getSauvegardes();
+
+  /// Restaure une sauvegarde : les données de l'église reviennent à
+  /// l'état sauvegardé (le journal d'audit n'est jamais réécrit).
+  Future<void> restaurerSauvegarde(String id);
+
+  /// Paramètres de confiance de l'église (`GET /confiance/parametres`).
+  /// La clé du fournisseur n'est jamais renvoyée.
+  Future<ParametresConfiance> getParametresConfiance();
+
+  /// Modifie les paramètres de confiance : fréquence de sauvegarde,
+  /// fournisseur de notification, clé, plafond mensuel.
+  Future<ParametresConfiance> patchParametresConfiance({
+    String? sauvegardeFrequence,
+    String? sauvegardeHeure,
+    bool? notificationsActives,
+    String? notificationFournisseur,
+    String? notificationCle,
+    int? notificationPlafondMensuel,
+  });
+
+  /// Notifications de la boîte d'envoi (`GET /notifications`).
+  Future<List<NotificationConfiance>> getNotifications(
+      {String? statut, String? canal});
+
+  /// Crée une notification en file (`POST /notifications`). Tant
+  /// qu'aucun fournisseur n'est choisi, rien n'est envoyé.
+  Future<NotificationConfiance> createNotification({
+    required String canal,
+    required String titre,
+    required String message,
+    String? userId,
+  });
+
+  /// Déclenche l'envoi d'une notification en attente.
+  Future<NotificationConfiance> envoyerNotification(String id);
+
+  /// Soumet une action hors ligne au serveur (`POST /file-hors-ligne`) :
+  /// idempotente par `cleClient`, jamais appliquée deux fois.
+  Future<ActionHorsLigne> soumettreActionHorsLigne({
+    required String typeAction,
+    required Map<String, dynamic> charge,
+    required String cleClient,
+  });
+
+  /// File d'attente hors ligne du serveur (`GET /file-hors-ligne`).
+  Future<List<ActionHorsLigne>> getActionsHorsLigne({String? statut});
+
+  /// Rejoue toute la file hors ligne du serveur, dans l'ordre.
+  Future<RejeuFile> rejouerFileHorsLigne();
+
+  /// Rejoue une seule action hors ligne.
+  Future<ActionHorsLigne> rejouerActionHorsLigne(String id);
+
+  // -- US4 à US17 restantes (T12) --------------------------------------------
+  Future<List<Promesse>> getPromesses({String? memberId});
+  Future<Promesse> getPromesse(String id);
+  Future<Promesse> createPromesse({
+    required String memberId,
+    required int montantTotalFcfa,
+    String? dateDebut,
+    int nbVersements = 1,
+  });
+  Future<Promesse> annulerPromesse(String id);
+  Future<Map<String, dynamic>> verserPromesse({
+    required String promesseId,
+    required String echeanceId,
+    required int amountFcfa,
+    required String paymentMethod,
+    String? paymentRef,
+    String? note,
+  });
+
+  Future<List<DonNature>> getDonsNature({String? typeDon});
+  Future<DonNature> createDonNature({
+    String? memberId,
+    required String description,
+    int quantite = 1,
+    String? unite,
+    String typeDon = 'materiel',
+    double? heures,
+    String? dateDon,
+    bool anonyme = false,
+  });
+
+  Future<List<Visiteur>> getVisiteurs({String? statut});
+  Future<Visiteur> createVisiteur({
+    required String nom,
+    String? dateVenue,
+    String? telephone,
+    String? email,
+    String? moyenContact,
+  });
+  Future<Visiteur> devenirMembre(String visiteurId, String memberId);
+
+  Future<List<EvenementVie>> getEvenementsVie({int jours = 30});
+  Future<void> masquerEvenementsVie(List<String> types);
+
+  Future<Transparence> getTransparence({String? periode});
+
+  Future<CartePortefeuille> getCartePortefeuille();
+
+  Future<MesConsentements> getMesConsentements();
+  Future<MesConsentements> saveMesConsentements({
+    bool? whatsapp,
+    bool? smsRepli,
+  });
+  Future<List<WhatsappConsentement>> getWhatsappConsentements();
+
+  Future<List<AlerteMere>> getAlertesMere({String? statut});
+  Future<Map<String, dynamic>> detecterAlertes();
+  Future<AlerteMere> traiterAlerte(String id);
+
+  Future<List<ListeConfigurable>> getListesConfigurables({String? type});
+  Future<ListeConfigurable> createListeConfigurable({
+    required String type,
+    required String libelle,
+    String? niveau,
+  });
+  Future<ListeConfigurable> updateListeConfigurable(
+    String id, {
+    bool? archive,
+  });
+  Future<void> deleteListeConfigurable(String id);
+  Future<List<String>> getStatutsMembre();
+
+  Future<List<ConsultationSensible>> getConsultationsSensibles();
+  Future<List<ConsultationSensible>> getMesConsultations();
+  Future<void> journaliserConsultation(String ressource, {String? ressourceId});
 }

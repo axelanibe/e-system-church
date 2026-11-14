@@ -315,9 +315,27 @@ CREATE TABLE audit_logs (
     user_id     UUID REFERENCES users (id) ON DELETE SET NULL,
     action      TEXT NOT NULL,                      -- ex. 'contribution.confirmee'
     details     JSONB NOT NULL DEFAULT '{}'::jsonb,
+    -- T11 : hash chaîné (chaque ligne scelle la précédente).
+    hash            TEXT,
+    hash_precedent  TEXT,
+    seq             BIGSERIAL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_audit_church ON audit_logs (church_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_hash ON audit_logs (church_id, created_at, id);
+
+-- T11 : immuabilité du journal d'audit (aucune modification ni
+-- suppression). Les lignes créées avant T11 ont un hash NULL.
+CREATE OR REPLACE FUNCTION audit_logs_immutable() RETURNS trigger AS $$
+BEGIN
+  RAISE EXCEPTION 'audit_immutable : le journal d''audit ne se modifie pas.';
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_audit_logs_immutable ON audit_logs;
+CREATE TRIGGER trg_audit_logs_immutable
+  BEFORE UPDATE OR DELETE ON audit_logs
+  FOR EACH ROW EXECUTE FUNCTION audit_logs_immutable();
 
 -- ---------------------------------------------------------------------------
 -- Historique des imports de fidèles (tranche A) : un rapport par import
@@ -1019,6 +1037,258 @@ CREATE TABLE IF NOT EXISTS maintenance_materiel (
 CREATE INDEX IF NOT EXISTS idx_maintenance_church ON maintenance_materiel (church_id, materiel_id);
 
 -- ---------------------------------------------------------------------------
+-- Tranche T10 — Gouvernance, secrétariat, documents, action sociale
+-- (migration 028, même définition).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS reunions_conseil (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id     UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    titre         TEXT NOT NULL,
+    date_reunion  TIMESTAMPTZ NOT NULL,
+    lieu          TEXT,
+    ordre_du_jour TEXT,
+    statut        TEXT NOT NULL DEFAULT 'prevue'
+                  CHECK (statut IN ('prevue','tenue','annulee')),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_reunions_church ON reunions_conseil (church_id, date_reunion);
+
+CREATE TABLE IF NOT EXISTS decisions (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id     UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    reunion_id    UUID REFERENCES reunions_conseil (id) ON DELETE SET NULL,
+    titre         TEXT NOT NULL,
+    description   TEXT,
+    date_decision DATE NOT NULL DEFAULT CURRENT_DATE,
+    statut        TEXT NOT NULL DEFAULT 'adoptee'
+                  CHECK (statut IN ('adoptee','rejetee','reportee')),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_decisions_church ON decisions (church_id, reunion_id);
+
+CREATE TABLE IF NOT EXISTS mandats (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id   UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    member_id   UUID NOT NULL REFERENCES members (id) ON DELETE CASCADE,
+    fonction    TEXT NOT NULL,
+    date_debut  DATE NOT NULL,
+    date_fin    DATE,
+    statut      TEXT NOT NULL DEFAULT 'en_cours'
+                CHECK (statut IN ('en_cours','termine')),
+    decision_id UUID REFERENCES decisions (id) ON DELETE SET NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_mandats_church ON mandats (church_id, statut);
+
+CREATE TABLE IF NOT EXISTS proces_verbaux (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id   UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    reunion_id  UUID REFERENCES reunions_conseil (id) ON DELETE SET NULL,
+    numero      TEXT,
+    contenu     TEXT NOT NULL,
+    date_pv     DATE NOT NULL DEFAULT CURRENT_DATE,
+    signataire  TEXT,
+    statut      TEXT NOT NULL DEFAULT 'brouillon'
+                CHECK (statut IN ('brouillon','signe','archive')),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (church_id, numero)
+);
+CREATE INDEX IF NOT EXISTS idx_pv_church ON proces_verbaux (church_id, date_pv);
+
+CREATE TABLE IF NOT EXISTS documents (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id     UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    titre         TEXT NOT NULL,
+    categorie     TEXT NOT NULL DEFAULT 'autre'
+                  CHECK (categorie IN ('statuts','reglement','decision','courrier','modele','autre')),
+    sens          TEXT CHECK (sens IN ('entrant','sortant','interne')),
+    reference     TEXT,
+    fichier_url   TEXT,
+    description   TEXT,
+    date_document DATE,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_documents_church ON documents (church_id, categorie);
+
+CREATE TABLE IF NOT EXISTS beneficiaires (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id  UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    nom        TEXT NOT NULL,
+    telephone  TEXT,
+    adresse    TEXT,
+    besoin     TEXT,
+    statut     TEXT NOT NULL DEFAULT 'actif' CHECK (statut IN ('actif','clos')),
+    member_id  UUID REFERENCES members (id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_beneficiaires_church ON beneficiaires (church_id, statut);
+
+CREATE TABLE IF NOT EXISTS aides (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id        UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    beneficiaire_id  UUID NOT NULL REFERENCES beneficiaires (id) ON DELETE CASCADE,
+    type_aide        TEXT NOT NULL
+                     CHECK (type_aide IN ('vivres','financier','medical','autre')),
+    montant_fcfa     INT CHECK (montant_fcfa >= 0),
+    date_aide        DATE NOT NULL DEFAULT CURRENT_DATE,
+    description      TEXT,
+    statut           TEXT NOT NULL DEFAULT 'prevue'
+                     CHECK (statut IN ('prevue','versee','annulee')),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_aides_church ON aides (church_id, beneficiaire_id);
+
+CREATE TABLE IF NOT EXISTS biens_patrimoine (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id       UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    nom             TEXT NOT NULL,
+    categorie       TEXT NOT NULL
+                    CHECK (categorie IN ('batiment','terrain','vehicule','equipement','autre')),
+    valeur_fcfa     INT CHECK (valeur_fcfa >= 0),
+    assurance       TEXT,
+    photo_url       TEXT,
+    code_inventaire TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (church_id, code_inventaire)
+);
+CREATE INDEX IF NOT EXISTS idx_patrimoine_church ON biens_patrimoine (church_id, categorie);
+
+CREATE TABLE IF NOT EXISTS maintenance_patrimoine (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id        UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    bien_id          UUID NOT NULL REFERENCES biens_patrimoine (id) ON DELETE CASCADE,
+    date_maintenance DATE NOT NULL DEFAULT CURRENT_DATE,
+    description      TEXT NOT NULL,
+    cout_fcfa        INT CHECK (cout_fcfa >= 0),
+    realise_par      TEXT,
+    depense_id       UUID REFERENCES depenses (id) ON DELETE SET NULL,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_maintenance_patrimoine_church
+    ON maintenance_patrimoine (church_id, bien_id);
+
+-- ---------------------------------------------------------------------------
+-- Tranche T11 — Socle de confiance (migration 029, même définition) :
+-- lectures sensibles, 2FA TOTP, sauvegardes chiffrées, notifications
+-- (boîte d'envoi, aucun fournisseur branché), file hors ligne, RLS.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS consultations_sensibles (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id     UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    user_id       UUID REFERENCES users (id) ON DELETE SET NULL,
+    ressource     TEXT NOT NULL,
+    ressource_id  UUID,
+    action        TEXT NOT NULL DEFAULT 'lecture',
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_consultations_church
+    ON consultations_sensibles (church_id, created_at);
+
+CREATE TABLE IF NOT EXISTS auth_2fa (
+    user_id         UUID PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+    church_id       UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    secret_chiffre  TEXT NOT NULL,
+    secret_iv       TEXT NOT NULL,
+    secret_tag      TEXT NOT NULL,
+    actif           BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    verified_at     TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_auth_2fa_church ON auth_2fa (church_id, actif);
+
+CREATE TABLE IF NOT EXISTS sauvegardes (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id       UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    cree_par        UUID REFERENCES users (id) ON DELETE SET NULL,
+    taille_octets   INT NOT NULL CHECK (taille_octets >= 0),
+    empreinte       TEXT NOT NULL,
+    nb_tables       INT NOT NULL DEFAULT 0 CHECK (nb_tables >= 0),
+    tables          TEXT[] NOT NULL DEFAULT '{}',
+    contenu_chiffre TEXT NOT NULL,
+    iv              TEXT NOT NULL,
+    tag             TEXT NOT NULL,
+    statut          TEXT NOT NULL DEFAULT 'ok'
+                    CHECK (statut IN ('ok', 'restauree')),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_sauvegardes_church ON sauvegardes (church_id, created_at);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id   UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    user_id     UUID REFERENCES users (id) ON DELETE SET NULL,
+    canal       TEXT NOT NULL DEFAULT 'push' CHECK (canal IN ('push', 'sms')),
+    titre       TEXT NOT NULL,
+    message     TEXT NOT NULL,
+    statut      TEXT NOT NULL DEFAULT 'en_attente'
+                CHECK (statut IN ('en_attente', 'envoyee', 'echouee', 'non_configurée')),
+    erreur      TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    envoyee_at  TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_church ON notifications (church_id, created_at);
+
+CREATE TABLE IF NOT EXISTS actions_hors_ligne (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id     UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    user_id       UUID REFERENCES users (id) ON DELETE SET NULL,
+    type_action   TEXT NOT NULL
+                  CHECK (type_action IN ('presence.pointer', 'contribution.creer')),
+    charge        JSONB NOT NULL DEFAULT '{}'::jsonb,
+    cle_client    TEXT NOT NULL,
+    statut        TEXT NOT NULL DEFAULT 'en_attente'
+                  CHECK (statut IN ('en_attente', 'rejouee', 'echouee')),
+    erreur        TEXT,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    rejoue_at     TIMESTAMPTZ,
+    UNIQUE (church_id, cle_client)
+);
+CREATE INDEX IF NOT EXISTS idx_actions_hors_ligne_church
+    ON actions_hors_ligne (church_id, statut, created_at);
+
+-- RLS : deuxième ligne de défense (voir migration 029). Le rôle
+-- propriétaire contourne la RLS : aucun comportement actuel ne change.
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE consultations_sensibles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auth_2fa ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sauvegardes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE actions_hors_ligne ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'isolement_eglise' AND tablename = 'audit_logs') THEN
+    CREATE POLICY isolement_eglise ON audit_logs
+      USING (church_id = current_setting('app.church_id', true)::uuid)
+      WITH CHECK (church_id = current_setting('app.church_id', true)::uuid);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'isolement_eglise' AND tablename = 'consultations_sensibles') THEN
+    CREATE POLICY isolement_eglise ON consultations_sensibles
+      USING (church_id = current_setting('app.church_id', true)::uuid)
+      WITH CHECK (church_id = current_setting('app.church_id', true)::uuid);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'isolement_eglise' AND tablename = 'auth_2fa') THEN
+    CREATE POLICY isolement_eglise ON auth_2fa
+      USING (church_id = current_setting('app.church_id', true)::uuid)
+      WITH CHECK (church_id = current_setting('app.church_id', true)::uuid);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'isolement_eglise' AND tablename = 'sauvegardes') THEN
+    CREATE POLICY isolement_eglise ON sauvegardes
+      USING (church_id = current_setting('app.church_id', true)::uuid)
+      WITH CHECK (church_id = current_setting('app.church_id', true)::uuid);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'isolement_eglise' AND tablename = 'notifications') THEN
+    CREATE POLICY isolement_eglise ON notifications
+      USING (church_id = current_setting('app.church_id', true)::uuid)
+      WITH CHECK (church_id = current_setting('app.church_id', true)::uuid);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'isolement_eglise' AND tablename = 'actions_hors_ligne') THEN
+    CREATE POLICY isolement_eglise ON actions_hors_ligne
+      USING (church_id = current_setting('app.church_id', true)::uuid)
+      WITH CHECK (church_id = current_setting('app.church_id', true)::uuid);
+  END IF;
+END $$;
+
+-- ---------------------------------------------------------------------------
 -- Module 11 — Rapports et statistiques : vue par église (agrégats)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE VIEW v_stats_eglise AS
@@ -1066,6 +1336,20 @@ CREATE TABLE IF NOT EXISTS eglise_parametres (
     mtn_numero      TEXT,
     devise          TEXT NOT NULL DEFAULT 'FCFA',
     fuseau_horaire  TEXT NOT NULL DEFAULT 'Africa/Abidjan',
+    -- T10 : signataires configurables, vides par défaut.
+    signataire_nominations     TEXT,
+    signataire_proces_verbaux  TEXT,
+    -- T11 : notifications (aucun fournisseur branché) et sauvegarde auto.
+    notification_fournisseur       TEXT,
+    notification_cle_chiffree      TEXT,
+    notification_cle_iv            TEXT,
+    notification_cle_tag           TEXT,
+    notification_plafond_mensuel   INT NOT NULL DEFAULT 0,
+    notifications_actives          BOOLEAN NOT NULL DEFAULT FALSE,
+    sauvegarde_frequence           TEXT NOT NULL DEFAULT 'jamais'
+                                   CHECK (sauvegarde_frequence IN ('jamais', 'quotidienne', 'hebdomadaire')),
+    sauvegarde_heure               TEXT NOT NULL DEFAULT '03:00',
+    sauvegarde_auto_derniere_at    TIMESTAMPTZ,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_parametres_church ON eglise_parametres (church_id);
@@ -1393,3 +1677,123 @@ CREATE TABLE IF NOT EXISTS progressions_ecole (
 );
 CREATE INDEX IF NOT EXISTS idx_progressions_ecole_inscription
     ON progressions_ecole (inscription_id, lecon_id);
+
+-- ---------------------------------------------------------------------------
+-- Tranche T12 — US4 à US17 restantes (migration 030, même définition).
+-- Promesses de don avec échéancier, dons en nature, fiche visiteur,
+-- alertes pour l'église mère, listes configurables par église,
+-- lectures sensibles (US17), consentements, paramètres de transparence,
+-- de dîme suggérée et de seuils, archivage des départements.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS promesses (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id        UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    member_id        UUID NOT NULL REFERENCES members (id) ON DELETE CASCADE,
+    montant_total_fcfa INT NOT NULL CHECK (montant_total_fcfa > 0),
+    date_debut       DATE NOT NULL DEFAULT CURRENT_DATE,
+    nb_versements    INT NOT NULL DEFAULT 1 CHECK (nb_versements BETWEEN 1 AND 120),
+    periodicite      TEXT NOT NULL DEFAULT 'mensuelle'
+                     CHECK (periodicite IN ('mensuelle')),
+    statut           TEXT NOT NULL DEFAULT 'en_cours'
+                     CHECK (statut IN ('en_cours', 'terminee', 'annulee')),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_promesses_church ON promesses (church_id, member_id, statut);
+
+CREATE TABLE IF NOT EXISTS echeances_promesses (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    promesse_id     UUID NOT NULL REFERENCES promesses (id) ON DELETE CASCADE,
+    date_echeance   DATE NOT NULL,
+    montant_fcfa    INT NOT NULL CHECK (montant_fcfa > 0),
+    statut          TEXT NOT NULL DEFAULT 'en_attente'
+                    CHECK (statut IN ('en_attente', 'recu', 'annulee')),
+    contribution_id UUID REFERENCES contributions (id) ON DELETE SET NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_echeances_promesse
+    ON echeances_promesses (promesse_id, date_echeance);
+
+CREATE TABLE IF NOT EXISTS dons_nature (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id    UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    member_id    UUID REFERENCES members (id) ON DELETE SET NULL,
+    description  TEXT NOT NULL,
+    quantite     INT NOT NULL DEFAULT 1 CHECK (quantite >= 0),
+    unite        TEXT,
+    type_don     TEXT NOT NULL DEFAULT 'materiel'
+                 CHECK (type_don IN ('materiel', 'nourriture', 'temps')),
+    heures       NUMERIC(6, 2) CHECK (heures IS NULL OR heures >= 0),
+    date_don     DATE NOT NULL DEFAULT CURRENT_DATE,
+    anonyme      BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_dons_nature_church ON dons_nature (church_id, date_don);
+
+CREATE TABLE IF NOT EXISTS visiteurs (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id      UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    nom            TEXT NOT NULL,
+    date_venue     DATE NOT NULL DEFAULT CURRENT_DATE,
+    telephone      TEXT,
+    email          TEXT,
+    moyen_contact  TEXT,
+    statut         TEXT NOT NULL DEFAULT 'nouveau'
+                   CHECK (statut IN ('nouveau', 'recontacte', 'devenu_membre')),
+    member_id      UUID REFERENCES members (id) ON DELETE SET NULL,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_visiteurs_church ON visiteurs (church_id, date_venue);
+
+CREATE TABLE IF NOT EXISTS alertes_mere (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id   UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    annexe_id   UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    type        TEXT NOT NULL
+                CHECK (type IN ('inactive', 'baisse_contributions', 'rapport_manquant')),
+    periode     TEXT NOT NULL,
+    statut      TEXT NOT NULL DEFAULT 'ouverte'
+                CHECK (statut IN ('ouverte', 'traitee')),
+    traitee_par UUID REFERENCES users (id) ON DELETE SET NULL,
+    traitee_at  TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_alertes_mere_church ON alertes_mere (church_id, statut, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_alertes_mere_une_ouverte
+    ON alertes_mere (church_id, annexe_id, type) WHERE statut = 'ouverte';
+
+CREATE TABLE IF NOT EXISTS listes_configurables (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id  UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    type       TEXT NOT NULL
+               CHECK (type IN ('role', 'categorie_depense', 'categorie_recette', 'statut_membre', 'departement')),
+    libelle    TEXT NOT NULL,
+    niveau     TEXT CHECK (niveau IS NULL OR niveau IN ('admin_eglise', 'tresorier', 'responsable_culte', 'membre')),
+    archive    BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (church_id, type, libelle)
+);
+CREATE INDEX IF NOT EXISTS idx_listes_configurables_church
+    ON listes_configurables (church_id, type, archive);
+
+
+ALTER TABLE contributions ADD COLUMN IF NOT EXISTS promesse_id UUID REFERENCES promesses (id) ON DELETE SET NULL;
+ALTER TABLE members ADD COLUMN IF NOT EXISTS whatsapp_consentement BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE members ADD COLUMN IF NOT EXISTS sms_repli_consentement BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE members ADD COLUMN IF NOT EXISTS evenements_vie_masques TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE eglise_parametres ADD COLUMN IF NOT EXISTS montant_dime_suggere INT CHECK (montant_dime_suggere IS NULL OR montant_dime_suggere >= 0);
+ALTER TABLE eglise_parametres ADD COLUMN IF NOT EXISTS transparence_visible_membres BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE eglise_parametres ADD COLUMN IF NOT EXISTS seuil_inactivite_semaines INT NOT NULL DEFAULT 4 CHECK (seuil_inactivite_semaines > 0);
+ALTER TABLE eglise_parametres ADD COLUMN IF NOT EXISTS seuil_baisse_contributions_pct INT NOT NULL DEFAULT 30 CHECK (seuil_baisse_contributions_pct BETWEEN 0 AND 100);
+ALTER TABLE departements ADD COLUMN IF NOT EXISTS archive BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- T12 (US13) : statuts de membre configurables. La contrainte figée aux
+-- 7 statuts riches de membre_statuts est levée ; la validation passe
+-- par la liste configurée de l'église, côté serveur.
+DO $$ DECLARE c text; BEGIN
+  FOR c IN SELECT conname FROM pg_constraint
+            WHERE conrelid = 'membre_statuts'::regclass AND contype = 'c'
+              AND (pg_get_constraintdef(oid) LIKE '%statut = ANY%'
+                   OR pg_get_constraintdef(oid) LIKE '%statut IN%') LOOP
+    EXECUTE 'ALTER TABLE membre_statuts DROP CONSTRAINT ' || quote_ident(c);
+  END LOOP;
+END $$;

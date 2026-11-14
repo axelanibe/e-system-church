@@ -35,10 +35,17 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # Bible Louis Segond 1910 (domaine public) : les 66 livres en JSON,
-  # lus par le mock en mode démo / hors ligne (le mode réel passe par
-  # l'API, qui lit sa propre copie sous server/src/data/bible/).
+  # Icône ESC simplifiée d'e-System Church (projection couleurs du
+  # logo, validée par Axel le 14 novembre 2026 ; correction du même
+  # jour : c'est l'icône ESC qui va dans l'application, pas le logo
+  # complet).
+  # Bible hors ligne (tranche T9) : Louis Segond 1910 et King James
+  # (domaine public), concordance Strong et dictionnaire, en JSON
+  # lus hors ligne par le service Bible de l'appli (le mode réel
+  # passe aussi par l'API, qui lit sa propre copie sous
+  # server/src/data/bible/).
   assets:
+    - assets/icone-esc.png
     - assets/bible/lsg1910/
     - assets/bible/kjv/
     - assets/bible/strong/

@@ -1,12 +1,12 @@
-import 'package:esystem_church/demo/mock_api_service.dart';
-import 'package:esystem_church/demo/mock_data.dart';
+import 'faux_api_service.dart';
+import 'faux_donnees.dart';
 import 'package:esystem_church/models/bible.dart';
 import 'package:esystem_church/models/ecole_biblique.dart';
 import 'package:esystem_church/services/api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Tranche T9 — Bible (Louis Segond 1910, domaine public) et école
-/// biblique : modèles et repli démo (assets bundlés + mémoire).
+/// biblique : modèles et service faux (assets bundlés + mémoire).
 /// Données EXEMPLE uniquement, jamais de données réelles.
 void main() {
   // Les lectures d'assets (rootBundle) exigent le binding, même dans
@@ -141,9 +141,9 @@ void main() {
     });
   });
 
-  group('repli démo — Bible (assets bundlés)', () {
+  group('service faux — Bible (assets bundlés)', () {
     test('canon complet : 66 livres', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -157,7 +157,7 @@ password: DemoAccounts.password
     });
 
     test('GEN 1 : 31 versets, verset 1 exact', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -169,7 +169,7 @@ password: DemoAccounts.password
     });
 
     test('recherche « berger » : PSA 23:1 dans les résultats', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -183,7 +183,7 @@ password: DemoAccounts.password
     });
 
     test('recherche trop courte : erreur', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -192,9 +192,9 @@ password: DemoAccounts.password
     });
   });
 
-  group('repli démo — école biblique', () {
+  group('service faux — école biblique', () {
     test('seed : 2 cours, 3 leçons, 1 inscription (1/2)', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -215,7 +215,7 @@ password: DemoAccounts.password
     });
 
     test('création de cours et ordre de leçon en doublon refusé', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -242,7 +242,7 @@ password: DemoAccounts.password
     });
 
     test('inscription membre puis progression jusqu’à terminé', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.membreEmail,
 password: DemoAccounts.password
@@ -268,7 +268,7 @@ password: DemoAccounts.password
     });
 
     test('statut « terminé » refusé par PATCH (posé par le serveur)', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -348,10 +348,10 @@ password: DemoAccounts.password
     });
   });
 
-  group('repli démo — versions Bible (LS1910 + KJV)', () {
+  group('service faux — versions Bible (LS1910 + KJV)', () {
     test('2 versions : lsg1910 66 livres / 31 170 versets, kjv 66 / 31 102',
         () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -368,7 +368,7 @@ password: DemoAccounts.password
     });
 
     test('canon KJV : GEN = Genesis', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -380,7 +380,7 @@ password: DemoAccounts.password
     });
 
     test('KJV GEN 1 : 31 versets, verset 1 exact', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -393,7 +393,7 @@ password: DemoAccounts.password
     });
 
     test('recherche KJV « shepherd » : PSA 23:1', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -408,9 +408,9 @@ password: DemoAccounts.password
     });
   });
 
-  group('repli démo — concordance Strong (assets bundlés)', () {
+  group('service faux — concordance Strong (assets bundlés)', () {
     test('H1 : lemme אָב, définition « father »', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -422,7 +422,7 @@ password: DemoAccounts.password
     });
 
     test('g1 (minuscule) normalisé en G1', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -433,7 +433,7 @@ password: DemoAccounts.password
     });
 
     test('numéro invalide : erreur', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -444,7 +444,7 @@ password: DemoAccounts.password
     });
 
     test('recherche « father » : H1 dans les résultats', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -454,9 +454,9 @@ password: DemoAccounts.password
     });
   });
 
-  group('repli démo — dictionnaire biblique (assets bundlés)', () {
+  group('service faux — dictionnaire biblique (assets bundlés)', () {
     test('recherche « Moïse » (fra) : article « Moïse » trouvé', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -466,7 +466,7 @@ password: DemoAccounts.password
     });
 
     test('article « Moïse » : texte long, parle de l’Égypte', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -477,7 +477,7 @@ password: DemoAccounts.password
     });
 
     test('recherche « Moses » (eng) : article « Moses » trouvé', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password
@@ -491,7 +491,7 @@ password: DemoAccounts.password
     });
 
     test('article introuvable : erreur', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
 password: DemoAccounts.password

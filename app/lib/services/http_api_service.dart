@@ -19,11 +19,13 @@ import '../models/code_tutelle.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/checkin_enfant.dart';
+import '../models/confiance.dart';
 import '../models/enfants.dart';
 import '../models/ecole_biblique.dart';
 import '../models/fidele.dart';
 import '../models/finances.dart';
 import '../models/frequentation.dart';
+import '../models/gouvernance.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
@@ -44,7 +46,9 @@ import '../models/rattachement.dart';
 import '../models/serviteurs.dart';
 import '../models/stats.dart';
 import '../models/sycebnl.dart';
+import '../models/us_restantes.dart';
 import 'api_service.dart';
+import 'bible_hors_ligne_service.dart';
 
 /// Client HTTP de l'API e-System Church (`server/` : Fastify + JWT bearer).
 /// Seule implémentation de [ApiService] : aucune donnée de démonstration,
@@ -52,6 +56,11 @@ import 'api_service.dart';
 class HttpApiService implements ApiService {
   final String baseUrl;
   String? _token;
+
+  /// Bible hors ligne (tranche T9) : quand l'API est injoignable, les
+  /// lectures Bible / Strong / dictionnaire basculent sur les JSON
+  /// bundlés dans l'appli, sans changer les écrans.
+  final BibleHorsLigneService _bibleHorsLigne = BibleHorsLigneService();
 
   /// Jeton de rafraîchissement (un par appareil) : renouvelle le JWT sans
   /// ressaisir le mot de passe, jusqu'à déconnexion manuelle.
@@ -124,14 +133,28 @@ class HttpApiService implements ApiService {
       }
     } on TimeoutException {
       throw const ApiException(
-          'Le serveur ne répond pas. Vérifiez l’URL de l’API dans Réglages.');
+        'Le serveur ne répond pas. Vérifiez l’URL de l’API dans Réglages.',
+        null,
+        'hors_ligne',
+      );
     } on SocketException {
       throw const ApiException(
-          'Impossible de joindre le serveur. Vérifiez l’URL de l’API dans Réglages.');
+        'Impossible de joindre le serveur. Vérifiez l’URL de l’API dans Réglages.',
+        null,
+        'hors_ligne',
+      );
     }
-    final Map<String, dynamic> data = res.body.isEmpty
-        ? <String, dynamic>{}
-        : jsonDecode(res.body) as Map<String, dynamic>;
+    // Les routes à tableau nu (GET /budgets-mensuels,
+    // GET /moi/rapports-annexe/recus) renvoient un JSON qui n'est pas un
+    // objet : on enveloppe la liste pour garder le type de retour
+    // (la liste se lit ensuite via `data['items']`, comme `_items`).
+    final dynamic brut =
+        res.body.isEmpty ? <String, dynamic>{} : jsonDecode(res.body);
+    final Map<String, dynamic> data = brut is Map<String, dynamic>
+        ? brut
+        : brut is List<dynamic>
+            ? <String, dynamic>{'items': brut}
+            : <String, dynamic>{};
     if (res.statusCode >= 200 && res.statusCode < 300) return data;
     if (res.statusCode == 401 &&
         rafraichir &&
@@ -147,6 +170,7 @@ class HttpApiService implements ApiService {
     throw ApiException(
       (data['message'] as String?) ?? 'Erreur ${res.statusCode}.',
       res.statusCode,
+      data['error'] as String?,
     );
   }
 
@@ -225,12 +249,14 @@ class HttpApiService implements ApiService {
   Future<AuthResult> login(
       {required String identifiant,
       required String password,
-      bool plateforme = false}) async {
+      bool plateforme = false,
+      String? code2fa}) async {
     final data = await _call('POST', '/auth/login', body: {
       'identifiant': identifiant,
       'password': password,
       'plateforme': plateforme,
       'channel': _channel,
+      if (code2fa != null && code2fa.isNotEmpty) 'code_2fa': code2fa,
     });
     final result = AuthResult.fromJson(data);
     _token = result.token;
@@ -550,12 +576,9 @@ class HttpApiService implements ApiService {
   }
 
   @override
-  Future<List<RapportAnnexe>> getRapportsRecus() async {
-    final data = await _call('GET', '/moi/rapports-annexe/recus');
-    return (data as List<dynamic>)
-        .map((e) => RapportAnnexe.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
+  Future<List<RapportAnnexe>> getRapportsRecus() async => _items(
+      await _call('GET', '/moi/rapports-annexe/recus'),
+      RapportAnnexe.fromJson);
 
   @override
   Future<RendezVous> demanderRendezVous({
@@ -748,11 +771,17 @@ class HttpApiService implements ApiService {
 
   @override
   Future<MemberPage> getMembers(
-      {String? q, String? department, String? status}) async {
+      {String? q,
+      String? department,
+      String? status,
+      int? limit,
+      int? offset}) async {
     final data = await _call('GET', '/membres', query: {
       if (q != null && q.isNotEmpty) 'q': q,
       if (department != null) 'department': department,
       if (status != null) 'status': status,
+      if (limit != null) 'limit': '$limit',
+      if (offset != null) 'offset': '$offset',
     });
     return MemberPage(
       total: (data['total'] as num).toInt(),
@@ -2135,19 +2164,31 @@ class HttpApiService implements ApiService {
   // -- Bible et école biblique (tranche T9) ----------------------------------
   @override
   Future<List<VersionBible>> getVersionsBible() async {
-    final data = await _call('GET', '/bible/versions');
-    return ((data['versions'] as List<dynamic>?) ?? [])
-        .map((e) => VersionBible.fromJson(e as Map<String, dynamic>))
-        .toList();
+    try {
+      final data = await _call('GET', '/bible/versions');
+      return ((data['versions'] as List<dynamic>?) ?? [])
+          .map((e) => VersionBible.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on ApiException catch (e) {
+      if (e.code == 'hors_ligne') return _bibleHorsLigne.getVersionsBible();
+      rethrow;
+    }
   }
 
   @override
   Future<List<LivreBible>> getLivresBible({String version = 'lsg1910'}) async {
-    final data =
-        await _call('GET', '/bible/livres', query: _q({'version': version}));
-    return ((data['livres'] as List<dynamic>?) ?? [])
-        .map((e) => LivreBible.fromJson(e as Map<String, dynamic>))
-        .toList();
+    try {
+      final data =
+          await _call('GET', '/bible/livres', query: _q({'version': version}));
+      return ((data['livres'] as List<dynamic>?) ?? [])
+          .map((e) => LivreBible.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on ApiException catch (e) {
+      if (e.code == 'hors_ligne') {
+        return _bibleHorsLigne.getLivresBible(version: version);
+      }
+      rethrow;
+    }
   }
 
   @override
@@ -2155,58 +2196,109 @@ class HttpApiService implements ApiService {
     required String code,
     required int chapitre,
     String version = 'lsg1910',
-  }) async =>
-      ChapitreBible.fromJson(await _call(
+  }) async {
+    try {
+      return ChapitreBible.fromJson(await _call(
           'GET', '/bible/livres/$code/chapitres/$chapitre',
           query: _q({'version': version})));
+    } on ApiException catch (e) {
+      if (e.code == 'hors_ligne') {
+        return _bibleHorsLigne.getChapitreBible(
+            code: code, chapitre: chapitre, version: version);
+      }
+      rethrow;
+    }
+  }
 
   @override
   Future<List<ResultatRechercheBible>> rechercherBible(
     String terme, {
     String version = 'lsg1910',
-  }) async =>
-      ((await _call('GET', '/bible/recherche',
-                  query: _q({'q': terme, 'version': version})))['resultats']
-              as List<dynamic>? ??
-          [])
-          .map((e) => ResultatRechercheBible.fromJson(e as Map<String, dynamic>))
-          .toList();
+  }) async {
+    try {
+      return ((await _call('GET', '/bible/recherche',
+                      query: _q({'q': terme, 'version': version})))['resultats']
+                  as List<dynamic>? ??
+              [])
+              .map((e) =>
+                  ResultatRechercheBible.fromJson(e as Map<String, dynamic>))
+              .toList();
+    } on ApiException catch (e) {
+      if (e.code == 'hors_ligne') {
+        return _bibleHorsLigne.rechercherBible(terme, version: version);
+      }
+      rethrow;
+    }
+  }
 
   @override
-  Future<EntreeStrong> getEntreeStrong(String numero) async =>
-      EntreeStrong.fromJson(
+  Future<EntreeStrong> getEntreeStrong(String numero) async {
+    try {
+      return EntreeStrong.fromJson(
           (await _call('GET', '/bible/strong/${Uri.encodeComponent(numero)}'))['entree']
               as Map<String, dynamic>);
+    } on ApiException catch (e) {
+      if (e.code == 'hors_ligne') {
+        return _bibleHorsLigne.getEntreeStrong(numero);
+      }
+      rethrow;
+    }
+  }
 
   @override
-  Future<List<EntreeStrong>> rechercherStrong(String terme) async =>
-      ((await _call('GET', '/bible/strong/recherche', query: _q({'q': terme})))['resultats']
-              as List<dynamic>? ??
-          [])
-          .map((e) => EntreeStrong.fromJson(e as Map<String, dynamic>))
-          .toList();
+  Future<List<EntreeStrong>> rechercherStrong(String terme) async {
+    try {
+      return ((await _call('GET', '/bible/strong/recherche',
+                      query: _q({'q': terme})))['resultats']
+                  as List<dynamic>? ??
+              [])
+              .map((e) => EntreeStrong.fromJson(e as Map<String, dynamic>))
+              .toList();
+    } on ApiException catch (e) {
+      if (e.code == 'hors_ligne') {
+        return _bibleHorsLigne.rechercherStrong(terme);
+      }
+      rethrow;
+    }
+  }
 
   @override
   Future<ArticleDictionnaire> getArticleDictionnaire(
     String titre, {
     String langue = 'fra',
-  }) async =>
-      ArticleDictionnaire.fromJson(
+  }) async {
+    try {
+      return ArticleDictionnaire.fromJson(
           (await _call('GET', '/bible/dictionnaire/${Uri.encodeComponent(titre)}',
                   query: _q({'langue': langue})))['article']
               as Map<String, dynamic>);
+    } on ApiException catch (e) {
+      if (e.code == 'hors_ligne') {
+        return _bibleHorsLigne.getArticleDictionnaire(titre, langue: langue);
+      }
+      rethrow;
+    }
+  }
 
   @override
   Future<List<ArticleDictionnaire>> rechercherDictionnaire(
     String terme, {
     String langue = 'fra',
-  }) async =>
-      ((await _call('GET', '/bible/dictionnaire/recherche',
-                  query: _q({'q': terme, 'langue': langue})))['resultats']
-              as List<dynamic>? ??
-          [])
-          .map((e) => ArticleDictionnaire.fromJson(e as Map<String, dynamic>))
-          .toList();
+  }) async {
+    try {
+      return ((await _call('GET', '/bible/dictionnaire/recherche',
+                      query: _q({'q': terme, 'langue': langue})))['resultats']
+                  as List<dynamic>? ??
+              [])
+              .map((e) => ArticleDictionnaire.fromJson(e as Map<String, dynamic>))
+              .toList();
+    } on ApiException catch (e) {
+      if (e.code == 'hors_ligne') {
+        return _bibleHorsLigne.rechercherDictionnaire(terme, langue: langue);
+      }
+      rethrow;
+    }
+  }
 
   @override
   Future<List<CoursEcole>> getCoursEcole() async =>
@@ -2430,6 +2522,276 @@ class HttpApiService implements ApiService {
         if (realisePar != null) 'realise_par': realisePar,
       }));
 
+  // -- Gouvernance, secrétariat, documents, action sociale (T10) ------------
+  @override
+  Future<List<ReunionConseil>> getReunionsConseil({String? statut}) async =>
+      _items(
+          await _call('GET', '/reunions-conseil',
+              query: _q({'statut': statut})),
+          ReunionConseil.fromJson);
+
+  @override
+  Future<ReunionConseil> createReunionConseil({
+    required String titre,
+    required String dateReunion,
+    String? lieu,
+    String? ordreDuJour,
+    String statut = 'prevue',
+  }) async =>
+      ReunionConseil.fromJson(await _call('POST', '/reunions-conseil', body: {
+        'titre': titre,
+        'date_reunion': dateReunion,
+        if (lieu != null) 'lieu': lieu,
+        if (ordreDuJour != null) 'ordre_du_jour': ordreDuJour,
+        'statut': statut,
+      }));
+
+  @override
+  Future<void> deleteReunionConseil(String id) async {
+    await _call('DELETE', '/reunions-conseil/$id');
+  }
+
+  @override
+  Future<List<Decision>> getDecisions({String? statut, String? reunionId}) async =>
+      _items(
+          await _call('GET', '/decisions',
+              query: _q({'statut': statut, 'reunion_id': reunionId})),
+          Decision.fromJson);
+
+  @override
+  Future<Decision> createDecision({
+    String? reunionId,
+    required String titre,
+    String? description,
+    String? dateDecision,
+    String statut = 'adoptee',
+  }) async =>
+      Decision.fromJson(await _call('POST', '/decisions', body: {
+        if (reunionId != null) 'reunion_id': reunionId,
+        'titre': titre,
+        if (description != null) 'description': description,
+        if (dateDecision != null) 'date_decision': dateDecision,
+        'statut': statut,
+      }));
+
+  @override
+  Future<void> deleteDecision(String id) async {
+    await _call('DELETE', '/decisions/$id');
+  }
+
+  @override
+  Future<List<Mandat>> getMandats({String? statut}) async => _items(
+      await _call('GET', '/mandats', query: _q({'statut': statut})),
+      Mandat.fromJson);
+
+  @override
+  Future<Mandat> createMandat({
+    required String memberId,
+    required String fonction,
+    required String dateDebut,
+    String? dateFin,
+    String? decisionId,
+  }) async =>
+      Mandat.fromJson(await _call('POST', '/mandats', body: {
+        'member_id': memberId,
+        'fonction': fonction,
+        'date_debut': dateDebut,
+        if (dateFin != null) 'date_fin': dateFin,
+        if (decisionId != null) 'decision_id': decisionId,
+      }));
+
+  @override
+  Future<Mandat> terminerMandat(String id) async => Mandat.fromJson(
+      await _call('PATCH', '/mandats/$id', body: {'statut': 'termine'}));
+
+  @override
+  Future<void> deleteMandat(String id) async {
+    await _call('DELETE', '/mandats/$id');
+  }
+
+  @override
+  Future<List<ProcesVerbal>> getProcesVerbaux({String? statut, String? reunionId}) async =>
+      _items(
+          await _call('GET', '/proces-verbaux',
+              query: _q({'statut': statut, 'reunion_id': reunionId})),
+          ProcesVerbal.fromJson);
+
+  @override
+  Future<ProcesVerbal> createProcesVerbal({
+    String? reunionId,
+    String? numero,
+    required String contenu,
+    String? datePv,
+    String? signataire,
+  }) async =>
+      ProcesVerbal.fromJson(await _call('POST', '/proces-verbaux', body: {
+        if (reunionId != null) 'reunion_id': reunionId,
+        if (numero != null) 'numero': numero,
+        'contenu': contenu,
+        if (datePv != null) 'date_pv': datePv,
+        if (signataire != null) 'signataire': signataire,
+      }));
+
+  @override
+  Future<ProcesVerbal> signerProcesVerbal(String id, {required String signataire}) async =>
+      ProcesVerbal.fromJson(await _call('PATCH', '/proces-verbaux/$id',
+          body: {'statut': 'signe', 'signataire': signataire}));
+
+  @override
+  Future<void> deleteProcesVerbal(String id) async {
+    await _call('DELETE', '/proces-verbaux/$id');
+  }
+
+  @override
+  Future<List<GouvernanceDocument>> getDocuments(
+          {String? q, String? categorie, String? sens}) async =>
+      _items(
+          await _call('GET', '/documents',
+              query: _q({'q': q, 'categorie': categorie, 'sens': sens})),
+          GouvernanceDocument.fromJson);
+
+  @override
+  Future<GouvernanceDocument> createDocument({
+    required String titre,
+    String categorie = 'autre',
+    String? sens,
+    String? reference,
+    String? fichierUrl,
+    String? description,
+    String? dateDocument,
+  }) async =>
+      GouvernanceDocument.fromJson(await _call('POST', '/documents', body: {
+        'titre': titre,
+        'categorie': categorie,
+        if (sens != null) 'sens': sens,
+        if (reference != null) 'reference': reference,
+        if (fichierUrl != null) 'fichier_url': fichierUrl,
+        if (description != null) 'description': description,
+        if (dateDocument != null) 'date_document': dateDocument,
+      }));
+
+  @override
+  Future<void> deleteDocument(String id) async {
+    await _call('DELETE', '/documents/$id');
+  }
+
+  @override
+  Future<List<Beneficiaire>> getBeneficiaires({String? statut}) async =>
+      _items(
+          await _call('GET', '/beneficiaires',
+              query: _q({'statut': statut})),
+          Beneficiaire.fromJson);
+
+  @override
+  Future<Beneficiaire> createBeneficiaire({
+    required String nom,
+    String? telephone,
+    String? adresse,
+    String? besoin,
+    String? memberId,
+  }) async =>
+      Beneficiaire.fromJson(await _call('POST', '/beneficiaires', body: {
+        'nom': nom,
+        if (telephone != null) 'telephone': telephone,
+        if (adresse != null) 'adresse': adresse,
+        if (besoin != null) 'besoin': besoin,
+        if (memberId != null) 'member_id': memberId,
+      }));
+
+  @override
+  Future<void> deleteBeneficiaire(String id) async {
+    await _call('DELETE', '/beneficiaires/$id');
+  }
+
+  @override
+  Future<List<Aide>> getAides({String? beneficiaireId, String? statut}) async =>
+      _items(
+          await _call('GET', '/aides',
+              query: _q({'beneficiaire_id': beneficiaireId, 'statut': statut})),
+          Aide.fromJson);
+
+  @override
+  Future<Aide> createAide({
+    required String beneficiaireId,
+    required String typeAide,
+    int? montantFcfa,
+    String? dateAide,
+    String? description,
+  }) async =>
+      Aide.fromJson(await _call('POST', '/aides', body: {
+        'beneficiaire_id': beneficiaireId,
+        'type_aide': typeAide,
+        if (montantFcfa != null) 'montant_fcfa': montantFcfa,
+        if (dateAide != null) 'date_aide': dateAide,
+        if (description != null) 'description': description,
+      }));
+
+  @override
+  Future<Aide> marquerAideVersee(String id) async => Aide.fromJson(
+      await _call('PATCH', '/aides/$id', body: {'statut': 'versee'}));
+
+  @override
+  Future<void> deleteAide(String id) async {
+    await _call('DELETE', '/aides/$id');
+  }
+
+  // -- Patrimoine (T10, avec les biens) ---------------------------------------
+  @override
+  Future<List<BienPatrimoine>> getBiensPatrimoine({String? categorie}) async =>
+      _items(
+          await _call('GET', '/biens-patrimoine',
+              query: _q({'categorie': categorie})),
+          BienPatrimoine.fromJson);
+
+  @override
+  Future<BienPatrimoine> createBienPatrimoine({
+    required String nom,
+    required String categorie,
+    int? valeurFcfa,
+    String? assurance,
+    String? photoUrl,
+    String? codeInventaire,
+  }) async =>
+      BienPatrimoine.fromJson(await _call('POST', '/biens-patrimoine', body: {
+        'nom': nom,
+        'categorie': categorie,
+        if (valeurFcfa != null) 'valeur_fcfa': valeurFcfa,
+        if (assurance != null) 'assurance': assurance,
+        if (photoUrl != null) 'photo_url': photoUrl,
+        if (codeInventaire != null) 'code_inventaire': codeInventaire,
+      }));
+
+  @override
+  Future<void> deleteBienPatrimoine(String id) async {
+    await _call('DELETE', '/biens-patrimoine/$id');
+  }
+
+  @override
+  Future<List<MaintenancePatrimoine>> getMaintenancePatrimoine({String? bienId}) async =>
+      _items(
+          await _call('GET', '/maintenance-patrimoine',
+              query: _q({'bien_id': bienId})),
+          MaintenancePatrimoine.fromJson);
+
+  @override
+  Future<MaintenancePatrimoine> createMaintenancePatrimoine({
+    required String bienId,
+    required String description,
+    String? dateMaintenance,
+    int? coutFcfa,
+    String? realisePar,
+    String? depenseId,
+  }) async =>
+      MaintenancePatrimoine.fromJson(
+          await _call('POST', '/maintenance-patrimoine', body: {
+        'bien_id': bienId,
+        'description': description,
+        if (dateMaintenance != null) 'date_maintenance': dateMaintenance,
+        if (coutFcfa != null) 'cout_fcfa': coutFcfa,
+        if (realisePar != null) 'realise_par': realisePar,
+        if (depenseId != null) 'depense_id': depenseId,
+      }));
+
   // -- Statistiques et export (module 11) ------------------------------------
   @override
   Future<StatsGlobales> getStatsGlobales() async =>
@@ -2447,10 +2809,16 @@ class HttpApiService implements ApiService {
           .timeout(const Duration(seconds: 20));
     } on TimeoutException {
       throw const ApiException(
-          'Le serveur ne répond pas. Vérifiez l’URL de l’API dans Réglages.');
+        'Le serveur ne répond pas. Vérifiez l’URL de l’API dans Réglages.',
+        null,
+        'hors_ligne',
+      );
     } on SocketException {
       throw const ApiException(
-          'Impossible de joindre le serveur. Vérifiez l’URL de l’API dans Réglages.');
+        'Impossible de joindre le serveur. Vérifiez l’URL de l’API dans Réglages.',
+        null,
+        'hors_ligne',
+      );
     }
     if (res.statusCode >= 200 && res.statusCode < 300) return res.body;
     String message = 'Erreur ${res.statusCode}.';
@@ -2707,6 +3075,13 @@ class HttpApiService implements ApiService {
     String? mtnNumero,
     String? devise,
     String? fuseauHoraire,
+    String? signataireNominations,
+    String? signataireProcesVerbaux,
+    int? montantDimeSuggere,
+    bool effacerDimeSuggere = false,
+    bool? transparenceVisibleMembres,
+    int? seuilInactiviteSemaines,
+    int? seuilBaisseContributionsPct,
   }) async =>
       EgliseParametres.fromJson(await _call('PATCH', '/parametres', body: {
         if (adresse != null) 'adresse': adresse,
@@ -2719,6 +3094,19 @@ class HttpApiService implements ApiService {
         if (mtnNumero != null) 'mtn_numero': mtnNumero,
         if (devise != null) 'devise': devise,
         if (fuseauHoraire != null) 'fuseau_horaire': fuseauHoraire,
+        if (signataireNominations != null)
+          'signataire_nominations': signataireNominations,
+        if (signataireProcesVerbaux != null)
+          'signataire_proces_verbaux': signataireProcesVerbaux,
+        if (montantDimeSuggere != null)
+          'montant_dime_suggere': montantDimeSuggere,
+        if (effacerDimeSuggere) 'montant_dime_suggere': null,
+        if (transparenceVisibleMembres != null)
+          'transparence_visible_membres': transparenceVisibleMembres,
+        if (seuilInactiviteSemaines != null)
+          'seuil_inactivite_semaines': seuilInactiviteSemaines,
+        if (seuilBaisseContributionsPct != null)
+          'seuil_baisse_contributions_pct': seuilBaisseContributionsPct,
       }));
 
   @override
@@ -2739,8 +3127,9 @@ class HttpApiService implements ApiService {
   }
 
   @override
-  Future<List<AuditEntree>> getAudit() async {
-    final data = await _call('GET', '/parametres/audit');
+  Future<List<AuditEntree>> getAudit({String? action, String? userId}) async {
+    final data = await _call('GET', '/audit',
+        query: _q({'action': action, 'user_id': userId}));
     return (data['items'] as List<dynamic>)
         .map((e) => AuditEntree.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -2983,5 +3372,387 @@ class HttpApiService implements ApiService {
   @override
   Future<void> deleteAnnonce(String id) async {
     await _call('DELETE', '/annonces/$id');
+  }
+
+  // -- Confiance (T11) -------------------------------------------------------
+  @override
+  Future<bool> getEtat2fa() async {
+    final data = await _call('GET', '/2fa/etat');
+    return data['actif'] as bool? ?? false;
+  }
+
+  @override
+  Future<Demarrage2fa> demarrer2fa() async =>
+      Demarrage2fa.fromJson(await _call('POST', '/2fa/demarrer'));
+
+  @override
+  Future<void> verifier2fa(String code) async {
+    await _call('POST', '/2fa/verifier', body: {'code': code});
+  }
+
+  @override
+  Future<void> desactiver2fa(String code) async {
+    await _call('POST', '/2fa/desactiver', body: {'code': code});
+  }
+
+  @override
+  Future<VerificationAudit> verifierAudit() async =>
+      VerificationAudit.fromJson(
+          await _call('GET', '/audit/verifier-chaine'));
+
+  @override
+  Future<List<ConsultationSensible>> getConsultations() async => _items(
+      await _call('GET', '/audit/consultations'),
+      ConsultationSensible.fromJson);
+
+  @override
+  Future<Sauvegarde> creerSauvegarde() async =>
+      Sauvegarde.fromJson(await _call('POST', '/sauvegardes'));
+
+  @override
+  Future<List<Sauvegarde>> getSauvegardes() async =>
+      _items(await _call('GET', '/sauvegardes'), Sauvegarde.fromJson);
+
+  @override
+  Future<void> restaurerSauvegarde(String id) async {
+    await _call('POST', '/sauvegardes/$id/restaurer');
+  }
+
+  @override
+  Future<ParametresConfiance> getParametresConfiance() async =>
+      ParametresConfiance.fromJson(
+          await _call('GET', '/confiance/parametres'));
+
+  @override
+  Future<ParametresConfiance> patchParametresConfiance({
+    String? sauvegardeFrequence,
+    String? sauvegardeHeure,
+    bool? notificationsActives,
+    String? notificationFournisseur,
+    String? notificationCle,
+    int? notificationPlafondMensuel,
+  }) async =>
+      ParametresConfiance.fromJson(
+          await _call('PATCH', '/confiance/parametres', body: {
+        if (sauvegardeFrequence != null)
+          'sauvegarde_frequence': sauvegardeFrequence,
+        if (sauvegardeHeure != null) 'sauvegarde_heure': sauvegardeHeure,
+        if (notificationsActives != null)
+          'notifications_actives': notificationsActives,
+        if (notificationFournisseur != null)
+          'notification_fournisseur': notificationFournisseur,
+        if (notificationCle != null) 'notification_cle': notificationCle,
+        if (notificationPlafondMensuel != null)
+          'notification_plafond_mensuel': notificationPlafondMensuel,
+      }));
+
+  @override
+  Future<List<NotificationConfiance>> getNotifications(
+          {String? statut, String? canal}) async =>
+      _items(
+        await _call('GET', '/notifications',
+            query: _q({'statut': statut, 'canal': canal})),
+        NotificationConfiance.fromJson,
+      );
+
+  @override
+  Future<NotificationConfiance> createNotification({
+    required String canal,
+    required String titre,
+    required String message,
+    String? userId,
+  }) async =>
+      NotificationConfiance.fromJson(
+          await _call('POST', '/notifications', body: {
+        'canal': canal,
+        'titre': titre,
+        'message': message,
+        if (userId != null) 'user_id': userId,
+      }));
+
+  @override
+  Future<NotificationConfiance> envoyerNotification(String id) async =>
+      NotificationConfiance.fromJson(
+          await _call('POST', '/notifications/$id/envoyer'));
+
+  @override
+  Future<ActionHorsLigne> soumettreActionHorsLigne({
+    required String typeAction,
+    required Map<String, dynamic> charge,
+    required String cleClient,
+  }) async =>
+      ActionHorsLigne.fromJson(
+          await _call('POST', '/file-hors-ligne', body: {
+        'type_action': typeAction,
+        'charge': charge,
+        'cle_client': cleClient,
+      }));
+
+  @override
+  Future<List<ActionHorsLigne>> getActionsHorsLigne(
+          {String? statut}) async =>
+      _items(
+        await _call('GET', '/file-hors-ligne',
+            query: _q({'statut': statut})),
+        ActionHorsLigne.fromJson,
+      );
+
+  @override
+  Future<RejeuFile> rejouerFileHorsLigne() async => RejeuFile.fromJson(
+      await _call('POST', '/file-hors-ligne/rejouer-tout'));
+
+  @override
+  Future<ActionHorsLigne> rejouerActionHorsLigne(String id) async =>
+      ActionHorsLigne.fromJson(
+          await _call('POST', '/file-hors-ligne/$id/rejouer'));
+
+  // -- US4 à US17 restantes (T12) --------------------------------------------
+  @override
+  Future<List<Promesse>> getPromesses({String? memberId}) async {
+    final data = await _call('GET', '/promesses', query: {
+      if (memberId != null && memberId.isNotEmpty) 'member_id': memberId,
+    });
+    return (data['items'] as List<dynamic>)
+        .map((e) => Promesse.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<Promesse> getPromesse(String id) async =>
+      Promesse.fromJson(await _call('GET', '/promesses/$id'));
+
+  @override
+  Future<Promesse> createPromesse({
+    required String memberId,
+    required int montantTotalFcfa,
+    String? dateDebut,
+    int nbVersements = 1,
+  }) async =>
+      Promesse.fromJson(await _call('POST', '/promesses', body: {
+        'member_id': memberId,
+        'montant_total_fcfa': montantTotalFcfa,
+        if (dateDebut != null) 'date_debut': dateDebut,
+        'nb_versements': nbVersements,
+      }));
+
+  @override
+  Future<Promesse> annulerPromesse(String id) async =>
+      Promesse.fromJson(await _call(
+          'PATCH', '/promesses/$id', body: {'statut': 'annulee'}));
+
+  @override
+  Future<Map<String, dynamic>> verserPromesse({
+    required String promesseId,
+    required String echeanceId,
+    required int amountFcfa,
+    required String paymentMethod,
+    String? paymentRef,
+    String? note,
+  }) async =>
+      _call('POST', '/promesses/$promesseId/versements', body: {
+        'echeance_id': echeanceId,
+        'amount_fcfa': amountFcfa,
+        'payment_method': paymentMethod,
+        if (paymentRef != null && paymentRef.isNotEmpty)
+          'payment_ref': paymentRef,
+        if (note != null && note.isNotEmpty) 'note': note,
+      });
+
+  @override
+  Future<List<DonNature>> getDonsNature({String? typeDon}) async {
+    final data = await _call('GET', '/dons-nature', query: {
+      if (typeDon != null && typeDon.isNotEmpty) 'type_don': typeDon,
+    });
+    return (data['items'] as List<dynamic>)
+        .map((e) => DonNature.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<DonNature> createDonNature({
+    String? memberId,
+    required String description,
+    int quantite = 1,
+    String? unite,
+    String typeDon = 'materiel',
+    double? heures,
+    String? dateDon,
+    bool anonyme = false,
+  }) async =>
+      DonNature.fromJson(await _call('POST', '/dons-nature', body: {
+        if (memberId != null) 'member_id': memberId,
+        'description': description,
+        'quantite': quantite,
+        if (unite != null && unite.isNotEmpty) 'unite': unite,
+        'type_don': typeDon,
+        if (heures != null) 'heures': heures,
+        if (dateDon != null) 'date_don': dateDon,
+        'anonyme': anonyme,
+      }));
+
+  @override
+  Future<List<Visiteur>> getVisiteurs({String? statut}) async {
+    final data = await _call('GET', '/visiteurs', query: {
+      if (statut != null && statut.isNotEmpty) 'statut': statut,
+    });
+    return (data['items'] as List<dynamic>)
+        .map((e) => Visiteur.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<Visiteur> createVisiteur({
+    required String nom,
+    String? dateVenue,
+    String? telephone,
+    String? email,
+    String? moyenContact,
+  }) async =>
+      Visiteur.fromJson(await _call('POST', '/visiteurs', body: {
+        'nom': nom,
+        if (dateVenue != null) 'date_venue': dateVenue,
+        if (telephone != null && telephone.isNotEmpty) 'telephone': telephone,
+        if (email != null && email.isNotEmpty) 'email': email,
+        if (moyenContact != null && moyenContact.isNotEmpty)
+          'moyen_contact': moyenContact,
+      }));
+
+  @override
+  Future<Visiteur> devenirMembre(String visiteurId, String memberId) async =>
+      Visiteur.fromJson(await _call(
+          'POST', '/visiteurs/$visiteurId/devenir-membre',
+          body: {'member_id': memberId}));
+
+  @override
+  Future<List<EvenementVie>> getEvenementsVie({int jours = 30}) async {
+    final data = await _call(
+        'GET', '/evenements-vie', query: {'jours': '$jours'});
+    return (data['items'] as List<dynamic>)
+        .map((e) => EvenementVie.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<void> masquerEvenementsVie(List<String> types) async {
+    await _call('PATCH', '/moi/evenements-vie-masques', body: {'types': types});
+  }
+
+  @override
+  Future<Transparence> getTransparence({String? periode}) async =>
+      Transparence.fromJson(await _call('GET', '/moi/transparence', query: {
+        if (periode != null && periode.isNotEmpty) 'periode': periode,
+      }));
+
+  @override
+  Future<CartePortefeuille> getCartePortefeuille() async =>
+      CartePortefeuille.fromJson(await _call('GET', '/moi/carte/portefeuille'));
+
+  @override
+  Future<MesConsentements> getMesConsentements() async =>
+      MesConsentements.fromJson(await _call('GET', '/moi/consentements'));
+
+  @override
+  Future<MesConsentements> saveMesConsentements({
+    bool? whatsapp,
+    bool? smsRepli,
+  }) async =>
+      MesConsentements.fromJson(await _call('PATCH', '/moi/consentements', body: {
+        if (whatsapp != null) 'whatsapp_consentement': whatsapp,
+        if (smsRepli != null) 'sms_repli_consentement': smsRepli,
+      }));
+
+  @override
+  Future<List<WhatsappConsentement>> getWhatsappConsentements() async {
+    final data = await _call('GET', '/whatsapp/consentements');
+    return (data['items'] as List<dynamic>)
+        .map((e) => WhatsappConsentement.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<List<AlerteMere>> getAlertesMere({String? statut}) async {
+    final data = await _call('GET', '/alertes-mere', query: {
+      if (statut != null && statut.isNotEmpty) 'statut': statut,
+    });
+    return (data['items'] as List<dynamic>)
+        .map((e) => AlerteMere.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<Map<String, dynamic>> detecterAlertes() async =>
+      _call('POST', '/alertes-mere/detecter');
+
+  @override
+  Future<AlerteMere> traiterAlerte(String id) async =>
+      AlerteMere.fromJson(await _call('PATCH', '/alertes-mere/$id/traiter'));
+
+  @override
+  Future<List<ListeConfigurable>> getListesConfigurables({String? type}) async {
+    final data = await _call('GET', '/listes-configurables', query: {
+      if (type != null && type.isNotEmpty) 'type': type,
+    });
+    return (data['items'] as List<dynamic>)
+        .map((e) => ListeConfigurable.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<ListeConfigurable> createListeConfigurable({
+    required String type,
+    required String libelle,
+    String? niveau,
+  }) async =>
+      ListeConfigurable.fromJson(
+          await _call('POST', '/listes-configurables', body: {
+        'type': type,
+        'libelle': libelle,
+        if (niveau != null) 'niveau': niveau,
+      }));
+
+  @override
+  Future<ListeConfigurable> updateListeConfigurable(
+    String id, {
+    bool? archive,
+  }) async =>
+      ListeConfigurable.fromJson(
+          await _call('PATCH', '/listes-configurables/$id', body: {
+        if (archive != null) 'archive': archive,
+      }));
+
+  @override
+  Future<void> deleteListeConfigurable(String id) async {
+    await _call('DELETE', '/listes-configurables/$id');
+  }
+
+  @override
+  Future<List<String>> getStatutsMembre() async {
+    final data = await _call('GET', '/listes-configurables/statuts-membre');
+    return (data['items'] as List<dynamic>).map((e) => e as String).toList();
+  }
+
+  @override
+  Future<List<ConsultationSensible>> getConsultationsSensibles() async {
+    final data = await _call('GET', '/consultations-sensibles');
+    return (data['items'] as List<dynamic>)
+        .map((e) => ConsultationSensible.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<List<ConsultationSensible>> getMesConsultations() async {
+    final data = await _call('GET', '/moi/consultations');
+    return (data['items'] as List<dynamic>)
+        .map((e) => ConsultationSensible.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<void> journaliserConsultation(String ressource,
+      {String? ressourceId}) async {
+    await _call('POST', '/consultations-sensibles', body: {
+      'ressource': ressource,
+      if (ressourceId != null) 'ressource_id': ressourceId,
+    });
   }
 }
