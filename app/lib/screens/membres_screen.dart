@@ -17,7 +17,7 @@ import 'import_membres_screen.dart';
 import 'visiteurs_screen.dart';
 
 /// Liste des membres de mon église : recherche (nom / matricule) et
-/// filtres (département, statut). Le trésorier ne peut pas créer de membre.
+/// filtre (statut). Le trésorier ne peut pas créer de membre.
 class MembresScreen extends StatefulWidget {
   const MembresScreen({super.key});
 
@@ -34,8 +34,6 @@ class _MembresScreenState extends State<MembresScreen> {
   /// serveur, il donne seulement un retour immédiat en attendant.
   String _filtreLocal = '';
   String? _statusFilter;
-  String? _departmentFilter;
-  List<String>? _departements;
   late Future<MemberPage> _future;
   late Future<List<Anniversaire>> _anniversairesFuture;
 
@@ -45,11 +43,6 @@ class _MembresScreenState extends State<MembresScreen> {
     _future = _load();
     _anniversairesFuture =
         context.read<AppState>().api.getAnniversaires(jours: 30);
-    context.read<AppState>().api.getDepartements().then((ds) {
-      if (mounted) {
-        setState(() => _departements = ds.map((d) => d.nom).toList());
-      }
-    }).catchError((_) {});
   }
 
   @override
@@ -62,7 +55,6 @@ class _MembresScreenState extends State<MembresScreen> {
   Future<MemberPage> _load() {
     return context.read<AppState>().api.getMembers(
           q: _query.isEmpty ? null : _query,
-          department: _departmentFilter,
           status: _statusFilter,
         );
   }
@@ -330,46 +322,6 @@ class _MembresScreenState extends State<MembresScreen> {
                     ),
                     const SizedBox(width: 8),
                   ],
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.bordure),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: [
-                  const Text(
-                    'Département :',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String?>(
-                        value: _departmentFilter,
-                        isExpanded: true,
-                        items: [
-                          const DropdownMenuItem(
-                              value: null, child: Text('Tous')),
-                          for (final d in _departements ?? const <String>[])
-                            DropdownMenuItem(value: d, child: Text(d)),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _departmentFilter = value;
-                            _future = _load();
-                          });
-                        },
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),

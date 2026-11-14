@@ -4,7 +4,7 @@ import 'package:esystem_church/screens/action_sociale_screen.dart';
 import 'package:esystem_church/screens/alertes_mere_screen.dart';
 import 'package:esystem_church/screens/audit_screen.dart';
 import 'package:esystem_church/screens/carte_portefeuille_screen.dart';
-import 'package:esystem_church/screens/confiance_screen.dart';
+import 'package:esystem_church/screens/settings_screen.dart';
 import 'package:esystem_church/screens/consultations_screen.dart';
 import 'package:esystem_church/screens/deux_fa_screen.dart';
 import 'package:esystem_church/screens/documents_screen.dart';
@@ -140,17 +140,16 @@ Future<void> _testerEcran(
 
 void main() {
   group('T10 gouvernance', () {
-    testWidgets('Gouvernance : les 8 entrées du hub', (tester) async {
+    testWidgets('Gouvernance : les 4 entrées du hub', (tester) async {
       await _testerEcran(
         tester,
         const GouvernanceScreen(),
         titre: 'Gouvernance',
         attendus: [
           'Mandats',
-          'Réunions et décisions',
+          'Nominations',
+          'Procès-verbaux',
           'Documents',
-          'Action sociale',
-          'Patrimoine',
         ],
       );
     });
@@ -209,11 +208,12 @@ void main() {
   });
 
   group('T11 confiance', () {
-    testWidgets('Confiance : les 5 entrées du hub', (tester) async {
+    testWidgets('Réglages et confiance : les 5 entrées Confiance',
+        (tester) async {
       await _testerEcran(
         tester,
-        const ConfianceScreen(),
-        titre: 'Confiance',
+        const SettingsScreen(),
+        titre: 'Réglages et confiance',
         attendus: [
           'Sauvegardes',
           'File hors ligne',

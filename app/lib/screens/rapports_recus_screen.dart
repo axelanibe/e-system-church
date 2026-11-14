@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../models/rapport_annexe.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
-import '../widgets/common_widgets.dart';
 import 'exemple_bilan_screen.dart';
 
 /// Rapports reçus (tranche P5) : l'église mère lit ici les rapports
@@ -82,12 +81,10 @@ class _RapportsRecusScreenState extends State<RapportsRecusScreen> {
                         style: TextStyle(fontSize: 16),
                       ),
                       const SizedBox(height: 16),
-                      if (rapports.isEmpty)
-                        const EmptyState(
-                          icon: Icons.mail_outline,
-                          message: 'Aucun rapport reçu pour l’instant.',
-                        )
-                      else
+                      // La projection montre la carte d'exemple même
+                      // quand aucun rapport n'est arrivé : pas d'état
+                      // vide. E-RR2.
+                      if (rapports.isNotEmpty)
                         ...rapports.map(
                           (r) => Card(
                             child: Padding(

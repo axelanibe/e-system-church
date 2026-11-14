@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_theme.dart';
-import 'action_sociale_screen.dart';
-import 'attestations_screen.dart';
 import 'documents_screen.dart';
 import 'mandats_screen.dart';
-import 'patrimoine_screen.dart';
 import 'reunions_conseil_screen.dart';
 
 /// T10 — Gouvernance (modèle projection, écran « Gouvernance ») :
-/// Mandats, Nominations, Procès-verbaux et Documents, puis Réunions et
-/// décisions, Certificats, Action sociale et Patrimoine. Chaque carte
-/// ouvre son écran, avec retour partout (AppBar).
+/// Mandats, Nominations, Procès-verbaux et Documents, comme dans la
+/// projection. Chaque carte ouvre son écran, avec retour partout
+/// (AppBar). Les écrans Réunions et décisions, Certificats, Action
+/// sociale et Patrimoine restent joignables ailleurs (Procès-verbaux,
+/// Attestations annuelles) ou en attente de décision ; leurs fichiers
+/// sont conservés.
 class GouvernanceScreen extends StatelessWidget {
   const GouvernanceScreen({super.key});
 
@@ -85,34 +85,6 @@ class GouvernanceScreen extends StatelessWidget {
             titre: 'Documents',
             sousTitre: 'Statuts, règlements, modèles et courriers.',
             ecran: const DocumentsScreen(),
-          ),
-          _carte(
-            context: context,
-            icone: Icons.event_available_outlined,
-            titre: 'Réunions et décisions',
-            sousTitre: 'Réunions du conseil, décisions et procès-verbaux.',
-            ecran: const ReunionsConseilScreen(),
-          ),
-          _carte(
-            context: context,
-            icone: Icons.workspace_premium_outlined,
-            titre: 'Certificats',
-            sousTitre: 'Baptême, mariage et membre, en PDF.',
-            ecran: const AttestationsScreen(),
-          ),
-          _carte(
-            context: context,
-            icone: Icons.volunteer_activism_outlined,
-            titre: 'Action sociale',
-            sousTitre: 'Bénéficiaires et suivi des aides.',
-            ecran: const ActionSocialeScreen(),
-          ),
-          _carte(
-            context: context,
-            icone: Icons.domain_outlined,
-            titre: 'Patrimoine',
-            sousTitre: 'Bâtiments, valeur, assurance et inventaire.',
-            ecran: const PatrimoineScreen(),
           ),
           const SizedBox(height: 80),
         ],
