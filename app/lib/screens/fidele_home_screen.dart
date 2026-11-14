@@ -18,6 +18,7 @@ import '../widgets/soft_card.dart';
 import 'bible_fidele_screen.dart';
 import 'carte_fidele_screen.dart';
 import 'cotisations_screen.dart';
+import 'ecole_biblique_screen.dart';
 import 'journal_screen.dart';
 import 'mes_attestations_screen.dart';
 import 'messages_fidele_screen.dart';
@@ -319,6 +320,11 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                         builder: (_) => const BibleFideleScreen(),
                       ),
                     ),
+                    onEcole: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const EcoleBibliqueScreen(),
+                      ),
+                    ),
                     onCotisations: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => const CotisationsScreen(),
@@ -408,12 +414,14 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
   }
 }
 
-/// Grille 2 par 2 des accès du fidèle, au texte complet : titres
-/// entiers, descriptions complètes, « Ouvrir » sur sa propre ligne
-/// en bas de chaque carte (maquette de refonte). « Prendre
+/// Grille 2 par 2 des accès du fidèle, au texte complet : Ma Bible,
+/// École biblique, Mes cotisations, Mon journal, Messagerie
+/// (titres entiers, descriptions complètes, « Ouvrir » sur sa propre
+/// ligne en bas de chaque carte, maquette de refonte). « Prendre
 /// rendez-vous » est une carte pleine largeur sous la grille.
 class _GrilleAcces extends StatelessWidget {
   final VoidCallback onBible;
+  final VoidCallback onEcole;
   final VoidCallback onCotisations;
   final VoidCallback onJournal;
   final VoidCallback onMessages;
@@ -421,6 +429,7 @@ class _GrilleAcces extends StatelessWidget {
 
   const _GrilleAcces({
     required this.onBible,
+    required this.onEcole,
     required this.onCotisations,
     required this.onJournal,
     required this.onMessages,
@@ -447,6 +456,12 @@ class _GrilleAcces extends StatelessWidget {
               sousTitre:
                   'Lire et rechercher dans l’Ancien et le Nouveau Testament.',
               onTap: onBible,
+            ),
+            _TuileAcces(
+              icone: Icons.school_outlined,
+              titre: 'École biblique',
+              sousTitre: 'Cours, leçons et ma progression.',
+              onTap: onEcole,
             ),
             _TuileAcces(
               icone: Icons.account_balance_wallet_outlined,
