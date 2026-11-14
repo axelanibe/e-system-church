@@ -129,6 +129,11 @@ void main() {
     expect(find.text('Confirmées'), findsOneWidget);
     expect(masquees(), isEmpty);
 
+    // La liste a grandi (grille des 4 chiffres en tête, E-F0) : le
+    // retour en haut peut encore animer quand le dernier pompage
+    // s'arrête, ce qui laissait un minuteur en attente en fin de test.
+    await tester.pumpAndSettle();
+
     // En bas de liste, les pastilles sont entièrement au-dessus du bouton :
     // la marge basse de la liste les laisse défiler au-dessus de lui.
     final bouton = tester.getRect(fab);

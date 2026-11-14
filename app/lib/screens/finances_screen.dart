@@ -3,6 +3,7 @@ import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/contribution.dart';
+import '../models/finances.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
@@ -128,6 +129,12 @@ class _FinancesScreenState extends State<FinancesScreen> {
                     // qui recouvrait sinon le badge de la dernière ligne.
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                     children: [
+                      // Les 4 chiffres de la projection (Cotisations du
+                      // mois, Caisse, Entrées et Sorties du jour) en
+                      // tête du premier sous-onglet ; Finances complètes
+                      // garde le détail. E-F0.
+                      const _GrilleChiffres(),
+                      const SizedBox(height: 16),
                       // Filtres en tête de liste : sous les cartes, ils
                       // défilaient dans la bande du bouton flottant, qui
                       // recouvrait une pastille à chaque arrêt. En tête,
@@ -485,6 +492,148 @@ class _FiltresDefilants extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Les 4 chiffres de la projection en tête des Contributions (E-F0) :
+/// mêmes appels et mêmes cartes que Finances complètes, sans les
+/// sections détaillées. La grille apparaît une fois les chiffres
+/// reçus ; en cas d'erreur, un message avec réessai, sans bloquer
+/// la liste des contributions.
+class _GrilleChiffres extends StatefulWidget {
+  const _GrilleChiffres();
+
+  @override
+  State<_GrilleChiffres> createState() => _GrilleChiffresState();
+}
+
+class _Chiffres {
+  final SuiviCotisations suivi;
+  final CaisseSolde solde;
+  final int entreesJour;
+  final int sortiesJour;
+
+  const _Chiffres({
+    required this.suivi,
+    required this.solde,
+    required this.entreesJour,
+    required this.sortiesJour,
+  });
+}
+
+class _GrilleChiffresState extends State<_GrilleChiffres> {
+  late Future<_Chiffres> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _charger();
+  }
+
+  Future<_Chiffres> _charger() async {
+    final api = context.read<AppState>().api;
+    final maintenant = DateTime.now();
+    final results = await Future.wait([
+      api.getCotisationsSuivi(),
+      api.getCaisseSolde(),
+      api.getCaisseMouvements(),
+    ]);
+    final mouvements = results[2] as List<CaisseMouvement>;
+    final aujourdHui =
+        DateTime(maintenant.year, maintenant.month, maintenant.day);
+    var entreesJour = 0;
+    var sortiesJour = 0;
+    for (final m in mouvements) {
+      final date = m.createdAt?.toLocal();
+      if (date == null) continue;
+      if (date.year == aujourdHui.year &&
+          date.month == aujourdHui.month &&
+          date.day == aujourdHui.day) {
+        if (m.type == 'entree') {
+          entreesJour += m.montantFcfa;
+        } else {
+          sortiesJour += m.montantFcfa;
+        }
+      }
+    }
+    return _Chiffres(
+      suivi: results[0] as SuiviCotisations,
+      solde: results[1] as CaisseSolde,
+      entreesJour: entreesJour,
+      sortiesJour: sortiesJour,
+    );
+  }
+
+  void _refresh() => setState(() => _future = _charger());
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    return FutureBuilder<_Chiffres>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+        if (snapshot.hasError) {
+          return Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Chiffres indisponibles : ${snapshot.error}',
+                  style: const TextStyle(color: AppTheme.rougeErreur),
+                ),
+              ),
+              TextButton(
+                onPressed: _refresh,
+                child: const Text('Réessayer'),
+              ),
+            ],
+          );
+        }
+        final d = snapshot.data!;
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = constraints.maxWidth > 600 ? 4 : 2;
+            return GridView.count(
+              crossAxisCount: crossAxisCount,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.9,
+              children: [
+                StatCard(
+                  label: 'Cotisations du mois',
+                  value: formatMontant(
+                      d.suivi.totaux.totalPayeFcfa, state.devise),
+                  icon: Icons.payments_outlined,
+                  color: AppTheme.violetProfond,
+                ),
+                StatCard(
+                  label: 'Caisse',
+                  value: formatMontant(d.solde.solde, state.devise),
+                  icon: Icons.account_balance_wallet_outlined,
+                  color: AppTheme.violetProfond,
+                ),
+                StatCard(
+                  label: 'Entrées du jour',
+                  value: formatMontant(d.entreesJour, state.devise),
+                  icon: Icons.trending_up,
+                  color: AppTheme.violetProfond,
+                ),
+                StatCard(
+                  label: 'Sorties du jour',
+                  value: formatMontant(d.sortiesJour, state.devise),
+                  icon: Icons.trending_down,
+                  color: AppTheme.violetProfond,
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

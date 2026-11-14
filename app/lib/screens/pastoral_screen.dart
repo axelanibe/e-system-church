@@ -51,9 +51,15 @@ const _typesVisite = {
 };
 
 class _PastoralScreenState extends State<PastoralScreen> {
-  int _tab = 0;
-  final _searchController = TextEditingController();
-  String _query = '';
+  // Une recherche propre à chaque section : l'ancien écran partageait
+  // un seul champ entre les onglets, la recherche d'une section
+  // filtrait les autres.
+  final _rechercheParcoursController = TextEditingController();
+  String _queryParcours = '';
+  final _rechercheVisitesController = TextEditingController();
+  String _queryVisites = '';
+  final _rechercheAccompagnementsController = TextEditingController();
+  String _queryAccompagnements = '';
 
   int _seuil = 3;
   String? _visiteType;
@@ -78,28 +84,27 @@ class _PastoralScreenState extends State<PastoralScreen> {
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _rechercheParcoursController.dispose();
+    _rechercheVisitesController.dispose();
+    _rechercheAccompagnementsController.dispose();
     super.dispose();
   }
 
+  // Les 4 sections sont visibles en même temps : le rafraîchissement
+  // recharge les 4 listes, en gardant les filtres de chacune.
   void _refresh() {
     final api = context.read<AppState>().api;
     setState(() {
-      if (_tab == 0) _radarFuture = api.getRadarAbsences(seuil: _seuil);
-      if (_tab == 1) _parcoursFuture = api.getParcoursNouveaux();
-      if (_tab == 2) {
-        _visitesFuture = api.getVisitesPastorales(type: _visiteType);
-      }
-      if (_tab == 3) {
-        _accompagnementsFuture = _casOuverts
-            ? api.getCasOuverts()
-            : api.getAccompagnements();
-      }
+      _radarFuture = api.getRadarAbsences(seuil: _seuil);
+      _parcoursFuture = api.getParcoursNouveaux();
+      _visitesFuture = api.getVisitesPastorales(type: _visiteType);
+      _accompagnementsFuture =
+          _casOuverts ? api.getCasOuverts() : api.getAccompagnements();
     });
   }
 
-  bool _matches(String text) =>
-      _query.isEmpty || text.toLowerCase().contains(_query.toLowerCase());
+  bool _matches(String text, String query) =>
+      query.isEmpty || text.toLowerCase().contains(query.toLowerCase());
 
   String? _opt(TextEditingController c) {
     final v = c.text.trim();
@@ -143,9 +148,56 @@ class _PastoralScreenState extends State<PastoralScreen> {
     );
   }
 
-  Widget _radarTab() {
+  /// En-tête d'une section en ligne : même style que SectionTitle, avec
+  /// un bouton de création à droite quand la section en a un. Le bouton
+  /// flottant de l'ancien écran à onglets dépendait de l'onglet actif ;
+  /// chaque section porte désormais sa création.
+  Widget _enTeteSection(String titre,
+      {VoidCallback? onAjouter, String? libelleAjouter}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              titre.toUpperCase(),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    letterSpacing: 1.2,
+                  ),
+            ),
+          ),
+          if (onAjouter != null)
+            TextButton.icon(
+              onPressed: onAjouter,
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(libelleAjouter ?? 'Ajouter'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _nouveau(int section) async {
+    try {
+      final membres = await _membres();
+      if (!mounted) return;
+      if (section == 1) {
+        await _createParcours(membres);
+      } else if (section == 2) {
+        await _createVisite(membres);
+      } else {
+        await _createAccompagnement(membres);
+      }
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
+  Widget _sectionRadar() {
     return Column(
       children: [
+        _enTeteSection('Radar'),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: Row(
@@ -173,8 +225,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
             ],
           ),
         ),
-        Expanded(
-          child: FutureBuilder<List<AlerteRadar>>(
+        FutureBuilder<List<AlerteRadar>>(
             future: _radarFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -193,10 +244,10 @@ class _PastoralScreenState extends State<PastoralScreen> {
                   message: 'Aucune alerte pour l’instant.',
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: items.length,
                   itemBuilder: (context, index) {
                     final a = items[index];
                     return ListTile(
@@ -230,11 +281,9 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       ),
                     );
                   },
-                ),
-              );
+                );
             },
           ),
-        ),
       ],
     );
   }
@@ -570,16 +619,20 @@ class _PastoralScreenState extends State<PastoralScreen> {
     );
   }
 
-  Widget _parcoursTab(Map<String, String> noms) {
+  Widget _sectionParcours(Map<String, String> noms) {
     return Column(
       children: [
+        _enTeteSection(
+          'Parcours',
+          onAjouter: () => _nouveau(1),
+          libelleAjouter: 'Nouveau parcours',
+        ),
         searchField(
-          controller: _searchController,
-          onChanged: (v) => setState(() => _query = v.trim()),
+          controller: _rechercheParcoursController,
+          onChanged: (v) => setState(() => _queryParcours = v.trim()),
           label: 'Rechercher un parcours',
         ),
-        Expanded(
-          child: FutureBuilder<List<ParcoursNouveau>>(
+        FutureBuilder<List<ParcoursNouveau>>(
             future: _parcoursFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -592,7 +645,8 @@ class _PastoralScreenState extends State<PastoralScreen> {
                 );
               }
               final items = snapshot.data!
-                  .where((p) => _matches(noms[p.memberId] ?? p.memberId))
+                  .where((p) =>
+                      _matches(noms[p.memberId] ?? p.memberId, _queryParcours))
                   .toList();
               if (items.isEmpty) {
                 return EmptyState(
@@ -611,12 +665,12 @@ class _PastoralScreenState extends State<PastoralScreen> {
                   },
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final p = items[index];
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final p = items[index];
                     return ListTile(
                       leading: const CircleAvatar(
                         child: Icon(Icons.route_outlined),
@@ -632,21 +686,24 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       ),
                     );
                   },
-                ),
-              );
+                );
             },
           ),
-        ),
       ],
     );
   }
 
-  Widget _visitesTab(Map<String, String> noms) {
+  Widget _sectionVisites(Map<String, String> noms) {
     return Column(
       children: [
+        _enTeteSection(
+          'Visites',
+          onAjouter: () => _nouveau(2),
+          libelleAjouter: 'Nouvelle visite',
+        ),
         searchField(
-          controller: _searchController,
-          onChanged: (v) => setState(() => _query = v.trim()),
+          controller: _rechercheVisitesController,
+          onChanged: (v) => setState(() => _queryVisites = v.trim()),
           label: 'Rechercher une visite',
         ),
         Padding(
@@ -658,8 +715,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
             onSelect: (v) => setState(() => _visiteType = v),
           ),
         ),
-        Expanded(
-          child: FutureBuilder<List<VisitePastorale>>(
+        FutureBuilder<List<VisitePastorale>>(
             future: _visitesFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -672,7 +728,8 @@ class _PastoralScreenState extends State<PastoralScreen> {
                 );
               }
               final items = snapshot.data!
-                  .where((v) => _matches(noms[v.memberId] ?? v.memberId))
+                  .where((v) =>
+                      _matches(noms[v.memberId] ?? v.memberId, _queryVisites))
                   .toList();
               if (items.isEmpty) {
                 return EmptyState(
@@ -691,12 +748,12 @@ class _PastoralScreenState extends State<PastoralScreen> {
                   },
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final v = items[index];
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final v = items[index];
                     return ListTile(
                       leading: const CircleAvatar(
                         child: Icon(Icons.home_outlined),
@@ -717,21 +774,25 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       ),
                     );
                   },
-                ),
-              );
+                );
             },
           ),
-        ),
       ],
     );
   }
 
-  Widget _accompagnementsTab(Map<String, String> noms) {
+  Widget _sectionAccompagnements(Map<String, String> noms) {
     return Column(
       children: [
+        _enTeteSection(
+          'Accompagnements',
+          onAjouter: () => _nouveau(3),
+          libelleAjouter: 'Nouvel accompagnement',
+        ),
         searchField(
-          controller: _searchController,
-          onChanged: (v) => setState(() => _query = v.trim()),
+          controller: _rechercheAccompagnementsController,
+          onChanged: (v) =>
+              setState(() => _queryAccompagnements = v.trim()),
           label: 'Rechercher un accompagnement',
         ),
         Padding(
@@ -743,8 +804,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
             onSelect: (v) => setState(() => _casOuverts = v == 'ouverts'),
           ),
         ),
-        Expanded(
-          child: FutureBuilder<List<Accompagnement>>(
+        FutureBuilder<List<Accompagnement>>(
             future: _accompagnementsFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -757,7 +817,8 @@ class _PastoralScreenState extends State<PastoralScreen> {
                 );
               }
               final items = snapshot.data!
-                  .where((a) => _matches(noms[a.memberId] ?? a.memberId))
+                  .where((a) => _matches(
+                      noms[a.memberId] ?? a.memberId, _queryAccompagnements))
                   .toList();
               if (items.isEmpty) {
                 return EmptyState(
@@ -778,12 +839,12 @@ class _PastoralScreenState extends State<PastoralScreen> {
                   },
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final a = items[index];
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final a = items[index];
                     return ListTile(
                       leading: const CircleAvatar(
                         child: Icon(Icons.handshake_outlined),
@@ -798,112 +859,72 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       onTap: () => _showAccompagnement(a, noms),
                     );
                   },
-                ),
-              );
+                );
             },
           ),
-        ),
       ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 4,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Suivi pastoral'),
-          actions: [
-            // Libellé visible, pas une icône seule (E-R7).
-            TextButton.icon(
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.white,
-              ),
-              icon: const Icon(Icons.cake_outlined),
-              label: const Text('Événements de vie'),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const EvenementsVieScreen(),
-                  ),
-                );
-              },
+    // Projection : un seul écran à défiler, 4 sections en ligne
+    // (Radar, Parcours, Visites, Accompagnements), pas d'onglets. E-R2.
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Suivi pastoral'),
+        actions: [
+          // Libellé visible, pas une icône seule (E-R7).
+          TextButton.icon(
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
             ),
-          ],
-          bottom: TabBar(
-            isScrollable: true,
-            // Les 4 libellés doivent tenir sur 390 px sans que le
-            // dernier soit coupé au bord droit : on resserre les
-            // marges latérales des onglets au lieu de renommer.
-            labelPadding: const EdgeInsets.symmetric(horizontal: 8),
-            onTap: (i) => setState(() {
-              _tab = i;
-              _query = '';
-              _searchController.clear();
-            }),
-            tabs: const [
-              Tab(text: 'Radar'),
-              Tab(text: 'Parcours'),
-              Tab(text: 'Visites'),
-              Tab(text: 'Accompagnements'),
-            ],
-          ),
-        ),
-        body: FutureBuilder<MemberPage>(
-          future: _membresFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const AppLoading();
-            }
-            if (snapshot.hasError) {
-              return AppError(
-                message: snapshot.error.toString(),
-                onRetry: () => setState(() {
-                  _membresFuture =
-                      context.read<AppState>().api.getMembers();
-                }),
+            icon: const Icon(Icons.cake_outlined),
+            label: const Text('Événements de vie'),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const EvenementsVieScreen(),
+                ),
               );
-            }
-            final noms = {
-              for (final m in snapshot.data!.membres) m.id: m.fullName
-            };
-            return TabBarView(
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _radarTab(),
-                _parcoursTab(noms),
-                _visitesTab(noms),
-                _accompagnementsTab(noms),
-              ],
+            },
+          ),
+        ],
+      ),
+      body: FutureBuilder<MemberPage>(
+        future: _membresFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const AppLoading();
+          }
+          if (snapshot.hasError) {
+            return AppError(
+              message: snapshot.error.toString(),
+              onRetry: () => setState(() {
+                _membresFuture =
+                    context.read<AppState>().api.getMembers();
+              }),
             );
-          },
-        ),
-        floatingActionButton: _tab < 1
-            ? null
-            : FloatingActionButton.extended(
-                onPressed: () async {
-                  try {
-                    final membres = await _membres();
-                    if (!mounted) return;
-                    if (_tab == 1) {
-                      await _createParcours(membres);
-                    } else if (_tab == 2) {
-                      await _createVisite(membres);
-                    } else {
-                      await _createAccompagnement(membres);
-                    }
-                  } catch (e) {
-                    if (context.mounted) showApiError(context, e);
-                  }
-                },
-                icon: const Icon(Icons.add),
-                label: Text(_tab == 1
-                    ? 'Nouveau parcours'
-                    : _tab == 2
-                        ? 'Nouvelle visite'
-                        : 'Nouvel accompagnement'),
+          }
+          final noms = {
+            for (final m in snapshot.data!.membres) m.id: m.fullName
+          };
+          return RefreshIndicator(
+            onRefresh: () async => _refresh(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                children: [
+                  _sectionRadar(),
+                  _sectionParcours(noms),
+                  _sectionVisites(noms),
+                  _sectionAccompagnements(noms),
+                  const SizedBox(height: 24),
+                ],
               ),
+            ),
+          );
+        },
       ),
     );
   }
