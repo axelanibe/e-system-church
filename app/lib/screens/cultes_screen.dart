@@ -6,6 +6,7 @@ import '../models/cultes.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/liste_avec_fab.dart';
 import '../widgets/dialog_helpers.dart';
 import 'medias_screen.dart';
 
@@ -342,41 +343,43 @@ class _CultesScreenState extends State<CultesScreen> {
                   },
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final culte = items[index];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.event_outlined),
-                      ),
-                      title: Text(culte.titre),
-                      subtitle: Text(
-                        '${afficherDateTime(culte.dateHeure)}'
-                        '${culte.lieu != null ? ' · ${culte.lieu}' : ''}'
-                        '${culte.orateur != null ? ' · ${culte.orateur}' : ''}'
-                        '${culte.theme != null ? ' · ${culte.theme}' : ''}',
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            tooltip: 'Supprimer',
-                            onPressed: () => _deleteCulte(culte),
-                          ),
-                          const Icon(Icons.chevron_right),
-                        ],
-                      ),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => CulteDetailScreen(culte: culte),
+              return ListeAvecFab(
+                child: RefreshIndicator(
+                  onRefresh: () async => _refresh(),
+                  child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final culte = items[index];
+                      return ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.event_outlined),
                         ),
-                      ),
-                    );
-                  },
+                        title: Text(culte.titre),
+                        subtitle: Text(
+                          '${afficherDateTime(culte.dateHeure)}'
+                          '${culte.lieu != null ? ' · ${culte.lieu}' : ''}'
+                          '${culte.orateur != null ? ' · ${culte.orateur}' : ''}'
+                          '${culte.theme != null ? ' · ${culte.theme}' : ''}',
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              tooltip: 'Supprimer',
+                              onPressed: () => _deleteCulte(culte),
+                            ),
+                            const Icon(Icons.chevron_right),
+                          ],
+                        ),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => CulteDetailScreen(culte: culte),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               );
             },
@@ -420,25 +423,27 @@ class _CultesScreenState extends State<CultesScreen> {
                   onAction: _createType,
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final t = items[index];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.category_outlined),
-                      ),
-                      title: Text(t.nom),
-                      subtitle: Text(
-                        '${t.jourSemaine != null ? _nomJour(t.jourSemaine!) : '—'}'
-                        '${t.heureDebut != null ? ' · ${t.heureDebut}' : ''}'
-                        '${t.dureeMinutes != null ? ' · ${t.dureeMinutes} min' : ''}'
-                        '${t.lieu != null ? ' · ${t.lieu}' : ''}',
-                      ),
-                    );
-                  },
+              return ListeAvecFab(
+                child: RefreshIndicator(
+                  onRefresh: () async => _refresh(),
+                  child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final t = items[index];
+                      return ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.category_outlined),
+                        ),
+                        title: Text(t.nom),
+                        subtitle: Text(
+                          '${t.jourSemaine != null ? _nomJour(t.jourSemaine!) : '—'}'
+                          '${t.heureDebut != null ? ' · ${t.heureDebut}' : ''}'
+                          '${t.dureeMinutes != null ? ' · ${t.dureeMinutes} min' : ''}'
+                          '${t.lieu != null ? ' · ${t.lieu}' : ''}',
+                        ),
+                      );
+                    },
+                  ),
                 ),
               );
             },
@@ -482,24 +487,26 @@ class _CultesScreenState extends State<CultesScreen> {
                   onAction: _createEvenement,
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final e = items[index];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.celebration_outlined),
-                      ),
-                      title: Text(e.titre),
-                      subtitle: Text(
-                        '${e.typeLabel} · ${afficherDate(e.dateDebut)}'
-                        '${e.lieu != null ? ' · ${e.lieu}' : ''}'
-                        '${e.responsable != null ? ' · ${e.responsable}' : ''}',
-                      ),
-                    );
-                  },
+              return ListeAvecFab(
+                child: RefreshIndicator(
+                  onRefresh: () async => _refresh(),
+                  child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final e = items[index];
+                      return ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.celebration_outlined),
+                        ),
+                        title: Text(e.titre),
+                        subtitle: Text(
+                          '${e.typeLabel} · ${afficherDate(e.dateDebut)}'
+                          '${e.lieu != null ? ' · ${e.lieu}' : ''}'
+                          '${e.responsable != null ? ' · ${e.responsable}' : ''}',
+                        ),
+                      );
+                    },
+                  ),
                 ),
               );
             },
@@ -703,24 +710,26 @@ class _CulteDetailScreenState extends State<CulteDetailScreen> {
                     onAction: _addItem,
                   );
                 }
-                return RefreshIndicator(
-                  onRefresh: () async => _refresh(),
-                  child: ListView.builder(
-                    itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      final item = items[index];
-                      return ListTile(
-                        leading: CircleAvatar(
-                          child: Text('${item.ordre}'),
-                        ),
-                        title: Text(item.titre),
-                        subtitle: Text(
-                          '${item.intervenant ?? '—'}'
-                          '${item.dureeMinutes != null ? ' · ${item.dureeMinutes} min' : ''}'
-                          '${item.description != null ? ' · ${item.description}' : ''}',
-                        ),
-                      );
-                    },
+                return ListeAvecFab(
+                  child: RefreshIndicator(
+                    onRefresh: () async => _refresh(),
+                    child: ListView.builder(
+                      itemCount: items.length,
+                      itemBuilder: (context, index) {
+                        final item = items[index];
+                        return ListTile(
+                          leading: CircleAvatar(
+                            child: Text('${item.ordre}'),
+                          ),
+                          title: Text(item.titre),
+                          subtitle: Text(
+                            '${item.intervenant ?? '—'}'
+                            '${item.dureeMinutes != null ? ' · ${item.dureeMinutes} min' : ''}'
+                            '${item.description != null ? ' · ${item.description}' : ''}',
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 );
               },

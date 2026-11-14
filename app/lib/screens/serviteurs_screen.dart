@@ -9,6 +9,7 @@ import '../models/serviteurs.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/liste_avec_fab.dart';
 import '../widgets/dialog_helpers.dart';
 
 /// Module 7 — Serviteurs par département et planning des services.
@@ -260,28 +261,30 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
                   },
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final s = items[index];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.volunteer_activism_outlined),
-                      ),
-                      title: Text(noms[s.memberId] ?? s.memberId),
-                      subtitle: Text(
-                        '${departementsNoms[s.departementId] ?? '—'} · ${s.role}'
-                        '${s.disponibilite != null ? ' · ${s.disponibilite}' : ''}',
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        tooltip: 'Supprimer',
-                        onPressed: () => _deleteServiteur(s, noms),
-                      ),
-                    );
-                  },
+              return ListeAvecFab(
+                child: RefreshIndicator(
+                  onRefresh: () async => _refresh(),
+                  child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final s = items[index];
+                      return ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.volunteer_activism_outlined),
+                        ),
+                        title: Text(noms[s.memberId] ?? s.memberId),
+                        subtitle: Text(
+                          '${departementsNoms[s.departementId] ?? '—'} · ${s.role}'
+                          '${s.disponibilite != null ? ' · ${s.disponibilite}' : ''}',
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          tooltip: 'Supprimer',
+                          onPressed: () => _deleteServiteur(s, noms),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               );
             },
@@ -342,32 +345,34 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
                   },
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final p = items[index];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.calendar_month_outlined),
-                      ),
-                      title: Text(noms[p.serviteurId] ?? p.serviteurId),
-                      subtitle: Text(
-                        '${afficherDate(p.dateService)}'
-                        '${p.culteId != null ? ' · ${cultesTitres[p.culteId] ?? '—'}' : ''}'
-                        '${p.roleService != null ? ' · ${p.roleService}' : ''}',
-                      ),
-                      trailing: StatusChip(
-                        label: p.statutLabel,
-                        color: p.statut == 'confirme'
-                            ? AppTheme.bleuNuit
-                            : p.statut == 'absent'
-                                ? AppTheme.rougeErreur
-                                : Colors.orange,
-                      ),
-                    );
-                  },
+              return ListeAvecFab(
+                child: RefreshIndicator(
+                  onRefresh: () async => _refresh(),
+                  child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final p = items[index];
+                      return ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.calendar_month_outlined),
+                        ),
+                        title: Text(noms[p.serviteurId] ?? p.serviteurId),
+                        subtitle: Text(
+                          '${afficherDate(p.dateService)}'
+                          '${p.culteId != null ? ' · ${cultesTitres[p.culteId] ?? '—'}' : ''}'
+                          '${p.roleService != null ? ' · ${p.roleService}' : ''}',
+                        ),
+                        trailing: StatusChip(
+                          label: p.statutLabel,
+                          color: p.statut == 'confirme'
+                              ? AppTheme.bleuNuit
+                              : p.statut == 'absent'
+                                  ? AppTheme.rougeErreur
+                                  : Colors.orange,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               );
             },
