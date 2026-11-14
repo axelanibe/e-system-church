@@ -5,7 +5,9 @@
 // fictives de `faux_donnees.dart`. Utilisé uniquement par les tests.
 // L'application réelle (`lib/main.dart`) n'importe jamais ce fichier.
 
-import 'dart:typed_data';
+import 'dart:convert';
+
+import 'package:flutter/services.dart';
 
 import 'package:esystem_church/models/abonnement.dart';
 import 'package:esystem_church/models/attestation.dart';
@@ -14,6 +16,7 @@ import 'package:esystem_church/models/anniversaire.dart';
 import 'package:esystem_church/models/announcement.dart';
 import 'package:esystem_church/models/auth.dart';
 import 'package:esystem_church/models/biens.dart';
+import 'package:esystem_church/models/bible.dart';
 import 'package:esystem_church/models/gouvernance.dart';
 import 'package:esystem_church/models/church.dart';
 import 'package:esystem_church/models/code_tutelle.dart';
@@ -23,6 +26,7 @@ import 'package:esystem_church/models/cultes.dart';
 import 'package:esystem_church/models/checkin_enfant.dart';
 import 'package:esystem_church/models/confiance.dart';
 import 'package:esystem_church/models/enfants.dart';
+import 'package:esystem_church/models/ecole_biblique.dart';
 import 'package:esystem_church/models/fidele.dart';
 import 'package:esystem_church/models/finances.dart';
 import 'package:esystem_church/models/frequentation.dart';
@@ -3562,6 +3566,605 @@ class FauxApiService implements ApiService {
     );
     _data.pretsLivres[i] = maj;
     return maj;
+  }
+
+  // -- Bible et école biblique (tranche T9, démo) ------------------------------
+  // La Bible est lue depuis les assets bundlés (LSG 1910 et KJV, domaine
+  // public), la concordance Strong et le dictionnaire aussi ; l'école
+  // biblique vit en mémoire, sur le seed de démo.
+
+  /// Canon (métadonnées des 66 livres) lu depuis l'asset livres.json,
+  /// par version (lsg1910, kjv).
+  final Map<String, List<LivreBible>> _canonBible = {};
+
+  /// Livres déjà chargés depuis les assets (« version:CODE » -> contenu).
+  final Map<String, LivreBibleAsset> _livresBible = {};
+
+  /// Lexiques Strong déjà chargés (grec, hebreu).
+  final Map<String, Map<String, dynamic>> _lexiquesStrong = {};
+
+  /// Dictionnaires déjà chargés (fra, eng).
+  final Map<String, List<ArticleDictionnaire>> _dictionnaires = {};
+
+  Future<List<LivreBible>> _canon({String version = 'lsg1910'}) async {
+    final enCache = _canonBible[version];
+    if (enCache != null) return enCache;
+    final brut =
+        await rootBundle.loadString('assets/bible/$version/livres.json');
+    final liste = (jsonDecode(brut) as List)
+        .map((e) => LivreBible.fromJson(e as Map<String, dynamic>))
+        .toList();
+    _canonBible[version] = liste;
+    return liste;
+  }
+
+  Future<LivreBibleAsset> _livreBible(String code,
+      {String version = 'lsg1910'}) async {
+    final maj = code.toUpperCase();
+    final cle = '$version:$maj';
+    final enCache = _livresBible[cle];
+    if (enCache != null) return enCache;
+    final brut =
+        await rootBundle.loadString('assets/bible/$version/$maj.json');
+    final livre =
+        LivreBibleAsset.fromJson(jsonDecode(brut) as Map<String, dynamic>);
+    _livresBible[cle] = livre;
+    return livre;
+  }
+
+  Future<Map<String, dynamic>> _lexiqueStrong(String langue) async {
+    final enCache = _lexiquesStrong[langue];
+    if (enCache != null) return enCache;
+    final fichier =
+        langue == 'hebreu' ? 'strong-hébreu.json' : 'strong-grec.json';
+    final brut =
+        await rootBundle.loadString('assets/bible/strong/$fichier');
+    final lexique = Map<String, dynamic>.from(
+        jsonDecode(brut) as Map<String, dynamic>);
+    _lexiquesStrong[langue] = lexique;
+    return lexique;
+  }
+
+  Future<List<ArticleDictionnaire>> _dictionnaire(
+      {String langue = 'fra'}) async {
+    final enCache = _dictionnaires[langue];
+    if (enCache != null) return enCache;
+    final brut = await rootBundle
+        .loadString('assets/bible/dictionnaire/dictionnaire-$langue.json');
+    // Le JSON bundlé est compact (clés « t » / « c ») ; l'API renvoie
+    // « titre » / « texte » — on traduit ici.
+    final articles = (jsonDecode(brut) as List).map((e) {
+      final entree = e as Map<String, dynamic>;
+      return ArticleDictionnaire(
+        titre: entree['t'] as String,
+        texte: entree['c'] as String,
+      );
+    }).toList();
+    _dictionnaires[langue] = articles;
+    return articles;
+  }
+
+  /// Normalisation insensible à la casse et aux accents (recherche démo).
+  String _normaliser(String texte) {
+    const accents = {
+      'à': 'a',
+      'á': 'a',
+      'â': 'a',
+      'ä': 'a',
+      'è': 'e',
+      'é': 'e',
+      'ê': 'e',
+      'ë': 'e',
+      'î': 'i',
+      'ï': 'i',
+      'ô': 'o',
+      'ö': 'o',
+      'ù': 'u',
+      'û': 'u',
+      'ü': 'u',
+      'ç': 'c',
+    };
+    final bas = texte.toLowerCase();
+    final tampon = StringBuffer();
+    for (var i = 0; i < bas.length; i++) {
+      tampon.write(accents[bas[i]] ?? bas[i]);
+    }
+    return tampon.toString();
+  }
+
+  @override
+  Future<List<VersionBible>> getVersionsBible() async {
+    await _latence();
+    _requireAuth();
+    // Totaux de versets vérifiés à la source (eBible.org) : LS1910
+    // 31 170 versets, KJV 31 102 versets (voir SOURCES.md).
+    const versets = {'lsg1910': 31170, 'kjv': 31102};
+    const noms = {
+      'lsg1910': 'Louis Segond 1910',
+      'kjv': 'King James Version',
+    };
+    const langues = {'lsg1910': 'fr', 'kjv': 'en'};
+    final versions = <VersionBible>[];
+    for (final id in ['lsg1910', 'kjv']) {
+      final livres = await _canon(version: id);
+      versions.add(VersionBible(
+        id: id,
+        nom: noms[id]!,
+        langue: langues[id]!,
+        livres: livres.length,
+        versets: versets[id]!,
+      ));
+    }
+    return versions;
+  }
+
+  @override
+  Future<List<LivreBible>> getLivresBible({String version = 'lsg1910'}) async {
+    await _latence();
+    _requireAuth();
+    return List.unmodifiable(await _canon(version: version));
+  }
+
+  @override
+  Future<ChapitreBible> getChapitreBible({
+    required String code,
+    required int chapitre,
+    String version = 'lsg1910',
+  }) async {
+    await _latence();
+    _requireAuth();
+    final livre = await _livreBible(code, version: version);
+    if (chapitre < 1 || chapitre > livre.chapitres.length) {
+      throw const ApiException('Chapitre introuvable (démo).');
+    }
+    return livre.chapitre(chapitre);
+  }
+
+  @override
+  Future<List<ResultatRechercheBible>> rechercherBible(
+    String terme, {
+    String version = 'lsg1910',
+  }) async {
+    await _latence();
+    _requireAuth();
+    final aiguille = _normaliser(terme.trim());
+    if (aiguille.length < 2) {
+      throw const ApiException('Recherche : au moins 2 caractères (démo).');
+    }
+    final resultats = <ResultatRechercheBible>[];
+    for (final meta in await _canon(version: version)) {
+      final livre = await _livreBible(meta.code, version: version);
+      for (var c = 0; c < livre.chapitres.length; c++) {
+        final chapitre = livre.chapitres[c];
+        for (var v = 0; v < chapitre.length; v++) {
+          if (_normaliser(chapitre[v]).contains(aiguille)) {
+            resultats.add(ResultatRechercheBible(
+              livre: livre.nom,
+              code: livre.code,
+              chapitre: c + 1,
+              verset: v + 1,
+              texte: chapitre[v],
+            ));
+            if (resultats.length >= 50) return resultats;
+          }
+        }
+      }
+    }
+    return resultats;
+  }
+
+  @override
+  Future<EntreeStrong> getEntreeStrong(String numero) async {
+    await _latence();
+    _requireAuth();
+    final maj = numero.trim().toUpperCase();
+    if (!RegExp(r'^[GH][0-9]{1,4}$').hasMatch(maj)) {
+      throw const ApiException('Numéro Strong invalide (démo).');
+    }
+    final lexique =
+        await _lexiqueStrong(maj.startsWith('H') ? 'hebreu' : 'grec');
+    final brut = lexique[maj] as Map<String, dynamic>?;
+    if (brut == null) {
+      throw const ApiException('Entrée Strong introuvable (démo).');
+    }
+    return EntreeStrong(
+      numero: maj,
+      langue: maj.startsWith('H') ? 'hebreu' : 'grec',
+      lemma: brut['lemma'] as String,
+      translit: (brut['translit'] as String?) ??
+          (brut['xlit'] as String?) ??
+          '',
+      pron: brut['pron'] as String?,
+      derivation: brut['derivation'] as String?,
+      strongsDef: brut['strongs_def'] as String?,
+      kjvDef: brut['kjv_def'] as String?,
+    );
+  }
+
+  @override
+  Future<List<EntreeStrong>> rechercherStrong(String terme) async {
+    await _latence();
+    _requireAuth();
+    final aiguille = _normaliser(terme.trim());
+    if (aiguille.length < 2) {
+      throw const ApiException('Recherche : au moins 2 caractères (démo).');
+    }
+    final resultats = <EntreeStrong>[];
+    final numero = terme.trim().toUpperCase();
+    if (RegExp(r'^[GH][0-9]{1,4}$').hasMatch(numero)) {
+      try {
+        resultats.add(await getEntreeStrong(numero));
+      } on ApiException {
+        // Numéro absent : on continue avec la recherche par mot.
+      }
+    }
+    for (final langue in ['hebreu', 'grec']) {
+      final lexique = await _lexiqueStrong(langue);
+      for (final entree in lexique.entries) {
+        if (resultats.length >= 50) return resultats;
+        if (entree.key == numero) continue;
+        final brut = entree.value as Map<String, dynamic>;
+        final champs = [
+          brut['lemma'] as String? ?? '',
+          (brut['translit'] as String?) ?? (brut['xlit'] as String?) ?? '',
+          brut['strongs_def'] as String? ?? '',
+          brut['kjv_def'] as String? ?? '',
+        ];
+        if (champs.any((c) => _normaliser(c).contains(aiguille))) {
+          resultats.add(EntreeStrong(
+            numero: entree.key,
+            langue: langue,
+            lemma: brut['lemma'] as String,
+            translit: (brut['translit'] as String?) ??
+                (brut['xlit'] as String?) ??
+                '',
+            pron: brut['pron'] as String?,
+            derivation: brut['derivation'] as String?,
+            strongsDef: brut['strongs_def'] as String?,
+            kjvDef: brut['kjv_def'] as String?,
+          ));
+        }
+      }
+    }
+    return resultats;
+  }
+
+  @override
+  Future<ArticleDictionnaire> getArticleDictionnaire(
+    String titre, {
+    String langue = 'fra',
+  }) async {
+    await _latence();
+    _requireAuth();
+    final aiguille = titre.trim().toLowerCase();
+    if (aiguille.isEmpty) {
+      throw const ApiException('Titre d’article invalide (démo).');
+    }
+    final articles = await _dictionnaire(langue: langue);
+    for (final article in articles) {
+      if (article.titre.toLowerCase() == aiguille) return article;
+    }
+    throw const ApiException('Article introuvable (démo).');
+  }
+
+  @override
+  Future<List<ArticleDictionnaire>> rechercherDictionnaire(
+    String terme, {
+    String langue = 'fra',
+  }) async {
+    await _latence();
+    _requireAuth();
+    final aiguille = _normaliser(terme.trim());
+    if (aiguille.length < 2) {
+      throw const ApiException('Recherche : au moins 2 caractères (démo).');
+    }
+    final articles = await _dictionnaire(langue: langue);
+    final parTitre = <ArticleDictionnaire>[];
+    final parTexte = <ArticleDictionnaire>[];
+    for (final article in articles) {
+      if (_normaliser(article.titre).contains(aiguille)) {
+        parTitre.add(article);
+      } else if (_normaliser(article.texte).contains(aiguille)) {
+        parTexte.add(article);
+      }
+    }
+    return [...parTitre, ...parTexte].take(50).toList();
+  }
+
+  @override
+  Future<List<CoursEcole>> getCoursEcole() async {
+    await _latence();
+    _requireAuth();
+    return List.unmodifiable(_visible(_data.coursEcole, (e) => e.id));
+  }
+
+  @override
+  Future<CoursEcole> createCoursEcole({
+    required String titre,
+    String? description,
+    String? niveau,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final cours = CoursEcole(
+      id: _nextId('cours'),
+      titre: titre,
+      description: description,
+      niveau: niveau,
+      createdAt: DateTime.now(),
+    );
+    _data.coursEcole.add(cours);
+    _tag(cours.id);
+    return cours;
+  }
+
+  @override
+  Future<CoursEcole> updateCoursEcole(
+    String id, {
+    String? titre,
+    String? description,
+    String? niveau,
+    bool? actif,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final i = _data.coursEcole.indexWhere((c) => c.id == id);
+    if (i < 0) throw const ApiException('Cours introuvable (démo).');
+    final c = _data.coursEcole[i];
+    final maj = CoursEcole(
+      id: c.id,
+      titre: titre ?? c.titre,
+      description: description ?? c.description,
+      niveau: niveau ?? c.niveau,
+      actif: actif ?? c.actif,
+      createdAt: c.createdAt,
+    );
+    _data.coursEcole[i] = maj;
+    return maj;
+  }
+
+  @override
+  Future<void> deleteCoursEcole(String id) async {
+    await _latence();
+    _requireAuth();
+    if (_data.leconsEcole.any((l) => l.coursId == id) ||
+        _data.inscriptionsEcole.any((s) => s.coursId == id)) {
+      throw const ApiException(
+          'Ce cours a encore des leçons ou des inscriptions (démo).');
+    }
+    _data.coursEcole.removeWhere((c) => c.id == id);
+  }
+
+  @override
+  Future<List<LeconEcole>> getLeconsEcole({required String coursId}) async {
+    await _latence();
+    _requireAuth();
+    final lecons = _data.leconsEcole
+        .where((l) => l.coursId == coursId)
+        .toList()
+      ..sort((a, b) => a.ordre.compareTo(b.ordre));
+    return List.unmodifiable(_visible(lecons, (e) => e.id));
+  }
+
+  @override
+  Future<LeconEcole> createLeconEcole({
+    required String coursId,
+    required int ordre,
+    required String titre,
+    String? contenu,
+    String? referenceBiblique,
+  }) async {
+    await _latence();
+    _requireAuth();
+    if (!_data.coursEcole.any((c) => c.id == coursId)) {
+      throw const ApiException('Cours introuvable (démo).');
+    }
+    if (_data.leconsEcole
+        .any((l) => l.coursId == coursId && l.ordre == ordre)) {
+      throw const ApiException(
+          'L’ordre de cette leçon existe déjà dans ce cours (démo).');
+    }
+    final lecon = LeconEcole(
+      id: _nextId('lecon'),
+      coursId: coursId,
+      ordre: ordre,
+      titre: titre,
+      contenu: contenu,
+      referenceBiblique: referenceBiblique,
+      createdAt: DateTime.now(),
+    );
+    _data.leconsEcole.add(lecon);
+    _tag(lecon.id);
+    return lecon;
+  }
+
+  @override
+  Future<LeconEcole> updateLeconEcole(
+    String id, {
+    int? ordre,
+    String? titre,
+    String? contenu,
+    String? referenceBiblique,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final i = _data.leconsEcole.indexWhere((l) => l.id == id);
+    if (i < 0) throw const ApiException('Leçon introuvable (démo).');
+    final l = _data.leconsEcole[i];
+    final nouvelOrdre = ordre ?? l.ordre;
+    if (_data.leconsEcole.any((x) =>
+        x.coursId == l.coursId && x.ordre == nouvelOrdre && x.id != id)) {
+      throw const ApiException(
+          'L’ordre de cette leçon existe déjà dans ce cours (démo).');
+    }
+    final maj = LeconEcole(
+      id: l.id,
+      coursId: l.coursId,
+      ordre: nouvelOrdre,
+      titre: titre ?? l.titre,
+      contenu: contenu ?? l.contenu,
+      referenceBiblique: referenceBiblique ?? l.referenceBiblique,
+      createdAt: l.createdAt,
+    );
+    _data.leconsEcole[i] = maj;
+    return maj;
+  }
+
+  @override
+  Future<void> deleteLeconEcole(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.leconsEcole.removeWhere((l) => l.id == id);
+  }
+
+  @override
+  Future<List<InscriptionEcole>> getInscriptionsEcole({
+    String? coursId,
+    String? memberId,
+  }) async {
+    await _latence();
+    _requireAuth();
+    var liste = _data.inscriptionsEcole;
+    if (coursId != null) {
+      liste = liste.where((s) => s.coursId == coursId).toList();
+    }
+    if (memberId != null) {
+      liste = liste.where((s) => s.memberId == memberId).toList();
+    }
+    return List.unmodifiable(_visible(liste, (e) => e.id));
+  }
+
+  @override
+  Future<InscriptionEcole> inscrireEcole({
+    required String coursId,
+    String? memberId,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final membre = memberId ?? 'demo-m-001';
+    if (!_data.coursEcole.any((c) => c.id == coursId && c.actif)) {
+      throw const ApiException('Cours introuvable ou fermé (démo).');
+    }
+    if (_data.inscriptionsEcole
+        .any((s) => s.coursId == coursId && s.memberId == membre)) {
+      throw const ApiException('Déjà inscrit à ce cours (démo).');
+    }
+    final inscription = InscriptionEcole(
+      id: _nextId('insc'),
+      coursId: coursId,
+      memberId: membre,
+      statut: 'inscrit',
+      dateInscription: DateTime.now().toIso8601String().substring(0, 10),
+      createdAt: DateTime.now(),
+    );
+    _data.inscriptionsEcole.add(inscription);
+    _tag(inscription.id);
+    return inscription;
+  }
+
+  @override
+  Future<InscriptionEcole> updateInscriptionEcole({
+    required String id,
+    required String statut,
+  }) async {
+    await _latence();
+    _requireAuth();
+    if (statut == 'termine') {
+      throw const ApiException(
+          'Le statut « terminé » est posé automatiquement (démo).');
+    }
+    final i = _data.inscriptionsEcole.indexWhere((s) => s.id == id);
+    if (i < 0) throw const ApiException('Inscription introuvable (démo).');
+    final s = _data.inscriptionsEcole[i];
+    final maj = InscriptionEcole(
+      id: s.id,
+      coursId: s.coursId,
+      memberId: s.memberId,
+      statut: statut,
+      dateInscription: s.dateInscription,
+      createdAt: s.createdAt,
+    );
+    _data.inscriptionsEcole[i] = maj;
+    return maj;
+  }
+
+  @override
+  Future<void> deleteInscriptionEcole(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.inscriptionsEcole.removeWhere((s) => s.id == id);
+    _data.progressionsEcole.remove(id);
+  }
+
+  @override
+  Future<ProgressionCours> getProgressionEcole(String inscriptionId) async {
+    await _latence();
+    _requireAuth();
+    final inscription =
+        _data.inscriptionsEcole.firstWhere((s) => s.id == inscriptionId,
+            orElse: () => throw const ApiException(
+                'Inscription introuvable (démo).'));
+    final terminees =
+        _data.progressionsEcole[inscriptionId] ?? <String>[];
+    final lecons = _data.leconsEcole
+        .where((l) => l.coursId == inscription.coursId)
+        .toList()
+      ..sort((a, b) => a.ordre.compareTo(b.ordre));
+    final lignes = lecons
+        .map((l) => ProgressionLecon(
+              id: l.id,
+              ordre: l.ordre,
+              titre: l.titre,
+              referenceBiblique: l.referenceBiblique,
+              termine: terminees.contains(l.id),
+            ))
+        .toList();
+    final total = lignes.length;
+    final fait = lignes.where((l) => l.termine).length;
+    return ProgressionCours(
+      inscription: inscription,
+      lecons: lignes,
+      terminees: fait,
+      total: total,
+      pourcentage: total == 0 ? 0 : (fait * 100 / total).round(),
+    );
+  }
+
+  @override
+  Future<void> terminerLeconEcole({
+    required String inscriptionId,
+    required String leconId,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final inscription =
+        _data.inscriptionsEcole.firstWhere((s) => s.id == inscriptionId,
+            orElse: () => throw const ApiException(
+                'Inscription introuvable (démo).'));
+    final lecon = _data.leconsEcole.firstWhere((l) => l.id == leconId,
+        orElse: () =>
+            throw const ApiException('Leçon introuvable (démo).'));
+    if (lecon.coursId != inscription.coursId) {
+      throw const ApiException(
+          'Cette leçon n’appartient pas à ce cours (démo).');
+    }
+    final terminees =
+        _data.progressionsEcole.putIfAbsent(inscriptionId, () => []);
+    if (!terminees.contains(leconId)) terminees.add(leconId);
+    final total =
+        _data.leconsEcole.where((l) => l.coursId == inscription.coursId).length;
+    if (total > 0 && terminees.length >= total && inscription.statut != 'termine') {
+      final i =
+          _data.inscriptionsEcole.indexWhere((s) => s.id == inscriptionId);
+      _data.inscriptionsEcole[i] = InscriptionEcole(
+        id: inscription.id,
+        coursId: inscription.coursId,
+        memberId: inscription.memberId,
+        statut: 'termine',
+        dateInscription: inscription.dateInscription,
+        createdAt: inscription.createdAt,
+      );
+    }
   }
 
   // -- Biens et inventaire -------------------------------------------------------
