@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_theme.dart';
 import '../models/membres_complement.dart';
 import '../models/member.dart';
 import '../state/app_state.dart';
@@ -15,6 +16,14 @@ import 'member_detail_screen.dart';
 /// la section dédiée en bas de l'onglet Familles. Les départements se
 /// gèrent en Paramètres ; les fonctions et les postes sont des options
 /// dans les formulaires où on les attribue.
+///
+/// Mise en page (maquette d'Axel, 14 novembre 2026) : bandeau violet
+/// avec les onglets Familles / Cellules (indicateur or) et la recherche
+/// blanche arrondie, état vide élégant, bouton flottant étendu. Le
+/// titre « Départements », le logo ESC et le bouton de menu sont déjà
+/// dans l'en-tête clair de la coque (HomeScreen), on ne les duplique
+/// pas ici : pas d'AppBar propre, pas de pastille logo, pas de barre
+/// de navigation du bas (la coque les fournit déjà).
 class FamillesScreen extends StatefulWidget {
   const FamillesScreen({super.key});
 
@@ -194,15 +203,63 @@ class _FamillesScreenState extends State<FamillesScreen> {
     }
   }
 
+  /// État vide élégant (maquette d'Axel) : cercle teinté, icône,
+  /// titre et piste vers le bouton + du bas. La création se fait par
+  /// le bouton flottant, toujours visible.
+  Widget _etatVide({
+    required IconData icon,
+    required String message,
+    String? hint,
+  }) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.violetProfond.withValues(alpha: 0.06),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 40,
+                color: AppTheme.violetProfond,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.violetProfond,
+              ),
+            ),
+            if (hint != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                hint,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.violetProfond.withValues(alpha: 0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _famillesTab(List<Member> membres) {
     final noms = {for (final m in membres) m.id: m.fullName};
     return Column(
       children: [
-        searchField(
-          controller: _searchController,
-          onChanged: (v) => setState(() => _query = v.trim()),
-          label: 'Rechercher une famille',
-        ),
         Expanded(
           child: FutureBuilder<List<Famille>>(
             future: _famillesFuture,
@@ -220,13 +277,14 @@ class _FamillesScreenState extends State<FamillesScreen> {
                   .where((f) => _matches(f.nom))
                   .toList();
               if (familles.isEmpty) {
-                return EmptyState(
+                return _etatVide(
                   icon: Icons.family_restroom_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucune famille pour l’instant.'
+                      ? 'Aucune famille pour l’instant'
                       : 'Aucune famille ne correspond à la recherche.',
-                  actionLabel: 'Créer une famille',
-                  onAction: () => _createFamille(membres),
+                  hint: snapshot.data!.isEmpty
+                      ? 'Appuyez sur le bouton + en bas pour en créer une.'
+                      : null,
                 );
               }
               return ListeAvecFab(
@@ -329,11 +387,6 @@ class _FamillesScreenState extends State<FamillesScreen> {
     final noms = {for (final m in membres) m.id: m.fullName};
     return Column(
       children: [
-        searchField(
-          controller: _searchController,
-          onChanged: (v) => setState(() => _query = v.trim()),
-          label: 'Rechercher une cellule',
-        ),
         Expanded(
           child: FutureBuilder<List<Cellule>>(
             future: _cellulesFuture,
@@ -351,13 +404,14 @@ class _FamillesScreenState extends State<FamillesScreen> {
                   .where((c) => _matches(c.nom))
                   .toList();
               if (items.isEmpty) {
-                return EmptyState(
+                return _etatVide(
                   icon: Icons.groups_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucune cellule pour l’instant.'
+                      ? 'Aucune cellule pour l’instant'
                       : 'Aucune cellule ne correspond à la recherche.',
-                  actionLabel: 'Créer une cellule',
-                  onAction: () => _createCellule(membres),
+                  hint: snapshot.data!.isEmpty
+                      ? 'Appuyez sur le bouton + en bas pour en créer une.'
+                      : null,
                 );
               }
               return ListeAvecFab(
@@ -400,41 +454,108 @@ class _FamillesScreenState extends State<FamillesScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Familles'),
-          bottom: TabBar(
-            isScrollable: true,
-            onTap: (i) => setState(() {
-              _tab = i;
-              _query = '';
-              _searchController.clear();
-            }),
-            tabs: const [
-              Tab(text: 'Familles'),
-              Tab(text: 'Cellules'),
-            ],
-          ),
-        ),
-        body: FutureBuilder<MemberPage>(
-          future: _membresFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const AppLoading();
-            }
-            if (snapshot.hasError) {
-              return AppError(
-                message: snapshot.error.toString(),
-                onRetry: _refreshAll,
-              );
-            }
-            final membres = snapshot.data!.membres;
-            return TabBarView(
-              children: [
-                _famillesTab(membres),
-                _cellulesTab(membres),
-              ],
-            );
-          },
+        body: Column(
+          children: [
+            // Bandeau violet (maquette d'Axel) : onglets Familles /
+            // Cellules avec indicateur or, puis recherche blanche
+            // arrondie. Le titre, le logo et le menu sont déjà dans
+            // l'en-tête clair de la coque.
+            Container(
+              color: AppTheme.violetProfond,
+              child: Column(
+                children: [
+                  TabBar(
+                    onTap: (i) => setState(() {
+                      _tab = i;
+                      _query = '';
+                      _searchController.clear();
+                    }),
+                    indicatorColor: AppTheme.or,
+                    indicatorWeight: 3,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.white60,
+                    labelStyle: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                    tabs: const [
+                      Tab(text: 'Familles'),
+                      Tab(text: 'Cellules'),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (v) =>
+                            setState(() => _query = v.trim()),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.violetProfond,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: _tab == 0
+                              ? 'Rechercher une famille...'
+                              : 'Rechercher une cellule...',
+                          hintStyle: TextStyle(
+                            color: AppTheme.violetProfond
+                                .withValues(alpha: 0.7),
+                            fontSize: 14,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: AppTheme.violetProfond
+                                .withValues(alpha: 0.7),
+                            size: 20,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                            horizontal: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: FutureBuilder<MemberPage>(
+                future: _membresFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const AppLoading();
+                  }
+                  if (snapshot.hasError) {
+                    return AppError(
+                      message: snapshot.error.toString(),
+                      onRetry: _refreshAll,
+                    );
+                  }
+                  final membres = snapshot.data!.membres;
+                  return TabBarView(
+                    children: [
+                      _famillesTab(membres),
+                      _cellulesTab(membres),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
         ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () async {
