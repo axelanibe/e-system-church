@@ -175,6 +175,13 @@ class _MesEglisesScreenState extends State<MesEglisesScreen> {
               ),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              'Seules les églises du même espace sont proposées : la bascule ne change jamais d’espace.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
           if (!_chargement && _total > 0)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),

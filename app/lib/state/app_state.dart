@@ -88,6 +88,13 @@ class AppState extends ChangeNotifier {
   /// L'utilisateur est admin de la plateforme (chiffres globaux seulement).
   bool get isSuperAdmin => _role == 'super_admin';
 
+  /// L'utilisateur est aide Plateforme : droits limités choisis par Axel.
+  bool get isAidePlateforme => _role == 'aide_plateforme';
+
+  /// L'utilisateur est connecté à la Plateforme (admin ou aide) : sa
+  /// session ouvre directement l'écran Plateforme, jamais une église.
+  bool get isPlateforme => isSuperAdmin || isAidePlateforme;
+
   String get roleLabel {
     switch (_role) {
       case 'admin_eglise':
@@ -100,6 +107,8 @@ class AppState extends ChangeNotifier {
         return 'Membre';
       case 'super_admin':
         return 'Admin plateforme';
+      case 'aide_plateforme':
+        return 'Aide Plateforme';
       default:
         return _role ?? '—';
     }
@@ -172,9 +181,14 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> login(
-      {required String identifiant, required String password}) async {
-    final result =
-        await _api.login(identifiant: identifiant, password: password);
+      {required String identifiant,
+      required String password,
+      bool plateforme = false}) async {
+    final result = await _api.login(
+      identifiant: identifiant,
+      password: password,
+      plateforme: plateforme,
+    );
     _applyAuth(result);
     await _store.saveToken(result.token);
     if (result.refreshToken != null) {

@@ -34,6 +34,7 @@ import '../models/presences.dart';
 import '../models/prieres.dart';
 import '../models/profil.dart';
 import '../models/plateforme.dart';
+import '../models/acces_plateforme.dart';
 import '../models/transfert.dart';
 import '../models/rapport.dart';
 import '../models/rapport_annexe.dart';
@@ -220,10 +221,13 @@ class HttpApiService implements ApiService {
 
   @override
   Future<AuthResult> login(
-      {required String identifiant, required String password}) async {
+      {required String identifiant,
+      required String password,
+      bool plateforme = false}) async {
     final data = await _call('POST', '/auth/login', body: {
       'identifiant': identifiant,
       'password': password,
+      'plateforme': plateforme,
       'channel': _channel,
     });
     final result = AuthResult.fromJson(data);
@@ -2719,6 +2723,33 @@ class HttpApiService implements ApiService {
     final data = await _call('GET', '/plateforme/chiffres');
     return ChiffresPlateforme.fromJson(
         data['chiffres'] as Map<String, dynamic>);
+  }
+
+  @override
+  Future<List<AccesPlateforme>> listerAccesPlateforme() async {
+    final data = await _call('GET', '/plateforme/acces');
+    return (data['acces'] as List<dynamic>)
+        .map((e) => AccesPlateforme.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<AccesPlateformeCree> creerAccesPlateforme({
+    required String email,
+    String? nom,
+    required List<String> droits,
+  }) async {
+    final data = await _call('POST', '/plateforme/acces', body: {
+      'email': email,
+      if (nom != null) 'full_name': nom,
+      'droits': droits,
+    });
+    return AccesPlateformeCree.fromJson(data);
+  }
+
+  @override
+  Future<void> revoquerAccesPlateforme(String userId) async {
+    await _call('DELETE', '/plateforme/acces/$userId');
   }
 
   @override

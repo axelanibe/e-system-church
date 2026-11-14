@@ -116,9 +116,14 @@ class DemoAppState extends AppState {
 
   @override
   Future<void> login(
-      {required String identifiant, required String password}) async {
-    final result =
-        await _demoApi.login(identifiant: identifiant, password: password);
+      {required String identifiant,
+      required String password,
+      bool plateforme = false}) async {
+    final result = await _demoApi.login(
+      identifiant: identifiant,
+      password: password,
+      plateforme: plateforme,
+    );
     _applyAuth(result);
     notifyListeners();
   }

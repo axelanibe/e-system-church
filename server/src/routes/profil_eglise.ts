@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
-import { auditLog, issueTokenForChurch, rotateRefreshTokenForChurch } from "../auth.js";
+import { auditLog, basculeAutorisee, issueTokenForChurch, rotateRefreshTokenForChurch } from "../auth.js";
 import { invalidInput } from "../crud.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
 
@@ -262,6 +262,48 @@ export function registerProfilEgliseRoutes(app: FastifyInstance, db: Pool) {
       return;
     }
     try {
+      // Espaces indépendants (13/11/2026) : la bascule ne change jamais
+      // d'espace, et la tutelle ne bascule pas avec (annexe, membre).
+      const { rows: actuelRows } = await db.query<{
+        parent_church_id: string | null;
+      }>(`SELECT parent_church_id FROM churches WHERE id = $1`, [
+        req.session.churchId,
+      ]);
+      const { rows: cibleRows } = await db.query<{
+        role: string;
+        parent_church_id: string | null;
+      }>(
+        `SELECT cu.role, c.parent_church_id
+           FROM church_users cu JOIN churches c ON c.id = cu.church_id
+          WHERE cu.user_id = $1 AND cu.church_id = $2`,
+        [req.session.userId, parsed.data.church_id],
+      );
+      if (cibleRows.length === 0) {
+        return reply.code(400).send({
+          error: "invalid_church",
+          message: "Cette église ne fait pas partie de vos églises.",
+        });
+      }
+      if (
+        !basculeAutorisee(
+          {
+            role: req.session.role,
+            parentChurchId: actuelRows[0]?.parent_church_id ?? null,
+            churchId: req.session.churchId,
+          },
+          {
+            role: cibleRows[0].role,
+            parentChurchId: cibleRows[0].parent_church_id,
+            churchId: parsed.data.church_id,
+          },
+        )
+      ) {
+        return reply.code(403).send({
+          error: "changement_espace_refuse",
+          message:
+            "Cette église appartient à un autre espace. Chaque espace est indépendant : la bascule ne change jamais d'espace.",
+        });
+      }
       const result = await issueTokenForChurch(
         db,
         req.session.userId,

@@ -5,6 +5,7 @@ import '../config/app_config.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 import 'forgot_password_screen.dart';
+import 'login_plateforme_screen.dart';
 import 'register_fidele_screen.dart';
 import 'register_screen.dart';
 
@@ -172,6 +173,24 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                     child: const Text('Mot de passe oublié ?'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: _loading
+                        ? null
+                        : () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const LoginPlateformeScreen(),
+                              ),
+                            ),
+                    child: const Text('Connexion Plateforme'),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Pour l’admin de la plateforme et ses aides.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton(
