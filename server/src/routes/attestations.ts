@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auditLog } from "../auth.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
 import { genererAttestationEvenementPdf, genererAttestationPdf } from "../pdf.js";
+import { chargerLogo } from "../logo_pdf.js";
 
 /**
  * US3 — Attestations annuelles de dons.
@@ -483,6 +484,13 @@ export function registerAttestationsRoutes(app: FastifyInstance, db: Pool) {
           return reply.code(409).send({ error: "conflict", message: "Cette attestation est annulée." });
         }
         const dateEmission = formaterDateEmission(att.date_emission as string);
+        // Logo figé avec le contenu (URL au moment de l'émission) : une
+        // attestation déjà émise garde le logo qu'elle avait, même si
+        // l'église en change ensuite. Absent ou illisible : sans logo.
+        const logo = await chargerLogo(
+          (att.contenu as { eglise: { logo_url: string | null } }).eglise
+            .logo_url,
+        );
         // Dons : générateur US3. Événement : générateur tranche B, depuis
         // le même contenu figé, jamais recalculé.
         const pdf =
@@ -490,6 +498,7 @@ export function registerAttestationsRoutes(app: FastifyInstance, db: Pool) {
             ? genererAttestationPdf({
                 egliseNom: (att.contenu as ContenuAttestation).eglise.nom,
                 egliseCode: (att.contenu as ContenuAttestation).eglise.code,
+                logo,
                 numero: att.numero,
                 annee: att.annee,
                 dateEmission,
@@ -507,6 +516,7 @@ export function registerAttestationsRoutes(app: FastifyInstance, db: Pool) {
                 return genererAttestationEvenementPdf({
                   egliseNom: c.eglise.nom,
                   egliseCode: c.eglise.code,
+                  logo,
                   numero: att.numero,
                   libelleType: LIBELLES_TYPES[c.type],
                   dateEmission,

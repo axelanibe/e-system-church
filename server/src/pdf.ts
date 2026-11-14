@@ -1,3 +1,5 @@
+import type { LogoPdf } from "./logo_pdf.js";
+
 /**
  * Générateur PDF minimal, sans dépendance : le serveur n'a aucune librairie
  * PDF (package.json ne contient que fastify, pg, zod…), et une attestation
@@ -15,6 +17,8 @@ export interface LignePdf {
 export interface AttestationPdfData {
   egliseNom: string;
   egliseCode: string;
+  /** Logo de l'église (chargé par la route), null : en-tête sans logo. */
+  logo?: LogoPdf | null;
   numero: string;
   annee: number;
   dateEmission: string; // JJ/MM/AAAA
@@ -56,6 +60,8 @@ function litteral(texte: string): string {
 export interface AttestationEvenementPdfData {
   egliseNom: string;
   egliseCode: string;
+  /** Logo de l'église (chargé par la route), null : en-tête sans logo. */
+  logo?: LogoPdf | null;
   numero: string;
   /** Libellé du type, ex. « Attestation de mariage ». */
   libelleType: string;
@@ -70,23 +76,65 @@ export interface AttestationEvenementPdfData {
   details: { label: string; valeur: string }[];
 }
 
+/** Objet image PDF (XObject) : JPEG brut ou RVB brut, selon le logo. */
+function objetImage(logo: LogoPdf): Buffer {
+  const filtre = logo.jpeg ? "/DCTDecode" : "/FlateDecode";
+  const dict =
+    `<< /Type /XObject /Subtype /Image /Width ${logo.largeur} ` +
+    `/Height ${logo.hauteur} /ColorSpace /DeviceRGB /BitsPerComponent 8 ` +
+    `/Filter ${filtre} /Length ${logo.donnees.length} >>\nstream\n`;
+  return Buffer.concat([
+    Buffer.from(dict, "latin1"),
+    logo.donnees,
+    Buffer.from("\nendstream", "latin1"),
+  ]);
+}
+
+/**
+ * Opérateur de dessin du logo, ajusté dans un carré de `taille` points
+ * (proportions gardées), coin haut-gauche (x, yHaut).
+ */
+function operateurLogo(
+  logo: LogoPdf,
+  x: number,
+  yHaut: number,
+  taille: number,
+): string {
+  const echelle = Math.min(taille / logo.largeur, taille / logo.hauteur);
+  const l = Math.max(1, Math.round(logo.largeur * echelle));
+  const h = Math.max(1, Math.round(logo.hauteur * echelle));
+  const dx = Math.round(x + (taille - l) / 2);
+  const dy = Math.round(yHaut - h);
+  return `q ${l} 0 0 ${h} ${dx} ${dy} cm /Im1 Do Q`;
+}
+
 /** Assemblage d'un PDF une page à partir de lignes de contenu. */
-function assemblerPdf(lignes: string[]): Buffer {
+function assemblerPdf(lignes: string[], logo?: LogoPdf | null): Buffer {
   const contenu = lignes.join("\n");
-  const objets: string[] = [
+  const image = logo ? objetImage(logo) : null;
+  const imageNum = image ? 7 : null;
+  const objets: (string | Buffer)[] = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>",
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R /F2 5 0 R >>${imageNum ? ` /XObject << /Im1 ${imageNum} 0 R >>` : ""} >> /Contents 6 0 R >>`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
     `<< /Length ${Buffer.byteLength(contenu)} >>\nstream\n${contenu}\nendstream`,
+    ...(image ? [image] : []),
   ];
   const parties: Buffer[] = [Buffer.from("%PDF-1.4\n", "latin1")];
   const offsets: number[] = [0];
   let pos = parties[0].length;
   objets.forEach((o, i) => {
     offsets.push(pos);
-    const b = Buffer.from(`${i + 1} 0 obj\n${o}\nendobj\n`, "latin1");
+    const b =
+      typeof o === "string"
+        ? Buffer.from(`${i + 1} 0 obj\n${o}\nendobj\n`, "latin1")
+        : Buffer.concat([
+            Buffer.from(`${i + 1} 0 obj\n`, "latin1"),
+            o,
+            Buffer.from("\nendobj\n", "latin1"),
+          ]);
     parties.push(b);
     pos += b.length;
   });
@@ -141,6 +189,8 @@ export interface SectionRapport {
 export interface RapportPdfData {
   titre: string;
   egliseNom: string;
+  /** Logo de l'église (chargé par la route), null : en-tête sans logo. */
+  logo?: LogoPdf | null;
   /** Lignes de contexte sous le titre (période, date d'émission, solde…). */
   lignesMeta: string[];
   sections: SectionRapport[];
@@ -171,8 +221,11 @@ function tronquer(texte: string, largeurPts: number, taille: number): string {
 }
 
 /** Assemble un PDF multipage à partir des flux de contenu de chaque page. */
-function construirePdfMultiPages(pages: string[]): Buffer {
-  const objets: string[] = [
+function construirePdfMultiPages(pages: string[], logo?: LogoPdf | null): Buffer {
+  const image = logo ? objetImage(logo) : null;
+  // 1 catalogue, 2 pages, 3 et 4 polices, puis 2 objets par page.
+  const imageNum = image ? 5 + pages.length * 2 : null;
+  const objets: (string | Buffer)[] = [
     `<< /Type /Catalog /Pages 2 0 R >>`,
     `<< /Type /Pages /Kids [${pages.map((_, i) => `${5 + i * 2} 0 R`).join(" ")}] /Count ${pages.length} >>`,
     `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>`,
@@ -180,18 +233,26 @@ function construirePdfMultiPages(pages: string[]): Buffer {
   ];
   pages.forEach((contenu, i) => {
     objets.push(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_LARGEUR} ${PAGE_HAUTEUR}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${6 + i * 2} 0 R >>`,
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_LARGEUR} ${PAGE_HAUTEUR}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${imageNum ? ` /XObject << /Im1 ${imageNum} 0 R >>` : ""} >> /Contents ${6 + i * 2} 0 R >>`,
     );
     objets.push(
       `<< /Length ${Buffer.byteLength(contenu)} >>\nstream\n${contenu}\nendstream`,
     );
   });
+  if (image) objets.push(image);
   const parties: Buffer[] = [Buffer.from("%PDF-1.4\n", "latin1")];
   const offsets: number[] = [0];
   let pos = parties[0].length;
   objets.forEach((o, i) => {
     offsets.push(pos);
-    const b = Buffer.from(`${i + 1} 0 obj\n${o}\nendobj\n`, "latin1");
+    const b =
+      typeof o === "string"
+        ? Buffer.from(`${i + 1} 0 obj\n${o}\nendobj\n`, "latin1")
+        : Buffer.concat([
+            Buffer.from(`${i + 1} 0 obj\n`, "latin1"),
+            o,
+            Buffer.from("\nendobj\n", "latin1"),
+          ]);
     parties.push(b);
     pos += b.length;
   });
@@ -237,7 +298,13 @@ export function genererRapportPdf(d: RapportPdfData): Buffer {
     if (y - besoin < BAS_PAGE) nouvellePage(repetition);
   };
 
-  texte(MARGE, y, 16, tronquer(d.titre, LARGEUR_UTILE, 16), true);
+  texte(
+    MARGE,
+    y,
+    16,
+    tronquer(d.titre, LARGEUR_UTILE - (d.logo ? 60 : 0), 16),
+    true,
+  );
   y -= 20;
   texte(MARGE, y, 11, d.egliseNom);
   y -= 18;
@@ -246,6 +313,10 @@ export function genererRapportPdf(d: RapportPdfData): Buffer {
     y -= 15;
   }
   y -= 10;
+  if (d.logo) {
+    // Logo de l'église en haut à droite de la première page seulement.
+    pages[0].push(operateurLogo(d.logo, MARGE + LARGEUR_UTILE - 48, 800, 48));
+  }
 
   for (const section of d.sections) {
     assurerPlace(60);
@@ -349,13 +420,20 @@ export function genererRapportPdf(d: RapportPdfData): Buffer {
     );
   });
 
-  return construirePdfMultiPages(pages.map((p) => p.join("\n")));
+  return construirePdfMultiPages(
+    pages.map((p) => p.join("\n")),
+    d.logo ?? null,
+  );
 }
 
 export function genererAttestationPdf(d: AttestationPdfData): Buffer {
   const { lignes, texte } = lignesTexte();
-  let y = 760;
-  y -= 20;
+  let y = 780;
+  // Nom de l'église en titre (il manquait : seule la ligne « Code »
+  // figurait, régression PR #46), logo en haut à droite.
+  texte(50, y, 16, d.egliseNom, true);
+  if (d.logo) lignes.push(operateurLogo(d.logo, 501, 792, 44));
+  y -= 32;
   texte(50, y, 11, `Code : ${d.egliseCode}`);
   y -= 32;
   texte(50, y, 15, `Attestation annuelle de dons — ${d.annee}`, true);
@@ -387,7 +465,7 @@ export function genererAttestationPdf(d: AttestationPdfData): Buffer {
   texte(50, y, 10, "Elle sert de reçu justificatif de vos dons,");
   y -= 15;
   texte(50, y, 10, "pas de déclaration d'impôt.");
-  return assemblerPdf(lignes);
+  return assemblerPdf(lignes, d.logo ?? null);
 }
 
 /**
@@ -400,6 +478,7 @@ export function genererAttestationEvenementPdf(d: AttestationEvenementPdfData): 
   const { lignes, texte } = lignesTexte();
   let y = 760;
   texte(50, y, 16, d.egliseNom, true);
+  if (d.logo) lignes.push(operateurLogo(d.logo, 501, 792, 44));
   y -= 20;
   texte(50, y, 11, `Code : ${d.egliseCode}`);
   y -= 32;
@@ -434,12 +513,14 @@ export function genererAttestationEvenementPdf(d: AttestationEvenementPdfData): 
   texte(50, y, 11, "Signature : ____________________", true);
   y -= 40;
   texte(50, y, 11, "Cachet de l'église", true);
-  return assemblerPdf(lignes);
+  return assemblerPdf(lignes, d.logo ?? null);
 }
 
 export interface RecuPdfData {
   egliseNom: string;
   egliseCode: string;
+  /** Logo de l'église (chargé par la route), null : en-tête sans logo. */
+  logo?: LogoPdf | null;
   numero: string; // REC-AAAA-NNNN, par église et par année
   dateEmission: string; // JJ/MM/AAAA
   membreNom: string | null;
@@ -463,6 +544,7 @@ export function genererRecuPdf(d: RecuPdfData): Buffer {
   const { lignes, texte } = lignesTexte();
   let y = 760;
   texte(50, y, 16, d.egliseNom, true);
+  if (d.logo) lignes.push(operateurLogo(d.logo, 501, 792, 44));
   y -= 20;
   texte(50, y, 11, `Code : ${d.egliseCode}`);
   y -= 32;
@@ -499,5 +581,5 @@ export function genererRecuPdf(d: RecuPdfData): Buffer {
   texte(50, y, 10, "Il sert de justificatif de votre contribution,");
   y -= 15;
   texte(50, y, 10, "pas de déclaration d'impôt.");
-  return assemblerPdf(lignes);
+  return assemblerPdf(lignes, d.logo ?? null);
 }
