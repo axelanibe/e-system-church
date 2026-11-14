@@ -30,6 +30,13 @@ const parametresSchema = z.object({
   // signataire n'est inventé, l'admin les renseigne ou les laisse vides.
   signataire_nominations: z.string().max(200).optional(),
   signataire_proces_verbaux: z.string().max(200).optional(),
+  // T12 (US8, US11, US14) : dîme suggérée (vide = désactivée, jamais
+  // imposée), transparence visible par les membres (désactivée par
+  // défaut), seuils d'alerte pour l'église mère.
+  montant_dime_suggere: z.number().int().min(0).max(100_000_000).nullable().optional(),
+  transparence_visible_membres: z.boolean().optional(),
+  seuil_inactivite_semaines: z.number().int().min(1).max(52).optional(),
+  seuil_baisse_contributions_pct: z.number().int().min(0).max(100).optional(),
 });
 
 const roleSchema = z.object({

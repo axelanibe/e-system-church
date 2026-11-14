@@ -3,8 +3,11 @@ import 'package:provider/provider.dart';
 
 import '../models/fidele.dart';
 import '../state/app_state.dart';
+import '../services/preferences_locales.dart';
 import '../widgets/change_password_dialog.dart';
 import '../widgets/common_widgets.dart';
+import 'consultations_screen.dart';
+import 'langue_donnees_screen.dart';
 
 /// Paramètres du fidèle (tranche P1) : Mon profil, Notifications,
 /// Langue, Aide. Rien d'administratif ici : les paramètres de
@@ -116,6 +119,21 @@ class _ParametresFideleScreenState extends State<ParametresFideleScreen> {
                       trailing: const Icon(Icons.chevron_right),
                       onTap: _changerMotDePasse,
                     ),
+                    ListTile(
+                      leading: const Icon(Icons.visibility_outlined),
+                      title: const Text('Qui a consulté ma fiche'),
+                      subtitle: const Text(
+                          'Les lectures de vos données sensibles.'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ConsultationsScreen(
+                                vueMembre: true),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -129,11 +147,23 @@ class _ParametresFideleScreenState extends State<ParametresFideleScreen> {
                   ),
                 ),
               ),
-              const Card(
+              Card(
                 child: ListTile(
-                  leading: Icon(Icons.language_outlined),
-                  title: Text('Langue de l’application'),
-                  subtitle: Text('Français'),
+                  leading: const Icon(Icons.language_outlined),
+                  title: const Text('Langue de l’application'),
+                  subtitle: Text(
+                    context.watch<PreferencesLocales>().estAnglais
+                        ? 'Anglais'
+                        : 'Français',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const LangueDonneesScreen(),
+                      ),
+                    );
+                  },
                 ),
               ),
               const SectionTitle(title: 'Aide'),

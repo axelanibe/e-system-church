@@ -11,6 +11,7 @@ import '../widgets/common_widgets.dart';
 import 'rattachements_screen.dart';
 import 'transferts_screen.dart';
 import 'tree_screen.dart';
+import 'alertes_mere_screen.dart';
 import 'annexe_detail_screen.dart';
 import 'codes_tutelle_screen.dart';
 
@@ -150,6 +151,24 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                       );
                     },
                   ),
+                  if (context.watch<AppState>().church?.isMere ?? false) ...[
+                    const Divider(height: 1),
+                    ListTile(
+                      leading:
+                          const Icon(Icons.warning_amber_outlined),
+                      title: const Text('Alertes du réseau'),
+                      subtitle: const Text(
+                          'Antenne inactive, contributions en baisse, rapport non soumis.'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const AlertesMereScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),

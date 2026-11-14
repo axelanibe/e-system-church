@@ -7,6 +7,9 @@ import '../state/app_state.dart';
 import '../widgets/change_password_dialog.dart';
 import '../widgets/common_widgets.dart';
 import 'biens_screen.dart';
+import 'consultations_screen.dart';
+import 'langue_donnees_screen.dart';
+import 'listes_configurables_screen.dart';
 import 'mon_eglise_screen.dart';
 import 'parametres_screen.dart';
 
@@ -238,6 +241,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             );
                           },
                         ),
+                        const Divider(),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.list_outlined),
+                          title: const Text('Listes configurables'),
+                          subtitle: const Text(
+                              'Rôles, catégories, statuts, départements, seuils et dîme suggérée.'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const ListesConfigurablesScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        const Divider(),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.visibility_outlined),
+                          title:
+                              const Text('Consultations sensibles'),
+                          subtitle: const Text(
+                              'Qui a consulté les données sensibles.'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const ConsultationsScreen(),
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -338,6 +376,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           title: Text(AppConfig.appName),
                           subtitle: Text(
                               'Version ${AppConfig.appVersion}'),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.language_outlined),
+                          title: const Text('Langue et données'),
+                          subtitle: const Text(
+                              'Langue des nouveaux écrans, mode économique.'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const LangueDonneesScreen(),
+                              ),
+                            );
+                          },
                         ),
                         const Divider(),
                         ListTile(

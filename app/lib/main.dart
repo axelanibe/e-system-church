@@ -10,6 +10,7 @@ import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/plateforme_screen.dart';
 import 'screens/reset_password_screen.dart';
+import 'services/preferences_locales.dart';
 import 'state/app_state.dart';
 
 void main() {
@@ -26,10 +27,15 @@ class EsystemApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AppState()..init(),
-      child: Consumer<AppState>(
-        builder: (context, state, _) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppState()..init()),
+        // T12 (US15, US16) : langue des nouveaux écrans et mode économique.
+        ChangeNotifierProvider(
+            create: (_) => PreferencesLocales()..init()),
+      ],
+      child: Consumer2<AppState, PreferencesLocales>(
+        builder: (context, state, prefs, _) {
           if (!state.initialized) {
             return const MaterialApp(
               home: Scaffold(
@@ -68,13 +74,15 @@ class EsystemApp extends StatelessWidget {
             title: AppConfig.appName,
             debugShowCheckedModeBanner: false,
             theme: AppTheme.theme,
-            locale: const Locale('fr'),
+            // T12 (US15) : la langue choisie s'applique aux nouveaux
+            // écrans ; le reste de l'application reste en français.
+            locale: Locale(prefs.langue),
             localizationsDelegates: const [
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            supportedLocales: const [Locale('fr')],
+            supportedLocales: const [Locale('fr'), Locale('en')],
             home: home,
           );
         },

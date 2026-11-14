@@ -8,6 +8,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import 'evenements_vie_screen.dart';
 
 /// Module 6 — Suivi pastoral : radar des absences, parcours des
 /// nouveaux convertis, visites pastorales et accompagnements (T6 :
@@ -813,6 +814,19 @@ class _PastoralScreenState extends State<PastoralScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Suivi pastoral'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.cake_outlined),
+              tooltip: 'Événements de vie',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const EvenementsVieScreen(),
+                  ),
+                );
+              },
+            ),
+          ],
           bottom: TabBar(
             isScrollable: true,
             onTap: (i) => setState(() {

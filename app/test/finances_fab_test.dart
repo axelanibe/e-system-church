@@ -1,5 +1,5 @@
-import 'package:esystem_church/demo/mock_api_service.dart';
-import 'package:esystem_church/demo/mock_data.dart';
+import 'faux_api_service.dart';
+import 'faux_donnees.dart';
 import 'package:esystem_church/screens/finances_screen.dart';
 import 'package:esystem_church/services/api_service.dart';
 import 'package:esystem_church/state/app_state.dart';
@@ -41,7 +41,7 @@ void main() {
   testWidgets(
       'Finances, Contributions : le bouton Ajouter ne masque aucune pastille',
       (tester) async {
-    final api = MockApiService();
+    final api = FauxApiService();
     // Temps réel : dans testWidgets l'horloge est fictive, le délai de
     // 120 ms du mock ne se déclencherait jamais sans pompage.
     await tester.runAsync(() => api.login(

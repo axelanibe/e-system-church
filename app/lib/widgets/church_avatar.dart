@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../config/app_theme.dart';
 import '../models/church.dart';
+import '../services/preferences_locales.dart';
 import '../state/app_state.dart';
 
 /// Avatar de l'église active : logo (NetworkImage) quand l'église en a un,
@@ -52,7 +53,12 @@ class ChurchAvatar extends StatelessWidget {
     // Fond de repli bleu nuit quand l'église n'a pas de couleur.
     final fond = c.couleur ?? AppTheme.bleuNuit;
     final logoUrl = c.logoUrl;
-    if (logoUrl != null && logoUrl.isNotEmpty) {
+    // T12 (US16) : en mode économique, le logo réseau n'est pas chargé.
+    // Lecture nullable : les tests pompent parfois l'avatar sans le
+    // fournisseur de préférences, le mode économique vaut alors faux.
+    final economique =
+        context.watch<PreferencesLocales?>()?.modeEconomique ?? false;
+    if (logoUrl != null && logoUrl.isNotEmpty && !economique) {
       final baseUrl = context.read<AppState>().apiBaseUrl;
       final fullUrl = logoUrl.startsWith('http') ? logoUrl : '$baseUrl$logoUrl';
       return CircleAvatar(

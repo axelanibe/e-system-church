@@ -11,6 +11,7 @@ import {
   registerCrud,
 } from "../crud.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
+import { statutsRichesAutorises } from "./us_restantes.js";
 
 /**
  * Module 1 — Membres (compléter) : familles, historique des statuts,
@@ -303,7 +304,9 @@ export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) 
   // -- Changement de statut d'un membre (écrit l'historique + met à jour
   //    members.status avec le statut simple correspondant). -----------------
   const statutSchema = z.object({
-    statut: z.enum(["membre", "sympathisant", "nouveau_converti", "en_formation", "suspendu", "parti", "ancien"]),
+    // T12 (US13) : statut libre, validé contre les statuts configurés
+    // de l'église (défauts + libellés ajoutés, défauts archivés exclus).
+    statut: z.string().min(2).max(120),
     motif: z.string().max(500).optional(),
   });
   app.post(
@@ -325,6 +328,10 @@ export function registerMembresComplementRoutes(app: FastifyInstance, db: Pool) 
           return reply.code(404).send({ error: "not_found", message: "Membre introuvable." });
         }
         const ancien = memberRows[0].status as string;
+        const autorises = await statutsRichesAutorises(db, req.session.churchId);
+        if (!autorises.includes(parsed.data.statut)) {
+          return reply.code(400).send({ error: "invalid_input", message: "Statut non configuré pour cette église." });
+        }
         const simple = toMemberStatus(parsed.data.statut);
         await db.query(
           `INSERT INTO membre_statuts (church_id, member_id, statut, ancien_statut, motif, change_par)

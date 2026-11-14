@@ -1,5 +1,5 @@
-import 'package:esystem_church/demo/mock_api_service.dart';
-import 'package:esystem_church/demo/mock_data.dart';
+import 'faux_api_service.dart';
+import 'faux_donnees.dart';
 import 'package:esystem_church/services/api_service.dart';
 import 'package:esystem_church/utils/qr_carte.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -53,7 +53,7 @@ void main() {
 
   group('pointage scanné en démo', () {
     test('QR scanné pointe le membre en mode scan_qr', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
         password: DemoAccounts.password,
@@ -72,7 +72,7 @@ void main() {
     });
 
     test('matricule d’une autre église introuvable dans la session', () async {
-      final api = MockApiService();
+      final api = FauxApiService();
       await api.login(
         identifiant: DemoAccounts.adminEmail,
         password: DemoAccounts.password,
