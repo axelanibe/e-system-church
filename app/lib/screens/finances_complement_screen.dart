@@ -654,7 +654,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
   Color _depenseColor(String statut) {
     switch (statut) {
       case 'payee':
-        return AppTheme.bleuNuit;
+        return AppTheme.violetProfond;
       case 'validee_pasteur':
       case 'validee_tresorier':
         return AppTheme.bleuFonce;
@@ -1088,7 +1088,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                         label: 'Entrées',
                         value: formatMontant(solde.entrees, state.devise),
                         icon: Icons.trending_up,
-                        color: AppTheme.bleuNuit,
+                        color: AppTheme.violetProfond,
                       ),
                       StatCard(
                         label: 'Sorties',

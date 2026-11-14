@@ -180,20 +180,20 @@ class _ContenuFinancesCompletesState
                           value: formatMontant(
                               suivi.totaux.totalPayeFcfa, state.devise),
                           icon: Icons.payments_outlined,
-                          color: AppTheme.bleuNuit,
+                          color: AppTheme.violetProfond,
                         ),
                         StatCard(
                           label: 'Caisse',
                           value:
                               formatMontant(d.solde.solde, state.devise),
                           icon: Icons.account_balance_wallet_outlined,
-                          color: AppTheme.bleuNuit,
+                          color: AppTheme.violetProfond,
                         ),
                         StatCard(
                           label: 'Entrées du jour',
                           value: formatMontant(d.entreesJour, state.devise),
                           icon: Icons.trending_up,
-                          color: AppTheme.bleuNuit,
+                          color: AppTheme.violetProfond,
                         ),
                         StatCard(
                           label: 'Sorties du jour',
@@ -352,7 +352,7 @@ class _CarteFonction extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(icone, color: AppTheme.bleuNuit),
+                  Icon(icone, color: AppTheme.violetProfond),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -389,7 +389,7 @@ class _CarteFonction extends StatelessWidget {
                     const SizedBox(width: 12),
                     StatusChip(
                       label: badge!,
-                      color: badgeColor ?? AppTheme.bleuNuit,
+                      color: badgeColor ?? AppTheme.violetProfond,
                     ),
                   ] else if (actionLabel == null) ...[
                     const SizedBox(width: 12),

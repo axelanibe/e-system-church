@@ -81,7 +81,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'actif':
-        return AppTheme.bleuNuit;
+        return AppTheme.violetProfond;
       case 'nouveau_converti':
         return AppTheme.bleuFonce;
       case 'inactif':
@@ -450,7 +450,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
   /// Membre depuis, QR. Rien d'autre.
   Widget _carteVisuelle(BuildContext context, String qrData) {
     final nomEglise = context.read<AppState>().church?.name;
-    // Carte du modèle : dégradé bleu nuit, barre or en haut,
+    // Carte du modèle : dégradé violet profond, barre or en haut,
     // matricule en mono. Photo, nom, matricule, église,
     // Membre depuis, QR. Rien d'autre.
     return ClipRRect(
@@ -460,7 +460,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppTheme.bleuNuit, Color(0xFF16324F)],
+            colors: [AppTheme.violetProfond, AppTheme.violetSecondaire],
           ),
         ),
         child: Column(
@@ -792,7 +792,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                           trailing: StatusChip(
                             label: p.statutLabel,
                             color: p.statut == 'present'
-                                ? AppTheme.bleuNuit
+                                ? AppTheme.violetProfond
                                 : p.statut == 'absent'
                                     ? AppTheme.rougeErreur
                                     : Colors.grey,

@@ -253,7 +253,7 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                       style: Theme.of(context)
                           .textTheme
                           .displayMedium
-                          ?.copyWith(color: AppTheme.bleuNuit),
+                          ?.copyWith(color: AppTheme.violetProfond),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -299,18 +299,18 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                           backgroundColor: courant
                               ? AppTheme.orFonce
                               : passe
-                                  ? AppTheme.bleuNuit
-                                  : AppTheme.bleuNuit.withValues(alpha: 0.15),
+                                  ? AppTheme.violetProfond
+                                  : AppTheme.violetProfond.withValues(alpha: 0.15),
                           child: Text(
                             '${moment.ordre}',
                             style: TextStyle(
-                              // Chiffre en cours en bleu nuit sur or :
+                              // Chiffre en cours en violet profond sur or :
                               // blanc sur or foncé, contraste limite.
                               color: courant
-                                  ? AppTheme.bleuNuit
+                                  ? AppTheme.violetProfond
                                   : passe
                                       ? Colors.white
-                                      : AppTheme.bleuNuit,
+                                      : AppTheme.violetProfond,
                               fontWeight: courant
                                   ? FontWeight.bold
                                   : FontWeight.normal,
@@ -449,7 +449,7 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                   LinearProgressIndicator(
                     value: progressionJauge(_entrees, _capacite),
                     color: AppTheme.orFonce,
-                    backgroundColor: AppTheme.bleuNuit.withValues(alpha: 0.15),
+                    backgroundColor: AppTheme.violetProfond.withValues(alpha: 0.15),
                     minHeight: 8,
                   ),
                 ],

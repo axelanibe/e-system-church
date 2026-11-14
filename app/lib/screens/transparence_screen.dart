@@ -119,7 +119,7 @@ class _TransparenceScreenState extends State<TransparenceScreen> {
                         label: t.recettes,
                         value: formatMontant(d.totalRecettesFcfa, devise),
                         icon: Icons.trending_up,
-                        color: AppTheme.bleuNuit,
+                        color: AppTheme.violetProfond,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -140,7 +140,7 @@ class _TransparenceScreenState extends State<TransparenceScreen> {
                   icon: Icons.account_balance_wallet_outlined,
                   color: d.soldeFcfa < 0
                       ? AppTheme.rougeErreur
-                      : AppTheme.bleuNuit,
+                      : AppTheme.violetProfond,
                 ),
                 const SizedBox(height: 20),
                 SectionTitle(title: t.parType),

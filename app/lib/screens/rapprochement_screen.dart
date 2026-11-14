@@ -133,14 +133,14 @@ class _RapprochementScreenState extends State<RapprochementScreen> {
                           value: formatMontant(
                               totaux.attenduFcfa, state.devise),
                           icon: Icons.account_balance_wallet_outlined,
-                          color: AppTheme.bleuNuit,
+                          color: AppTheme.violetProfond,
                         ),
                         StatCard(
                           label: 'En caisse',
                           value: formatMontant(
                               totaux.caisseNetFcfa, state.devise),
                           icon: Icons.trending_up,
-                          color: AppTheme.bleuNuit,
+                          color: AppTheme.violetProfond,
                         ),
                         StatCard(
                           label: 'Écart total',
@@ -149,7 +149,7 @@ class _RapprochementScreenState extends State<RapprochementScreen> {
                           icon: Icons.swap_horiz,
                           color: totaux.ecartFcfa != 0
                               ? AppTheme.rougeErreur
-                              : AppTheme.bleuNuit,
+                              : AppTheme.violetProfond,
                         ),
                       ],
                     );
@@ -215,7 +215,7 @@ class RapprochementCanalTile extends StatelessWidget {
                 fontWeight: FontWeight.bold,
                 color: ligne.alerte
                     ? AppTheme.rougeErreur
-                    : AppTheme.bleuNuit,
+                    : AppTheme.violetProfond,
               ),
             ),
             if (ligne.alerte)

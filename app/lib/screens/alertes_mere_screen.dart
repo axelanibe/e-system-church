@@ -141,7 +141,7 @@ class _AlertesMereScreenState extends State<AlertesMereScreen> {
                           )
                         : StatusChip(
                             label: t.alerteTraitee,
-                            color: AppTheme.bleuNuit),
+                            color: AppTheme.violetProfond),
                   ),
                 );
               },

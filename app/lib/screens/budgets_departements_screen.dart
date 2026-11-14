@@ -216,7 +216,7 @@ class _BudgetsDepartementsScreenState
                           value: formatMontant(
                               suivi.totalPrevuFcfa, state.devise),
                           icon: Icons.calendar_month_outlined,
-                          color: AppTheme.bleuNuit,
+                          color: AppTheme.violetProfond,
                         ),
                         StatCard(
                           label: 'Total réel',
@@ -266,7 +266,7 @@ class _BudgetsDepartementsScreenState
                             : ligne.budgetDefini
                                 ? const StatusChip(
                                     label: 'Dans le budget',
-                                    color: AppTheme.bleuNuit,
+                                    color: AppTheme.violetProfond,
                                   )
                                 : const StatusChip(
                                     label: 'Sans budget',

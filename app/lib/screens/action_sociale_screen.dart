@@ -255,7 +255,7 @@ class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
                       label: b.statutLabel,
                       color: b.statut == 'clos'
                           ? Colors.grey
-                          : AppTheme.bleuNuit,
+                          : AppTheme.violetProfond,
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline),
@@ -325,7 +325,7 @@ class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
                       label: a.statutLabel,
                       color: a.statut == 'annulee'
                           ? AppTheme.rougeErreur
-                          : AppTheme.bleuNuit,
+                          : AppTheme.violetProfond,
                     ),
                     if (a.statut == 'prevue')
                       IconButton(

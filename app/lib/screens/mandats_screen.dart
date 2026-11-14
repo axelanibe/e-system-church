@@ -190,7 +190,7 @@ class _MandatsScreenState extends State<MandatsScreen> {
                   children: [
                     StatusChip(
                       label: m.statutLabel,
-                      color: m.enCours ? AppTheme.bleuNuit : Colors.grey,
+                      color: m.enCours ? AppTheme.violetProfond : Colors.grey,
                     ),
                     if (m.enCours)
                       IconButton(

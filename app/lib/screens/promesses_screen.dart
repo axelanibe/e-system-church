@@ -273,7 +273,7 @@ class _PromesseCardState extends State<_PromesseCard> {
           label: p.estEnCours
               ? t.promesseEnCours
               : (p.statut == 'terminee' ? t.promesseTerminee : t.annuler),
-          color: p.estEnCours ? AppTheme.orAttention : AppTheme.bleuNuit,
+          color: p.estEnCours ? AppTheme.orAttention : AppTheme.violetProfond,
         ),
         onExpansionChanged: (ouvert) {
           if (ouvert && _detail == null) {

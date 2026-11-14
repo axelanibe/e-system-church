@@ -48,7 +48,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePasswordConfirm = true;
   // Logo choisi à l'inscription (facultatif) : téléversé après la création
   // de l'église, comme dans Mon église. Sans logo, les initiales de
-  // l'église s'affichent sur fond bleu nuit.
+  // l'église s'affichent sur fond violet profond.
   Uint8List? _logoBytes;
   String? _logoName;
 
@@ -316,7 +316,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             const SizedBox(height: 4),
                             const Text(
                               'Sans logo, vos initiales s’affichent '
-                              'sur fond bleu nuit.',
+                              'sur fond violet profond.',
                               style: TextStyle(fontSize: 12),
                             ),
                           ],

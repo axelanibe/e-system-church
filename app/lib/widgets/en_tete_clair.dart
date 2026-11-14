@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../config/app_theme.dart';
 
-/// Logo « eS » : pastille bleu nuit cerclée d'or, comme l'artefact.
+/// Logo « eS » : pastille violet profond cerclée d'or, comme l'artefact.
 class LogoES extends StatelessWidget {
   const LogoES({super.key});
 
@@ -12,7 +12,7 @@ class LogoES extends StatelessWidget {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: AppTheme.bleuNuit,
+        color: AppTheme.violetProfond,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.or, width: 2),
       ),
@@ -81,7 +81,7 @@ class EnTeteClair extends StatelessWidget {
                         .bodySmall
                         ?.copyWith(
                           color:
-                              AppTheme.bleuNuit.withValues(alpha: 0.7),
+                              AppTheme.violetProfond.withValues(alpha: 0.7),
                         ),
                   ),
                 ],

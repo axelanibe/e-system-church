@@ -282,7 +282,7 @@ class _AnnexeDetailScreenState extends State<AnnexeDetailScreen> {
                       label: 'Entrées confirmées',
                       value: formatFcfa(d.totalFcfa),
                       icon: Icons.trending_up,
-                      color: AppTheme.bleuNuit,
+                      color: AppTheme.violetProfond,
                     ),
                     StatMini(
                       label: 'Dépenses confirmées',
@@ -321,7 +321,7 @@ class _AnnexeDetailScreenState extends State<AnnexeDetailScreen> {
                 else
                   ...d.modules.map((m) => ListTile(
                         leading: const Icon(Icons.check_circle_outlined,
-                            color: AppTheme.bleuNuit),
+                            color: AppTheme.violetProfond),
                         title: Text(m.label),
                         subtitle: m.noyau ? const Text('Noyau') : null,
                       )),
