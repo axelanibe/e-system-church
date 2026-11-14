@@ -13,12 +13,6 @@
 -- Idempotente : db/schema.sql reprend ce miroir pour les nouvelles
 -- bases, et les tests appliquent le schéma puis toutes les migrations.
 
-CREATE INDEX IF NOT EXISTS idx_mandats_church ON mandats (church_id, statut);
-
-CREATE INDEX IF NOT EXISTS idx_reunions_church ON reunions_conseil (church_id, date_reunion);
-
-CREATE INDEX IF NOT EXISTS idx_decisions_church ON decisions (church_id, reunion_id);
-
 CREATE TABLE IF NOT EXISTS reunions_conseil (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     church_id     UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
@@ -30,6 +24,7 @@ CREATE TABLE IF NOT EXISTS reunions_conseil (
                   CHECK (statut IN ('prevue','tenue','annulee')),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_reunions_church ON reunions_conseil (church_id, date_reunion);
 
 CREATE TABLE IF NOT EXISTS decisions (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -42,6 +37,7 @@ CREATE TABLE IF NOT EXISTS decisions (
                   CHECK (statut IN ('adoptee','rejetee','reportee')),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_decisions_church ON decisions (church_id, reunion_id);
 
 CREATE TABLE IF NOT EXISTS mandats (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -55,6 +51,7 @@ CREATE TABLE IF NOT EXISTS mandats (
     decision_id UUID REFERENCES decisions (id) ON DELETE SET NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_mandats_church ON mandats (church_id, statut);
 
 CREATE TABLE IF NOT EXISTS proces_verbaux (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
