@@ -660,14 +660,21 @@ class _ProchainCulte extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Text(
-                    'PROCHAIN CULTE',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: Colors.white70,
-                      letterSpacing: 1.2,
+                  // R1 : à 360 px, le libellé + la pastille débordaient
+                  // de 42 px (police de test, glyphes pleine largeur).
+                  // L'Expanded + l'ellipse protègent la rangée sans
+                  // changer le rendu aux largeurs où elle tenait.
+                  Expanded(
+                    child: Text(
+                      'PROCHAIN CULTE',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: Colors.white70,
+                        letterSpacing: 1.2,
+                      ),
                     ),
                   ),
-                  const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
