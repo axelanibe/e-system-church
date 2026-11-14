@@ -1334,3 +1334,62 @@ CREATE TABLE IF NOT EXISTS clotures_caisse (
 );
 CREATE INDEX IF NOT EXISTS idx_clotures_caisse_church
     ON clotures_caisse (church_id, periode DESC);
+
+-- École biblique (migration 027, tranche T9) : cours, leçons, inscriptions
+-- et progressions. Le contenu des cours et des leçons est créé par
+-- l'église (admin / responsable de culte), jamais pré-rempli. La Bible
+-- (Louis Segond 1910, domaine public) est servie depuis des JSON par
+-- livre (server/src/data/bible/lsg1910/), pas depuis la base.
+CREATE TABLE IF NOT EXISTS cours_ecole (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id   UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    titre       TEXT NOT NULL,
+    description TEXT,
+    niveau      TEXT CHECK (niveau IN ('debutant', 'intermediaire', 'avance')),
+    actif       BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_cours_ecole_church
+    ON cours_ecole (church_id, actif);
+
+CREATE TABLE IF NOT EXISTS lecons_ecole (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id         UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    cours_id          UUID NOT NULL REFERENCES cours_ecole (id) ON DELETE CASCADE,
+    ordre             INT NOT NULL CHECK (ordre > 0),
+    titre             TEXT NOT NULL,
+    contenu           TEXT,
+    reference_biblique TEXT,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (cours_id, ordre)
+);
+CREATE INDEX IF NOT EXISTS idx_lecons_ecole_cours
+    ON lecons_ecole (cours_id, ordre);
+
+CREATE TABLE IF NOT EXISTS inscriptions_ecole (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id        UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    cours_id         UUID NOT NULL REFERENCES cours_ecole (id) ON DELETE CASCADE,
+    member_id        UUID NOT NULL REFERENCES members (id) ON DELETE CASCADE,
+    statut           TEXT NOT NULL DEFAULT 'inscrit'
+                     CHECK (statut IN ('inscrit', 'termine', 'abandonne')),
+    date_inscription DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (cours_id, member_id)
+);
+CREATE INDEX IF NOT EXISTS idx_inscriptions_ecole_cours
+    ON inscriptions_ecole (cours_id, member_id);
+CREATE INDEX IF NOT EXISTS idx_inscriptions_ecole_membre
+    ON inscriptions_ecole (member_id, statut);
+
+CREATE TABLE IF NOT EXISTS progressions_ecole (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id      UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    inscription_id UUID NOT NULL REFERENCES inscriptions_ecole (id) ON DELETE CASCADE,
+    lecon_id       UUID NOT NULL REFERENCES lecons_ecole (id) ON DELETE CASCADE,
+    termine_le     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (inscription_id, lecon_id)
+);
+CREATE INDEX IF NOT EXISTS idx_progressions_ecole_inscription
+    ON progressions_ecole (inscription_id, lecon_id);

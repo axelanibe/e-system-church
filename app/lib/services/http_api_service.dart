@@ -12,6 +12,7 @@ import '../models/anniversaire.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
+import '../models/bible.dart';
 import '../models/campagne.dart';
 import '../models/church.dart';
 import '../models/code_tutelle.dart';
@@ -19,6 +20,7 @@ import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/checkin_enfant.dart';
 import '../models/enfants.dart';
+import '../models/ecole_biblique.dart';
 import '../models/fidele.dart';
 import '../models/finances.dart';
 import '../models/frequentation.dart';
@@ -2129,6 +2131,210 @@ class HttpApiService implements ApiService {
   @override
   Future<PretLivre> rendreLivre(String id) async => PretLivre.fromJson(
       await _call('POST', '/prets-livres/$id/rendre'));
+
+  // -- Bible et école biblique (tranche T9) ----------------------------------
+  @override
+  Future<List<VersionBible>> getVersionsBible() async {
+    final data = await _call('GET', '/bible/versions');
+    return ((data['versions'] as List<dynamic>?) ?? [])
+        .map((e) => VersionBible.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<List<LivreBible>> getLivresBible({String version = 'lsg1910'}) async {
+    final data =
+        await _call('GET', '/bible/livres', query: _q({'version': version}));
+    return ((data['livres'] as List<dynamic>?) ?? [])
+        .map((e) => LivreBible.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<ChapitreBible> getChapitreBible({
+    required String code,
+    required int chapitre,
+    String version = 'lsg1910',
+  }) async =>
+      ChapitreBible.fromJson(await _call(
+          'GET', '/bible/livres/$code/chapitres/$chapitre',
+          query: _q({'version': version})));
+
+  @override
+  Future<List<ResultatRechercheBible>> rechercherBible(
+    String terme, {
+    String version = 'lsg1910',
+  }) async =>
+      ((await _call('GET', '/bible/recherche',
+                  query: _q({'q': terme, 'version': version})))['resultats']
+              as List<dynamic>? ??
+          [])
+          .map((e) => ResultatRechercheBible.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+  @override
+  Future<EntreeStrong> getEntreeStrong(String numero) async =>
+      EntreeStrong.fromJson(
+          (await _call('GET', '/bible/strong/${Uri.encodeComponent(numero)}'))['entree']
+              as Map<String, dynamic>);
+
+  @override
+  Future<List<EntreeStrong>> rechercherStrong(String terme) async =>
+      ((await _call('GET', '/bible/strong/recherche', query: _q({'q': terme})))['resultats']
+              as List<dynamic>? ??
+          [])
+          .map((e) => EntreeStrong.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+  @override
+  Future<ArticleDictionnaire> getArticleDictionnaire(
+    String titre, {
+    String langue = 'fra',
+  }) async =>
+      ArticleDictionnaire.fromJson(
+          (await _call('GET', '/bible/dictionnaire/${Uri.encodeComponent(titre)}',
+                  query: _q({'langue': langue})))['article']
+              as Map<String, dynamic>);
+
+  @override
+  Future<List<ArticleDictionnaire>> rechercherDictionnaire(
+    String terme, {
+    String langue = 'fra',
+  }) async =>
+      ((await _call('GET', '/bible/dictionnaire/recherche',
+                  query: _q({'q': terme, 'langue': langue})))['resultats']
+              as List<dynamic>? ??
+          [])
+          .map((e) => ArticleDictionnaire.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+  @override
+  Future<List<CoursEcole>> getCoursEcole() async =>
+      _items(await _call('GET', '/cours-ecole'), CoursEcole.fromJson);
+
+  @override
+  Future<CoursEcole> createCoursEcole({
+    required String titre,
+    String? description,
+    String? niveau,
+  }) async =>
+      CoursEcole.fromJson(await _call('POST', '/cours-ecole', body: {
+        'titre': titre,
+        if (description != null) 'description': description,
+        if (niveau != null) 'niveau': niveau,
+      }));
+
+  @override
+  Future<CoursEcole> updateCoursEcole(
+    String id, {
+    String? titre,
+    String? description,
+    String? niveau,
+    bool? actif,
+  }) async =>
+      CoursEcole.fromJson(await _call('PATCH', '/cours-ecole/$id', body: {
+        if (titre != null) 'titre': titre,
+        if (description != null) 'description': description,
+        if (niveau != null) 'niveau': niveau,
+        if (actif != null) 'actif': actif,
+      }));
+
+  @override
+  Future<void> deleteCoursEcole(String id) async {
+    await _call('DELETE', '/cours-ecole/$id');
+  }
+
+  @override
+  Future<List<LeconEcole>> getLeconsEcole({required String coursId}) async =>
+      _items(
+          await _call('GET', '/lecons-ecole',
+              query: _q({'cours_id': coursId})),
+          LeconEcole.fromJson);
+
+  @override
+  Future<LeconEcole> createLeconEcole({
+    required String coursId,
+    required int ordre,
+    required String titre,
+    String? contenu,
+    String? referenceBiblique,
+  }) async =>
+      LeconEcole.fromJson(await _call('POST', '/lecons-ecole', body: {
+        'cours_id': coursId,
+        'ordre': ordre,
+        'titre': titre,
+        if (contenu != null) 'contenu': contenu,
+        if (referenceBiblique != null) 'reference_biblique': referenceBiblique,
+      }));
+
+  @override
+  Future<LeconEcole> updateLeconEcole(
+    String id, {
+    int? ordre,
+    String? titre,
+    String? contenu,
+    String? referenceBiblique,
+  }) async =>
+      LeconEcole.fromJson(await _call('PATCH', '/lecons-ecole/$id', body: {
+        if (ordre != null) 'ordre': ordre,
+        if (titre != null) 'titre': titre,
+        if (contenu != null) 'contenu': contenu,
+        if (referenceBiblique != null) 'reference_biblique': referenceBiblique,
+      }));
+
+  @override
+  Future<void> deleteLeconEcole(String id) async {
+    await _call('DELETE', '/lecons-ecole/$id');
+  }
+
+  @override
+  Future<List<InscriptionEcole>> getInscriptionsEcole({
+    String? coursId,
+    String? memberId,
+  }) async =>
+      _items(
+          await _call('GET', '/inscriptions-ecole',
+              query: _q({'cours_id': coursId, 'member_id': memberId})),
+          InscriptionEcole.fromJson);
+
+  @override
+  Future<InscriptionEcole> inscrireEcole({
+    required String coursId,
+    String? memberId,
+  }) async =>
+      InscriptionEcole.fromJson(
+          await _call('POST', '/inscriptions-ecole', body: {
+        'cours_id': coursId,
+        if (memberId != null) 'member_id': memberId,
+      }));
+
+  @override
+  Future<InscriptionEcole> updateInscriptionEcole({
+    required String id,
+    required String statut,
+  }) async =>
+      InscriptionEcole.fromJson(await _call(
+          'PATCH', '/inscriptions-ecole/$id',
+          body: {'statut': statut}));
+
+  @override
+  Future<void> deleteInscriptionEcole(String id) async {
+    await _call('DELETE', '/inscriptions-ecole/$id');
+  }
+
+  @override
+  Future<ProgressionCours> getProgressionEcole(String inscriptionId) async =>
+      ProgressionCours.fromJson(await _call(
+          'GET', '/inscriptions-ecole/$inscriptionId/progression'));
+
+  @override
+  Future<void> terminerLeconEcole({
+    required String inscriptionId,
+    required String leconId,
+  }) async {
+    await _call('POST', '/inscriptions-ecole/$inscriptionId/terminer',
+        body: {'lecon_id': leconId});
+  }
 
   // -- Biens et inventaire (module 10) ---------------------------------------
   @override

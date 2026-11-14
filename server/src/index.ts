@@ -28,6 +28,8 @@ import { registerPastoralRoutes } from "./routes/pastoral.js";
 import { registerServiteursRoutes } from "./routes/serviteurs.js";
 import { registerEnfantsRoutes } from "./routes/enfants.js";
 import { registerMediasRoutes } from "./routes/medias.js";
+import { registerBibleRoutes } from "./routes/bible.js";
+import { registerEcoleBibliqueRoutes } from "./routes/ecole_biblique.js";
 import { registerBiensRoutes } from "./routes/biens.js";
 import { registerStatsRoutes } from "./routes/stats.js";
 import { registerParametresRoutes } from "./routes/parametres.js";
@@ -151,6 +153,8 @@ export function buildApp(db: Pool) {
   registerServiteursRoutes(app, db);
   registerEnfantsRoutes(app, db);
   registerMediasRoutes(app, db);
+  registerBibleRoutes(app, db);
+  registerEcoleBibliqueRoutes(app, db);
   registerBiensRoutes(app, db);
   registerStatsRoutes(app, db);
   registerParametresRoutes(app, db);

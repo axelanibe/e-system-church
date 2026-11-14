@@ -7,6 +7,7 @@ import '../models/anniversaire.dart';
 import '../models/announcement.dart';
 import '../models/auth.dart';
 import '../models/biens.dart';
+import '../models/bible.dart';
 import '../models/campagne.dart';
 import '../models/church.dart';
 import '../models/code_tutelle.dart';
@@ -14,6 +15,7 @@ import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/checkin_enfant.dart';
 import '../models/enfants.dart';
+import '../models/ecole_biblique.dart';
 import '../models/fidele.dart';
 import '../models/finances.dart';
 import '../models/frequentation.dart';
@@ -876,6 +878,114 @@ abstract class ApiService {
   });
 
   Future<PretLivre> rendreLivre(String id);
+
+  // -- Bible et école biblique (tranche T9) ----------------------------------
+  // Lecture de la Bible Louis Segond 1910 (domaine public) et King James
+  // Version : canon, chapitres et recherche plein texte. La version par
+  // défaut est « lsg1910 » ; « kjv » donne la version anglaise.
+  Future<List<VersionBible>> getVersionsBible();
+
+  Future<List<LivreBible>> getLivresBible({String version = 'lsg1910'});
+
+  Future<ChapitreBible> getChapitreBible({
+    required String code,
+    required int chapitre,
+    String version = 'lsg1910',
+  });
+
+  Future<List<ResultatRechercheBible>> rechercherBible(
+    String terme, {
+    String version = 'lsg1910',
+  });
+
+  // Concordance Strong (lexique hébreu + grec, Open Scriptures) :
+  // recherche par numéro (G1234, H1234) ou par mot. Aucun lien mot à
+  // mot avec les versets.
+  Future<EntreeStrong> getEntreeStrong(String numero);
+
+  Future<List<EntreeStrong>> rechercherStrong(String terme);
+
+  // Dictionnaire biblique (Aquifer Open Bible Dictionary) : recherche
+  // par mot et lecture d'un article. La langue suit celle de la version
+  // biblique (LS1910 -> fra, KJV -> eng).
+  Future<ArticleDictionnaire> getArticleDictionnaire(
+    String titre, {
+    String langue = 'fra',
+  });
+
+  Future<List<ArticleDictionnaire>> rechercherDictionnaire(
+    String terme, {
+    String langue = 'fra',
+  });
+
+  // Cours de l'école biblique (création / modification : admin et
+  // responsable de culte ; lecture : tous les rôles).
+  Future<List<CoursEcole>> getCoursEcole();
+
+  Future<CoursEcole> createCoursEcole({
+    required String titre,
+    String? description,
+    String? niveau,
+  });
+
+  Future<CoursEcole> updateCoursEcole(
+    String id, {
+    String? titre,
+    String? description,
+    String? niveau,
+    bool? actif,
+  });
+
+  Future<void> deleteCoursEcole(String id);
+
+  // Leçons d'un cours (mêmes rôles que les cours).
+  Future<List<LeconEcole>> getLeconsEcole({required String coursId});
+
+  Future<LeconEcole> createLeconEcole({
+    required String coursId,
+    required int ordre,
+    required String titre,
+    String? contenu,
+    String? referenceBiblique,
+  });
+
+  Future<LeconEcole> updateLeconEcole(
+    String id, {
+    int? ordre,
+    String? titre,
+    String? contenu,
+    String? referenceBiblique,
+  });
+
+  Future<void> deleteLeconEcole(String id);
+
+  // Inscriptions : le membre s'inscrit lui-même (memberId omis) ; l'admin
+  // ou le responsable peut inscrire n'importe quel membre.
+  Future<List<InscriptionEcole>> getInscriptionsEcole({
+    String? coursId,
+    String? memberId,
+  });
+
+  Future<InscriptionEcole> inscrireEcole({
+    required String coursId,
+    String? memberId,
+  });
+
+  Future<InscriptionEcole> updateInscriptionEcole({
+    required String id,
+    required String statut,
+  });
+
+  Future<void> deleteInscriptionEcole(String id);
+
+  // Progression : leçons terminées d'une inscription (le serveur pose le
+  // statut « termine » quand toutes les leçons sont terminées).
+  Future<ProgressionCours> getProgressionEcole(String inscriptionId);
+
+  Future<void> terminerLeconEcole({
+    required String inscriptionId,
+    required String leconId,
+  });
 
   // -- Biens et inventaire (module 10) ---------------------------------------
   Future<List<Salle>> getSalles();

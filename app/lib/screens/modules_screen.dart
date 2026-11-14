@@ -59,7 +59,7 @@ class ModulesScreen extends StatelessWidget {
     (
       'Bible et école',
       'Lecture, cours et progression des membres.',
-      'T9 · À venir',
+      'T9 · Construit',
       Icons.menu_book_outlined,
     ),
     (

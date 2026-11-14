@@ -12,6 +12,7 @@ import '../models/biens.dart';
 import '../models/church.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
+import '../models/ecole_biblique.dart';
 import '../models/enfants.dart';
 import '../models/fidele.dart';
 import '../models/finances.dart';
@@ -88,6 +89,15 @@ class DemoSeed {
   final List<Predication> predications = _buildPredications();
   final List<PlanLecture> plansLecture = _buildPlansLecture();
   final List<Livre> livres = _buildLivres();
+  final List<CoursEcole> coursEcole = _buildCoursEcole();
+  final List<LeconEcole> leconsEcole = _buildLeconsEcole();
+  final List<InscriptionEcole> inscriptionsEcole = _buildInscriptionsEcole();
+
+  /// Leçons terminées par inscription (inscriptionId -> ids de leçons).
+  /// Le membre de démo (Awa Koné) a terminé la première leçon du cours 1.
+  final Map<String, List<String>> progressionsEcole = {
+    'demo-insc-1': ['demo-lecon-1'],
+  };
   final List<PretLivre> pretsLivres = _buildPretsLivres();
   final List<Salle> salles = _buildSalles();
   final List<ReservationSalle> reservationsSalles = _buildReservationsSalles();
@@ -1210,6 +1220,59 @@ List<PlanLecture> _buildPlansLecture() => [
           nom: 'Psaumes de louange',
           description: 'Un psaume par jour pendant 30 jours.',
           dureeJours: 30),
+    ];
+
+/// Cours de l'école biblique (démo).
+List<CoursEcole> _buildCoursEcole() => [
+      const CoursEcole(
+          id: 'demo-cours-1',
+          titre: 'Fondements de la foi',
+          description:
+              'Les bases de la foi chrétienne : Dieu, Jésus-Christ, le Saint-Esprit et la prière.',
+          niveau: 'debutant'),
+      const CoursEcole(
+          id: 'demo-cours-2',
+          titre: 'Étude des Psaumes',
+          description: 'Lire et méditer les Psaumes, un par un.',
+          niveau: 'intermediaire'),
+    ];
+
+/// Leçons de l'école biblique (démo).
+List<LeconEcole> _buildLeconsEcole() => [
+      const LeconEcole(
+          id: 'demo-lecon-1',
+          coursId: 'demo-cours-1',
+          ordre: 1,
+          titre: 'Dieu créateur',
+          contenu:
+              'Au commencement, Dieu créa les cieux et la terre. Tout ce qui existe vient de lui.',
+          referenceBiblique: 'Genèse 1:1'),
+      const LeconEcole(
+          id: 'demo-lecon-2',
+          coursId: 'demo-cours-1',
+          ordre: 2,
+          titre: 'La foi qui sauve',
+          contenu:
+              'Dieu a tant aimé le monde qu’il a donné son Fils unique, afin que quiconque croit en lui ne périsse point, mais qu’il ait la vie éternelle.',
+          referenceBiblique: 'Jean 3:16'),
+      const LeconEcole(
+          id: 'demo-lecon-3',
+          coursId: 'demo-cours-2',
+          ordre: 1,
+          titre: 'Le berger et ses brebis',
+          contenu:
+              'L’Éternel est mon berger : je ne manquerai de rien. Il me fait reposer dans de verts pâturages.',
+          referenceBiblique: 'Psaume 23:1-2'),
+    ];
+
+/// Inscriptions de l'école biblique (démo) : Awa Koné suit le cours 1.
+List<InscriptionEcole> _buildInscriptionsEcole() => [
+      const InscriptionEcole(
+          id: 'demo-insc-1',
+          coursId: 'demo-cours-1',
+          memberId: 'demo-m-001',
+          statut: 'inscrit',
+          dateInscription: '2026-11-10'),
     ];
 
 List<Livre> _buildLivres() => [
