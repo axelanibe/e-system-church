@@ -317,7 +317,17 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                   _GrilleAcces(
                     onBible: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
-                        builder: (_) => const BibleFideleScreen(),
+                        // La Bible est un écran sans Scaffold propre : elle
+                        // vit aussi dans la coquille fidèle sous EnTeteClair.
+                        // Poussée seule depuis la grille, on l'habille ici
+                        // (barre « Ma Bible » + fond clair), comme les autres
+                        // écrans fidèles (École, Cotisations…).
+                        builder: (_) => Scaffold(
+                          appBar: AppBar(
+                            title: const Text('Ma Bible'),
+                          ),
+                          body: const BibleFideleScreen(),
+                        ),
                       ),
                     ),
                     onEcole: () => Navigator.of(context).push(
@@ -458,12 +468,6 @@ class _GrilleAcces extends StatelessWidget {
               onTap: onBible,
             ),
             _TuileAcces(
-              icone: Icons.school_outlined,
-              titre: 'École biblique',
-              sousTitre: 'Cours, leçons et ma progression.',
-              onTap: onEcole,
-            ),
-            _TuileAcces(
               icone: Icons.account_balance_wallet_outlined,
               titre: 'Mes cotisations',
               sousTitre: 'Historique, reçus et total.',
@@ -474,6 +478,12 @@ class _GrilleAcces extends StatelessWidget {
               titre: 'Mon journal',
               sousTitre: 'Notes privées, jamais partagées.',
               onTap: onJournal,
+            ),
+            _TuileAcces(
+              icone: Icons.school_outlined,
+              titre: 'École biblique',
+              sousTitre: 'Cours, leçons et ma progression.',
+              onTap: onEcole,
             ),
             _TuileAcces(
               icone: Icons.mail_outline,

@@ -215,7 +215,7 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
                 TextField(
                   controller: _rechercheTexteController,
                   decoration: const InputDecoration(
-                    labelText: 'Rechercher dans le texte (ex. berger)',
+                    labelText: 'Rechercher un livre ou un passage',
                     prefixIcon: Icon(Icons.search),
                   ),
                   textInputAction: TextInputAction.search,

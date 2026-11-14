@@ -28,6 +28,7 @@ class EcoleBibliqueScreen extends StatefulWidget {
 class _EcoleBibliqueScreenState extends State<EcoleBibliqueScreen> {
   late Future<List<CoursEcole>> _coursFuture;
   late Future<List<InscriptionEcole>> _inscriptionsFuture;
+  late Future<List<ProgressionCours>> _progressionsFuture;
 
   @override
   void initState() {
@@ -39,6 +40,12 @@ class _EcoleBibliqueScreenState extends State<EcoleBibliqueScreen> {
     final api = context.read<AppState>().api;
     _coursFuture = api.getCoursEcole();
     _inscriptionsFuture = api.getInscriptionsEcole();
+    // Agrégat des progressions du membre, chargé une fois par
+    // rafraîchissement (pas à chaque reconstruction).
+    _progressionsFuture = _inscriptionsFuture.then(
+      (inscriptions) => Future.wait(
+          inscriptions.map((i) => api.getProgressionEcole(i.id))),
+    );
   }
 
   void _refresh() => setState(_refreshFutures);
@@ -113,9 +120,23 @@ class _EcoleBibliqueScreenState extends State<EcoleBibliqueScreen> {
               child: const Icon(Icons.add),
             )
           : null,
-      body: FutureBuilder<List<CoursEcole>>(
-        future: _coursFuture,
-        builder: (context, snapshot) {
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SectionTitle(title: 'Ma progression'),
+                const SizedBox(height: 8),
+                _MaProgression(future: _progressionsFuture),
+              ],
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<CoursEcole>>(
+              future: _coursFuture,
+              builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -133,7 +154,8 @@ class _EcoleBibliqueScreenState extends State<EcoleBibliqueScreen> {
               child: EmptyState(
                 icon: Icons.school_outlined,
                 message:
-                    'Aucun cours pour l’instant. L’église crée ses cours ici.',
+                    'Aucun cours publié. Les cours créés par la structure '
+                    'apparaîtront ici, leçon par leçon.',
               ),
             );
           }
@@ -191,7 +213,66 @@ class _EcoleBibliqueScreenState extends State<EcoleBibliqueScreen> {
             },
           );
         },
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+/// « Ma progression » (projection) : agrégat réel des progressions des
+/// cours du membre connecté (leçons terminées / total, %). Sans
+/// inscription : 0 % / 0 leçon sur 0 — état vide véridique, pas une
+/// donnée inventée. En aperçu admin, la progression d'un membre n'est
+/// pas visible : état explicite, comme Carte / Messages.
+class _MaProgression extends StatelessWidget {
+  final Future<List<ProgressionCours>> future;
+
+  const _MaProgression({required this.future});
+
+  @override
+  Widget build(BuildContext context) {
+    if (context.watch<AppState>().apercuFidele) {
+      return const EmptyState(
+        icon: Icons.school_outlined,
+        message: 'En aperçu, la progression d’un membre n’est pas visible. '
+            'Connectez-vous avec un compte fidèle pour suivre votre '
+            'progression.',
+      );
+    }
+    return FutureBuilder<List<ProgressionCours>>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return EmptyState(
+            icon: Icons.error_outline,
+            message: 'Progression indisponible : ${snapshot.error}',
+          );
+        }
+        final progressions = snapshot.data ?? [];
+        final total =
+            progressions.fold<int>(0, (somme, p) => somme + p.total);
+        final terminees =
+            progressions.fold<int>(0, (somme, p) => somme + p.terminees);
+        final pourcentage =
+            total == 0 ? 0 : (terminees * 100 / total).round();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            LinearProgressIndicator(
+                value: total == 0 ? 0 : terminees / total),
+            const SizedBox(height: 4),
+            Text(
+              'Ma progression $pourcentage % — $terminees leçon(s) '
+              'terminée(s) sur $total.',
+            ),
+          ],
+        );
+      },
     );
   }
 }

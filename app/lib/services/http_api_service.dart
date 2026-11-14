@@ -144,8 +144,8 @@ class HttpApiService implements ApiService {
         'hors_ligne',
       );
     }
-    // Les routes à tableau nu (GET /budgets-mensuels,
-    // GET /moi/rapports-annexe/recus) renvoient un JSON qui n'est pas un
+    // Les routes à tableau nu (GET /moi/rapports-annexe/recus,
+    // GET /budgets-mensuels) renvoient un JSON qui n'est pas un
     // objet : on enveloppe la liste pour garder le type de retour
     // (la liste se lit ensuite via `data['items']`, comme `_items`).
     final dynamic brut =
@@ -2162,6 +2162,17 @@ class HttpApiService implements ApiService {
       await _call('POST', '/prets-livres/$id/rendre'));
 
   // -- Bible et école biblique (tranche T9) ----------------------------------
+  /// Le repli hors ligne s'applique quand l'API est injoignable
+  /// (`hors_ligne`) ET quand le serveur répond 404 « Route inconnue. » :
+  /// la route Bible n'existe pas sur ce serveur (API antérieure à la
+  /// T9) — les JSON embarqués servent alors. On teste le message
+  /// exact : une ressource introuvable renvoie le même code
+  /// `not_found` mais un autre message (« Livre introuvable. »,
+  /// « Entrée Strong introuvable. »…) et ne doit PAS basculer.
+  static bool repliHorsLigne(ApiException e) =>
+      e.code == 'hors_ligne' ||
+      (e.statusCode == 404 && e.message == 'Route inconnue.');
+
   @override
   Future<List<VersionBible>> getVersionsBible() async {
     try {
@@ -2170,7 +2181,7 @@ class HttpApiService implements ApiService {
           .map((e) => VersionBible.fromJson(e as Map<String, dynamic>))
           .toList();
     } on ApiException catch (e) {
-      if (e.code == 'hors_ligne') return _bibleHorsLigne.getVersionsBible();
+      if (repliHorsLigne(e)) return _bibleHorsLigne.getVersionsBible();
       rethrow;
     }
   }
@@ -2184,7 +2195,7 @@ class HttpApiService implements ApiService {
           .map((e) => LivreBible.fromJson(e as Map<String, dynamic>))
           .toList();
     } on ApiException catch (e) {
-      if (e.code == 'hors_ligne') {
+      if (repliHorsLigne(e)) {
         return _bibleHorsLigne.getLivresBible(version: version);
       }
       rethrow;
@@ -2202,7 +2213,7 @@ class HttpApiService implements ApiService {
           'GET', '/bible/livres/$code/chapitres/$chapitre',
           query: _q({'version': version})));
     } on ApiException catch (e) {
-      if (e.code == 'hors_ligne') {
+      if (repliHorsLigne(e)) {
         return _bibleHorsLigne.getChapitreBible(
             code: code, chapitre: chapitre, version: version);
       }
@@ -2224,7 +2235,7 @@ class HttpApiService implements ApiService {
                   ResultatRechercheBible.fromJson(e as Map<String, dynamic>))
               .toList();
     } on ApiException catch (e) {
-      if (e.code == 'hors_ligne') {
+      if (repliHorsLigne(e)) {
         return _bibleHorsLigne.rechercherBible(terme, version: version);
       }
       rethrow;
@@ -2238,7 +2249,7 @@ class HttpApiService implements ApiService {
           (await _call('GET', '/bible/strong/${Uri.encodeComponent(numero)}'))['entree']
               as Map<String, dynamic>);
     } on ApiException catch (e) {
-      if (e.code == 'hors_ligne') {
+      if (repliHorsLigne(e)) {
         return _bibleHorsLigne.getEntreeStrong(numero);
       }
       rethrow;
@@ -2255,7 +2266,7 @@ class HttpApiService implements ApiService {
               .map((e) => EntreeStrong.fromJson(e as Map<String, dynamic>))
               .toList();
     } on ApiException catch (e) {
-      if (e.code == 'hors_ligne') {
+      if (repliHorsLigne(e)) {
         return _bibleHorsLigne.rechercherStrong(terme);
       }
       rethrow;
@@ -2273,7 +2284,7 @@ class HttpApiService implements ApiService {
                   query: _q({'langue': langue})))['article']
               as Map<String, dynamic>);
     } on ApiException catch (e) {
-      if (e.code == 'hors_ligne') {
+      if (repliHorsLigne(e)) {
         return _bibleHorsLigne.getArticleDictionnaire(titre, langue: langue);
       }
       rethrow;
@@ -2293,7 +2304,7 @@ class HttpApiService implements ApiService {
               .map((e) => ArticleDictionnaire.fromJson(e as Map<String, dynamic>))
               .toList();
     } on ApiException catch (e) {
-      if (e.code == 'hors_ligne') {
+      if (repliHorsLigne(e)) {
         return _bibleHorsLigne.rechercherDictionnaire(terme, langue: langue);
       }
       rethrow;

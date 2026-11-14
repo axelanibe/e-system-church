@@ -1,5 +1,6 @@
 import 'package:esystem_church/services/api_service.dart';
 import 'package:esystem_church/services/bible_hors_ligne_service.dart';
+import 'package:esystem_church/services/http_api_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Tranche T9 (fin) — Bible hors ligne : le service réel lit les JSON
@@ -156,6 +157,44 @@ void main() {
       final service = BibleHorsLigneService();
       expect(() => service.getArticleDictionnaire('ZzzzzIntrouvable'),
           throwsA(isA<ApiException>()));
+    });
+  });
+
+  // Correctif audit (E-B1/E-B7/E-B8/E-B9) : le repli hors ligne des 8
+  // lectures Bible / Strong / dictionnaire s'applique aussi quand le
+  // serveur répond 404 « Route inconnue. » (route absente : API
+  // antérieure à la T9). Une ressource introuvable renvoie le même
+  // code `not_found` mais un autre message : elle ne bascule pas.
+  group('HttpApiService.repliHorsLigne — 404 Route inconnue', () {
+    test('404 « Route inconnue. » -> repli ; ressource introuvable -> non',
+        () {
+      expect(
+          HttpApiService.repliHorsLigne(
+              const ApiException('Route inconnue.', 404, 'not_found')),
+          isTrue);
+      expect(
+          HttpApiService.repliHorsLigne(
+              const ApiException('Livre introuvable.', 404, 'not_found')),
+          isFalse);
+      expect(
+          HttpApiService.repliHorsLigne(const ApiException(
+              'Entrée Strong introuvable.', 404, 'not_found')),
+          isFalse);
+      expect(
+          HttpApiService.repliHorsLigne(
+              const ApiException('Article introuvable.', 404, 'not_found')),
+          isFalse);
+    });
+
+    test('erreur réseau (hors_ligne) -> repli ; 500 -> non', () {
+      expect(
+          HttpApiService.repliHorsLigne(const ApiException(
+              'Impossible de joindre le serveur.', null, 'hors_ligne')),
+          isTrue);
+      expect(
+          HttpApiService.repliHorsLigne(
+              const ApiException('Erreur 500.', 500, null)),
+          isFalse);
     });
   });
 }
