@@ -205,6 +205,7 @@ class _CheckinEnfantsScreenState extends State<CheckinEnfantsScreen> {
               ),
               textCapitalization: TextCapitalization.characters,
             ),
+            const SizedBox(height: 12),
             TextField(
               controller: codeParent,
               decoration: const InputDecoration(

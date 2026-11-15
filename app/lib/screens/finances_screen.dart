@@ -221,18 +221,6 @@ class _FinancesScreenState extends State<FinancesScreen> {
                       const SizedBox(height: 16),
                       Card(
                         child: ListTile(
-                          leading: const Icon(
-                              Icons.account_balance_wallet_outlined),
-                          title: const Text('Finances complètes'),
-                          subtitle: const Text(
-                              'Cotisations, banque, caisse, reçus, budgets.'),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () =>
-                              setState(() => _sousOnglet = 1),
-                        ),
-                      ),
-                      Card(
-                        child: ListTile(
                           leading: const Icon(Icons.volunteer_activism_outlined),
                           title: const Text('Campagnes de collecte'),
                           subtitle: const Text(

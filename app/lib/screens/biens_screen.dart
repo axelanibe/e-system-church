@@ -20,6 +20,9 @@ class BiensScreen extends StatefulWidget {
 
 class _BiensScreenState extends State<BiensScreen> {
   int _tab = 0;
+  // Un bool par onglet : le FAB se masque quand les deux listes de
+  // l'onglet courant sont vides (l'état vide affiche déjà son bouton).
+  final List<bool> _ongletVide = [false, false];
   final _searchController = TextEditingController();
   String _query = '';
 
@@ -315,6 +318,15 @@ class _BiensScreenState extends State<BiensScreen> {
                   final sallesNoms = {
                     for (final s in snapshot.data!) s.id: s.nom
                   };
+                  final vide = snapshot.data!.isEmpty &&
+                      resSnapshot.data!.isEmpty;
+                  if (vide != _ongletVide[0]) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted && _ongletVide[0] != vide) {
+                        setState(() => _ongletVide[0] = vide);
+                      }
+                    });
+                  }
                   if (salles.isEmpty && reservations.isEmpty) {
                     if (_query.isNotEmpty) {
                       return const EmptyState(
@@ -438,6 +450,15 @@ class _BiensScreenState extends State<BiensScreen> {
                   final materielNoms = {
                     for (final m in snapshot.data!) m.id: m.nom
                   };
+                  final vide = snapshot.data!.isEmpty &&
+                      maintSnapshot.data!.isEmpty;
+                  if (vide != _ongletVide[1]) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted && _ongletVide[1] != vide) {
+                        setState(() => _ongletVide[1] = vide);
+                      }
+                    });
+                  }
                   if (items.isEmpty && maintenances.isEmpty) {
                     return EmptyState(
                       icon: Icons.inventory_2_outlined,
@@ -557,66 +578,70 @@ class _BiensScreenState extends State<BiensScreen> {
             );
           },
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            try {
-              if (_tab == 0) {
-                final choix = await showDialog<String>(
-                  context: context,
-                  builder: (ctx) => SimpleDialog(
-                    title: const Text('Que voulez-vous ajouter ?'),
-                    children: [
-                      SimpleDialogOption(
-                        onPressed: () => Navigator.of(ctx).pop('salle'),
-                        child: const Text('Une salle'),
-                      ),
-                      SimpleDialogOption(
-                        onPressed: () =>
-                            Navigator.of(ctx).pop('reservation'),
-                        child: const Text('Une réservation'),
-                      ),
-                    ],
-                  ),
-                );
-                if (choix == 'salle' && mounted) {
-                  await _createSalle();
-                } else if (choix == 'reservation' && mounted) {
-                  final salles = await _sallesFuture;
-                  if (mounted) await _createReservation(salles);
-                }
-              } else {
-                final choix = await showDialog<String>(
-                  context: context,
-                  builder: (ctx) => SimpleDialog(
-                    title: const Text('Que voulez-vous ajouter ?'),
-                    children: [
-                      SimpleDialogOption(
-                        onPressed: () => Navigator.of(ctx).pop('materiel'),
-                        child: const Text('Du matériel'),
-                      ),
-                      SimpleDialogOption(
-                        onPressed: () =>
-                            Navigator.of(ctx).pop('maintenance'),
-                        child: const Text('Une maintenance'),
-                      ),
-                    ],
-                  ),
-                );
-                if (choix == 'materiel' && mounted) {
-                  final membres = await _membres();
-                  if (mounted) await _createMateriel(membres);
-                } else if (choix == 'maintenance' && mounted) {
-                  final materiels = await _materielFuture;
-                  if (mounted) await _createMaintenance(materiels);
-                }
-              }
-            } catch (e) {
-              if (context.mounted) showApiError(context, e);
-            }
-          },
-          icon: const Icon(Icons.add),
-          label: const Text('Ajouter'),
-        ),
+        floatingActionButton: _ongletVide[_tab]
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () async {
+                  try {
+                    if (_tab == 0) {
+                      final choix = await showDialog<String>(
+                        context: context,
+                        builder: (ctx) => SimpleDialog(
+                          title: const Text('Que voulez-vous ajouter ?'),
+                          children: [
+                            SimpleDialogOption(
+                              onPressed: () =>
+                                  Navigator.of(ctx).pop('salle'),
+                              child: const Text('Une salle'),
+                            ),
+                            SimpleDialogOption(
+                              onPressed: () =>
+                                  Navigator.of(ctx).pop('reservation'),
+                              child: const Text('Une réservation'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (choix == 'salle' && mounted) {
+                        await _createSalle();
+                      } else if (choix == 'reservation' && mounted) {
+                        final salles = await _sallesFuture;
+                        if (mounted) await _createReservation(salles);
+                      }
+                    } else {
+                      final choix = await showDialog<String>(
+                        context: context,
+                        builder: (ctx) => SimpleDialog(
+                          title: const Text('Que voulez-vous ajouter ?'),
+                          children: [
+                            SimpleDialogOption(
+                              onPressed: () =>
+                                  Navigator.of(ctx).pop('materiel'),
+                              child: const Text('Du matériel'),
+                            ),
+                            SimpleDialogOption(
+                              onPressed: () =>
+                                  Navigator.of(ctx).pop('maintenance'),
+                              child: const Text('Une maintenance'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (choix == 'materiel' && mounted) {
+                        final membres = await _membres();
+                        if (mounted) await _createMateriel(membres);
+                      } else if (choix == 'maintenance' && mounted) {
+                        final materiels = await _materielFuture;
+                        if (mounted) await _createMaintenance(materiels);
+                      }
+                    }
+                  } catch (e) {
+                    if (context.mounted) showApiError(context, e);
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Ajouter'),
+              ),
       ),
     );
   }

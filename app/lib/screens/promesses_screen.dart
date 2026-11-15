@@ -10,6 +10,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import '../widgets/liste_avec_fab.dart';
 
 /// Promesses de don avec échéancier (US4).
 ///
@@ -225,20 +226,22 @@ class _PromessesScreenState extends State<PromessesScreen> {
               onAction: _creer,
             );
           }
-          return RefreshIndicator(
-            onRefresh: () async => _refresh(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: items.length,
-              itemBuilder: (context, i) {
-                final p = items[i];
-                return _PromesseCard(
-                  promesse: p,
-                  peutGer: _peutGer,
-                  onVerser: (e) => _verser(p, e),
-                  onAnnuler: () => _annuler(p),
-                );
-              },
+          return ListeAvecFab(
+            child: RefreshIndicator(
+              onRefresh: () async => _refresh(),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: items.length,
+                itemBuilder: (context, i) {
+                  final p = items[i];
+                  return _PromesseCard(
+                    promesse: p,
+                    peutGer: _peutGer,
+                    onVerser: (e) => _verser(p, e),
+                    onAnnuler: () => _annuler(p),
+                  );
+                },
+              ),
             ),
           );
         },

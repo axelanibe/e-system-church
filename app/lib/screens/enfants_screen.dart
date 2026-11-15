@@ -9,6 +9,7 @@ import 'checkin_enfants_screen.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import '../widgets/liste_avec_fab.dart';
 
 /// Module 8 — Enfants et jeunesse : classes d'enfants, autorisations de
 /// sortie et activités jeunesse.
@@ -21,6 +22,8 @@ class EnfantsScreen extends StatefulWidget {
 
 class _EnfantsScreenState extends State<EnfantsScreen> {
   int _tab = 0;
+  // Un bool par onglet : le FAB se masque quand l'onglet courant est vide.
+  final List<bool> _ongletVide = [false, false, false];
   final _searchController = TextEditingController();
   String _query = '';
 
@@ -261,6 +264,13 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
               final items = snapshot.data!
                   .where((c) => _matches(c.nom))
                   .toList();
+              if (items.isEmpty != _ongletVide[0]) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _ongletVide[0] != items.isEmpty) {
+                    setState(() => _ongletVide[0] = items.isEmpty);
+                  }
+                });
+              }
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.child_care_outlined,
@@ -271,28 +281,30 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
                   onAction: _createClasse,
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final c = items[index];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.child_care_outlined),
-                      ),
-                      title: Text(c.nom),
-                      subtitle: Text(
-                        '${c.ageMin != null || c.ageMax != null ? '${c.ageMin ?? '—'} – ${c.ageMax ?? '—'} ans' : 'Âges non précisés'}'
-                        '${c.salle != null ? ' · Salle ${c.salle}' : ''}',
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        tooltip: 'Supprimer',
-                        onPressed: () => _deleteClasse(c),
-                      ),
-                    );
-                  },
+              return ListeAvecFab(
+                child: RefreshIndicator(
+                  onRefresh: () async => _refresh(),
+                  child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final c = items[index];
+                      return ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.child_care_outlined),
+                        ),
+                        title: Text(c.nom),
+                        subtitle: Text(
+                          '${c.ageMin != null || c.ageMax != null ? '${c.ageMin ?? '—'} – ${c.ageMax ?? '—'} ans' : 'Âges non précisés'}'
+                          '${c.salle != null ? ' · Salle ${c.salle}' : ''}',
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          tooltip: 'Supprimer',
+                          onPressed: () => _deleteClasse(c),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               );
             },
@@ -328,6 +340,13 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
                       _matches(a.activite) ||
                       _matches(noms[a.enfantMemberId] ?? ''))
                   .toList();
+              if (items.isEmpty != _ongletVide[1]) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _ongletVide[1] != items.isEmpty) {
+                    setState(() => _ongletVide[1] = items.isEmpty);
+                  }
+                });
+              }
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.exit_to_app_outlined,
@@ -345,58 +364,63 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
                   },
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final a = items[index];
-                    return Card(
-                      child: ListTile(
-                        leading: const CircleAvatar(
-                          child: Icon(Icons.exit_to_app_outlined),
+              return ListeAvecFab(
+                child: RefreshIndicator(
+                  onRefresh: () async => _refresh(),
+                  child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final a = items[index];
+                      return Card(
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.exit_to_app_outlined),
+                          ),
+                          title: Text(
+                            '${noms[a.enfantMemberId] ?? a.enfantMemberId} — ${a.activite}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            '${afficherDate(a.dateSortie)}'
+                            '${a.parentMemberId != null ? ' · Parent : ${noms[a.parentMemberId] ?? '—'}' : ''}',
+                          ),
+                          trailing: a.statut == 'en_attente'
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.check,
+                                          color: AppTheme.violetProfond),
+                                      tooltip: 'Autoriser',
+                                      onPressed: () => _setAutorisationStatut(
+                                          a, 'autorisee'),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close,
+                                          color: AppTheme.rougeErreur),
+                                      tooltip: 'Refuser',
+                                      onPressed: () => _setAutorisationStatut(
+                                          a, 'refusee'),
+                                    ),
+                                  ],
+                                )
+                              : StatusChip(
+                                  label: a.statut == 'autorisee'
+                                      ? 'Autorisée'
+                                      : a.statut == 'refusee'
+                                          ? 'Refusée'
+                                          : a.statut,
+                                  color: a.statut == 'autorisee'
+                                      ? AppTheme.violetProfond
+                                      : a.statut == 'refusee'
+                                          ? AppTheme.rougeErreur
+                                          : Colors.orange,
+                                ),
                         ),
-                        title: Text(
-                            '${noms[a.enfantMemberId] ?? a.enfantMemberId} — ${a.activite}'),
-                        subtitle: Text(
-                          '${afficherDate(a.dateSortie)}'
-                          '${a.parentMemberId != null ? ' · Parent : ${noms[a.parentMemberId] ?? '—'}' : ''}',
-                        ),
-                        trailing: a.statut == 'en_attente'
-                            ? Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.check,
-                                        color: AppTheme.violetProfond),
-                                    tooltip: 'Autoriser',
-                                    onPressed: () => _setAutorisationStatut(
-                                        a, 'autorisee'),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.close,
-                                        color: AppTheme.rougeErreur),
-                                    tooltip: 'Refuser',
-                                    onPressed: () => _setAutorisationStatut(
-                                        a, 'refusee'),
-                                  ),
-                                ],
-                              )
-                            : StatusChip(
-                                label: a.statut == 'autorisee'
-                                    ? 'Autorisée'
-                                    : a.statut == 'refusee'
-                                        ? 'Refusée'
-                                        : a.statut,
-                                color: a.statut == 'autorisee'
-                                    ? AppTheme.violetProfond
-                                    : a.statut == 'refusee'
-                                        ? AppTheme.rougeErreur
-                                        : Colors.orange,
-                              ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               );
             },
@@ -430,6 +454,13 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
               final items = snapshot.data!
                   .where((a) => _matches(a.titre))
                   .toList();
+              if (items.isEmpty != _ongletVide[2]) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _ongletVide[2] != items.isEmpty) {
+                    setState(() => _ongletVide[2] = items.isEmpty);
+                  }
+                });
+              }
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.sports_soccer_outlined,
@@ -447,25 +478,27 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
                   },
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refresh(),
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final a = items[index];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.groups_outlined),
-                      ),
-                      title: Text(a.titre),
-                      subtitle: Text(
-                        '${afficherDate(a.dateActivite)}'
-                        '${a.lieu != null ? ' · ${a.lieu}' : ''}'
-                        '${a.responsableMemberId != null ? ' · ${noms[a.responsableMemberId] ?? '—'}' : ''}'
-                        '${a.description != null ? ' · ${a.description}' : ''}',
-                      ),
-                    );
-                  },
+              return ListeAvecFab(
+                child: RefreshIndicator(
+                  onRefresh: () async => _refresh(),
+                  child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final a = items[index];
+                      return ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.groups_outlined),
+                        ),
+                        title: Text(a.titre),
+                        subtitle: Text(
+                          '${afficherDate(a.dateActivite)}'
+                          '${a.lieu != null ? ' · ${a.lieu}' : ''}'
+                          '${a.responsableMemberId != null ? ' · ${noms[a.responsableMemberId] ?? '—'}' : ''}'
+                          '${a.description != null ? ' · ${a.description}' : ''}',
+                        ),
+                      );
+                    },
+                  ),
                 ),
               );
             },
@@ -534,31 +567,33 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
             );
           },
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            try {
-              if (_tab == 0) {
-                await _createClasse();
-              } else {
-                final membres = await _membres();
-                if (!mounted) return;
-                if (_tab == 1) {
-                  await _createAutorisation(membres);
-                } else {
-                  await _createActivite(membres);
-                }
-              }
-            } catch (e) {
-              if (context.mounted) showApiError(context, e);
-            }
-          },
-          icon: const Icon(Icons.add),
-          label: Text(_tab == 0
-              ? 'Nouvelle classe'
-              : _tab == 1
-                  ? 'Nouvelle autorisation'
-                  : 'Nouvelle activité'),
-        ),
+        floatingActionButton: _ongletVide[_tab]
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () async {
+                  try {
+                    if (_tab == 0) {
+                      await _createClasse();
+                    } else {
+                      final membres = await _membres();
+                      if (!mounted) return;
+                      if (_tab == 1) {
+                        await _createAutorisation(membres);
+                      } else {
+                        await _createActivite(membres);
+                      }
+                    }
+                  } catch (e) {
+                    if (context.mounted) showApiError(context, e);
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: Text(_tab == 0
+                    ? 'Nouvelle classe'
+                    : _tab == 1
+                        ? 'Nouvelle autorisation'
+                        : 'Nouvelle activité'),
+              ),
       ),
     );
   }

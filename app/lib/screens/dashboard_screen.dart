@@ -535,12 +535,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       contentPadding: EdgeInsets.zero,
                                       leading: const Icon(
                                           Icons.account_tree_outlined),
-                                      title: Text(s.egliseNom),
+                                      title: Text(
+                                        s.egliseNom,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                       subtitle: Text(
                                           '${s.membresActifs} membres · ${formatFcfa(s.totalFcfa)}'
                                           '${s.niveau == 1 ? '' : ' · niveau ${s.niveau}'}'),
                                       trailing: Text(
-                                          '${s.nombreContributions} contributions'),
+                                        '${s.nombreContributions} contributions',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                   ),
                                 ],

@@ -357,6 +357,7 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                   const SizedBox(height: 12),
                   if (_moyens.isNotEmpty)
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       initialValue: _moyenCode,
                       decoration: const InputDecoration(
                         labelText: 'Moyen de paiement *',
@@ -423,6 +424,7 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String?>(
+                    isExpanded: true,
                     initialValue: _memberId,
                     decoration: InputDecoration(
                       labelText: _type == 'cotisation'
@@ -454,6 +456,7 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                       !_viaMoyenConfigure) ...[
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String?>(
+                      isExpanded: true,
                       initialValue: _campagneId,
                       decoration: const InputDecoration(
                         labelText: 'Campagne (facultatif)',

@@ -148,6 +148,7 @@ class _ParametresFideleScreenState extends State<ParametresFideleScreen> {
                   ),
                 ),
               ),
+              const SectionTitle(title: 'Langue'),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.language_outlined),

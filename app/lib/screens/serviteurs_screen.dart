@@ -26,6 +26,8 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
   // L'onglet Affectations est-il vide ? Sert à masquer le FAB quand
   // l'état vide affiche déjà le bouton de création (un seul bouton).
   bool _serviteursVides = false;
+  // Idem pour l'onglet Planning.
+  bool _planningVides = false;
   final _searchController = TextEditingController();
   String _query = '';
   String? _departementFilter;
@@ -331,6 +333,13 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
                   .where((p) => _matches(
                       '${noms[p.serviteurId] ?? ''} ${p.roleService ?? ''}'))
                   .toList();
+              if (items.isEmpty != _planningVides) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _planningVides != items.isEmpty) {
+                    setState(() => _planningVides = items.isEmpty);
+                  }
+                });
+              }
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.calendar_month_outlined,
@@ -461,7 +470,8 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
             );
           },
         ),
-        floatingActionButton: (_tab == 0 && _serviteursVides)
+        floatingActionButton: ((_tab == 0 && _serviteursVides) ||
+                (_tab == 1 && _planningVides))
             ? null
             : FloatingActionButton.extended(
                 onPressed: () async {

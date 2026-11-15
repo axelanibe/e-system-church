@@ -24,6 +24,8 @@ class _PrieresScreenState extends State<PrieresScreen> {
   // L'onglet Demandes est-il vide ? Sert à masquer le FAB quand
   // l'état vide affiche déjà le bouton de création (un seul bouton).
   bool _demandesVides = false;
+  // Idem pour l'onglet Messages internes.
+  bool _messagesVides = false;
   final _searchController = TextEditingController();
   String _query = '';
   String? _statutFilter;
@@ -422,6 +424,13 @@ class _PrieresScreenState extends State<PrieresScreen> {
               final items = snapshot.data!
                   .where((m) => _matches(m.sujet))
                   .toList();
+              if (items.isEmpty != _messagesVides) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _messagesVides != items.isEmpty) {
+                    setState(() => _messagesVides = items.isEmpty);
+                  }
+                });
+              }
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.mail_outline,
@@ -503,7 +512,8 @@ class _PrieresScreenState extends State<PrieresScreen> {
             );
           },
         ),
-        floatingActionButton: (_tab == 0 && _demandesVides)
+        floatingActionButton: ((_tab == 0 && _demandesVides) ||
+                (_tab == 1 && _messagesVides))
             ? null
             : FloatingActionButton.extended(
                 onPressed: () async {
