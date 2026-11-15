@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/contribution.dart';
 import '../models/paiements.dart';
+import '../services/api_service.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
@@ -99,6 +100,23 @@ class _CotisationsScreenState extends State<CotisationsScreen> {
             return const AppLoading();
           }
           if (snapshot.hasError) {
+            // En aperçu admin, les cotisations du membre ne sont pas
+            // visibles (403 sur /moi/contributions) : état vide
+            // explicite, pas d'erreur brute — même pattern que
+            // Carte / Messages. Le total et le paiement ne sont pas
+            // affichables en aperçu ; en vue membre réelle, l'écran
+            // les montre normalement.
+            final erreur = snapshot.error;
+            if (state.apercuFidele &&
+                erreur is ApiException &&
+                erreur.statusCode == 403) {
+              return const EmptyState(
+                icon: Icons.account_balance_wallet_outlined,
+                message: 'En aperçu, les cotisations d’un membre ne sont '
+                    'pas visibles. Connectez-vous avec un compte fidèle '
+                    'pour voir vos cotisations.',
+              );
+            }
             return AppError(
               message: snapshot.error.toString(),
               onRetry: _refresh,

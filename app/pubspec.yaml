@@ -39,8 +39,17 @@ flutter:
   # logo, validée par Axel le 14 novembre 2026 ; correction du même
   # jour : c'est l'icône ESC qui va dans l'application, pas le logo
   # complet).
+  # Bible hors ligne (tranche T9) : Louis Segond 1910 et King James
+  # (domaine public), concordance Strong et dictionnaire, en JSON
+  # lus hors ligne par le service Bible de l'appli (le mode réel
+  # passe aussi par l'API, qui lit sa propre copie sous
+  # server/src/data/bible/).
   assets:
     - assets/icone-esc.png
+    - assets/bible/lsg1910/
+    - assets/bible/kjv/
+    - assets/bible/strong/
+    - assets/bible/dictionnaire/
   # Polices de l'artefact, embarquées dans le build (aucun
   # téléchargement à l'exécution, site statique et APK autonomes).
   # Fichiers TTF officiels Google Fonts, poids utilisés par le thème.
