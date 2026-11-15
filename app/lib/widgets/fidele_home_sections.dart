@@ -18,6 +18,7 @@ import '../widgets/soft_card.dart';
 import '../screens/bible_fidele_screen.dart';
 import '../screens/carte_fidele_screen.dart';
 import '../screens/cotisations_screen.dart';
+import '../screens/ecole_biblique_screen.dart';
 import '../screens/journal_screen.dart';
 import '../screens/mes_attestations_screen.dart';
 import '../screens/messages_fidele_screen.dart';
@@ -28,10 +29,10 @@ import '../screens/rendez_vous_screen.dart';
 /// fidèle) et « membre » (Espace membre, ouvert depuis Modules).
 /// Mêmes données, même chargement, mêmes sections, seul l'ordre
 /// des blocs et la section outils changent, selon la projection :
-/// - fidele-accueil : « Mes accès », 5 outils dont Prendre
+/// - fidele-accueil : « Mes accès », 6 outils dont Prendre
 ///   rendez-vous, camps et attestations avant Prière du jour et
 ///   Sujet de prière privé.
-/// - membre : « Actions rapides », 4 outils sans Prendre
+/// - membre : « Actions rapides », 5 outils sans Prendre
 ///   rendez-vous, Prière du jour et Sujet de prière privé avant
 ///   camps et attestations.
 /// Contenu seul, sans Scaffold ni barre : la coquille fidèle
@@ -345,7 +346,22 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                     avecRendezVous: widget.avecRendezVous,
                     onBible: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
-                        builder: (_) => const BibleFideleScreen(),
+                        // La Bible est un écran sans Scaffold propre : elle
+                        // vit aussi dans la coquille fidèle sous EnTeteClair.
+                        // Poussée seule depuis la grille, on l'habille ici
+                        // (barre « Ma Bible » + fond clair), comme les autres
+                        // écrans fidèles (École, Cotisations…).
+                        builder: (_) => Scaffold(
+                          appBar: AppBar(
+                            title: const Text('Ma Bible'),
+                          ),
+                          body: const BibleFideleScreen(),
+                        ),
+                      ),
+                    ),
+                    onEcole: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const EcoleBibliqueScreen(),
                       ),
                     ),
                     onCotisations: () => Navigator.of(context).push(
@@ -443,6 +459,7 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
 class _GrilleOutils extends StatelessWidget {
   final bool avecRendezVous;
   final VoidCallback onBible;
+  final VoidCallback onEcole;
   final VoidCallback onCotisations;
   final VoidCallback onJournal;
   final VoidCallback onMessages;
@@ -451,6 +468,7 @@ class _GrilleOutils extends StatelessWidget {
   const _GrilleOutils({
     required this.avecRendezVous,
     required this.onBible,
+    required this.onEcole,
     required this.onCotisations,
     required this.onJournal,
     required this.onMessages,
@@ -495,6 +513,12 @@ class _GrilleOutils extends StatelessWidget {
                   titre: 'Mon journal',
                   sousTitre: 'Notes privées, jamais partagées.',
                   onTap: onJournal,
+                ),
+                _TuileAcces(
+                  icone: Icons.school_outlined,
+                  titre: 'École biblique',
+                  sousTitre: 'Cours, leçons et ma progression.',
+                  onTap: onEcole,
                 ),
                 _TuileAcces(
                   icone: Icons.mail_outline,

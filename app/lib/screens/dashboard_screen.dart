@@ -491,7 +491,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         textAlign: TextAlign.center,
                                       ),
                                     ),
-                                  ],
+                                  ] else
+                                    const Text(
+                                      'Votre église est une annexe : elle ne peut pas avoir de sous-église.',
+                                    ),
                                 ] else ...[
                                   Text(
                                     'Total de mes églises',

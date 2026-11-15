@@ -69,6 +69,7 @@ const TABLES_LIEES = [
   "comptes_bancaires",
   "contributions",
   "cotisations_config",
+  "cours_ecole", // T9 (école biblique) : church_id CASCADE
   "culte_rsvp",
   "culte_types",
   "cultes",
@@ -85,6 +86,8 @@ const TABLES_LIEES = [
   "familles",
   "fonctions",
   "imports_membres",
+  "inscriptions_ecole", // T9 (école biblique) : church_id CASCADE
+  "lecons_ecole", // T9 (école biblique) : church_id CASCADE
   "liens_parent_enfant",
   "livres",
   "maintenance_materiel",
@@ -104,6 +107,7 @@ const TABLES_LIEES = [
   "predications",
   "presences",
   "prets_livres",
+  "progressions_ecole", // T9 (école biblique) : church_id CASCADE
   "rapports_annexe",
   "rattachements",
   "refresh_tokens",
