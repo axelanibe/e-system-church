@@ -141,8 +141,7 @@ class AProposScreen extends StatelessWidget {
                         const ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: Icon(Icons.info_outline),
-                          title: Text('Version'),
-                          subtitle: Text(
+                          title: Text(
                               'Version ${AppConfig.appVersion}'),
                         ),
                         const Divider(),

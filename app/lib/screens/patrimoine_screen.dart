@@ -205,7 +205,7 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
         if (items.isEmpty) {
           return EmptyState(
             icon: Icons.domain_outlined,
-            message: 'Aucun bien du patrimoine pour l’instant.',
+            message: 'Aucun bien.',
             actionLabel: 'Ajouter un bien',
             onAction: _createBien,
           );
@@ -261,7 +261,7 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
         if (items.isEmpty) {
           return EmptyState(
             icon: Icons.build_outlined,
-            message: 'Aucune maintenance enregistrée pour l’instant.',
+            message: 'Aucune maintenance.',
             actionLabel: 'Enregistrer une maintenance',
             onAction: () async {
               try {

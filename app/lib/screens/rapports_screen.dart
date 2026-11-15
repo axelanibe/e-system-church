@@ -172,7 +172,7 @@ class _RapportsScreenState extends State<RapportsScreen> {
                 if (stats.reseau.isEmpty)
                   const EmptyState(
                     icon: Icons.account_tree_outlined,
-                    message: 'Aucune sous-église rattachée pour l’instant.',
+                    message: 'Aucune sous-église.',
                   )
                 else
                   ...stats.reseau.map((b) => ListTile(
@@ -214,7 +214,7 @@ class _RapportsScreenState extends State<RapportsScreen> {
                     child: FilledButton.icon(
                       onPressed: _exporterConsolidePdf,
                       icon: const Icon(Icons.download_outlined),
-                      label: const Text('Rapport consolidé (PDF)'),
+                      label: const Text('Rapport consolidé'),
                     ),
                   ),
                 ],

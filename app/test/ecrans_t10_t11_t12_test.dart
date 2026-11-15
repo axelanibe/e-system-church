@@ -174,7 +174,7 @@ void main() {
           'Réunions',
           'Décisions',
           'Procès-verbaux',
-          'Aucune réunion du conseil pour l’instant.',
+          'Aucune réunion.',
         ],
       );
     });
@@ -184,7 +184,7 @@ void main() {
         tester,
         const DocumentsScreen(),
         titre: 'Documents',
-        attendus: ['Aucun document classé pour l’instant.'],
+        attendus: ['Aucun document classé.'],
       );
     });
 
@@ -202,7 +202,7 @@ void main() {
         tester,
         const PatrimoineScreen(),
         titre: 'Patrimoine',
-        attendus: ['Biens', 'Maintenance', 'Aucun bien du patrimoine pour l’instant.'],
+        attendus: ['Biens', 'Maintenance', 'Aucun bien.'],
       );
     });
   });
@@ -229,7 +229,7 @@ void main() {
         tester,
         const SauvegardeScreen(),
         titre: 'Sauvegardes',
-        attendus: ['Aucune sauvegarde pour le moment.'],
+        attendus: ['Aucune sauvegarde.'],
       );
     });
 
@@ -238,7 +238,7 @@ void main() {
         tester,
         const FileHorsLigneScreen(),
         titre: 'File hors ligne',
-        attendus: ['Aucune action en attente sur le serveur.'],
+        attendus: ['Aucune action en attente.'],
       );
     });
 

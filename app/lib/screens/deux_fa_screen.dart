@@ -190,7 +190,6 @@ class _DeuxFaScreenState extends State<DeuxFaScreen> {
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Un code à 6 chiffres est demandé à chaque connexion. '
                           'Réservée aux rôles Pasteur, Trésorier et Admin.',
                         ),
                       ],

@@ -129,13 +129,6 @@ class _RapportsRecusScreenState extends State<RapportsRecusScreen> {
                                       style: const TextStyle(fontSize: 16),
                                     ),
                                   ],
-                                  if (r.enAttenteEnvoi) ...[
-                                    const SizedBox(height: 8),
-                                    const Text(
-                                      'En attente d’envoi par e-mail.',
-                                      style: TextStyle(fontSize: 16),
-                                    ),
-                                  ],
                                 ],
                               ),
                             ),

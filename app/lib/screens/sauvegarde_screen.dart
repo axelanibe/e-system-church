@@ -184,7 +184,7 @@ class _SauvegardeScreenState extends State<SauvegardeScreen> {
                           const SizedBox(height: 8),
                           Text(
                             _parametres?.sauvegardeAutoDerniereAt == null
-                                ? 'Aucune sauvegarde automatique pour le moment.'
+                                ? 'Aucune sauvegarde automatique.'
                                 : 'Dernière sauvegarde automatique : '
                                     '${formatDateTime(_parametres!.sauvegardeAutoDerniereAt)}.',
                           ),
@@ -203,7 +203,7 @@ class _SauvegardeScreenState extends State<SauvegardeScreen> {
                     const Card(
                       child: Padding(
                         padding: EdgeInsets.all(16),
-                        child: Text('Aucune sauvegarde pour le moment.'),
+                        child: Text('Aucune sauvegarde.'),
                       ),
                     ),
                   for (final sauvegarde in _sauvegardes)
@@ -216,7 +216,7 @@ class _SauvegardeScreenState extends State<SauvegardeScreen> {
                         ),
                         title: Text(formatDateTime(sauvegarde.createdAt)),
                         subtitle: Text(
-                          '${sauvegarde.tailleLabel} · ${sauvegarde.nbTables} tables · ${sauvegarde.statutLabel}',
+                          '${sauvegarde.tailleLabel} · ${sauvegarde.statutLabel}',
                         ),
                         trailing: TextButton(
                           onPressed: () => _restaurer(sauvegarde),

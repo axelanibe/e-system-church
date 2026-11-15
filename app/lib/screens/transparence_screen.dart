@@ -156,7 +156,6 @@ class _TransparenceScreenState extends State<TransparenceScreen> {
                         : d.totauxParType
                             .map((l) => ListTile(
                               title: Text(_libelleType(l.type)),
-                              subtitle: Text('${l.nombre}'),
                               trailing: Text(
                                 formatMontant(l.totalFcfa, devise),
                                 style: const TextStyle(

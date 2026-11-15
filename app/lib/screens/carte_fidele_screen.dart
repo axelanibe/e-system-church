@@ -114,8 +114,7 @@ class _CarteApercu extends StatelessWidget {
   Widget build(BuildContext context) {
     return const EmptyState(
       icon: Icons.badge_outlined,
-      message: 'En aperçu, la carte d’un membre n’est pas visible. '
-          'Connectez-vous avec un compte fidèle pour voir votre carte.',
+      message: 'Carte non visible en aperçu.',
     );
   }
 }

@@ -258,7 +258,7 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
                 return EmptyState(
                   icon: Icons.volunteer_activism_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucun serviteur affecté pour l’instant.'
+                      ? 'Aucun serviteur.'
                       : 'Aucun serviteur ne correspond à la recherche.',
                   actionLabel: 'Affecter un serviteur',
                   onAction: () async {
@@ -344,7 +344,7 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
                 return EmptyState(
                   icon: Icons.calendar_month_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucun service planifié pour l’instant.'
+                      ? 'Aucun service.'
                       : 'Aucun service ne correspond à la recherche.',
                   actionLabel: 'Planifier un service',
                   onAction: () async {

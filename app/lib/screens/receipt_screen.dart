@@ -230,11 +230,6 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                               ? 'Confirmer la dépense'
                               : 'Confirmer la contribution'),
                         ),
-                      if (!state.isAdmin)
-                        const Text(
-                          'Seul le pasteur confirme une contribution.',
-                          textAlign: TextAlign.center,
-                        ),
                       const SizedBox(height: 12),
                       OutlinedButton.icon(
                         onPressed: _working
