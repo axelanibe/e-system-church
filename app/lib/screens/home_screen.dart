@@ -7,7 +7,7 @@ import '../widgets/common_widgets.dart';
 import '../widgets/en_tete_clair.dart';
 import '../widgets/short_drawer.dart';
 import 'dashboard_screen.dart';
-import 'familles_screen.dart';
+import 'departements_screen.dart';
 import 'finances_screen.dart';
 import 'membres_screen.dart';
 
@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// sinon leur Future d'avant (données de l'église précédente). La clé
   /// changeante recrée l'écran, donc son chargement, sans refaire la
   /// navigation. Vaut pour les 4 écrans à Future en initState
-  /// (Accueil, Membres, Finances, Familles).
+  /// (Accueil, Membres, Finances, Départements).
   Widget _screenFor(int index, String? egliseId) {
     final cle = ValueKey(egliseId);
     switch (index) {
@@ -57,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 2:
         return FinancesScreen(key: cle);
       case 3:
-        return FamillesScreen(key: cle);
+        return DepartementsScreen(key: cle);
       default:
         return DashboardScreen(
             key: cle, onAller: (i) => setState(() => _index = i));

@@ -9,12 +9,11 @@ import '../widgets/common_widgets.dart';
 import '../widgets/liste_avec_fab.dart';
 import '../widgets/dialog_helpers.dart';
 import 'enfants_screen.dart';
-import 'member_detail_screen.dart';
 
 /// Module 1 — Familles et cellules de l'église.
 /// La fiche complète d'un membre (statuts, baptême, liens) s'ouvre depuis
-/// la section dédiée en bas de l'onglet Familles. Les départements se
-/// gèrent en Paramètres ; les fonctions et les postes sont des options
+/// l'onglet Fiche de l'écran Membres. Les départements se gèrent dans
+/// l'onglet Départements ; les fonctions et les postes sont des options
 /// dans les formulaires où on les attribue.
 ///
 /// Mise en page (maquette d'Axel, 14 novembre 2026) : bandeau violet
@@ -211,8 +210,8 @@ class _FamillesScreenState extends State<FamillesScreen> {
     required String message,
     String? hint,
   }) {
-    // L'état vide est au-dessus de sections fixes (Fiche d'un membre,
-    // Enfants & jeunesse) : sur un petit écran il déborde sur elles.
+    // L'état vide est au-dessus de la section fixe (Enfants &
+    // jeunesse) : sur un petit écran il déborde sur elle.
     // On le rend défilant au lieu de laisser les textes se chevaucher.
     return Center(
       child: SingleChildScrollView(
@@ -325,34 +324,6 @@ class _FamillesScreenState extends State<FamillesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SectionTitle(title: 'Fiche d’un membre'),
-              DropdownButtonFormField<Member>(
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Choisir un membre',
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
-                items: membres
-                    .map((m) => DropdownMenuItem<Member>(
-                          value: m,
-                          child: Text(
-                            '${m.fullName} (${m.matricule})',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ))
-                    .toList(),
-                onChanged: (m) {
-                  if (m == null) return;
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => MemberDetailScreen(member: m),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
               const SectionTitle(title: 'Enfants & jeunesse'),
               Card(
                 child: ListTile(
