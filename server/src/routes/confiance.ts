@@ -1,8 +1,8 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Pool, PoolClient } from "pg";
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { auditLog, logConsultationSensible, verifierChaineAudit } from "../auth.js";
+import { auditLog, logConsultationSensible, recordFailedAttempt, verifierChaineAudit } from "../auth.js";
 import { ErreurMetier } from "../crud.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
 import { decryptSecret, encryptSecret } from "../paiements_crypto.js";
@@ -35,6 +35,41 @@ const uuid = z.string().uuid();
 const ADMIN = ["admin_eglise"];
 const EQUIPE = ["admin_eglise", "tresorier", "responsable_culte"];
 const ROLES_2FA = ["admin_eglise", "tresorier", "responsable_culte"];
+
+/** Compte verrouillé ? Même règle que la connexion (5 échecs → 15 min). */
+async function compteVerrouille(db: Pool, userId: string): Promise<boolean> {
+  const { rows } = await db.query<{ locked_until: Date | null }>(
+    `SELECT locked_until FROM users WHERE id = $1`,
+    [userId],
+  );
+  return (
+    rows.length > 0 &&
+    rows[0].locked_until !== null &&
+    new Date(rows[0].locked_until) > new Date()
+  );
+}
+
+/** Échec sur un code 2FA : compte l'échec (verrouillage éventuel, 423 si verrouillé). */
+async function echecCode2fa(
+  db: Pool,
+  reply: FastifyReply,
+  userId: string,
+): Promise<boolean> {
+  const { rows } = await db.query<{ failed_logins: number }>(
+    `SELECT failed_logins FROM users WHERE id = $1`,
+    [userId],
+  );
+  if (rows.length === 0) return false;
+  const verrouille = await recordFailedAttempt(db, { id: userId, failed_logins: rows[0].failed_logins });
+  if (verrouille) {
+    reply.code(423).send({
+      error: "locked",
+      message: "Compte verrouillé 15 minutes après 5 échecs.",
+    });
+    return true;
+  }
+  return false;
+}
 
 const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
@@ -442,6 +477,12 @@ export function registerConfianceRoutes(app: FastifyInstance, db: Pool) {
         return reply.code(400).send({ error: "invalid_input", message: "Code à 6 chiffres requis." });
       }
       try {
+        if (await compteVerrouille(db, req.session.userId)) {
+          return reply.code(423).send({
+            error: "locked",
+            message: "Compte verrouillé 15 minutes après 5 échecs.",
+          });
+        }
         const { rows } = await db.query(
           `SELECT secret_chiffre, secret_iv, secret_tag, actif FROM auth_2fa WHERE user_id = $1`,
           [req.session.userId],
@@ -458,12 +499,15 @@ export function registerConfianceRoutes(app: FastifyInstance, db: Pool) {
           tag: rows[0].secret_tag as string,
         });
         if (!verifierCodeTOTP(secret, parsed.data.code)) {
+          if (await echecCode2fa(db, reply, req.session.userId)) return;
           return reply.code(401).send({ error: "code_invalide", message: "Code incorrect." });
         }
         await db.query(
           `UPDATE auth_2fa SET actif = TRUE, verified_at = now() WHERE user_id = $1`,
           [req.session.userId],
         );
+        // Code juste : il prouve l'identité, le compteur d'échecs est remis à zéro.
+        await db.query(`UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = $1`, [req.session.userId]);
         await auditLog(db, {
           churchId: req.session.churchId,
           userId: req.session.userId,
@@ -486,6 +530,12 @@ export function registerConfianceRoutes(app: FastifyInstance, db: Pool) {
         return reply.code(400).send({ error: "invalid_input", message: "Code à 6 chiffres requis." });
       }
       try {
+        if (await compteVerrouille(db, req.session.userId)) {
+          return reply.code(423).send({
+            error: "locked",
+            message: "Compte verrouillé 15 minutes après 5 échecs.",
+          });
+        }
         const { rows } = await db.query(
           `SELECT secret_chiffre, secret_iv, secret_tag FROM auth_2fa WHERE user_id = $1 AND actif = TRUE`,
           [req.session.userId],
@@ -499,9 +549,12 @@ export function registerConfianceRoutes(app: FastifyInstance, db: Pool) {
           tag: rows[0].secret_tag as string,
         });
         if (!verifierCodeTOTP(secret, parsed.data.code)) {
+          if (await echecCode2fa(db, reply, req.session.userId)) return;
           return reply.code(401).send({ error: "code_invalide", message: "Code incorrect." });
         }
         await db.query(`DELETE FROM auth_2fa WHERE user_id = $1`, [req.session.userId]);
+        // Code juste : il prouve l'identité, le compteur d'échecs est remis à zéro.
+        await db.query(`UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = $1`, [req.session.userId]);
         await auditLog(db, {
           churchId: req.session.churchId,
           userId: req.session.userId,

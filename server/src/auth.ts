@@ -1053,8 +1053,6 @@ export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
   const passwordOk = await verifyPassword(user.password_hash as string, password);
   if (!passwordOk) return recordFailure(db, user);
 
-  await db.query(`UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = $1`, [user.id]);
-
   // Double authentification (T11) : quand le compte l'a activée, la
   // connexion exige en plus le code TOTP à 6 chiffres. Un code faux
   // compte comme un échec (verrouillage après 5 échecs, même règle).
@@ -1075,17 +1073,22 @@ export async function login(db: Pool, rawInput: unknown): Promise<LoginResult> {
       return { ok: false, reason: "code_2fa_invalide" };
     }
     if (!verifierCodeTOTP(secretClair, code_2fa)) {
-      // Le compteur d'échecs vient d'être remis à zéro (mot de passe
-      // correct) : le code faux est le premier échec de cette tentative.
+      // Code faux : il compte comme un échec, avec le vrai compteur
+      // (jamais remis à zéro avant ce contrôle, sinon le verrouillage
+      // après 5 échecs ne serait jamais atteint).
       const verrouille = await recordFailedAttempt(db, {
         id: user.id as string,
-        failed_logins: 0,
+        failed_logins: user.failed_logins as number,
       });
       return verrouille
         ? { ok: false, reason: "locked" }
         : { ok: false, reason: "code_2fa_invalide" };
     }
   }
+
+  // Mot de passe correct et, le cas échéant, code 2FA correct : le
+  // compteur d'échecs est remis à zéro seulement maintenant.
+  await db.query(`UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = $1`, [user.id]);
 
   const eglises = await chargerEglises(db, user.id as string);
 
