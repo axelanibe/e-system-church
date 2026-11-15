@@ -164,6 +164,36 @@ class RendezVous {
   DateTime? get date => DateTime.tryParse(dateSouhaitee);
 }
 
+/// Créneau de rendez-vous défini par le pasteur (migration 033,
+/// E-RV1) : période (matin, après-midi, soir) et libellé libre,
+/// sans horaire inventé. Aucun créneau pré-créé.
+class CreneauPasteur {
+  final String id;
+  final String periode; // matin | apres-midi | soir
+  final String libelle;
+  final bool actif;
+  final DateTime? createdAt;
+
+  const CreneauPasteur({
+    required this.id,
+    required this.periode,
+    required this.libelle,
+    this.actif = true,
+    this.createdAt,
+  });
+
+  factory CreneauPasteur.fromJson(Map<String, dynamic> json) =>
+      CreneauPasteur(
+        id: json['id'] as String,
+        periode: json['periode'] as String? ?? '',
+        libelle: json['libelle'] as String? ?? '',
+        actif: json['actif'] as bool? ?? true,
+        createdAt: json['created_at'] == null
+            ? null
+            : DateTime.tryParse(json['created_at'] as String),
+      );
+}
+
 /// Message du fil privé du fidèle (`GET /moi/messages`, migration 020) :
 /// écrit par le fidèle (`membre`) ou par son église (`eglise`), dans
 /// l'application, pas par e-mail.

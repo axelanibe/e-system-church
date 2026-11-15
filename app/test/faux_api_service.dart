@@ -910,6 +910,16 @@ class FauxApiService implements ApiService {
   @override
   Future<List<RendezVous>> getMesRendezVous() async => [];
 
+  // E-RV1 : créneaux du pasteur, en démo. Aucun créneau pré-créé.
+  final List<CreneauPasteur> _creneaux = [];
+
+  @override
+  Future<List<CreneauPasteur>> getMesCreneaux() async {
+    await _latence();
+    _requireAuth();
+    return _creneaux.where((c) => c.actif).toList();
+  }
+
   @override
   Future<RendezVous> demanderRendezVous({
     required String dateSouhaitee,
@@ -3003,6 +3013,62 @@ class FauxApiService implements ApiService {
     await _latence();
     _requireAuth();
     throw const ApiException('Rendez-vous introuvable (démo).');
+  }
+
+  @override
+  Future<List<CreneauPasteur>> getCreneauxPasteur() async {
+    await _latence();
+    _requireAuth();
+    return List.of(_creneaux);
+  }
+
+  @override
+  Future<CreneauPasteur> createCreneau({
+    required String periode,
+    required String libelle,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final creneau = CreneauPasteur(
+      id: 'demo-creneau-${DateTime.now().millisecondsSinceEpoch}',
+      periode: periode,
+      libelle: libelle,
+      createdAt: DateTime.now(),
+    );
+    _creneaux.add(creneau);
+    return creneau;
+  }
+
+  @override
+  Future<CreneauPasteur> updateCreneau(
+    String id, {
+    String? periode,
+    String? libelle,
+    bool? actif,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final index = _creneaux.indexWhere((c) => c.id == id);
+    if (index == -1) {
+      throw const ApiException('Créneau introuvable (démo).');
+    }
+    final ancien = _creneaux[index];
+    final modifie = CreneauPasteur(
+      id: ancien.id,
+      periode: periode ?? ancien.periode,
+      libelle: libelle ?? ancien.libelle,
+      actif: actif ?? ancien.actif,
+      createdAt: ancien.createdAt,
+    );
+    _creneaux[index] = modifie;
+    return modifie;
+  }
+
+  @override
+  Future<void> deleteCreneau(String id) async {
+    await _latence();
+    _requireAuth();
+    _creneaux.removeWhere((c) => c.id == id);
   }
 
   @override

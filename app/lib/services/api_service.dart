@@ -215,6 +215,10 @@ abstract class ApiService {
     required String motif,
   });
 
+  /// Créneaux actifs de mon pasteur (migration 033, E-RV1) : vides
+  /// tant que le pasteur n'a rien défini.
+  Future<List<CreneauPasteur>> getMesCreneaux();
+
   /// Tranche P5 — Rapports à mon église mère (migration 023) : mon
   /// église mère, racine du réseau, avec son adresse e-mail, nulle
   /// tant qu'elle n'est pas renseignée en base (« À compléter »).
@@ -727,6 +731,30 @@ abstract class ApiService {
   /// (400 sinon), refuse depuis en attente, annule depuis confirmé.
   Future<RendezVous> setRendezVousStatut(String id, String statut,
       {String? creneau});
+
+  /// Créneaux du pasteur, côté admin (migration 033, E-RV1) : tous
+  /// les créneaux de mon église, triés par période puis création.
+  Future<List<CreneauPasteur>> getCreneauxPasteur();
+
+  /// Créer un créneau (migration 033, E-RV1) : période
+  /// (matin, après-midi, soir) et libellé obligatoire, 50 caractères
+  /// au maximum. Aucun créneau pré-créé.
+  Future<CreneauPasteur> createCreneau({
+    required String periode,
+    required String libelle,
+  });
+
+  /// Modifier un créneau (migration 033, E-RV1) : période, libellé
+  /// ou activation, au moins un champ.
+  Future<CreneauPasteur> updateCreneau(
+    String id, {
+    String? periode,
+    String? libelle,
+    bool? actif,
+  });
+
+  /// Supprimer un créneau (migration 033, E-RV1).
+  Future<void> deleteCreneau(String id);
 
   /// Tableau des cas ouverts (T6) : accompagnements en cours, par
   /// défaut les personnes en difficulté, triés par le serveur

@@ -352,6 +352,167 @@ export function registerPastoralRoutes(app: FastifyInstance, db: Pool) {
     },
   );
 
+  // -- Créneaux de rendez-vous du pasteur (corrections audit 63,
+  //    tranche 3, E-RV1, migration 033) : le pasteur définit ses
+  //    créneaux par période (matin, après-midi, soir), libellé libre
+  //    sans horaire inventé. Aucun créneau pré-créé. Le fidèle les
+  //    lit via GET /moi/rendez-vous/creneaux (fidele.ts). ------------
+  const PERIODES_CRENEAU = ["matin", "apres-midi", "soir"] as const;
+  const ordrePeriode =
+    "CASE periode WHEN 'matin' THEN 0 WHEN 'apres-midi' THEN 1 ELSE 2 END";
+
+  app.get(
+    "/rendez-vous/creneaux",
+    { preHandler: [requireAuth(db), requireRole(...WRITE_STD)] },
+    async (req, reply) => {
+      try {
+        const { rows } = await db.query(
+          `SELECT id, periode, libelle, actif, created_at, updated_at
+             FROM creneaux_pasteur
+            WHERE church_id = $1
+            ORDER BY ${ordrePeriode}, created_at ASC`,
+          [req.session.churchId],
+        );
+        await auditLog(db, {
+          churchId: req.session.churchId,
+          userId: req.session.userId,
+          action: "creneau_pasteur.lu",
+          details: { total: rows.length },
+        });
+        return reply.send({ creneaux: rows });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  app.post(
+    "/rendez-vous/creneaux",
+    { preHandler: [requireAuth(db), requireRole(...WRITE_STD)] },
+    async (req, reply) => {
+      const parsed = z
+        .object({
+          periode: z.enum(PERIODES_CRENEAU),
+          libelle: z.string().min(1).max(50),
+        })
+        .safeParse(req.body);
+      if (!parsed.success) {
+        invalidInput(reply, parsed.error);
+        return;
+      }
+      try {
+        const { rows } = await db.query(
+          `INSERT INTO creneaux_pasteur (church_id, periode, libelle)
+           VALUES ($1, $2, $3)
+           RETURNING id, periode, libelle, actif, created_at, updated_at`,
+          [
+            req.session.churchId,
+            parsed.data.periode,
+            parsed.data.libelle.trim(),
+          ],
+        );
+        await auditLog(db, {
+          churchId: req.session.churchId,
+          userId: req.session.userId,
+          action: "creneau_pasteur.cree",
+          details: { id: rows[0].id, periode: rows[0].periode },
+        });
+        return reply.code(201).send({ creneau: rows[0] });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  app.patch(
+    "/rendez-vous/creneaux/:id",
+    { preHandler: [requireAuth(db), requireRole(...WRITE_STD)] },
+    async (req, reply) => {
+      const parsed = z
+        .object({
+          periode: z.enum(PERIODES_CRENEAU).optional(),
+          libelle: z.string().min(1).max(50).optional(),
+          actif: z.boolean().optional(),
+        })
+        .safeParse(req.body);
+      if (!parsed.success) {
+        invalidInput(reply, parsed.error);
+        return;
+      }
+      const champs: string[] = [];
+      const values: unknown[] = [
+        (req.params as { id: string }).id,
+        req.session.churchId,
+      ];
+      if (parsed.data.periode !== undefined) {
+        values.push(parsed.data.periode);
+        champs.push(`periode = $${values.length}`);
+      }
+      if (parsed.data.libelle !== undefined) {
+        values.push(parsed.data.libelle.trim());
+        champs.push(`libelle = $${values.length}`);
+      }
+      if (parsed.data.actif !== undefined) {
+        values.push(parsed.data.actif);
+        champs.push(`actif = $${values.length}`);
+      }
+      if (champs.length === 0) {
+        return reply.code(400).send({
+          error: "invalid_input",
+          message: "Indiquez au moins un champ à modifier.",
+        });
+      }
+      try {
+        const { rows } = await db.query(
+          `UPDATE creneaux_pasteur
+              SET ${champs.join(", ")}, updated_at = now()
+            WHERE id = $1 AND church_id = $2
+            RETURNING id, periode, libelle, actif, created_at, updated_at`,
+          values,
+        );
+        if (rows.length === 0) {
+          return reply.code(404).send({ error: "not_found", message: "Créneau introuvable." });
+        }
+        await auditLog(db, {
+          churchId: req.session.churchId,
+          userId: req.session.userId,
+          action: "creneau_pasteur.modifie",
+          details: { id: rows[0].id },
+        });
+        return reply.send({ creneau: rows[0] });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  app.delete(
+    "/rendez-vous/creneaux/:id",
+    { preHandler: [requireAuth(db), requireRole(...WRITE_STD)] },
+    async (req, reply) => {
+      try {
+        const { rows } = await db.query(
+          `DELETE FROM creneaux_pasteur
+            WHERE id = $1 AND church_id = $2
+            RETURNING id`,
+          [(req.params as { id: string }).id, req.session.churchId],
+        );
+        if (rows.length === 0) {
+          return reply.code(404).send({ error: "not_found", message: "Créneau introuvable." });
+        }
+        await auditLog(db, {
+          churchId: req.session.churchId,
+          userId: req.session.userId,
+          action: "creneau_pasteur.supprime",
+          details: { id: rows[0].id },
+        });
+        return reply.send({ ok: true, id: rows[0].id });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
   // -- Tableau des cas ouverts (tranche T6) : accompagnements en cours,
   //    par défaut les personnes en difficulté, triés par priorité
   //    (urgente d'abord) puis par ancienneté. Le nom du membre est joint

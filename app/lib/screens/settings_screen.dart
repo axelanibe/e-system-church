@@ -3,8 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
 import '../config/app_theme.dart';
-import '../models/membres_complement.dart';
-import '../models/member.dart';
 import '../models/parametres.dart';
 import '../models/suppression_eglise.dart';
 import '../state/app_state.dart';
@@ -25,10 +23,9 @@ import 'sauvegarde_screen.dart';
 /// Réglages et confiance (fusion E-CF4 + E-RG1, modèle projection,
 /// écran « Réglages et confiance ») : un seul parcours. Les 5 entrées
 /// Confiance en tête, dans l'ordre de la projection, puis les sections
-/// Réglages (Église, Paramètres de l'église, Rôles, Départements,
-/// Compte, API réelle, Application). Le Journal d'audit ouvre l'écran
-/// Audit, qui montre les mêmes données que l'ancien onglet Journal des
-/// paramètres. Les anciens écrans Confiance et Paramètres sont
+/// Réglages (Église, Paramètres de l'église, Rôles, Compte, API réelle,
+/// Application). Le Journal d'audit ouvre l'écran Audit, qui montre les
+/// mêmes données que l'ancien onglet Journal des paramètres. Les anciens
 /// supprimés, jamais gardés en doublon.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -66,13 +63,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // un seul champ entre les onglets.
   final _rechercheRolesController = TextEditingController();
   String _queryRoles = '';
-  final _rechercheDepartementsController = TextEditingController();
-  String _queryDepartements = '';
 
   late Future<EgliseParametres> _parametresFuture;
   late Future<List<RoleEglise>> _rolesFuture;
-  late Future<List<Departement>> _departementsFuture;
-  late Future<MemberPage> _membresFuture;
 
   @override
   void initState() {
@@ -82,8 +75,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final api = context.read<AppState>().api;
     _parametresFuture = api.getParametres();
     _rolesFuture = api.getRoles();
-    _departementsFuture = api.getDepartements();
-    _membresFuture = api.getMembers();
   }
 
   @override
@@ -102,7 +93,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _signataireNominationsController.dispose();
     _signataireProcesVerbauxController.dispose();
     _rechercheRolesController.dispose();
-    _rechercheDepartementsController.dispose();
     super.dispose();
   }
 
@@ -111,8 +101,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _parametresFuture = api.getParametres();
       _rolesFuture = api.getRoles();
-      _departementsFuture = api.getDepartements();
-      _membresFuture = api.getMembers();
     });
   }
 
@@ -284,93 +272,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) showApiError(context, e);
     } finally {
       if (mounted) setState(() => _savingParametres = false);
-    }
-  }
-
-  /// Gestion des départements : créer, renommer, supprimer. Les
-  /// départements restent aussi le filtre et le sélecteur en contexte
-  /// (liste des membres, formulaire membre).
-  Future<void> _createDepartement(List<Member> membres) async {
-    final nomController = TextEditingController();
-    final descriptionController = TextEditingController();
-    String? responsableId;
-    await showCreateDialog(
-      context: context,
-      title: 'Nouveau département',
-      saveLabel: 'Créer',
-      fields: [
-        dialogTextField(controller: nomController, label: 'Nom du département'),
-        dialogTextField(
-            controller: descriptionController, label: 'Description'),
-        dialogDropdown<String?>(
-          value: responsableId,
-          label: 'Responsable',
-          options: {
-            null: 'Aucun',
-            for (final m in membres) m.id: '${m.fullName} (${m.matricule})',
-          },
-          onChanged: (v) => responsableId = v,
-        ),
-      ],
-      isValid: () => nomController.text.trim().isNotEmpty,
-      onSave: () async {
-        try {
-          await context.read<AppState>().api.createDepartement(
-                nom: nomController.text.trim(),
-                description: descriptionController.text.trim().isEmpty
-                    ? null
-                    : descriptionController.text.trim(),
-                responsableMemberId: responsableId,
-              );
-          if (mounted) showSuccess(context, 'Département créé.');
-          _refresh();
-        } catch (e) {
-          if (mounted) showApiError(context, e);
-        }
-      },
-    );
-  }
-
-  /// Renomme un département (les membres rattachés gardent leur département,
-  /// seul le libellé change).
-  Future<void> _renameDepartement(Departement departement) async {
-    final nomController = TextEditingController(text: departement.nom);
-    await showCreateDialog(
-      context: context,
-      title: 'Renommer le département',
-      saveLabel: 'Enregistrer',
-      fields: [
-        dialogTextField(controller: nomController, label: 'Nom du département'),
-      ],
-      isValid: () => nomController.text.trim().length >= 2,
-      onSave: () async {
-        try {
-          await context.read<AppState>().api.updateDepartement(
-                departement.id,
-                nom: nomController.text.trim(),
-              );
-          if (mounted) showSuccess(context, 'Département renommé.');
-          _refresh();
-        } catch (e) {
-          if (mounted) showApiError(context, e);
-        }
-      },
-    );
-  }
-
-  Future<void> _deleteDepartement(Departement departement) async {
-    final confirmed = await confirmDelete(
-      context,
-      'Supprimer définitivement le département « ${departement.nom} » ?',
-    );
-    if (!confirmed) return;
-    if (!mounted) return;
-    try {
-      await context.read<AppState>().api.deleteDepartement(departement.id);
-      if (mounted) showSuccess(context, 'Département supprimé.');
-      _refresh();
-    } catch (e) {
-      if (mounted) showApiError(context, e);
     }
   }
 
@@ -609,95 +510,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _sectionDepartements() {
-    return FutureBuilder<MemberPage>(
-      future: _membresFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const AppLoading();
-        }
-        if (snapshot.hasError) {
-          return AppError(
-            message: snapshot.error.toString(),
-            onRetry: _refresh,
-          );
-        }
-        final membres = snapshot.data!.membres;
-        final noms = {for (final m in membres) m.id: m.fullName};
-        return Column(
-          children: [
-            searchField(
-              controller: _rechercheDepartementsController,
-              onChanged: (v) =>
-                  setState(() => _queryDepartements = v.trim()),
-              label: 'Rechercher un département',
-            ),
-            FutureBuilder<List<Departement>>(
-              future: _departementsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const AppLoading();
-                }
-                if (snapshot.hasError) {
-                  return AppError(
-                    message: snapshot.error.toString(),
-                    onRetry: _refresh,
-                  );
-                }
-                final items = snapshot.data!
-                    .where((d) => _matches(d.nom, _queryDepartements))
-                    .toList();
-                if (items.isEmpty) {
-                  return EmptyState(
-                    icon: Icons.group_work_outlined,
-                    message: snapshot.data!.isEmpty
-                        ? 'Aucun département.'
-                        : 'Aucun département ne correspond à la recherche.',
-                    actionLabel: 'Créer un département',
-                    onAction: () => _createDepartement(membres),
-                  );
-                }
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final d = items[index];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.group_work_outlined),
-                      ),
-                      title: Text(d.nom),
-                      subtitle: Text(
-                        '${d.responsableMemberId != null ? 'Responsable : ${noms[d.responsableMemberId] ?? '—'}' : 'Sans responsable'}'
-                        '${d.description != null ? ' · ${d.description}' : ''}',
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            tooltip: 'Renommer',
-                            onPressed: () => _renameDepartement(d),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            tooltip: 'Supprimer',
-                            onPressed: () => _deleteDepartement(d),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
@@ -827,8 +639,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _formulaireParametres(),
                   const SectionTitle(title: 'Rôles'),
                   _sectionRoles(),
-                  const SectionTitle(title: 'Départements'),
-                  _sectionDepartements(),
                   const SectionTitle(title: 'Compte'),
                   Card(
                     child: Padding(

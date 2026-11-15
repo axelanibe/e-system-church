@@ -573,6 +573,14 @@ class HttpApiService implements ApiService {
       RapportAnnexe.fromJson);
 
   @override
+  Future<List<CreneauPasteur>> getMesCreneaux() async {
+    final data = await _call('GET', '/moi/rendez-vous/creneaux');
+    return (data['creneaux'] as List<dynamic>? ?? [])
+        .map((e) => CreneauPasteur.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
   Future<RendezVous> demanderRendezVous({
     required String dateSouhaitee,
     String? creneau,
@@ -1814,6 +1822,46 @@ class HttpApiService implements ApiService {
             'statut': statut,
             if (creneau != null) 'creneau': creneau,
           }));
+
+  @override
+  Future<List<CreneauPasteur>> getCreneauxPasteur() async {
+    final data = await _call('GET', '/rendez-vous/creneaux');
+    return (data['creneaux'] as List<dynamic>? ?? [])
+        .map((e) => CreneauPasteur.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<CreneauPasteur> createCreneau({
+    required String periode,
+    required String libelle,
+  }) async {
+    final data = await _call('POST', '/rendez-vous/creneaux', body: {
+      'periode': periode,
+      'libelle': libelle,
+    });
+    return CreneauPasteur.fromJson(data['creneau'] as Map<String, dynamic>);
+  }
+
+  @override
+  Future<CreneauPasteur> updateCreneau(
+    String id, {
+    String? periode,
+    String? libelle,
+    bool? actif,
+  }) async {
+    final data = await _call('PATCH', '/rendez-vous/creneaux/$id', body: {
+      if (periode != null) 'periode': periode,
+      if (libelle != null) 'libelle': libelle,
+      if (actif != null) 'actif': actif,
+    });
+    return CreneauPasteur.fromJson(data['creneau'] as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> deleteCreneau(String id) async {
+    await _call('DELETE', '/rendez-vous/creneaux/$id');
+  }
 
   @override
   Future<List<Accompagnement>> getCasOuverts(

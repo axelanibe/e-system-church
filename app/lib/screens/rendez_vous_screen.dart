@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_theme.dart';
+import '../models/fidele.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
@@ -22,6 +23,15 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
   DateTime? _date;
   var _envoi = false;
   var _envoye = false;
+  late Future<List<CreneauPasteur>> _creneauxFuture;
+  String? _periodeChoisie;
+  String? _creneauChoisi;
+
+  @override
+  void initState() {
+    super.initState();
+    _creneauxFuture = context.read<AppState>().api.getMesCreneaux();
+  }
 
   @override
   void dispose() {
@@ -72,6 +82,7 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
           '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
       await context.read<AppState>().api.demanderRendezVous(
             dateSouhaitee: iso,
+            creneau: _creneauChoisi,
             motif: motif,
           );
       if (!mounted) return;
@@ -87,8 +98,82 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
     setState(() {
       _envoye = false;
       _date = null;
+      _periodeChoisie = null;
+      _creneauChoisi = null;
       _motifController.clear();
     });
+  }
+
+  /// Créneaux du pasteur (E-RV1) : rien tant qu'il n'a rien défini,
+  /// sinon puces de période puis libellés de la période choisie.
+  Widget _creneaux() {
+    return FutureBuilder<List<CreneauPasteur>>(
+      future: _creneauxFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LinearProgressIndicator();
+        }
+        final creneaux = snapshot.data ?? const <CreneauPasteur>[];
+        if (creneaux.isEmpty) {
+          return const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('À compléter'),
+              SizedBox(height: 4),
+              Text('Les créneaux de votre pasteur s’afficheront ici.'),
+            ],
+          );
+        }
+        const periodes = {
+          'matin': 'Matin',
+          'apres-midi': 'Après-midi',
+          'soir': 'Soir',
+        };
+        final presentes = [
+          for (final p in periodes.keys)
+            if (creneaux.any((c) => c.periode == p)) p,
+        ];
+        final periode = _periodeChoisie ?? presentes.first;
+        final libelles = [
+          for (final c in creneaux.where((c) => c.periode == periode))
+            c.libelle,
+        ];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final p in presentes)
+                  ChoiceChip(
+                    label: Text(periodes[p]!),
+                    selected: periode == p,
+                    onSelected: (_) => setState(() {
+                      _periodeChoisie = p;
+                      _creneauChoisi = null;
+                    }),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final libelle in libelles)
+                  ChoiceChip(
+                    label: Text(libelle),
+                    selected: _creneauChoisi == libelle,
+                    onSelected: (_) => setState(() {
+                      _creneauChoisi =
+                          _creneauChoisi == libelle ? null : libelle;
+                    }),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -179,7 +264,7 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
                         const SizedBox(height: 12),
                         const Text('Créneau'),
                         const SizedBox(height: 8),
-                        const Text('À compléter'),
+                        _creneaux(),
                       ],
                     ),
                   ),

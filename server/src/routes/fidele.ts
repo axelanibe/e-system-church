@@ -925,6 +925,34 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
     },
   );
 
+  // -- Créneaux actifs de mon pasteur (corrections audit 63, tranche 3,
+  //    E-RV1, migration 033) : seuls les créneaux actifs de mon église,
+  //    triés par période puis par création. Vide tant que le pasteur
+  //    n'a rien défini : aucun créneau inventé.
+  app.get(
+    "/moi/rendez-vous/creneaux",
+    { preHandler: [requireAuth(db), requireRole("membre")] },
+    async (req, reply) => {
+      try {
+        const { rows } = await db.query(
+          `SELECT id, periode, libelle, actif, created_at
+             FROM creneaux_pasteur
+            WHERE church_id = $1 AND actif = true
+            ORDER BY CASE periode
+                       WHEN 'matin' THEN 0
+                       WHEN 'apres-midi' THEN 1
+                       ELSE 2
+                     END,
+                     created_at ASC`,
+          [req.session.churchId],
+        );
+        return reply.send({ creneaux: rows });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
   // -- Fils des fidèles, côté église (admin seulement) : les fils des
   //    membres de mon église et de ses annexes (récursif), avec le
   //    dernier message. La lecture et la réponse côté admin arrivent
