@@ -30,6 +30,10 @@ String? validerIdentifiant(String? v) {
   return null;
 }
 
+/// Rembourrage de l'écran de connexion, partagé par le défilement
+/// et le calcul de la hauteur minimale de la boîte.
+const _rembourrage = EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0);
+
 /// Écran de connexion : e-mail ou téléphone + mot de passe, JWT stocké
 /// en sécurité. La connexion exige un compte réel créé sur le serveur.
 /// Mise en page d'après la maquette envoyée par Axel (14 novembre
@@ -106,283 +110,293 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: AppTheme.fondPapier,
         body: SafeArea(
           child: Center(
-            child: SingleChildScrollView(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // 1. En-tête (logo + titre).
-                      Center(
-                        child: Container(
-                          width: 76,
-                          height: 76,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.violetProfond
-                                    .withValues(alpha: 0.15),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
+            // La boîte garde la hauteur disponible : quand le clavier
+            // s'ouvre, le contenu reste centré dans l'espace restant
+            // au lieu de basculer brutalement en haut de l'écran.
+            // Le Center est gardé : sans lui, la boîte de 420 px
+            // serait collée à gauche sur écran large.
+            child: LayoutBuilder(
+              builder: (context, contraintes) => SingleChildScrollView(
+                padding: _rembourrage,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: contraintes.maxHeight - _rembourrage.vertical,
+                    maxWidth: 420,
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // 1. En-tête (logo + titre).
+                        Center(
+                          child: Container(
+                            width: 76,
+                            height: 76,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.violetProfond
+                                      .withValues(alpha: 0.15),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: const LogoApp(taille: 76),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          AppConfig.appName,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: scheme.primary,
                               ),
-                            ],
-                          ),
-                          child: const LogoApp(taille: 76),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        AppConfig.appName,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: scheme.primary,
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        AppConfig.appSlogan,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(
-                              fontStyle: FontStyle.italic,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                      ),
-                      const SizedBox(height: 32),
+                        const SizedBox(height: 4),
+                        Text(
+                          AppConfig.appSlogan,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                fontStyle: FontStyle.italic,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                        ),
+                        const SizedBox(height: 32),
 
-                      // 2. Formulaire de connexion.
-                      _buildTextField(
-                        context: context,
-                        controller: _identifiantController,
-                        labelText: 'E-mail ou téléphone',
-                        icon: Icons.person_outline,
-                        keyboardType: TextInputType.text,
-                        textInputAction: TextInputAction.next,
-                        validator: validerIdentifiant,
-                      ),
-                      const SizedBox(height: 14),
-                      _buildTextField(
-                        context: context,
-                        controller: _passwordController,
-                        labelText: 'Mot de passe',
-                        icon: Icons.lock_outline,
-                        obscureText: _obscurePassword,
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) => _login(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            color: scheme.onSurfaceVariant,
-                            size: 20,
-                          ),
-                          onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword),
+                        // 2. Formulaire de connexion.
+                        _buildTextField(
+                          context: context,
+                          controller: _identifiantController,
+                          labelText: 'E-mail ou téléphone',
+                          icon: Icons.person_outline,
+                          keyboardType: TextInputType.text,
+                          textInputAction: TextInputAction.next,
+                          validator: validerIdentifiant,
                         ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) {
-                            return 'Saisissez votre mot de passe.';
-                          }
-                          return null;
-                        },
-                      ),
-                      if (_demande2fa) ...[
                         const SizedBox(height: 14),
                         _buildTextField(
                           context: context,
-                          controller: _code2faController,
-                          labelText: 'Code à 6 chiffres',
-                          icon: Icons.phonelink_lock_outlined,
-                          keyboardType: TextInputType.number,
+                          controller: _passwordController,
+                          labelText: 'Mot de passe',
+                          icon: Icons.lock_outline,
+                          obscureText: _obscurePassword,
                           textInputAction: TextInputAction.done,
                           onFieldSubmitted: (_) => _login(),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              color: scheme.onSurfaceVariant,
+                              size: 20,
+                            ),
+                            onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword),
+                          ),
                           validator: (v) {
-                            if (v == null || v.trim().length != 6) {
-                              return 'Le code compte 6 chiffres.';
+                            if (v == null || v.isEmpty) {
+                              return 'Saisissez votre mot de passe.';
                             }
                             return null;
                           },
                         ),
-                      ],
-                      if (_error != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          _error!,
-                          style: TextStyle(color: scheme.error),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                        if (_demande2fa) ...[
+                          const SizedBox(height: 14),
+                          _buildTextField(
+                            context: context,
+                            controller: _code2faController,
+                            labelText: 'Code à 6 chiffres',
+                            icon: Icons.phonelink_lock_outlined,
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => _login(),
+                            validator: (v) {
+                              if (v == null || v.trim().length != 6) {
+                                return 'Le code compte 6 chiffres.';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                        if (_error != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            _error!,
+                            style: TextStyle(color: scheme.error),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
 
-                      // Mot de passe oublié aligné à droite.
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: _loading
+                        // Mot de passe oublié aligné à droite.
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: _loading
+                                ? null
+                                : () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const ForgotPasswordScreen(),
+                                      ),
+                                    ),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 8, horizontal: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              'Mot de passe oublié ?',
+                              style: TextStyle(
+                                color: scheme.primary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Bouton principal.
+                        FilledButton(
+                          onPressed: _loading ? null : _login,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: scheme.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            shadowColor:
+                                scheme.primary.withValues(alpha: 0.4),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: _loading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2),
+                                )
+                              : const Text(
+                                  'Se connecter',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                        ),
+
+                        // 3. Séparateur visuel.
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 26),
+                          child: Row(
+                            children: [
+                              const Expanded(
+                                  child: Divider(
+                                      color: AppTheme.bordure, thickness: 1)),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 14),
+                                child: Text(
+                                  'NOUVEAU SUR LA PLATEFORME ?',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: scheme.onSurfaceVariant
+                                        .withValues(alpha: 0.8),
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                              ),
+                              const Expanded(
+                                  child: Divider(
+                                      color: AppTheme.bordure, thickness: 1)),
+                            ],
+                          ),
+                        ),
+
+                        // 4. Cartes d'action secondaires.
+                        _buildActionCard(
+                          context: context,
+                          icon: Icons.church_outlined,
+                          title: 'Inscrire mon église',
+                          subtitle: 'Pour créer une nouvelle église.',
+                          onTap: _loading
                               ? null
                               : () => Navigator.of(context).push(
                                     MaterialPageRoute(
-                                      builder: (_) =>
-                                          const ForgotPasswordScreen(),
+                                      builder: (_) => const RegisterScreen(),
                                     ),
                                   ),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 8, horizontal: 4),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: Text(
-                            'Mot de passe oublié ?',
-                            style: TextStyle(
-                              color: scheme.primary,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13.5,
-                            ),
-                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Bouton principal.
-                      FilledButton(
-                        onPressed: _loading ? null : _login,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: scheme.primary,
-                          foregroundColor: Colors.white,
-                          elevation: 2,
-                          shadowColor:
-                              scheme.primary.withValues(alpha: 0.4),
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: _loading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2),
-                              )
-                            : const Text(
-                                'Se connecter',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                      ),
-
-                      // 3. Séparateur visuel.
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 26),
-                        child: Row(
-                          children: [
-                            const Expanded(
-                                child: Divider(
-                                    color: AppTheme.bordure, thickness: 1)),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 14),
-                              child: Text(
-                                'NOUVEAU SUR LA PLATEFORME ?',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: scheme.onSurfaceVariant
-                                      .withValues(alpha: 0.8),
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                            ),
-                            const Expanded(
-                                child: Divider(
-                                    color: AppTheme.bordure, thickness: 1)),
-                          ],
-                        ),
-                      ),
-
-                      // 4. Cartes d'action secondaires.
-                      _buildActionCard(
-                        context: context,
-                        icon: Icons.church_outlined,
-                        title: 'Inscrire mon église',
-                        subtitle: 'Pour créer une nouvelle église.',
-                        onTap: _loading
-                            ? null
-                            : () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => const RegisterScreen(),
-                                  ),
-                                ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildActionCard(
-                        context: context,
-                        icon: Icons.group_add_outlined,
-                        title: 'Je suis membre d’une église',
-                        subtitle: 'Pour rejoindre votre église avec son code.',
-                        onTap: _loading
-                            ? null
-                            : () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        const RegisterFideleScreen(),
-                                  ),
-                                ),
-                      ),
-                      const SizedBox(height: 28),
-
-                      // 5. Accès administration discret en pied de page.
-                      Center(
-                        child: InkWell(
+                        const SizedBox(height: 12),
+                        _buildActionCard(
+                          context: context,
+                          icon: Icons.group_add_outlined,
+                          title: 'Je suis membre d’une église',
+                          subtitle: 'Pour rejoindre votre église avec son code.',
                           onTap: _loading
                               ? null
                               : () => Navigator.of(context).push(
                                     MaterialPageRoute(
                                       builder: (_) =>
-                                          const LoginPlateformeScreen(),
+                                          const RegisterFideleScreen(),
                                     ),
                                   ),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                    Icons.admin_panel_settings_outlined,
-                                    size: 16,
-                                    color: scheme.onSurfaceVariant),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Connexion Plateforme (Admin)',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: scheme.onSurfaceVariant,
-                                    fontWeight: FontWeight.w500,
+                        ),
+                        const SizedBox(height: 28),
+
+                        // 5. Accès administration discret en pied de page.
+                        Center(
+                          child: InkWell(
+                            onTap: _loading
+                                ? null
+                                : () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const LoginPlateformeScreen(),
+                                      ),
+                                    ),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                      Icons.admin_panel_settings_outlined,
+                                      size: 16,
+                                      color: scheme.onSurfaceVariant),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Connexion Plateforme (Admin)',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: scheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
