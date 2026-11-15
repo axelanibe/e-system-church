@@ -71,6 +71,13 @@ class _RapportsRecusScreenState extends State<RapportsRecusScreen> {
                         style: TextStyle(fontSize: 16),
                       ),
                       const SizedBox(height: 16),
+                      if (rapports.isEmpty)
+                        const Card(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text('Aucun rapport reçu.'),
+                          ),
+                        ),
                       if (rapports.isNotEmpty)
                         ...rapports.map(
                           (r) => Card(

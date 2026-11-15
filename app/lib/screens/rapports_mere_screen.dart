@@ -148,7 +148,8 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
       body: estMere
           ? EmptyState(
               icon: Icons.mail_outline,
-              message: '',
+              message:
+                  'Vous êtes une église mère : les rapports de vos annexes arrivent ici.',
               actionLabel: 'Voir les rapports reçus',
               onAction: () => Navigator.of(context).push(
                 MaterialPageRoute(

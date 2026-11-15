@@ -1,32 +1,31 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_theme.dart';
-import 'cartes_membres_screen.dart';
-import 'espace_membre_screen.dart';
-import 'settings_screen.dart';
+import 'annexes_screen.dart';
+import 'attestations_screen.dart';
+import 'bible_fidele_screen.dart';
 import 'cultes_direct_screen.dart';
+import 'departements_screen.dart';
+import 'ecole_biblique_screen.dart';
 import 'gouvernance_screen.dart';
-import 'paiements_screen.dart';
 import 'pastoral_screen.dart';
+import 'patrimoine_screen.dart';
+import 'prieres_screen.dart';
+import 'rapports_recus_screen.dart';
+import 'rendez_vous_admin_screen.dart';
+import 'serviteurs_screen.dart';
 
-/// Modules de l'église (modèle projection, écran « Tous les modules »,
-/// captures IMG_4018 à IMG_4020) : grille 2 colonnes, icône or,
-/// titre, description et pastille d'état en bas de carte. L'ordre
-/// des cartes suit la projection (Accueil admin, Espace membre,
-/// Membres et familles, Cultes en direct, Radar pastoral, Finances,
-/// Bible et école, Gouvernance, Réglages et confiance, Paiements
-/// automatiques, US restantes et dette, Qualité et bascule,
-/// Connexion). Tous les modules sont affichés pour toutes les
-/// églises (règle du 11 novembre 2026) : rien à activer ici.
-/// Chaque carte ouvre sa vraie fonctionnalité : les modules Accueil,
-/// Membres et Finances sont des onglets, ils s'ouvrent par [onAller]
-/// (comme le tiroir) ; les autres poussent leur écran, qui a son
-/// retour par l'AppBar. Trois modules n'ont pas encore de cible
-/// réelle dans l'application : Bible et école (tranche T9, pas
-/// encore en ligne), Qualité et bascule (contrôles automatisés,
-/// sans écran dédié) et Connexion (l'utilisateur est déjà
-/// connecté) ; leur carte ne navigue pas et l'explique par un
-/// message, sans inventer de fausse cible.
+/// Modules de l'église (maquette Membres Finances, écran 21) : grille
+/// de 13 cartes EXACTEMENT, dans l'ordre de la maquette. Chaque carte
+/// ouvre sa vraie fonctionnalité, une seule entrée par fonction, jamais
+/// de doublon avec la barre du bas (Accueil, Membres, Finances,
+/// Départements) ni avec la connexion, qui est l'entrée de
+/// l'application, ni avec l'espace fidèle, périmètre étanche.
+/// La carte « Bible et école » ouvre les vrais écrans Bible de la T9 :
+/// la lecture d'abord, l'école biblique par le bouton de la barre.
+/// La carte « Messages admin » ouvre l'écran Prières, dont le 2e
+/// onglet est « Messages internes » : il n'existe pas d'écran admin
+/// de messages dédié dans l'application.
 class ModulesScreen extends StatelessWidget {
   /// Aller à un onglet de la barre du bas (0 Accueil, 1 Membres,
   /// 2 Finances). Sans [onAller], une carte d'onglet revient
@@ -35,100 +34,84 @@ class ModulesScreen extends StatelessWidget {
 
   const ModulesScreen({super.key, this.onAller});
 
-  /// Modules sans cible réelle : la carte ne navigue pas.
-  static const _sansCible = {'bible', 'qualite', 'connexion'};
-
   static const _modules = [
     (
-      'accueil',
-      'Accueil admin',
-      'Carte Aujourd’hui, chiffres, réseau, annonces.',
-      'T3 · Construit',
-      Icons.home_outlined,
-    ),
-    (
-      'espaceMembre',
-      'Espace membre',
-      'Carte avec QR, parcours, attestations, prière.',
-      'T2 · Construit',
-      Icons.badge_outlined,
-    ),
-    (
-      'membres',
-      'Membres et familles',
-      'Fiche unique, création guidée, anniversaires.',
-      'T4 · Construit',
-      Icons.people_outline,
-    ),
-    (
-      'cartes',
-      'Cartes de membre',
-      'Voir les cartes et les imprimer.',
-      'Admin · Construit',
-      Icons.print_outlined,
+      'departements',
+      'Départements',
+      'Équipes, fonctions et cellules.',
+      Icons.groups_outlined,
     ),
     (
       'cultes',
       'Cultes en direct',
-      'Conducteur chronométré, transposition, portes.',
-      'T5 · Construit, en ligne',
+      'Conducteur, transposition, portes.',
       Icons.schedule_outlined,
     ),
     (
       'pastoral',
       'Radar pastoral',
-      'Absences, rendez-vous, visites, accompagnements.',
-      'T6 · Construit, en ligne',
+      'Absences, visites et accompagnements.',
       Icons.track_changes_outlined,
     ),
     (
-      'finances',
-      'Finances',
-      'Cotisations, banque, caisse, reçus, budgets.',
-      'T7 · Construit, en ligne',
-      Icons.account_balance_wallet_outlined,
+      'serviteurs',
+      'Serviteurs',
+      'Affectations et planning.',
+      Icons.handshake_outlined,
     ),
     (
       'bible',
       'Bible et école',
-      'Lecture, cours et progression des membres.',
-      'T9 · Construit',
+      'Lecture, cours et progression.',
       Icons.menu_book_outlined,
     ),
     (
       'gouvernance',
       'Gouvernance',
-      'Mandats, nominations, procès-verbaux, documents.',
-      'T10 · Construit, en ligne',
+      'Mandats, procès-verbaux, documents.',
       Icons.verified_outlined,
     ),
     (
-      'confiance',
-      'Réglages et confiance',
-      'Sauvegarde, hors ligne, 2FA, journal d’audit.',
-      'T11 · Construit, en ligne',
-      Icons.wb_sunny_outlined,
+      'patrimoine',
+      'Patrimoine',
+      'Biens, salles et maintenance.',
+      Icons.home_work_outlined,
     ),
     (
-      'paiements',
-      'Paiements automatiques',
-      '',
-      'T8 · Construit, en ligne',
-      Icons.credit_card_outlined,
+      'prieres',
+      'Prières',
+      'Demandes et messages internes.',
+      Icons.favorite_outline,
     ),
     (
-      'qualite',
-      'Qualité et bascule',
-      'Contrôles qualité et bascule finale.',
-      'T13 · À venir',
-      Icons.fact_check_outlined,
+      'annexes',
+      'Mes annexes',
+      'Réseau, transferts et rattachements.',
+      Icons.account_tree_outlined,
     ),
     (
-      'connexion',
-      'Connexion',
-      'E-mail ou téléphone, inscription église ou membre.',
-      'T1 · Construit',
-      Icons.login_outlined,
+      'rapports',
+      'Rapports d’annexe',
+      'Bilans reçus des annexes.',
+      Icons.description_outlined,
+    ),
+    (
+      'rendezVous',
+      'Rendez-vous',
+      'Demandes et créneaux pastoraux.',
+      Icons.event_available_outlined,
+    ),
+    (
+      'attestations',
+      'Attestations d’actes',
+      'Baptêmes, mariages et attestations.',
+      Icons.badge_outlined,
+    ),
+    (
+      'messages',
+      'Messages admin',
+      'Messages internes de l’église.',
+      Icons.message_outlined,
     ),
   ];
 
@@ -138,55 +121,58 @@ class ModulesScreen extends StatelessWidget {
     );
   }
 
-  void _info(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-  /// Ouvre la vraie fonctionnalité du module [cible]. Les onglets
-  /// se rejoignent par [onAller] : la carte est dépilée d'abord,
-  /// sinon l'onglet changerait sous la grille, invisible.
+  /// Ouvre la vraie fonctionnalité du module [cible].
   void _ouvrir(BuildContext context, String cible) {
     switch (cible) {
-      case 'accueil':
-      case 'membres':
-      case 'finances':
-        final index = {'accueil': 0, 'membres': 1, 'finances': 2}[cible]!;
-        Navigator.of(context).pop();
-        onAller?.call(index);
-      case 'espaceMembre':
-        // Tranche 3, E-FI1 : l'écran « membre » de la projection,
-        // ouvert directement, sans passer par l'aperçu complet
-        // de l'espace fidèle (celui du tableau de bord reste
-        // inchangé).
-        _pousser(context, const EspaceMembreScreen());
+      case 'departements':
+        _pousser(context, const DepartementsScreen());
       case 'cultes':
         _pousser(context, const CultesDirectScreen());
-      case 'cartes':
-        _pousser(context, const CartesMembresScreen());
       case 'pastoral':
         _pousser(context, const PastoralScreen());
+      case 'serviteurs':
+        _pousser(context, const ServiteursScreen());
       case 'bible':
-        _info(
+        // La Bible est un écran sans Scaffold propre : on l'habille
+        // ici, comme dans l'accueil fidèle. L'école biblique, qui a
+        // sa propre barre, s'ouvre par le bouton de la barre.
+        _pousser(
           context,
-          'Bible et école biblique : tranche T9 en cours, '
-          'pas encore en ligne.',
+          Scaffold(
+            appBar: AppBar(
+              title: const Text('Bible et école'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.school_outlined),
+                  tooltip: 'École biblique',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const EcoleBibliqueScreen(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            body: const BibleFideleScreen(),
+          ),
         );
       case 'gouvernance':
         _pousser(context, const GouvernanceScreen());
-      case 'confiance':
-        _pousser(context, const SettingsScreen());
-      case 'paiements':
-        _pousser(context, const PaiementsScreen());
-      case 'qualite':
-        _info(
-          context,
-          'Qualité et bascule : contrôles automatisés en place, '
-          'sans écran dédié dans l’application.',
-        );
-      case 'connexion':
-        _info(context, 'Connexion : vous êtes déjà connecté.');
+      case 'patrimoine':
+        _pousser(context, const PatrimoineScreen());
+      case 'prieres':
+      case 'messages':
+        // Pas d'écran admin de messages dédié : les messages
+        // internes vivent dans l'écran Prières, 2e onglet.
+        _pousser(context, const PrieresScreen());
+      case 'annexes':
+        _pousser(context, const AnnexesScreen());
+      case 'rapports':
+        _pousser(context, const RapportsRecusScreen());
+      case 'rendezVous':
+        _pousser(context, const RendezVousAdminScreen());
+      case 'attestations':
+        _pousser(context, const AttestationsScreen());
     }
   }
 
@@ -197,31 +183,9 @@ class ModulesScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Text(
-                  'Tous les modules',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppTheme.or,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'T1 à T13',
-                  style: AppTheme.styleCode.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.violetProfond,
-                  ),
-                ),
-              ),
-            ],
+          Text(
+            'Tous les modules',
+            style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 8),
           LayoutBuilder(
@@ -235,7 +199,7 @@ class ModulesScreen extends StatelessWidget {
                 crossAxisSpacing: 12,
                 childAspectRatio: 0.82,
                 children: [
-                  for (final (cible, titre, description, etat, icone)
+                  for (final (cible, titre, description, icone)
                       in _modules)
                     Card(
                       child: InkWell(
@@ -251,9 +215,8 @@ class ModulesScreen extends StatelessWidget {
                                   Icon(icone,
                                       color: AppTheme.orFonce, size: 28),
                                   const Spacer(),
-                                  if (!_sansCible.contains(cible))
-                                    const Icon(Icons.chevron_right,
-                                        color: AppTheme.orFonce, size: 20),
+                                  const Icon(Icons.chevron_right,
+                                      color: AppTheme.orFonce, size: 20),
                                 ],
                               ),
                               const SizedBox(height: 12),
@@ -267,36 +230,11 @@ class ModulesScreen extends StatelessWidget {
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 4),
-                              // La description prend la place restante et
-                              // s'ellipse : sans elle, les cartes à titre
-                              // long débordaient de 33 px sur un téléphone
-                              // de 390 px (titre 2 lignes + description
-                              // 3 lignes + pastille 2 lignes).
                               Expanded(
                                 child: Text(
                                   description,
                                   maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: etat.contains('À venir')
-                                      ? Colors.grey.shade200
-                                      : AppTheme.orClair,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  etat,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTheme.styleCode.copyWith(
-                                    color: etat.contains('À venir')
-                                        ? Colors.grey.shade700
-                                        : AppTheme.violetProfond,
-                                  ),
                                 ),
                               ),
                             ],

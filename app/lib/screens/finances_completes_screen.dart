@@ -8,10 +8,10 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../utils/periodes.dart';
 import '../widgets/common_widgets.dart';
-import 'budgets_departements_screen.dart';
 import 'cloture_caisse_screen.dart';
 import 'comptes_bancaires_screen.dart';
 import 'cotisations_admin_screen.dart';
+import 'paiements_screen.dart';
 import 'rapprochement_screen.dart';
 import 'recus_screen.dart';
 import 'sycebnl_screen.dart';
@@ -26,7 +26,6 @@ class _DonneesHub {
   final Rapprochement rapprochement;
   final List<ClotureCaisse> clotures;
   final int nombreRecus;
-  final SuiviDepartements suiviDepartements;
   final List<CompteBancaire> comptes;
 
   const _DonneesHub({
@@ -37,15 +36,16 @@ class _DonneesHub {
     required this.rapprochement,
     required this.clotures,
     required this.nombreRecus,
-    required this.suiviDepartements,
     required this.comptes,
   });
 }
 
 /// Contenu de l'onglet « Finances complètes » (tranche T7) :
 /// indicateurs du mois et de la caisse, puis une carte par fonction
-/// (cotisations, comptes bancaires, rapprochement, clôture, reçus,
-/// budgets par département), chacune ouvrant son écran. Le rôle
+/// (cotisations, comptes bancaires, rapprochement, clôture, reçus),
+/// chacune ouvrant son écran. Les budgets par département vivent dans
+/// l'onglet Départements (maquette, un seul accès aux budgets :
+/// « Budget & caisse » depuis Finances). Le rôle
 /// « membre » simple n'a pas accès à cet écran.
 class ContenuFinancesCompletes extends StatefulWidget {
   const ContenuFinancesCompletes({super.key});
@@ -75,8 +75,6 @@ class _ContenuFinancesCompletesState
       api.getRapprochement(),
       api.getCloturesCaisse(),
       api.getContributions(status: 'confirme'),
-      api.getSuiviDepartements(
-          annee: maintenant.year, mois: maintenant.month),
       api.getComptesBancaires(),
     ]);
     final mouvements = results[2] as List<CaisseMouvement>;
@@ -114,8 +112,7 @@ class _ContenuFinancesCompletesState
       rapprochement: results[3] as Rapprochement,
       clotures: results[4] as List<ClotureCaisse>,
       nombreRecus: nombreRecus,
-      suiviDepartements: results[6] as SuiviDepartements,
-      comptes: results[7] as List<CompteBancaire>,
+      comptes: results[6] as List<CompteBancaire>,
     );
   }
 
@@ -155,9 +152,6 @@ class _ContenuFinancesCompletesState
           final cloturee =
               d.clotures.any((c) => c.periode == aCloturer);
           final suivi = d.suiviCotisations;
-          final budgetsDefinis = d.suiviDepartements.parDepartements
-              .where((l) => l.budgetDefini)
-              .length;
           return RefreshIndicator(
             onRefresh: () async => _refresh(),
             child: ListView(
@@ -227,6 +221,12 @@ class _ContenuFinancesCompletesState
                       _ouvrir(const ComptesBancairesScreen()),
                 ),
                 _CarteFonction(
+                  icone: Icons.store_outlined,
+                  titre: 'Comptes marchands',
+                  texte: 'Wave, Orange Money, MTN.',
+                  onTap: () => _ouvrir(const PaiementsScreen()),
+                ),
+                _CarteFonction(
                   icone: Icons.swap_horiz,
                   titre: 'Rapprochement',
                   texte: 'Écart entre la caisse et la banque.',
@@ -255,17 +255,6 @@ class _ContenuFinancesCompletesState
                   texte: '',
                   badge: pluriel(d.nombreRecus, 'reçu'),
                   onTap: () => _ouvrir(const RecusScreen()),
-                ),
-                _CarteFonction(
-                  icone: Icons.calendar_month_outlined,
-                  titre: 'Budgets par département',
-                  texte: budgetsDefinis == 0
-                      ? 'Aucun budget défini'
-                      : '${pluriel(budgetsDefinis, 'budget défini')} · ${libellePeriodeMois('${d.suiviDepartements.annee}-${d.suiviDepartements.mois.toString().padLeft(2, '0')}')}',
-                  sousTexte:
-                      'Les budgets se créent par département, avec leur enveloppe en FCFA.',
-                  onTap: () =>
-                      _ouvrir(const BudgetsDepartementsScreen()),
                 ),
                 const SizedBox(height: 8),
                 const SectionTitle(title: 'Déclarations et exports'),

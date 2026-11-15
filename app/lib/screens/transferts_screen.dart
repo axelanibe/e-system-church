@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
+import '../models/church.dart';
+import '../models/member.dart';
 import '../models/transfert.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
@@ -24,6 +26,15 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
   final _codeController = TextEditingController();
   final _motifController = TextEditingController();
   bool _sending = false;
+
+  // Vérification avant envoi (P0 F-03) : le membre et l'église
+  // d'arrivée sont retrouvés et affichés avant toute demande.
+  // Tant que les deux ne sont pas retrouvés, l'envoi reste inactif.
+  bool _verificationEnCours = false;
+  Member? _membreVerifie;
+  Church? _egliseVerifiee;
+  String? _membreIntrouvable;
+  String? _egliseIntrouvable;
 
   @override
   void initState() {
@@ -70,6 +81,72 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
     }
   }
 
+  /// La saisie a changé depuis la vérification : le résultat affiché
+  /// ne vaut plus, l'envoi se verrouille de nouveau.
+  void _invaliderVerification() {
+    if (_membreVerifie != null ||
+        _egliseVerifiee != null ||
+        _membreIntrouvable != null ||
+        _egliseIntrouvable != null) {
+      setState(() {
+        _membreVerifie = null;
+        _egliseVerifiee = null;
+        _membreIntrouvable = null;
+        _egliseIntrouvable = null;
+      });
+    }
+  }
+
+  Future<void> _verifier() async {
+    final matricule = _matriculeController.text.trim().toUpperCase();
+    final code = _codeController.text.trim().toUpperCase();
+    if (matricule.isEmpty) {
+      showApiError(context, 'Saisissez le matricule du membre.');
+      return;
+    }
+    if (code.length < 4) {
+      showApiError(context, 'Saisissez le code de l’église d’arrivée.');
+      return;
+    }
+    setState(() {
+      _verificationEnCours = true;
+      _membreVerifie = null;
+      _egliseVerifiee = null;
+      _membreIntrouvable = null;
+      _egliseIntrouvable = null;
+    });
+    final api = context.read<AppState>().api;
+    Member? membre;
+    Church? eglise;
+    String? erreurMembre;
+    String? erreurEglise;
+    try {
+      final page = await api.getMembers(q: matricule);
+      membre = page.membres
+          .where((m) => m.matricule.toUpperCase() == matricule)
+          .firstOrNull;
+      if (membre == null) {
+        erreurMembre = 'Membre introuvable pour ce matricule.';
+      }
+    } catch (e) {
+      erreurMembre = 'Membre introuvable pour ce matricule.';
+    }
+    try {
+      final presentation = await api.getPresentation(code);
+      eglise = presentation.eglise;
+    } catch (e) {
+      erreurEglise = 'Église introuvable pour ce code.';
+    }
+    if (!mounted) return;
+    setState(() {
+      _verificationEnCours = false;
+      _membreVerifie = membre;
+      _egliseVerifiee = eglise;
+      _membreIntrouvable = erreurMembre;
+      _egliseIntrouvable = erreurEglise;
+    });
+  }
+
   Future<void> _request() async {
     final matricule = _matriculeController.text.trim().toUpperCase();
     final code = _codeController.text.trim().toUpperCase();
@@ -94,6 +171,12 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
       _matriculeController.clear();
       _codeController.clear();
       _motifController.clear();
+      setState(() {
+        _membreVerifie = null;
+        _egliseVerifiee = null;
+        _membreIntrouvable = null;
+        _egliseIntrouvable = null;
+      });
       showSuccess(context,
           'Demande envoyée.');
       await _refresh();
@@ -245,6 +328,7 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                               labelText: 'Matricule du membre',
                               border: OutlineInputBorder(),
                             ),
+                            onChanged: (_) => _invaliderVerification(),
                           ),
                           const SizedBox(height: 12),
                           TextField(
@@ -254,6 +338,7 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                               labelText: 'Code de l’église d’arrivée',
                               border: OutlineInputBorder(),
                             ),
+                            onChanged: (_) => _invaliderVerification(),
                           ),
                           const SizedBox(height: 12),
                           TextField(
@@ -264,9 +349,62 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
+                          OutlinedButton(
+                            onPressed:
+                                _verificationEnCours ? null : _verifier,
+                            child: _verificationEnCours
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  )
+                                : const Text('Vérifier'),
+                          ),
+                          if (_membreVerifie != null ||
+                              _membreIntrouvable != null ||
+                              _egliseVerifiee != null ||
+                              _egliseIntrouvable != null) ...[
+                            const SizedBox(height: 12),
+                            if (_membreVerifie != null)
+                              Text(
+                                'Membre retrouvé : ${_membreVerifie!.fullName} (${_membreVerifie!.matricule})',
+                                style: const TextStyle(
+                                  color: AppTheme.violetProfond,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            if (_membreIntrouvable != null)
+                              Text(
+                                _membreIntrouvable!,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                              ),
+                            if (_egliseVerifiee != null)
+                              Text(
+                                'Église d’arrivée : ${_egliseVerifiee!.name} (${_egliseVerifiee!.code})',
+                                style: const TextStyle(
+                                  color: AppTheme.violetProfond,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            if (_egliseIntrouvable != null)
+                              Text(
+                                _egliseIntrouvable!,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                              ),
+                          ],
+                          const SizedBox(height: 12),
                           FilledButton(
-                            onPressed: _sending ? null : _request,
-                            child: const Text('Envoyer la demande'),
+                            onPressed: (_sending ||
+                                    _membreVerifie == null ||
+                                    _egliseVerifiee == null)
+                                ? null
+                                : _request,
+                            child: const Text('Confirmer et envoyer'),
                           ),
                         ],
                       ),

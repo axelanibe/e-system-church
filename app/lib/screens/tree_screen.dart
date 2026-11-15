@@ -6,19 +6,21 @@ import '../models/church.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
-import '../widgets/liste_avec_fab.dart';
 
-/// Arborescence de mon réseau (`GET /eglises/arbre`) : vue dépliable,
-/// ajout d'une sous-église (admin seulement) et demandes de rattachement
-/// en attente (accepter / refuser).
-class TreeScreen extends StatefulWidget {
-  const TreeScreen({super.key});
+/// Arborescence de mon réseau (`GET /eglises/arbre`) : vue dépliable
+/// et ajout d'une sous-église (admin seulement). Ancien écran « Réseau »
+/// (10), fusionné dans Mes annexes (12) : il n'existe plus d'écran
+/// Réseau séparé, cet arbre s'affiche directement dans Mes annexes.
+/// Les demandes de rattachement se traitent dans leur écran (11),
+/// pas ici : une seule entrée par fonction.
+class ArbreReseau extends StatefulWidget {
+  const ArbreReseau({super.key});
 
   @override
-  State<TreeScreen> createState() => _TreeScreenState();
+  State<ArbreReseau> createState() => _ArbreReseauState();
 }
 
-class _TreeScreenState extends State<TreeScreen> {
+class _ArbreReseauState extends State<ArbreReseau> {
   late Future<TreeResult> _future;
 
 
@@ -112,148 +114,74 @@ class _TreeScreenState extends State<TreeScreen> {
     }
   }
 
-  Future<void> _decide(String id, bool accept) async {
-    try {
-      await context
-          .read<AppState>()
-          .api
-          .decideRattachement(id, accept: accept);
-      if (!mounted) return;
-      showSuccess(
-          context, accept ? 'Demande acceptée.' : 'Demande refusée.');
-      await _refresh();
-    } catch (e) {
-      if (mounted) showApiError(context, e);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Réseau')),
-      body: FutureBuilder<TreeResult>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const AppLoading();
-          }
-          if (snapshot.hasError) {
-            return AppError(
-              message: snapshot.error.toString(),
-              onRetry: _refresh,
-            );
-          }
-          final result = snapshot.data!;
-          // Réseau vide (une seule église, aucune sous-église) : la page
-          // ne reste pas vide et confuse (photo 2). Une carte explique
-          // ce qu'est le réseau et ce qu'il faut faire ensuite, avec un
-          // bouton bien visible, au lieu du seul petit bouton flottant.
-          final reseauVide = result.arbre.totalEglises <= 1 &&
-              result.arbre.children.isEmpty &&
-              result.demandesRattachement.isEmpty;
-          return ListeAvecFab(
-            child: RefreshIndicator(
-              onRefresh: _refresh,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 720),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (result.demandesRattachement.isNotEmpty) ...[
-                          const SectionTitle(title: 'Demandes de rattachement'),
-                          ...result.demandesRattachement.map(
-                            (d) => Card(
-                              child: ListTile(
-                                leading:
-                                    const Icon(Icons.group_add_outlined),
-                                title: Text(
-                                  d.egliseNom,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                subtitle: Text(
-                                    '${d.egliseCode} · ${d.egliseVille ?? ''}'),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    // Une annexe ne peut pas accepter de
-                                    // rattachement : elle ne peut pas
-                                    // devenir mère. Refuser reste possible.
-                                    if (result.arbre.isMere)
-                                      IconButton(
-                                        icon: const Icon(Icons.check,
-                                            color: AppTheme.violetProfond),
-                                        tooltip: 'Accepter',
-                                        onPressed: () => _decide(d.id, true),
-                                      ),
-                                    IconButton(
-                                      icon: const Icon(Icons.close,
-                                          color: AppTheme.rougeErreur),
-                                      tooltip: 'Refuser',
-                                      onPressed: () => _decide(d.id, false),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                        const SectionTitle(title: 'Mon réseau'),
-                        Card(
-                          child: _TreeNodeTile(
-                            node: result.arbre,
-                            isRoot: true,
-                            canEdit: state.isAdmin,
-                            onRenamed: _refresh,
-                          ),
+    return FutureBuilder<TreeResult>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AppLoading();
+        }
+        if (snapshot.hasError) {
+          return AppError(
+            message: snapshot.error.toString(),
+            onRetry: _refresh,
+          );
+        }
+        final result = snapshot.data!;
+        // Réseau vide (une seule église, aucune sous-église) : la page
+        // ne reste pas vide et confuse (photo 2). Une carte explique
+        // ce qu'est le réseau et ce qu'il faut faire ensuite, avec un
+        // bouton bien visible, au lieu du seul petit bouton flottant.
+        final reseauVide = result.arbre.totalEglises <= 1 &&
+            result.arbre.children.isEmpty &&
+            result.demandesRattachement.isEmpty;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              child: _TreeNodeTile(
+                node: result.arbre,
+                isRoot: true,
+                canEdit: state.isAdmin,
+                onRenamed: _refresh,
+              ),
+            ),
+            // Le bouton reste visible pour une mère même quand
+            // le réseau n'est plus vide : c'est le seul moyen
+            // de créer une autre sous-église (plus de FAB).
+            if (reseauVide || result.arbre.isMere) ...[
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (!result.arbre.isMere)
+                        const Text(
+                          'Une annexe ne peut pas avoir de '
+                          'sous-église.',
                         ),
-                        // Le bouton reste visible pour une mère même quand
-                        // le réseau n'est plus vide : c'est le seul moyen
-                        // de créer une autre sous-église (plus de FAB).
-                        if (reseauVide || result.arbre.isMere) ...[
-                          const SizedBox(height: 16),
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (!result.arbre.isMere)
-                                    const Text(
-                                      'Une annexe ne peut pas avoir de '
-                                      'sous-église.',
-                                    ),
-                                  // Le bouton n'existe que pour une mère.
-                                  if (result.arbre.isMere) ...[
-                                    const SizedBox(height: 16),
-                                    FilledButton.icon(
-                                      onPressed: _addSubChurch,
-                                      icon: const Icon(Icons.add),
-                                      label:
-                                          const Text('Créer une sous-église'),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
+                      // Le bouton n'existe que pour une mère.
+                      if (result.arbre.isMere) ...[
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          onPressed: _addSubChurch,
+                          icon: const Icon(Icons.add),
+                          label: const Text('Créer une sous-église'),
+                        ),
                       ],
-                    ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          );
-        },
-      ),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }

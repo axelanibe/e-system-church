@@ -12,17 +12,27 @@ import '../widgets/logo_app.dart';
 import '../widgets/soft_button.dart';
 import '../widgets/soft_card.dart';
 import 'annonces_screen.dart';
+import 'annexes_screen.dart';
 import 'cultes_screen.dart';
-import 'member_form_screen.dart';
+import 'mon_eglise_screen.dart';
+import 'pastoral_screen.dart';
 import 'plateforme_screen.dart';
 import 'rapports_mere_screen.dart';
 import 'rapports_recus_screen.dart';
+import 'rendez_vous_admin_screen.dart';
+import 'serviteurs_screen.dart';
 
 class _DashboardData {
   final int membresTotal;
   final int presencesJour;
   final int nouveauxMembres;
   final int cotisationsMois;
+  final int demandesEnAttente;
+  final int membresASuivre;
+  final int rendezVousEnAttente;
+  final int serviteursActifs;
+  final int annexesTotal;
+  final int rapportsRecus;
   final RapportConsolide? rapport;
   final List<Announcement> annonces;
   final List<Culte> cultes;
@@ -32,20 +42,27 @@ class _DashboardData {
     required this.presencesJour,
     required this.nouveauxMembres,
     required this.cotisationsMois,
+    required this.demandesEnAttente,
+    required this.membresASuivre,
+    required this.rendezVousEnAttente,
+    required this.serviteursActifs,
+    required this.annexesTotal,
+    required this.rapportsRecus,
     required this.rapport,
     required this.annonces,
     required this.cultes,
   });
 }
 
-/// Tableau de bord (projection, captures IMG_4027 à IMG_4031) :
-/// carte violet profond « Aujourd'hui » avec le prochain culte dedans,
-/// 4 chiffres réels, « Mon réseau », annonces récentes, actions
-/// rapides, puis les rapports (mère ou annexes).
-/// Chiffres de mon église + consolidé du réseau
-/// (`GET /rapports/consolide`, admin de la mère seulement).
-/// Rien d'inventé : que des données réelles, et des états vides
-/// quand il n'y a rien.
+/// Tableau de bord (maquette Membres Finances, écran 19) : carte
+/// violet profond « Aujourd'hui » avec le prochain culte dedans,
+/// tableau du jour en chiffres réels (membres, présences, cotisations,
+/// demandes, membres à suivre, rendez-vous, serviteurs, annexes,
+/// rapports reçus), « Mon réseau », actions rapides (Nouveau culte,
+/// Nouvelle annonce) et annonces récentes, puis les rapports (mère ou
+/// annexes). Rien d'inventé : que des données réelles, et des états
+/// vides quand il n'y a rien. L'espace fidèle ne s'ouvre pas depuis
+/// l'admin (périmètres étanches) : pas d'aperçu fidèle ici.
 class DashboardScreen extends StatefulWidget {
   final ValueChanged<int> onAller;
 
@@ -104,6 +121,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (_) {
       nouveauxMembres = 0;
     }
+    // Tableau du jour (maquette, écran 19) : demandes, membres à
+    // suivre, rendez-vous, serviteurs, annexes, rapports reçus.
+    // Chaque compteur vient d'une vraie lecture serveur ; un échec
+    // ne bloque pas le tableau, le compteur reste à 0.
+    int demandesEnAttente = 0;
+    int membresASuivre = 0;
+    int rendezVousEnAttente = 0;
+    int serviteursActifs = 0;
+    int annexesTotal = 0;
+    int rapportsRecus = 0;
+    if (state.isAdmin) {
+      try {
+        final demandes = await api.getDemandesLiaison();
+        demandesEnAttente =
+            demandes.where((d) => d.status == 'en_attente').length;
+      } catch (_) {
+        demandesEnAttente = 0;
+      }
+      try {
+        final annexes = await api.getAnnexes();
+        annexesTotal = annexes.length;
+      } catch (_) {
+        annexesTotal = 0;
+      }
+    }
+    if (state.canManageMembers) {
+      try {
+        final radar = await api.getRadarAbsences();
+        membresASuivre = radar.length;
+      } catch (_) {
+        membresASuivre = 0;
+      }
+      try {
+        final rendezVous = await api.getRendezVousAdmin();
+        rendezVousEnAttente =
+            rendezVous.where((r) => r.statut == 'en_attente').length;
+      } catch (_) {
+        rendezVousEnAttente = 0;
+      }
+      try {
+        final serviteurs = await api.getServiteurs();
+        serviteursActifs = serviteurs.where((s) => s.actif).length;
+      } catch (_) {
+        serviteursActifs = 0;
+      }
+    }
+    if (state.isAdmin && (state.church?.isMere ?? false)) {
+      try {
+        final recus = await api.getRapportsRecus();
+        rapportsRecus = recus.length;
+      } catch (_) {
+        rapportsRecus = 0;
+      }
+    }
     final annonces = await api.getAnnonces();
     List<Culte> cultes = [];
     try {
@@ -116,6 +187,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       presencesJour: presencesJour,
       nouveauxMembres: nouveauxMembres,
       cotisationsMois: cotisationsMois,
+      demandesEnAttente: demandesEnAttente,
+      membresASuivre: membresASuivre,
+      rendezVousEnAttente: rendezVousEnAttente,
+      serviteursActifs: serviteursActifs,
+      annexesTotal: annexesTotal,
+      rapportsRecus: rapportsRecus,
       rapport: rapport,
       annonces: annonces,
       cultes: cultes,
@@ -177,79 +254,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 // logo e-System Church en grand.
                 EnteteEspace(eglise: church),
                 const SizedBox(height: 16),
-                // Aperçu multi-rôles (maquette de refonte) : remplace
-                // la carte « Démonstration des deux espaces ». Même
-                // accès que l'espace fidèle, en aperçu avec retour.
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppTheme.violetProfond,
-                        AppTheme.violetSecondaire,
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'APERÇU FIDÈLE',
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.or,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Espace Fidèle',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(color: Colors.white),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(
-                            Icons.visibility_outlined,
-                            color: AppTheme.or,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppTheme.or,
-                            foregroundColor: AppTheme.violetProfond,
-                          ),
-                          onPressed: () => context
-                              .read<AppState>()
-                              .entrerApercuFidele(),
-                          icon: const Icon(Icons.arrow_forward),
-                          label: const Text(
-                              'Aperçu de l’espace fidèle'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
                 if (state.isSuperAdmin)
                   SoftCard(
                     child: Column(
@@ -301,10 +305,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Aujourd'hui (projection, IMG_4027) : carte
+                        // Aujourd'hui (maquette, écran 19) : carte
                         // violet profond avec le prochain culte dedans,
-                        // puis les 4 chiffres réels. Aucun chiffre
-                        // inventé.
+                        // puis les chiffres réels du tableau du jour.
+                        // Aucun chiffre inventé.
                         Container(
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
@@ -461,6 +465,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   icon: Icons.person_add_outlined,
                                   color: AppTheme.violetProfond,
                                 ),
+                                if (state.isAdmin)
+                                  StatCard(
+                                    label: 'Demandes',
+                                    value: '${data.demandesEnAttente}',
+                                    icon: Icons.mail_outline,
+                                    color: AppTheme.violetProfond,
+                                    onTap: () => _ouvrir(
+                                        context, const MonEgliseScreen()),
+                                  ),
+                                if (state.canManageMembers)
+                                  StatCard(
+                                    label: 'Membres à suivre',
+                                    value: '${data.membresASuivre}',
+                                    icon: Icons.track_changes_outlined,
+                                    color: AppTheme.violetProfond,
+                                    onTap: () => _ouvrir(
+                                        context, const PastoralScreen()),
+                                  ),
+                                if (state.canManageMembers)
+                                  StatCard(
+                                    label: 'Rendez-vous',
+                                    value:
+                                        '${data.rendezVousEnAttente}',
+                                    icon: Icons.event_available_outlined,
+                                    color: AppTheme.violetProfond,
+                                    onTap: () => _ouvrir(context,
+                                        const RendezVousAdminScreen()),
+                                  ),
+                                if (state.canManageMembers)
+                                  StatCard(
+                                    label: 'Serviteurs',
+                                    value: '${data.serviteursActifs}',
+                                    icon: Icons.handshake_outlined,
+                                    color: AppTheme.violetProfond,
+                                    onTap: () => _ouvrir(
+                                        context, const ServiteursScreen()),
+                                  ),
+                                if (state.isAdmin)
+                                  StatCard(
+                                    label: 'Annexes',
+                                    value: '${data.annexesTotal}',
+                                    icon: Icons.account_tree_outlined,
+                                    color: AppTheme.violetProfond,
+                                    onTap: () => _ouvrir(
+                                        context, const AnnexesScreen()),
+                                  ),
+                                if (state.isAdmin &&
+                                    (church?.isMere ?? false))
+                                  StatCard(
+                                    label: 'Rapports d’annexe reçus',
+                                    value: '${data.rapportsRecus}',
+                                    icon: Icons.description_outlined,
+                                    color: AppTheme.violetProfond,
+                                    onTap: () => _ouvrir(context,
+                                        const RapportsRecusScreen()),
+                                  ),
                               ],
                             );
                           },
@@ -603,17 +663,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                // Actions rapides (projection, IMG_4030) : grille
-                // 2 colonnes, icône or, titre et sous-titre. Les 4
-                // de la projection : Ajouter un membre, Nouveau
-                // culte, Nouvelle annonce, Voir les finances (onglet
-                // Finances, pas un écran en double). La création
-                // d'une contribution se fait depuis l'onglet Finances.
-                // Seulement celles que le rôle permet ; sans aucune
-                // action permise, rien ne s'affiche.
-                if (state.canManageMembers ||
-                    state.canReadFinances ||
-                    state.isAdmin) ...[
+                // Actions rapides (maquette, écran 19) : Nouveau culte
+                // et Nouvelle annonce seulement. Ajouter un membre se
+                // fait depuis l'onglet Membres, les finances depuis
+                // l'onglet Finances : pas de doublon. Seulement celles
+                // que le rôle permet ; sans aucune action permise, rien
+                // ne s'affiche.
+                if (state.canManageMembers || state.isAdmin) ...[
                   const SectionTitle(title: 'Actions rapides'),
                   LayoutBuilder(
                     builder: (context, constraints) {
@@ -627,15 +683,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         crossAxisSpacing: 12,
                         childAspectRatio: 1.1,
                         children: [
-                          if (state.canManageMembers)
-                            _ActionRapide(
-                              icone: Icons.person_add_outlined,
-                              titre: 'Ajouter un membre',
-                              sousTitre:
-                                  'Création guidée en 3 étapes',
-                              onTap: () => _ouvrir(
-                                  context, const MemberFormScreen()),
-                            ),
                           if (state.canManageMembers)
                             _ActionRapide(
                               icone: Icons.church_outlined,
@@ -652,14 +699,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   'Publiée pour toute la structure',
                               onTap: () => _ouvrir(
                                   context, const AnnoncesScreen()),
-                            ),
-                          if (state.canReadFinances)
-                            _ActionRapide(
-                              icone:
-                                  Icons.account_balance_wallet_outlined,
-                              titre: 'Voir les finances',
-                              sousTitre: 'Cotisations, caisse et reçus',
-                              onTap: () => widget.onAller(2),
                             ),
                         ],
                       );

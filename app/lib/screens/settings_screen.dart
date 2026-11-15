@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
 import '../config/app_theme.dart';
+import '../models/confiance.dart';
+import '../models/paiements.dart';
 import '../models/parametres.dart';
 import '../models/suppression_eglise.dart';
 import '../state/app_state.dart';
@@ -23,10 +25,14 @@ import 'sauvegarde_screen.dart';
 /// Réglages et confiance (fusion E-CF4 + E-RG1, modèle projection,
 /// écran « Réglages et confiance ») : un seul parcours. Les 5 entrées
 /// Confiance en tête, dans l'ordre de la projection, puis les sections
-/// Réglages (Église, Paramètres de l'église, Rôles, Compte, API réelle,
-/// Application). Le Journal d'audit ouvre l'écran Audit, qui montre les
-/// mêmes données que l'ancien onglet Journal des paramètres. Les anciens
-/// supprimés, jamais gardés en doublon.
+/// Réglages (Église, Paramètres de l'église, Clés marchandes et API,
+/// Rôles, Compte, API réelle, Application). Les clés marchandes (Wave,
+/// Orange Money, MTN) et la clé du fournisseur de notifications se
+/// saisissent uniquement ici, masquées et chiffrées, jamais affichées
+/// en clair ni pré-remplies, vidées après enregistrement. Le Journal
+/// d'audit ouvre l'écran Audit, qui montre les mêmes données que
+/// l'ancien onglet Journal des paramètres. Les anciens supprimés,
+/// jamais gardés en doublon.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -637,6 +643,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SectionTitle(title: 'Paramètres de l’église'),
                   _formulaireParametres(),
+                  const SectionTitle(title: 'Clés marchandes et API'),
+                  if (state.church != null)
+                    _ClesMarchandesSection(churchId: state.church!.id),
                   const SectionTitle(title: 'Rôles'),
                   _sectionRoles(),
                   const SectionTitle(title: 'Compte'),
@@ -773,6 +782,243 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Clés marchandes et API (maquette, écran 14) : le seul endroit où
+/// se saisissent les clés Wave, Orange Money, MTN et celle du
+/// fournisseur de notifications. Les champs sont masqués à la saisie,
+/// jamais pré-remplis (l'API ne renvoie aucune valeur), et vidés après
+/// enregistrement. L'état affiché est seulement « •••••••• —
+/// chiffrée, jamais affichée en clair » ou « Aucune clé enregistrée ».
+class _ClesMarchandesSection extends StatefulWidget {
+  final String churchId;
+
+  const _ClesMarchandesSection({required this.churchId});
+
+  @override
+  State<_ClesMarchandesSection> createState() =>
+      _ClesMarchandesSectionState();
+}
+
+class _ClesMarchandesSectionState extends State<_ClesMarchandesSection> {
+  static const _codesMarchands = {'wave', 'orange_money', 'mtn_momo'};
+
+  List<FournisseurPaiement> _fournisseurs = [];
+  List<EglisePaiement> _configs = [];
+  ParametresConfiance? _confiance;
+  bool _chargement = true;
+  bool _enregistrement = false;
+
+  /// Contrôleurs par fournisseur puis par champ, créés après le
+  /// chargement du catalogue (les champs viennent du serveur).
+  final Map<String, Map<String, TextEditingController>> _cles = {};
+  final _cleNotificationController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _charger();
+  }
+
+  @override
+  void dispose() {
+    for (final parChamp in _cles.values) {
+      for (final c in parChamp.values) {
+        c.dispose();
+      }
+    }
+    _cleNotificationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _charger() async {
+    setState(() => _chargement = true);
+    try {
+      final api = context.read<AppState>().api;
+      final fournisseurs = await api.getFournisseursPaiement();
+      final configs = await api.getMesPaiements(widget.churchId);
+      final confiance = await api.getParametresConfiance();
+      if (!mounted) return;
+      setState(() {
+        _fournisseurs = fournisseurs
+            .where((f) => _codesMarchands.contains(f.code))
+            .toList();
+        _configs = configs;
+        _confiance = confiance;
+        for (final f in _fournisseurs) {
+          _cles[f.code] ??= {
+            for (final champ in f.champsRequis)
+              champ.nom: TextEditingController(),
+          };
+        }
+        _chargement = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _chargement = false);
+      showApiError(context, e);
+    }
+  }
+
+  EglisePaiement? _configPour(String code) =>
+      _configs.where((c) => c.fournisseurCode == code).firstOrNull;
+
+  void _vider() {
+    for (final parChamp in _cles.values) {
+      for (final c in parChamp.values) {
+        c.clear();
+      }
+    }
+    _cleNotificationController.clear();
+  }
+
+  Future<void> _enregistrer() async {
+    final api = context.read<AppState>().api;
+    setState(() => _enregistrement = true);
+    try {
+      var nbEnregistres = 0;
+      for (final f in _fournisseurs) {
+        final parChamp = _cles[f.code] ?? {};
+        final secrets = <Map<String, String>>[];
+        for (final champ in f.champsRequis) {
+          final valeur = parChamp[champ.nom]?.text.trim() ?? '';
+          if (valeur.isNotEmpty) {
+            secrets.add({'nom_champ': champ.nom, 'valeur': valeur});
+          }
+        }
+        if (secrets.isEmpty) continue;
+        final config = _configPour(f.code);
+        if (config == null) {
+          final manquants = f.champsRequis
+              .where((c) =>
+                  !c.optionnel &&
+                  !secrets.any((s) => s['nom_champ'] == c.nom))
+              .map((c) => c.label)
+              .toList();
+          if (manquants.isNotEmpty) {
+            if (!mounted) return;
+            showApiError(context,
+                'Champs obligatoires manquants pour ${f.nom} : ${manquants.join(', ')}.');
+            return;
+          }
+        }
+        await api.configurerPaiement(
+          churchId: widget.churchId,
+          fournisseurCode: f.code,
+          pays: config?.pays ?? f.pays.first,
+          secrets: secrets,
+        );
+        nbEnregistres++;
+      }
+      final cleNotification = _cleNotificationController.text.trim();
+      if (cleNotification.isNotEmpty) {
+        await api.patchParametresConfiance(
+            notificationCle: cleNotification);
+        nbEnregistres++;
+      }
+      if (nbEnregistres == 0) {
+        if (!mounted) return;
+        showApiError(context, 'Saisissez au moins une clé.');
+        return;
+      }
+      _vider();
+      if (mounted) {
+        showSuccess(
+            context, 'Clés enregistrées. Elles ne sont jamais affichées.');
+      }
+      await _charger();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    } finally {
+      if (mounted) setState(() => _enregistrement = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_chargement) {
+      return const AppLoading();
+    }
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final f in _fournisseurs) ...[
+              Text(
+                f.nom,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Builder(
+                builder: (context) {
+                  final config = _configPour(f.code);
+                  if (config == null) {
+                    return const Text('Aucune clé enregistrée.');
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                          '•••••••• — chiffrée, jamais affichée en clair.'),
+                      for (final champ in config.champs)
+                        Text(
+                          '${champ.label} : ${champ.configure ? 'configuré' : 'non configuré'}',
+                        ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              for (final champ in f.champsRequis) ...[
+                TextField(
+                  controller: _cles[f.code]![champ.nom]!,
+                  obscureText: champ.secret,
+                  enableSuggestions: !champ.secret,
+                  autocorrect: !champ.secret,
+                  decoration: InputDecoration(
+                    labelText: champ.optionnel
+                        ? '${champ.label} (facultatif)'
+                        : champ.label,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              const SizedBox(height: 8),
+            ],
+            const Text(
+              'Fournisseur de notifications',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _confiance?.notificationsConfigurees == true
+                  ? '•••••••• — chiffrée, jamais affichée en clair.'
+                  : 'Aucune clé enregistrée.',
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _cleNotificationController,
+              obscureText: true,
+              enableSuggestions: false,
+              autocorrect: false,
+              decoration: const InputDecoration(
+                labelText: 'Clé du fournisseur de notifications',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: _enregistrement ? null : _enregistrer,
+              child: const Text('Enregistrer les clés'),
+            ),
+          ],
         ),
       ),
     );

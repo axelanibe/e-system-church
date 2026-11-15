@@ -76,7 +76,7 @@ class AProposScreen extends StatelessWidget {
                   child: Padding(
                     padding: EdgeInsets.all(16),
                     child: Text(
-                      'e-System Church est une seule plateforme qui centralise les églises en Côte d’Ivoire. Plusieurs églises peuvent l’utiliser en simultané. Chaque membre est rattaché à une seule église, sans mélange entre les églises.',
+                      'e-System Church est une seule plateforme qui centralise les églises dans le monde entier. Plusieurs églises peuvent l’utiliser en simultané. Chaque membre est rattaché à une seule église, sans mélange entre les églises.',
                       style: TextStyle(fontSize: 16),
                     ),
                   ),

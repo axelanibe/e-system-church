@@ -10,7 +10,8 @@ import '../widgets/common_widgets.dart';
 /// T11 — Notifications : boîte d'envoi (push et SMS), création, envoi,
 /// et paramètres du fournisseur. Aucun fournisseur n'est branché :
 /// tant qu'Axel n'a pas choisi de fournisseur, l'envoi reste en
-/// attente et rien ne part. La clé n'est jamais affichée.
+/// attente et rien ne part. La clé du fournisseur se saisit
+/// uniquement dans Réglages et confidentialité, jamais ici.
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 
@@ -28,7 +29,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final _titreController = TextEditingController();
   final _messageController = TextEditingController();
   final _fournisseurController = TextEditingController();
-  final _cleController = TextEditingController();
   final _plafondController = TextEditingController();
   String _canal = 'push';
 
@@ -43,7 +43,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _titreController.dispose();
     _messageController.dispose();
     _fournisseurController.dispose();
-    _cleController.dispose();
     _plafondController.dispose();
     super.dispose();
   }
@@ -130,16 +129,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     _fournisseurController.text.trim().isEmpty
                         ? null
                         : _fournisseurController.text.trim(),
-                notificationCle: _cleController.text.trim().isEmpty
-                    ? null
-                    : _cleController.text.trim(),
                 notificationPlafondMensuel: plafond,
               );
       if (!mounted) return;
       setState(() {
         _parametres = parametres;
-        _cleController.clear();
-        _message = 'Paramètres enregistrés. La clé n’est jamais affichée.';
+        _message = 'Paramètres enregistrés.';
       });
     } catch (e) {
       if (!mounted) return;
@@ -187,23 +182,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           const SizedBox(height: 8),
                           Text(
                             _parametres?.notificationsConfigurees == true
-                                ? 'Fournisseur configuré : ${_parametres!.notificationFournisseur ?? ''}.'
+                                ? 'Fournisseur configuré : ${_parametres!.notificationFournisseur ?? ''}.\n•••••••• — chiffrée, jamais affichée en clair.'
                                 : 'Aucun fournisseur.',
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'La clé du fournisseur se saisit dans Réglages et confidentialité.',
                           ),
                           const SizedBox(height: 12),
                           TextField(
                             controller: _fournisseurController,
                             decoration: const InputDecoration(
                               labelText: 'Fournisseur',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _cleController,
-                            obscureText: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Clé du fournisseur',
                               border: OutlineInputBorder(),
                             ),
                           ),
