@@ -8,7 +8,6 @@ import '../services/api_service.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
-import 'exemple_bilan_screen.dart';
 import 'rapports_recus_screen.dart';
 
 class _DonneesRapport {
@@ -402,25 +401,6 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                               ),
                             ),
                           ],
-                          const SectionTitle(title: 'Exemple de rapport'),
-                          const Text(
-                            'Voyez à quoi ressemble un bilan annuel rempli. '
-                            'Les chiffres sont des chiffres d’exemple.',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                          const SizedBox(height: 12),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const ExempleBilanScreen(),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.description_outlined),
-                            label: const Text('Voir un exemple de rapport'),
-                          ),
                         ],
                       ),
                     ),

@@ -229,18 +229,9 @@ class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
           });
         }
         if (items.isEmpty) {
-          return EmptyState(
+          return const EmptyState(
             icon: Icons.volunteer_activism_outlined,
-            message: 'Aucun bénéficiaire pour l’instant.',
-            actionLabel: 'Ajouter un bénéficiaire',
-            onAction: () async {
-              try {
-                final membres = (await _membresFuture).membres;
-                if (mounted) await _createBeneficiaire(membres);
-              } catch (e) {
-                if (context.mounted) showApiError(context, e);
-              }
-            },
+            message: 'Aucun bénéficiaire.',
           );
         }
         return ListeAvecFab(
@@ -256,7 +247,7 @@ class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
                   ),
                   title: Text(b.nom),
                   subtitle: Text(
-                    '${b.besoin ?? 'Besoin à compléter'}'
+                    '${b.besoin ?? ''}'
                     '${b.telephone != null ? ' · ${b.telephone}' : ''}',
                   ),
                   trailing: Row(
@@ -306,18 +297,9 @@ class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
           });
         }
         if (items.isEmpty) {
-          return EmptyState(
+          return const EmptyState(
             icon: Icons.handshake_outlined,
-            message: 'Aucune aide enregistrée pour l’instant.',
-            actionLabel: 'Enregistrer une aide',
-            onAction: () async {
-              try {
-                final beneficiaires = await _beneficiairesFuture;
-                if (mounted) await _createAide(beneficiaires);
-              } catch (e) {
-                if (context.mounted) showApiError(context, e);
-              }
-            },
+            message: 'Aucune aide.',
           );
         }
         return ListeAvecFab(

@@ -21,9 +21,6 @@ class TreeScreen extends StatefulWidget {
 class _TreeScreenState extends State<TreeScreen> {
   late Future<TreeResult> _future;
 
-  // Le réseau est-il vide ? Sert à masquer le FAB quand la carte
-  // réseau vide affiche déjà le bouton de création (un seul bouton).
-  bool _reseauVide = false;
 
   @override
   void initState() {
@@ -156,13 +153,6 @@ class _TreeScreenState extends State<TreeScreen> {
           final reseauVide = result.arbre.totalEglises <= 1 &&
               result.arbre.children.isEmpty &&
               result.demandesRattachement.isEmpty;
-          if (reseauVide != _reseauVide) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && _reseauVide != reseauVide) {
-                setState(() => _reseauVide = reseauVide);
-              }
-            });
-          }
           return ListeAvecFab(
             child: RefreshIndicator(
               onRefresh: _refresh,
@@ -223,12 +213,6 @@ class _TreeScreenState extends State<TreeScreen> {
                             onRenamed: _refresh,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${result.arbre.totalEglises} église${result.arbre.totalEglises > 1 ? 's' : ''} · ${result.arbre.totalMembresActifs} membre${result.arbre.totalMembresActifs > 1 ? 's' : ''} actif${result.arbre.totalMembresActifs > 1 ? 's' : ''} dans le réseau.',
-                          style: Theme.of(context).textTheme.bodySmall,
-                          textAlign: TextAlign.center,
-                        ),
                         if (reseauVide) ...[
                           const SizedBox(height: 16),
                           Card(
@@ -237,25 +221,11 @@ class _TreeScreenState extends State<TreeScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    result.arbre.isMere
-                                        ? 'Votre réseau, c’est votre église et ses sous-églises.'
-                                        : 'Votre église est une annexe.',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    result.arbre.isMere
-                                        ? 'Pour l’instant, vous n’avez qu’une seule église. '
-                                            'Créez une sous-église pour une nouvelle antenne : '
-                                            'elle aura son propre code, ses membres et ses finances, '
-                                            'et vous verrez ici ses chiffres avec les vôtres.'
-                                        : 'Une annexe ne peut pas avoir de sous-église. '
-                                            'Pour organiser la vie de votre église en petits groupes, '
-                                            'créez des cellules dans Familles, onglet Cellules.',
-                                  ),
+                                  if (!result.arbre.isMere)
+                                    const Text(
+                                      'Une annexe ne peut pas avoir de '
+                                      'sous-église.',
+                                    ),
                                   // Le bouton n'existe que pour une mère.
                                   if (result.arbre.isMere) ...[
                                     const SizedBox(height: 16),
@@ -281,23 +251,6 @@ class _TreeScreenState extends State<TreeScreen> {
           );
         },
       ),
-      // Le bouton n'existe que pour une église mère : une annexe ne
-      // peut pas créer de sous-église (règle du 11/11/2026).
-      // Masqué quand la carte réseau vide affiche déjà le bouton
-      // « Créer une sous-église » (un seul bouton, pas deux).
-      floatingActionButton: state.isAdmin &&
-              (state.church?.isMere ?? false) &&
-              !_reseauVide
-          ? FloatingActionButton.extended(
-              // Bleu nuit et blanc, bien lisible : l'or du thème sur fond
-              // papier paraissait effacé sur la photo 2.
-              backgroundColor: AppTheme.violetProfond,
-              foregroundColor: Colors.white,
-              onPressed: _addSubChurch,
-              icon: const Icon(Icons.add),
-              label: const Text('Sous-église'),
-            )
-          : null,
     );
   }
 }

@@ -169,11 +169,6 @@ class _ClotureCaisseScreenState extends State<ClotureCaisseScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const Text(
-                              'Clôturer un mois terminé',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
                               'Une clôture ne se rouvre ni ne se supprime.',
                             ),
                             const SizedBox(height: 12),
@@ -181,7 +176,6 @@ class _ClotureCaisseScreenState extends State<ClotureCaisseScreen> {
                               controller: _periodeController,
                               decoration: const InputDecoration(
                                 labelText: 'Période (AAAA-MM) *',
-                                hintText: 'Ex. 2026-10',
                                 border: OutlineInputBorder(),
                               ),
                               validator: (v) =>
@@ -254,7 +248,7 @@ class _ClotureCaisseScreenState extends State<ClotureCaisseScreen> {
                 if (donnees.clotures.isEmpty)
                   const EmptyState(
                     icon: Icons.lock_outline,
-                    message: 'Aucune période clôturée pour le moment.',
+                    message: 'Aucune période clôturée.',
                   )
                 else
                   ...donnees.clotures.map(

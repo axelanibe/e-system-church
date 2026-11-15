@@ -275,7 +275,7 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
                 return EmptyState(
                   icon: Icons.child_care_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucune classe d’enfants pour l’instant.'
+                      ? 'Aucune classe d’enfants.'
                       : 'Aucune classe ne correspond à la recherche.',
                   actionLabel: 'Créer une classe',
                   onAction: _createClasse,
@@ -351,7 +351,7 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
                 return EmptyState(
                   icon: Icons.exit_to_app_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucune autorisation de sortie pour l’instant.'
+                      ? 'Aucune autorisation de sortie.'
                       : 'Aucune autorisation ne correspond à la recherche.',
                   actionLabel: 'Créer une autorisation',
                   onAction: () async {
@@ -465,7 +465,7 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
                 return EmptyState(
                   icon: Icons.sports_soccer_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucune activité jeunesse pour l’instant.'
+                      ? 'Aucune activité jeunesse.'
                       : 'Aucune activité ne correspond à la recherche.',
                   actionLabel: 'Créer une activité',
                   onAction: () async {
@@ -523,7 +523,7 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
                 ),
               ),
               icon: const Icon(Icons.qr_code_scanner),
-              tooltip: 'Check-in enfants (double QR)',
+              tooltip: 'Check-in enfants',
             ),
           ],
           bottom: TabBar(

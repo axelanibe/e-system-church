@@ -174,10 +174,6 @@ class _VueMere extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'L’abonnement de votre église mère.',
-          style: TextStyle(fontSize: 16),
-        ),
         if (abonnement.lectureSeule) ...[
           const SizedBox(height: 12),
           Container(
@@ -216,8 +212,7 @@ class _VueMere extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${abonnement.essaiJours} jours pour '
-                  'essayer l’application avant de payer.',
+                  '${abonnement.essaiJours} jours',
                   style: const TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 12),
@@ -351,8 +346,7 @@ class _VueMere extends StatelessWidget {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'À l’expiration, l’application passe en lecture seule, '
-                  'toutes les fonctionnalités s’interrompent automatiquement.',
+                  'À l’expiration, l’application passe en lecture seule.',
                   style: TextStyle(fontSize: 16),
                 ),
                 SizedBox(height: 8),

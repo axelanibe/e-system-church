@@ -193,7 +193,7 @@ void main() {
         tester,
         const ActionSocialeScreen(),
         titre: 'Action sociale',
-        attendus: ['Bénéficiaires', 'Aides', 'Aucun bénéficiaire pour l’instant.'],
+        attendus: ['Bénéficiaires', 'Aides', 'Aucun bénéficiaire.'],
       );
     });
 

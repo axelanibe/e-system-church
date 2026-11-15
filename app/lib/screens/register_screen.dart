@@ -145,7 +145,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _choiceCard({
     required String title,
-    required String subtitle,
     required IconData icon,
     required bool selected,
     required VoidCallback onTap,
@@ -178,8 +177,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             .textTheme
                             .titleMedium
                             ?.copyWith(fontWeight: FontWeight.bold)),
-                    Text(subtitle,
-                        style: Theme.of(context).textTheme.bodyMedium),
                   ],
                 ),
               ),
@@ -214,8 +211,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 children: [
                   _choiceCard(
                     title: 'Créer une église mère',
-                    subtitle:
-                        'Mon église devient la tête d’un nouveau réseau. Je pourrai ensuite créer des sous-églises.',
                     icon: Icons.church,
                     selected: !_joinMother,
                     onTap: () => setState(() => _joinMother = false),
@@ -223,8 +218,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 8),
                   _choiceCard(
                     title: 'Rejoindre une église mère',
-                    subtitle:
-                        'Mon église rejoint un réseau existant avec le code d’invitation de la mère. La demande devra être validée.',
                     icon: Icons.group_add_outlined,
                     selected: _joinMother,
                     onTap: () => setState(() => _joinMother = true),
@@ -251,7 +244,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Ville *',
-                      hintText: 'Ex. Abidjan',
                       border: OutlineInputBorder(),
                     ),
                     validator: (v) =>
@@ -278,7 +270,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
                         labelText: 'Code d’invitation de l’église mère *',
-                        hintText: 'Ex. GD-PLAT',
                         border: OutlineInputBorder(),
                       ),
                       validator: (v) => (_joinMother &&
@@ -314,8 +305,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             const SizedBox(height: 4),
                             const Text(
-                              'PNG/JPG, max 2 Mo. Sans logo, vos initiales '
-                              's’affichent sur fond violet profond.',
+                              'PNG/JPG, max 2 Mo.',
                               style: TextStyle(fontSize: 12),
                             ),
                           ],

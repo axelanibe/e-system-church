@@ -66,15 +66,11 @@ class _CampagnesScreenState extends State<CampagnesScreen> {
             children: [
               SwitchListTile(
                 title: const Text('Campagne active'),
-                subtitle: const Text(
-                    'Une campagne active peut recevoir des contributions.'),
                 value: statutActive,
                 onChanged: (v) => setDialogState(() => statutActive = v),
               ),
               SwitchListTile(
                 title: const Text('Les membres voient le total'),
-                subtitle: const Text(
-                    'Sinon, seuls les responsables voient cette campagne.'),
                 value: visibleMembres,
                 onChanged: (v) => setDialogState(() => visibleMembres = v),
               ),
@@ -147,15 +143,15 @@ class _CampagnesScreenState extends State<CampagnesScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Statut : ${c.statutLabel}'),
+            Text(c.statutLabel),
             const SizedBox(height: 4),
             Text(
-              'Période : ${formatDateSeule(c.dateDebut)} — ${formatDateSeule(c.dateFin)}',
+              '${formatDateSeule(c.dateDebut)} — ${formatDateSeule(c.dateFin)}',
             ),
             const SizedBox(height: 4),
-            Text('Objectif : ${formatFcfa(c.objectifFcfa)}'),
+            Text(formatFcfa(c.objectifFcfa)),
             Text(
-              'Collecté : ${formatFcfa(c.totalCollecte)} (${c.pourcentage} %)',
+              '${formatFcfa(c.totalCollecte)} (${c.pourcentage} %)',
             ),
             Text('${pluriel(c.nombreContributions, 'contribution confirmée', 'contributions confirmées')}.'),
           ],

@@ -287,7 +287,7 @@ class _MediasScreenState extends State<MediasScreen> {
                 return EmptyState(
                   icon: Icons.mic_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucune prédication pour l’instant.'
+                      ? 'Aucune prédication.'
                       : 'Aucune prédication ne correspond à la recherche.',
                   actionLabel: 'Ajouter une prédication',
                   onAction: _createPredication,
@@ -349,7 +349,7 @@ class _MediasScreenState extends State<MediasScreen> {
                 return EmptyState(
                   icon: Icons.menu_book_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucun plan de lecture pour l’instant.'
+                      ? 'Aucun plan de lecture.'
                       : 'Aucun plan ne correspond à la recherche.',
                   actionLabel: 'Créer un plan de lecture',
                   onAction: _createPlan,
@@ -426,7 +426,7 @@ class _MediasScreenState extends State<MediasScreen> {
                   if (livres.isEmpty && prets.isEmpty) {
                     return EmptyState(
                       icon: Icons.library_books_outlined,
-                      message: 'Aucun livre dans la bibliothèque pour l’instant.',
+                      message: 'Aucun livre.',
                       actionLabel: 'Ajouter un livre',
                       onAction: _createLivre,
                     );
@@ -441,7 +441,7 @@ class _MediasScreenState extends State<MediasScreen> {
                             icon: Icons.library_books_outlined,
                             message: _query.isNotEmpty
                                 ? 'Aucun livre ne correspond à la recherche.'
-                                : 'Aucun livre pour l’instant.',
+                                : 'Aucun livre.',
                           )
                         else
                           ...livres.map((l) => ListTile(
@@ -466,7 +466,7 @@ class _MediasScreenState extends State<MediasScreen> {
                             .isEmpty)
                           const EmptyState(
                             icon: Icons.book_outlined,
-                            message: 'Aucun prêt en cours pour l’instant.',
+                            message: 'Aucun prêt en cours.',
                           )
                         else
                           ...prets
