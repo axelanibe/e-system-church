@@ -9,6 +9,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import '../widgets/liste_avec_fab.dart';
 
 /// Fiche visiteur (US6) : nom et date de venue seuls obligatoires.
 /// Un visiteur n'apparaît ni dans les membres ni dans les finances tant
@@ -182,34 +183,36 @@ class _VisiteursScreenState extends State<VisiteursScreen> {
             return EmptyState(
                 icon: Icons.person_add_alt_1_outlined, message: t.vide);
           }
-          return RefreshIndicator(
-            onRefresh: () async => _refresh(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: items.length,
-              itemBuilder: (context, i) {
-                final v = items[i];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: const Icon(Icons.person_add_alt_1_outlined,
-                        color: AppTheme.or),
-                    title: Text(v.nom,
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                    subtitle: Text(
-                      '${formatDateSeule(DateTime.tryParse(v.dateVenue))}${v.telephone == null ? '' : ' · ${v.telephone}'}${v.moyenContact == null ? '' : ' · ${v.moyenContact}'}',
+          return ListeAvecFab(
+            child: RefreshIndicator(
+              onRefresh: () async => _refresh(),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: items.length,
+                itemBuilder: (context, i) {
+                  final v = items[i];
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      leading: const Icon(Icons.person_add_alt_1_outlined,
+                          color: AppTheme.or),
+                      title: Text(v.nom,
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      subtitle: Text(
+                        '${formatDateSeule(DateTime.tryParse(v.dateVenue))}${v.telephone == null ? '' : ' · ${v.telephone}'}${v.moyenContact == null ? '' : ' · ${v.moyenContact}'}',
+                      ),
+                      trailing: v.statut == 'devenu_membre'
+                          ? StatusChip(
+                              label: t.devenirMembre,
+                              color: AppTheme.violetProfond)
+                          : TextButton(
+                              onPressed: () => _devenirMembre(v),
+                              child: Text(t.devenirMembre),
+                            ),
                     ),
-                    trailing: v.statut == 'devenu_membre'
-                        ? StatusChip(
-                            label: t.devenirMembre,
-                            color: AppTheme.violetProfond)
-                        : TextButton(
-                            onPressed: () => _devenirMembre(v),
-                            child: Text(t.devenirMembre),
-                          ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           );
         },

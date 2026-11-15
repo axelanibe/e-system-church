@@ -35,6 +35,8 @@ class CultesScreen extends StatefulWidget {
 
 class _CultesScreenState extends State<CultesScreen> {
   int _tab = 0;
+  // Un bool par onglet : le FAB se masque quand l'onglet courant est vide.
+  final List<bool> _ongletVide = [false, false, false];
   final _searchController = TextEditingController();
   String _query = '';
 
@@ -330,6 +332,13 @@ class _CultesScreenState extends State<CultesScreen> {
               final items = snapshot.data!
                   .where((c) => _matches(c.titre))
                   .toList();
+              if (items.isEmpty != _ongletVide[0]) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _ongletVide[0] != items.isEmpty) {
+                    setState(() => _ongletVide[0] = items.isEmpty);
+                  }
+                });
+              }
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.event_outlined,
@@ -413,6 +422,13 @@ class _CultesScreenState extends State<CultesScreen> {
               final items = snapshot.data!
                   .where((t) => _matches(t.nom))
                   .toList();
+              if (items.isEmpty != _ongletVide[1]) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _ongletVide[1] != items.isEmpty) {
+                    setState(() => _ongletVide[1] = items.isEmpty);
+                  }
+                });
+              }
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.category_outlined,
@@ -477,6 +493,13 @@ class _CultesScreenState extends State<CultesScreen> {
               final items = snapshot.data!
                   .where((e) => _matches(e.titre))
                   .toList();
+              if (items.isEmpty != _ongletVide[2]) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _ongletVide[2] != items.isEmpty) {
+                    setState(() => _ongletVide[2] = items.isEmpty);
+                  }
+                });
+              }
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.celebration_outlined,
@@ -540,28 +563,30 @@ class _CultesScreenState extends State<CultesScreen> {
         body: TabBarView(
           children: [_cultesTab(), _typesTab(), _evenementsTab()],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            if (_tab == 0) {
-              try {
-                final types = await _typesFuture;
-                if (mounted) await _createCulte(types);
-              } catch (e) {
-                if (context.mounted) showApiError(context, e);
-              }
-            } else if (_tab == 1) {
-              await _createType();
-            } else {
-              await _createEvenement();
-            }
-          },
-          icon: const Icon(Icons.add),
-          label: Text(_tab == 0
-              ? 'Nouveau culte'
-              : _tab == 1
-                  ? 'Nouveau type'
-                  : 'Nouvel événement'),
-        ),
+        floatingActionButton: _ongletVide[_tab]
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () async {
+                  if (_tab == 0) {
+                    try {
+                      final types = await _typesFuture;
+                      if (mounted) await _createCulte(types);
+                    } catch (e) {
+                      if (context.mounted) showApiError(context, e);
+                    }
+                  } else if (_tab == 1) {
+                    await _createType();
+                  } else {
+                    await _createEvenement();
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: Text(_tab == 0
+                    ? 'Nouveau culte'
+                    : _tab == 1
+                        ? 'Nouveau type'
+                        : 'Nouvel événement'),
+              ),
       ),
     );
   }
@@ -581,6 +606,10 @@ class _CulteDetailScreenState extends State<CulteDetailScreen> {
   final _searchController = TextEditingController();
   String _query = '';
   late Future<List<OrdreCulteItem>> _future;
+
+  // La liste est-elle vide ? Sert à masquer le FAB quand l'état vide
+  // affiche déjà le bouton de création (un seul bouton, pas deux).
+  bool _listeVide = false;
 
   @override
   void initState() {
@@ -700,6 +729,13 @@ class _CulteDetailScreenState extends State<CulteDetailScreen> {
                         _query.isEmpty ||
                         i.titre.toLowerCase().contains(_query.toLowerCase()))
                     .toList();
+                if (items.isEmpty != _listeVide) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _listeVide != items.isEmpty) {
+                      setState(() => _listeVide = items.isEmpty);
+                    }
+                  });
+                }
                 if (items.isEmpty) {
                   return EmptyState(
                     icon: Icons.list_outlined,
@@ -737,11 +773,13 @@ class _CulteDetailScreenState extends State<CulteDetailScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addItem,
-        icon: const Icon(Icons.add),
-        label: const Text('Élément'),
-      ),
+      floatingActionButton: _listeVide
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _addItem,
+              icon: const Icon(Icons.add),
+              label: const Text('Élément'),
+            ),
     );
   }
 }

@@ -296,6 +296,7 @@ class _MediasScreenState extends State<MediasScreen> {
               return RefreshIndicator(
                 onRefresh: () async => _refresh(),
                 child: ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 88),
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     final p = items[index];
@@ -357,6 +358,7 @@ class _MediasScreenState extends State<MediasScreen> {
               return RefreshIndicator(
                 onRefresh: () async => _refresh(),
                 child: ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 88),
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     final p = items[index];

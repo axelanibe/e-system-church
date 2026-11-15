@@ -6,6 +6,7 @@ import '../models/church.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/liste_avec_fab.dart';
 
 /// Arborescence de mon réseau (`GET /eglises/arbre`) : vue dépliable,
 /// ajout d'une sous-église (admin seulement) et demandes de rattachement
@@ -19,6 +20,10 @@ class TreeScreen extends StatefulWidget {
 
 class _TreeScreenState extends State<TreeScreen> {
   late Future<TreeResult> _future;
+
+  // Le réseau est-il vide ? Sert à masquer le FAB quand la carte
+  // réseau vide affiche déjà le bouton de création (un seul bouton).
+  bool _reseauVide = false;
 
   @override
   void initState() {
@@ -151,11 +156,19 @@ class _TreeScreenState extends State<TreeScreen> {
           final reseauVide = result.arbre.totalEglises <= 1 &&
               result.arbre.children.isEmpty &&
               result.demandesRattachement.isEmpty;
-          return RefreshIndicator(
-            onRefresh: _refresh,
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
+          if (reseauVide != _reseauVide) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _reseauVide != reseauVide) {
+                setState(() => _reseauVide = reseauVide);
+              }
+            });
+          }
+          return ListeAvecFab(
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
                 Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 720),
@@ -264,12 +277,17 @@ class _TreeScreenState extends State<TreeScreen> {
                 ),
               ],
             ),
+          ),
           );
         },
       ),
       // Le bouton n'existe que pour une église mère : une annexe ne
       // peut pas créer de sous-église (règle du 11/11/2026).
-      floatingActionButton: state.isAdmin && (state.church?.isMere ?? false)
+      // Masqué quand la carte réseau vide affiche déjà le bouton
+      // « Créer une sous-église » (un seul bouton, pas deux).
+      floatingActionButton: state.isAdmin &&
+              (state.church?.isMere ?? false) &&
+              !_reseauVide
           ? FloatingActionButton.extended(
               // Bleu nuit et blanc, bien lisible : l'or du thème sur fond
               // papier paraissait effacé sur la photo 2.
@@ -310,6 +328,9 @@ class _TreeNodeTile extends StatefulWidget {
 class _TreeNodeTileState extends State<_TreeNodeTile> {
   bool _editing = false;
   bool _saving = false;
+  // La tuile est dépliée au départ ; suit l'état de l'ExpansionTile
+  // pour orienter la flèche du trailing.
+  bool _ouvert = true;
   late final TextEditingController _nameController;
 
   @override
@@ -407,6 +428,12 @@ class _TreeNodeTileState extends State<_TreeNodeTile> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(pluriel(widget.node.membresActifs, 'membre')),
+        // Flèche de dépliage : le trailing remplace celle par défaut
+        // de l'ExpansionTile, il faut la remettre à côté du compteur.
+        if (widget.node.children.isNotEmpty)
+          Icon(_ouvert
+              ? Icons.keyboard_arrow_up
+              : Icons.keyboard_arrow_down),
         if (widget.isRoot && widget.canEdit)
           IconButton(
             icon: const Icon(Icons.edit_outlined, size: 20),
@@ -443,6 +470,7 @@ class _TreeNodeTileState extends State<_TreeNodeTile> {
       subtitle: subtitle,
       trailing: _trailing(),
       initiallyExpanded: true,
+      onExpansionChanged: (ouvert) => setState(() => _ouvert = ouvert),
       childrenPadding: const EdgeInsets.only(left: 24),
       children: node.children
           .map((child) => _TreeNodeTile(

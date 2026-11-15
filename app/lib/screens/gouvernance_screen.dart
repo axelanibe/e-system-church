@@ -103,7 +103,6 @@ class GouvernanceScreen extends StatelessWidget {
             sousTitre: 'Bâtiments, valeur, assurance et inventaire.',
             ecran: const PatrimoineScreen(),
           ),
-          const SizedBox(height: 80),
         ],
       ),
     );

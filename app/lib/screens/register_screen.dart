@@ -310,13 +310,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             FilledButton.tonalIcon(
                               onPressed: _choisirLogo,
                               icon: const Icon(Icons.image_outlined),
-                              label: const Text(
-                                  'Choisir un logo (PNG/JPG, max 2 Mo)'),
+                              label: const Text('Choisir un logo'),
                             ),
                             const SizedBox(height: 4),
                             const Text(
-                              'Sans logo, vos initiales s’affichent '
-                              'sur fond violet profond.',
+                              'PNG/JPG, max 2 Mo. Sans logo, vos initiales '
+                              's’affichent sur fond violet profond.',
                               style: TextStyle(fontSize: 12),
                             ),
                           ],

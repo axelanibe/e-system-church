@@ -173,6 +173,7 @@ class _MandatsScreenState extends State<MandatsScreen> {
         return RefreshIndicator(
           onRefresh: () async => _refresh(),
           child: ListView.builder(
+            padding: const EdgeInsets.only(bottom: 88),
             itemCount: items.length,
             itemBuilder: (context, index) {
               final m = items[index];
