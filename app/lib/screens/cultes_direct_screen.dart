@@ -257,13 +257,6 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                           ?.copyWith(color: AppTheme.violetProfond),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Center(
-                    child: Text(
-                      _enMarche ? 'Chronomètre en marche' : 'Chronomètre en pause',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -284,9 +277,7 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                   ),
                   const SizedBox(height: 12),
                   if (_moments.isEmpty)
-                    const Text('Aucun moment au conducteur.\n'
-                        'Les moments du culte, louange, parole, offrandes, '
-                        's’ajouteront ici dans l’ordre.')
+                    const Text('Aucun moment au conducteur.')
                   else
                     ..._moments.asMap().entries.map((e) {
                       final index = e.key;
@@ -370,7 +361,6 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                       ),
                     ],
                   ),
-                  const Center(child: Text('DEMI-TONS')),
                 ],
               ),
             ),
@@ -413,7 +403,6 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                       ),
                     ],
                   ),
-                  const Center(child: Text('ENTRÉES')),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _capaciteController,
@@ -514,8 +503,6 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
             child: ListTile(
               leading: const Icon(Icons.how_to_reg_outlined),
               title: const Text('Feuille de présence'),
-              subtitle: const Text(
-                  'Pointer les présents, culte par culte.'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).push(
@@ -536,9 +523,6 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                      'Note courte de la régie après le culte, gardée sur cet écran seulement.'),
-                  const SizedBox(height: 12),
                   TextField(
                     controller: _retourRegieController,
                     maxLines: 4,
@@ -560,10 +544,10 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: _statsErreur
-                  ? const Text('Statistiques indisponibles pour l’instant.')
+                  ? const Text('Statistiques indisponibles.')
                   : _stats == null
                       ? const Text(
-                          'Aucune présence enregistrée pour l’instant.')
+                          'Aucune présence enregistrée.')
                       : Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -574,7 +558,7 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                             const SizedBox(height: 4),
                             if (_stats!.parCulte.isEmpty)
                               const Text(
-                                  'Aucune présence enregistrée pour l’instant.')
+                                  'Aucune présence enregistrée.')
                             else
                               ..._stats!.parCulte.map((entree) {
                                 final presents = presentsStat(entree);
@@ -604,7 +588,7 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                             if (_stats!.parMembre.isEmpty &&
                                 _stats!.parCulte.isNotEmpty)
                               const Text(
-                                  'Aucune présence enregistrée pour l’instant.')
+                                  'Aucune présence enregistrée.')
                             else
                               ..._stats!.parMembre.map((entree) {
                                 final presents = presentsStat(entree);

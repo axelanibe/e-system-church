@@ -285,11 +285,8 @@ class _FamillesScreenState extends State<FamillesScreen> {
                 return _etatVide(
                   icon: Icons.family_restroom_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucune famille pour l’instant'
+                      ? 'Aucune famille.'
                       : 'Aucune famille ne correspond à la recherche.',
-                  hint: snapshot.data!.isEmpty
-                      ? 'Appuyez sur le bouton + en bas pour en créer une.'
-                      : null,
                 );
               }
               return ListeAvecFab(
@@ -329,10 +326,6 @@ class _FamillesScreenState extends State<FamillesScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SectionTitle(title: 'Fiche d’un membre'),
-              const Text(
-                'Statuts, baptême, départements, cellules et liens parent-enfant.',
-              ),
-              const SizedBox(height: 12),
               DropdownButtonFormField<Member>(
                 isExpanded: true,
                 decoration: const InputDecoration(
@@ -361,16 +354,10 @@ class _FamillesScreenState extends State<FamillesScreen> {
               ),
               const SizedBox(height: 16),
               const SectionTitle(title: 'Enfants & jeunesse'),
-              const Text(
-                'Classes, autorisations et activités des enfants.',
-              ),
-              const SizedBox(height: 12),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.child_care_outlined),
                   title: const Text('Enfants & jeunesse'),
-                  subtitle: const Text(
-                      'Classes, autorisations et activités.'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.of(context).push(
@@ -415,11 +402,8 @@ class _FamillesScreenState extends State<FamillesScreen> {
                 return _etatVide(
                   icon: Icons.groups_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucune cellule pour l’instant'
+                      ? 'Aucune cellule.'
                       : 'Aucune cellule ne correspond à la recherche.',
-                  hint: snapshot.data!.isEmpty
-                      ? 'Appuyez sur le bouton + en bas pour en créer une.'
-                      : null,
                 );
               }
               return ListeAvecFab(

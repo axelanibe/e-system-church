@@ -149,8 +149,7 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
       body: estMere
           ? EmptyState(
               icon: Icons.mail_outline,
-              message: 'Cet écran est pour une église annexe. Une église '
-                  'mère lit les rapports dans « Rapports reçus ».',
+              message: '',
               actionLabel: 'Voir les rapports reçus',
               onAction: () => Navigator.of(context).push(
                 MaterialPageRoute(
@@ -226,40 +225,25 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                             ),
                           ),
                           const SectionTitle(title: 'Envoyer un rapport'),
-                          const Text(
-                            'Le rapport se prépare en cinq étapes.',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                          const SizedBox(height: 8),
                           const _Etape(
                             numero: '1',
                             titre: 'Choisir le type de rapport',
-                            texte:
-                                'Bilan annuel, bilan d’activité ou rapport financier.',
                           ),
                           const _Etape(
                             numero: '2',
                             titre: 'Générer le rapport',
-                            texte:
-                                'L’application remplit le rapport avec les données de votre église.',
                           ),
                           const _Etape(
                             numero: '3',
                             titre: 'Relire l’aperçu',
-                            texte:
-                                'Vous relisez le rapport avant l’envoi.',
                           ),
                           const _Etape(
                             numero: '4',
                             titre: 'Envoyer à votre église mère',
-                            texte:
-                                'Le rapport est enregistré pour votre église mère. L’envoi par e-mail sera activé prochainement.',
                           ),
                           const _Etape(
                             numero: '5',
                             titre: 'Confirmation',
-                            texte:
-                                'Vous voyez que le rapport est bien enregistré.',
                           ),
                           const SizedBox(height: 16),
                           const Text(
@@ -313,11 +297,6 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                           ),
                           if (_apercuGenere) ...[
                             const SectionTitle(title: 'Aperçu du rapport'),
-                            const Text(
-                              'Généré depuis vos vraies données.',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                            const SizedBox(height: 8),
                             Card(
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
@@ -363,14 +342,6 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                                 'Envoyer à mon église mère',
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'L’envoi par e-mail sera activé prochainement : '
-                              'le rapport est déjà enregistré, votre église '
-                              'mère le voit dans « Rapports reçus ».',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 16),
-                            ),
                           ],
                           if (_envoye != null) ...[
                             const SizedBox(height: 16),
@@ -392,9 +363,7 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                                     SizedBox(height: 4),
                                     Text(
                                       'Votre église mère le verra dans '
-                                      '« Rapports reçus ». Elle le recevra '
-                                      'par e-mail, en pièce jointe PDF, quand '
-                                      'l’envoi sera activé.',
+                                      '« Rapports reçus ».',
                                       style: TextStyle(fontSize: 16),
                                     ),
                                   ],
@@ -404,8 +373,7 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                           ],
                           const SectionTitle(title: 'Exemple de rapport'),
                           const Text(
-                            'Voyez à quoi ressemble un bilan annuel rempli. '
-                            'Les chiffres sont des chiffres d’exemple.',
+                            'Exemple seulement. Vos vrais rapports partent de vos vraies données.',
                             style: TextStyle(fontSize: 16),
                           ),
                           const SizedBox(height: 12),
@@ -435,12 +403,10 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
 class _Etape extends StatelessWidget {
   final String numero;
   final String titre;
-  final String texte;
 
   const _Etape({
     required this.numero,
     required this.titre,
-    required this.texte,
   });
 
   @override
@@ -466,7 +432,6 @@ class _Etape extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(texte, style: const TextStyle(fontSize: 16)),
               ],
             ),
           ),

@@ -72,7 +72,7 @@ Future<void> _defilerJusqua(WidgetTester tester, Finder cible) async {
 }
 
 void main() {
-  testWidgets('Modules : les 13 cartes s’affichent', (tester) async {
+  testWidgets('Modules : les 12 cartes s’affichent', (tester) async {
     await _pomper(tester);
     for (final titre in [
       'Accueil admin',
@@ -85,7 +85,6 @@ void main() {
       'Gouvernance',
       'Réglages et confiance',
       'Paiements automatiques',
-      'US restantes et dette',
       'Qualité et bascule',
       'Connexion',
     ]) {

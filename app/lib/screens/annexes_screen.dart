@@ -111,8 +111,6 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                   ListTile(
                     leading: const Icon(Icons.swap_horiz_outlined),
                     title: const Text('Transferts de membres'),
-                    subtitle: const Text(
-                        'Déplacer un membre vers une autre église du réseau.'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       Navigator.of(context).push(
@@ -126,8 +124,6 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                   ListTile(
                     leading: const Icon(Icons.account_tree_outlined),
                     title: const Text('Arbre du réseau'),
-                    subtitle: const Text(
-                        'Hiérarchie des églises mères et annexes.'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       Navigator.of(context).push(
@@ -141,8 +137,6 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                   ListTile(
                     leading: const Icon(Icons.group_add_outlined),
                     title: const Text('Demandes de rattachement'),
-                    subtitle: const Text(
-                        'Églises qui demandent à se rattacher à vous.'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       Navigator.of(context).push(
@@ -158,8 +152,6 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                       leading:
                           const Icon(Icons.warning_amber_outlined),
                       title: const Text('Alertes du réseau'),
-                      subtitle: const Text(
-                          'Antenne inactive, contributions en baisse, rapport non soumis.'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {
                         Navigator.of(context).push(
@@ -187,7 +179,7 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                             icon: Icons.account_tree_outlined,
                             message: _recherche.text.trim().isNotEmpty
                                 ? 'Aucune annexe ne correspond à « ${_recherche.text.trim()} ».'
-                                : 'Aucune annexe pour l’instant. Une église se rattache à vous avec votre code permanent ou un code de tutelle, depuis « Demandes de rattachement ».',
+                                : 'Aucune annexe.',
                             actionLabel:
                                 _recherche.text.trim().isNotEmpty
                                     ? null
