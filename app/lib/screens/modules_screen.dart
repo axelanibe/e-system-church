@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../state/app_state.dart';
 import 'cartes_membres_screen.dart';
-import 'confiance_screen.dart';
+import 'settings_screen.dart';
 import 'cultes_direct_screen.dart';
 import 'gouvernance_screen.dart';
 import 'paiements_screen.dart';
@@ -184,7 +184,7 @@ class ModulesScreen extends StatelessWidget {
       case 'gouvernance':
         _pousser(context, const GouvernanceScreen());
       case 'confiance':
-        _pousser(context, const ConfianceScreen());
+        _pousser(context, const SettingsScreen());
       case 'paiements':
         _pousser(context, const PaiementsScreen());
       case 'usRestantes':

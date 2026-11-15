@@ -11,7 +11,8 @@ import 'langue_donnees_screen.dart';
 
 /// Paramètres du fidèle (tranche P1) : Mon profil, Notifications,
 /// Langue, Aide. Rien d'administratif ici : les paramètres de
-/// l'église restent dans l'écran admin (ParametresScreen).
+/// l'église restent dans l'écran admin (SettingsScreen, Réglages et
+/// confiance).
 class ParametresFideleScreen extends StatefulWidget {
   const ParametresFideleScreen({super.key});
 

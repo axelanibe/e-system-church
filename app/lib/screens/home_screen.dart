@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _index = 0;
 
   static const _titles = [
-    'Accueil',
+    'Accueil administrateur',
     'Membres',
     'Finances',
     'Départements',

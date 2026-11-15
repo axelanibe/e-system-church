@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 
 import '../config/app_theme.dart';
 import 'action_sociale_screen.dart';
-import 'attestations_screen.dart';
 import 'documents_screen.dart';
 import 'mandats_screen.dart';
 import 'patrimoine_screen.dart';
 import 'reunions_conseil_screen.dart';
 
 /// T10 — Gouvernance (modèle projection, écran « Gouvernance ») :
-/// Mandats, Nominations, Procès-verbaux et Documents, puis Réunions et
-/// décisions, Certificats, Action sociale et Patrimoine. Chaque carte
-/// ouvre son écran, avec retour partout (AppBar).
+/// Mandats, Nominations, Procès-verbaux et Documents, comme dans la
+/// projection, plus Action sociale et Patrimoine, gardés comme acquis
+/// par décision d'Axel (divergence volontaire sur E-G1). Chaque carte
+/// ouvre son écran, avec retour partout (AppBar). Les écrans Réunions
+/// et décisions et Certificats restent joignables ailleurs
+/// (Procès-verbaux, Attestations annuelles) ; leurs fichiers sont
+/// conservés.
 class GouvernanceScreen extends StatelessWidget {
   const GouvernanceScreen({super.key});
 
@@ -85,20 +88,6 @@ class GouvernanceScreen extends StatelessWidget {
             titre: 'Documents',
             sousTitre: 'Statuts, règlements, modèles et courriers.',
             ecran: const DocumentsScreen(),
-          ),
-          _carte(
-            context: context,
-            icone: Icons.event_available_outlined,
-            titre: 'Réunions et décisions',
-            sousTitre: 'Réunions du conseil, décisions et procès-verbaux.',
-            ecran: const ReunionsConseilScreen(),
-          ),
-          _carte(
-            context: context,
-            icone: Icons.workspace_premium_outlined,
-            titre: 'Certificats',
-            sousTitre: 'Baptême, mariage et membre, en PDF.',
-            ecran: const AttestationsScreen(),
           ),
           _carte(
             context: context,

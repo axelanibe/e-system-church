@@ -6,6 +6,10 @@ import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/logo_app.dart';
 
+/// Rembourrage de l'écran de connexion Plateforme, partagé par le
+/// défilement et le calcul de la hauteur minimale de la boîte.
+const _rembourrage = EdgeInsets.all(24);
+
 /// Connexion séparée de la Plateforme, dans la même application :
 /// pour l'admin de la plateforme et ses aides seulement. Les églises
 /// et les membres se connectent par l'écran de connexion habituel.
@@ -58,111 +62,122 @@ class _LoginPlateformeScreenState extends State<LoginPlateformeScreen> {
 
     return Scaffold(
       body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Center(child: LogoApp(taille: 104)),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Plateforme',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: scheme.primary,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Connexion séparée, pour l’admin de la plateforme et ses aides. Les églises et les membres se connectent par l’autre écran.',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 24),
-                  TextFormField(
-                    controller: _identifiantController,
-                    decoration: const InputDecoration(
-                      labelText: 'E-mail',
-                      prefixIcon: Icon(Icons.mail_outline),
-                      border: OutlineInputBorder(),
+        // La boîte garde la hauteur disponible : quand le clavier
+        // s'ouvre, le contenu reste centré dans l'espace restant
+        // au lieu de basculer brutalement en haut de l'écran.
+        // Le Center est gardé : sans lui, la boîte de 420 px
+        // serait collée à gauche sur écran large.
+        child: LayoutBuilder(
+          builder: (context, contraintes) => SingleChildScrollView(
+            padding: _rembourrage,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: contraintes.maxHeight - _rembourrage.vertical,
+                maxWidth: 420,
+              ),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Center(child: LogoApp(taille: 104)),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Plateforme',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: scheme.primary,
+                          ),
                     ),
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Saisissez votre e-mail.';
-                      }
-                      if (!v.contains('@') || !v.contains('.')) {
-                        return 'E-mail invalide.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _passwordController,
-                    decoration: InputDecoration(
-                      labelText: 'Mot de passe',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      border: const OutlineInputBorder(),
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined),
-                        onPressed: () => setState(
-                            () => _obscurePassword = !_obscurePassword),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Connexion séparée, pour l’admin de la plateforme et ses aides. Les églises et les membres se connectent par l’autre écran.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 24),
+                    TextFormField(
+                      controller: _identifiantController,
+                      decoration: const InputDecoration(
+                        labelText: 'E-mail',
+                        prefixIcon: Icon(Icons.mail_outline),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Saisissez votre e-mail.';
+                        }
+                        if (!v.contains('@') || !v.contains('.')) {
+                          return 'E-mail invalide.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _passwordController,
+                      decoration: InputDecoration(
+                        labelText: 'Mot de passe',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined),
+                          onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
+                        ),
+                      ),
+                      obscureText: _obscurePassword,
+                      onFieldSubmitted: (_) => _login(),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) {
+                          return 'Saisissez votre mot de passe.';
+                        }
+                        return null;
+                      },
+                    ),
+                    if (_error != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        _error!,
+                        style: TextStyle(color: scheme.error),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    FilledButton(
+                      onPressed: _loading ? null : _login,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: _loading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('Se connecter à la Plateforme'),
                       ),
                     ),
-                    obscureText: _obscurePassword,
-                    onFieldSubmitted: (_) => _login(),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) {
-                        return 'Saisissez votre mot de passe.';
-                      }
-                      return null;
-                    },
-                  ),
-                  if (_error != null) ...[
                     const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: _loading
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      child: const Text('Retour à la connexion'),
+                    ),
+                    const SizedBox(height: 4),
                     Text(
-                      _error!,
-                      style: TextStyle(color: scheme.error),
+                      AppConfig.appName,
                       textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: _loading ? null : _login,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: _loading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Se connecter à la Plateforme'),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: _loading
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                    child: const Text('Retour à la connexion'),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    AppConfig.appName,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
+                ),
               ),
             ),
           ),
