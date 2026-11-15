@@ -217,6 +217,12 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
             );
           }
           final result = snapshot.data!;
+          // Tout est vide : un seul message, pas quatre états vides
+          // empilés (un par section).
+          final toutVide = result.aTraiter.isEmpty &&
+              result.emises.isEmpty &&
+              result.recues.isEmpty &&
+              result.historique.isEmpty;
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
@@ -273,22 +279,29 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                     ),
                   ),
                 ],
-                _section('À traiter par mon église', result.aTraiter,
-                    aTraiter: true,
-                    emis: false,
-                    vide: 'Aucun transfert à traiter.'),
-                _section('Demandes émises', result.emises,
-                    aTraiter: false,
-                    emis: true,
-                    vide: 'Aucune demande émise.'),
-                _section('Demandes reçues', result.recues,
-                    aTraiter: false,
-                    emis: false,
-                    vide: 'Aucune demande reçue.'),
-                _section('Historique', result.historique,
-                    aTraiter: false,
-                    emis: false,
-                    vide: 'Aucun transfert dans l’historique.'),
+                if (toutVide)
+                  const EmptyState(
+                    icon: Icons.swap_horiz_outlined,
+                    message: 'Aucun transfert pour l’instant.',
+                  )
+                else ...[
+                  _section('À traiter par mon église', result.aTraiter,
+                      aTraiter: true,
+                      emis: false,
+                      vide: 'Aucun transfert à traiter.'),
+                  _section('Demandes émises', result.emises,
+                      aTraiter: false,
+                      emis: true,
+                      vide: 'Aucune demande émise.'),
+                  _section('Demandes reçues', result.recues,
+                      aTraiter: false,
+                      emis: false,
+                      vide: 'Aucune demande reçue.'),
+                  _section('Historique', result.historique,
+                      aTraiter: false,
+                      emis: false,
+                      vide: 'Aucun transfert dans l’historique.'),
+                ],
               ],
             ),
           );

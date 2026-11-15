@@ -125,10 +125,13 @@ class _PaiementsScreenState extends State<PaiementsScreen> {
                                 padding: const EdgeInsets.all(16),
                                 children: [
                                   if (_configs.isEmpty)
-                                    const EmptyState(
-                                      icon: Icons.payments_outlined,
-                                      message:
-                                          'Aucun moyen de paiement configuré pour l’instant.',
+                                    const Padding(
+                                      padding:
+                                          EdgeInsets.fromLTRB(16, 12, 16, 12),
+                                      child: Text(
+                                        'Aucun moyen de paiement configuré pour l’instant.',
+                                        textAlign: TextAlign.center,
+                                      ),
                                     ),
                                   for (final f in _fournisseurs)
                                     _FournisseurCard(

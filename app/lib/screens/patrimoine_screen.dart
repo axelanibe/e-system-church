@@ -7,6 +7,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import '../widgets/liste_avec_fab.dart';
 
 /// T10 — Patrimoine : bâtiments et biens avec valeur, assurance, photo
 /// et code d'inventaire ; maintenance reliée aux dépenses.
@@ -209,12 +210,14 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
             onAction: _createBien,
           );
         }
-        return RefreshIndicator(
-          onRefresh: () async => _refresh(),
-          child: ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final b = items[index];
+        return ListeAvecFab(
+          child: RefreshIndicator(
+            onRefresh: () async => _refresh(),
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final b = items[index];
               return ListTile(
                 leading: const CircleAvatar(
                   child: Icon(Icons.domain_outlined),
@@ -234,6 +237,7 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
               );
             },
           ),
+        ),
         );
       },
     );
@@ -270,12 +274,14 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
             },
           );
         }
-        return RefreshIndicator(
-          onRefresh: () async => _refresh(),
-          child: ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final m = items[index];
+        return ListeAvecFab(
+          child: RefreshIndicator(
+            onRefresh: () async => _refresh(),
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final m = items[index];
               return ListTile(
                 leading: const CircleAvatar(
                   child: Icon(Icons.build_outlined),
@@ -290,6 +296,7 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
               );
             },
           ),
+        ),
         );
       },
     );
