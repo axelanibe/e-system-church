@@ -473,10 +473,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             dialogTextField(
                 controller: _fuseauController, label: 'Fuseau horaire'),
             const SectionTitle(title: 'Gouvernance'),
-            const Text(
-              'Qui signe les nominations et les procès-verbaux. À compléter par l’église.',
-              style: TextStyle(fontSize: 12),
-            ),
             dialogTextField(
               controller: _signataireNominationsController,
               label: 'Signataire des nominations',
@@ -524,7 +520,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             if (items.isEmpty) {
               return const EmptyState(
                 icon: Icons.manage_accounts_outlined,
-                message: 'Aucun utilisateur dans cette église pour l’instant.',
+                message: 'Aucun utilisateur.',
               );
             }
             return ListView.builder(
@@ -655,7 +651,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   return EmptyState(
                     icon: Icons.group_work_outlined,
                     message: snapshot.data!.isEmpty
-                        ? 'Aucun département pour l’instant.'
+                        ? 'Aucun département.'
                         : 'Aucun département ne correspond à la recherche.',
                     actionLabel: 'Créer un département',
                     onAction: () => _createDepartement(membres),
@@ -726,7 +722,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icone: Icons.backup_outlined,
                     titre: 'Sauvegardes',
                     sousTitre:
-                        'Sauvegarde chiffrée de l’église, restauration testée.',
+                        'Dernière sauvegarde affichée ici, avec son état.',
                     ecran: const SauvegardeScreen(),
                   ),
                   _carteConfiance(
@@ -734,14 +730,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icone: Icons.cloud_off_outlined,
                     titre: 'File hors ligne',
                     sousTitre:
-                        'Pointages et saisies en attente, rejoués à la reconnexion.',
+                        'Contenu déjà chargé disponible sans connexion.',
                     ecran: const FileHorsLigneScreen(),
                   ),
                   _carteConfiance(
                     context: context,
                     icone: Icons.notifications_outlined,
                     titre: 'Notifications',
-                    sousTitre: 'Push et SMS, boîte d’envoi et paramètres.',
+                    sousTitre: 'Annonces, rappels de culte et rendez-vous.',
                     ecran: const NotificationsScreen(),
                   ),
                   _carteConfiance(
@@ -749,7 +745,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icone: Icons.phonelink_lock_outlined,
                     titre: 'Double authentification',
                     sousTitre:
-                        'Code à 6 chiffres pour Pasteur, Trésorier et Admin.',
+                        'Un code supplémentaire protège les comptes sensibles.',
                     ecran: const DeuxFaScreen(),
                   ),
                   _carteConfiance(
@@ -757,7 +753,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icone: Icons.fact_check_outlined,
                     titre: 'Journal d’audit',
                     sousTitre:
-                        'Historique immuable, chaîne vérifiée, lectures sensibles.',
+                        'Actions sensibles tracées, avec auteur et horodatage.',
                     ecran: const AuditScreen(),
                   ),
                   const SectionTitle(title: 'Église'),
@@ -770,8 +766,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.church_outlined),
                             title: const Text('Mon église'),
-                            subtitle: const Text(
-                                'Logo, présentation, horaires des cultes, pasteur et antennes.'),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.of(context).push(
@@ -786,8 +780,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.home_work_outlined),
                             title: const Text('Biens de l’église'),
-                            subtitle: const Text(
-                                'Salles, réservations, matériel et maintenance.'),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.of(context).push(
@@ -802,8 +794,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.list_outlined),
                             title: const Text('Listes configurables'),
-                            subtitle: const Text(
-                                'Rôles, catégories, statuts, départements, seuils et dîme suggérée.'),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.of(context).push(
@@ -819,8 +809,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.visibility_outlined),
                             title: const Text('Consultations sensibles'),
-                            subtitle: const Text(
-                                'Qui a consulté les données sensibles.'),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.of(context).push(
@@ -880,7 +868,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         .error),
                               ),
                               subtitle: const Text(
-                                  'Supprime définitivement votre église TEST, ses annexes et tout ce qu’elles contiennent (membres, contributions, campagnes, attestations, transferts). L’aperçu s’affiche avant toute suppression.'),
+                                  'Supprime définitivement votre église TEST, ses annexes et tout ce qu’elles contiennent. L’aperçu s’affiche avant toute suppression.'),
                               trailing: _suppressionEnCours
                                   ? const SizedBox(
                                       width: 24,
@@ -945,8 +933,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.language_outlined),
                             title: const Text('Langue et données'),
-                            subtitle: const Text(
-                                'Langue des nouveaux écrans, mode économique.'),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.of(context).push(

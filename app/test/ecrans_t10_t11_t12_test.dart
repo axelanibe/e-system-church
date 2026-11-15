@@ -278,7 +278,7 @@ void main() {
         tester,
         const PromessesScreen(),
         titre: 'Promesses de don',
-        attendus: ['Aucune promesse pour l’instant.', 'Nouvelle promesse'],
+        attendus: ['Aucune promesse.', 'Nouvelle promesse'],
       );
     });
 
@@ -288,7 +288,7 @@ void main() {
         const DonsNatureScreen(),
         titre: 'Dons en nature',
         attendus: [
-          'Aucun don en nature pour l’instant.',
+          'Aucun don en nature.',
           'Nouveau don en nature'
         ],
       );
@@ -299,7 +299,7 @@ void main() {
         tester,
         const VisiteursScreen(),
         titre: 'Visiteurs',
-        attendus: ['Rien pour le moment.'],
+        attendus: ['Rien.'],
       );
     });
 
@@ -308,7 +308,7 @@ void main() {
         tester,
         const EvenementsVieScreen(),
         titre: 'Événements de vie',
-        attendus: ['Rien pour le moment.'],
+        attendus: ['Rien.'],
       );
     });
 
@@ -335,7 +335,7 @@ void main() {
         tester,
         const WhatsappScreen(),
         titre: 'WhatsApp',
-        attendus: ['Rien pour le moment.'],
+        attendus: ['Rien.'],
       );
     });
 
@@ -353,7 +353,7 @@ void main() {
         tester,
         const ListesConfigurablesScreen(),
         titre: 'Listes configurables',
-        attendus: ['Rien pour le moment.'],
+        attendus: ['Rien.'],
       );
     });
 

@@ -223,8 +223,6 @@ class _ContenuFinancesCompletesState
                   texte: d.comptes.isEmpty
                       ? 'Aucun compte enregistré'
                       : pluriel(d.comptes.length, 'compte enregistré'),
-                  sousTexte:
-                      'Les comptes de la structure s’ajouteront ici pour le rapprochement.',
                   onTap: () =>
                       _ouvrir(const ComptesBancairesScreen()),
                 ),
@@ -241,7 +239,7 @@ class _ContenuFinancesCompletesState
                   icone: Icons.lock_outline,
                   titre: 'Clôture de période',
                   texte: d.clotures.isEmpty
-                      ? 'Aucune période clôturée pour le moment.'
+                      ? 'Aucune période clôturée.'
                       : 'Dernière clôture : ${libellePeriodeMois(d.clotures.first.periode)}',
                   badge: cloturee ? 'Clôturé' : 'Ouvert',
                   badgeColor:
@@ -254,7 +252,7 @@ class _ContenuFinancesCompletesState
                 _CarteFonction(
                   icone: Icons.receipt_long_outlined,
                   titre: 'Reçus numérotés',
-                  texte: 'Numérotation continue, sans trou.',
+                  texte: '',
                   badge: pluriel(d.nombreRecus, 'reçu'),
                   onTap: () => _ouvrir(const RecusScreen()),
                 ),

@@ -224,7 +224,7 @@ class _CotisationsAdminScreenState extends State<CotisationsAdminScreen> {
                         const SizedBox(height: 8),
                         if (config == null)
                           const Text(
-                            'Aucune cotisation configurée pour le moment : fixez un montant pour suivre les paiements par membre.',
+                            'Aucune cotisation configurée.',
                           )
                         else ...[
                           Text(

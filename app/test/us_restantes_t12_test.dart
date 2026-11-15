@@ -106,7 +106,7 @@ void main() {
       expect(en.promesses, 'Giving pledges');
       expect(fr.donsNature, 'Dons en nature');
       expect(en.donsNature, 'In-kind gifts');
-      expect(fr.aucunCompteWallet, contains('Aucun compte'));
+      expect(fr.aucunCompteWallet, contains('fichier pass générique'));
       expect(en.aucunCompteWallet, contains('No Apple Wallet'));
       expect(fr.modeEconomique, 'Mode économique');
       expect(en.modeEconomique, 'Low-data mode');

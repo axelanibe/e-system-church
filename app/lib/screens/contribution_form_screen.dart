@@ -343,7 +343,6 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       labelText: 'Montant ($devise) *',
-                      hintText: 'Ex. 10000',
                       border: const OutlineInputBorder(),
                     ),
                     validator: (v) {
@@ -401,7 +400,7 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Aucun moyen de paiement configuré pour l’instant.',
+                      'Aucun moyen de paiement configuré.',
                       textAlign: TextAlign.center,
                     ),
                     TextButton(
@@ -418,7 +417,6 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                     controller: _refController,
                     decoration: const InputDecoration(
                       labelText: 'Référence de paiement',
-                      hintText: 'Ex. WAVE-123456',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -513,13 +511,6 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                             )
                           : const Text('Enregistrer'),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _type == 'depense'
-                        ? 'La dépense est enregistrée « en attente » : seul le pasteur peut la confirmer.'
-                        : 'La contribution est enregistrée « en attente » : seul le pasteur peut la confirmer.',
-                    textAlign: TextAlign.center,
                   ),
                 ],
               ),

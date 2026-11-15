@@ -427,10 +427,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
           label: 'Nom de l’église',
         ),
         const Text(
-          'Les matricules et les cartes existantes ne changent jamais. '
-          'Le code de tutelle, lui, peut être régénéré depuis la '
-          'section « Codes d’invitation » : l’ancien code cesse alors de '
-          'fonctionner immédiatement. Le code fidèle ne change jamais.',
+          'Les matricules et les cartes ne changent jamais.',
           style: TextStyle(fontSize: 12),
         ),
         const SizedBox(height: 12),
@@ -631,8 +628,6 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                       child: ListTile(
                         leading: const Icon(Icons.payments_outlined),
                         title: const Text('Moyens de paiement'),
-                        subtitle: const Text(
-                            'Moyens de paiement de l’église par pays'),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () {
                           Navigator.of(context).push(
@@ -651,7 +646,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                             const EmptyState(
                               icon: Icons.schedule_outlined,
                               message:
-                                  'Aucun horaire de culte renseigné pour l’instant.',
+                                  'Aucun horaire de culte.',
                             )
                           else
                             ...horaires.map((h) => ListTile(
@@ -705,7 +700,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                             const EmptyState(
                               icon: Icons.person_outline,
                               message:
-                                  'Aucun pasteur principal renseigné pour l’instant.',
+                                  'Aucun pasteur principal.',
                             )
                           else
                             ListTile(
@@ -725,7 +720,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                             const EmptyState(
                               icon: Icons.account_tree_outlined,
                               message:
-                                  'Aucune antenne rattachée pour l’instant.',
+                                  'Aucune antenne rattachée.',
                             )
                           else
                             ...profil.antennes.map((a) => ListTile(
@@ -741,14 +736,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                     if (state.isAdmin) ...[
                       const SectionTitle(title: 'Codes d’invitation'),
                       const Text(
-                        'Le code fidèle permet aux membres de s’inscrire '
-                        'dans votre église ; le code de tutelle permet à '
-                        'une église de se rattacher à la vôtre. Touchez '
-                        'l’icône pour copier le code à transmettre. Le '
-                        'code de tutelle peut être régénéré '
-                        '(« Régénérer ») — l’ancien code cesse alors de '
-                        'fonctionner immédiatement ; le code fidèle, lui, '
-                        'ne change jamais.',
+                        'Code fidèle : inscription des membres. Code de tutelle : rattachement d’une église.',
                       ),
                       const SizedBox(height: 8),
                       Card(
@@ -872,12 +860,6 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                         },
                       ),
                     ],
-                    const SizedBox(height: 16),
-                    Text(
-                      'Code de votre église : ${state.church?.code ?? ''}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                      textAlign: TextAlign.center,
-                    ),
                   ],
                 ),
               );
@@ -973,13 +955,6 @@ class _ChoixCouleurState extends State<_ChoixCouleur> {
                   couleurPrincipale: _choisie,
                 ),
                 radius: 20,
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Touchez une couleur : l’aperçu à gauche montre '
-                  'comment vos initiales s’affichent.',
-                ),
               ),
             ],
           ),

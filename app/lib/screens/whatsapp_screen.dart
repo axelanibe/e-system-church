@@ -39,15 +39,6 @@ class _WhatsappScreenState extends State<WhatsappScreen> {
       appBar: AppBar(title: Text(t.whatsapp)),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Text(
-              t.aucunFournisseur,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ),
           Expanded(
             child: FutureBuilder<List<WhatsappConsentement>>(
               future: _future,
