@@ -224,6 +224,7 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _culteId,
             decoration: const InputDecoration(labelText: 'Culte en cours'),
             items: _cultes
@@ -304,10 +305,9 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                           child: Text(
                             '${moment.ordre}',
                             style: TextStyle(
-                              // Chiffre en cours en violet profond sur or :
-                              // blanc sur or foncé, contraste limite.
+                              // Chiffre en cours en blanc sur or foncé.
                               color: courant
-                                  ? AppTheme.violetProfond
+                                  ? Colors.white
                                   : passe
                                       ? Colors.white
                                       : AppTheme.violetProfond,

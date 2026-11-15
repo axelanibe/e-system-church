@@ -9,6 +9,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import '../widgets/liste_avec_fab.dart';
 
 /// Dons en nature (US5) : matériel, nourriture ou temps. Un don en nature
 /// n'entre jamais dans les totaux financiers ni dans le solde : il vit
@@ -108,6 +109,7 @@ class _DonsNatureScreenState extends State<DonsNatureScreen> {
               ),
               if (!anonyme)
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: membreId,
                   decoration:
                       const InputDecoration(labelText: 'Membre donateur'),
@@ -198,30 +200,32 @@ class _DonsNatureScreenState extends State<DonsNatureScreen> {
                     onAction: _creer,
                   );
                 }
-                return RefreshIndicator(
-                  onRefresh: () async => _refresh(),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: items.length,
-                    itemBuilder: (context, i) {
-                      final d = items[i];
-                      final nom = d.anonyme
-                          ? t.anonyme
-                          : (_nomsMembres[d.memberId] ?? t.anonyme);
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          leading: const Icon(Icons.card_giftcard_outlined,
-                              color: AppTheme.or),
-                          title: Text(d.description,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
-                          subtitle: Text(
-                            '$nom · ${_libelleType(d, t)} · ${d.quantite}${d.unite == null ? '' : ' ${d.unite}'}${d.heures == null ? '' : ' · ${d.heures} ${t.heures.toLowerCase()}'} · ${formatDateSeule(DateTime.tryParse(d.dateDon))}',
+                return ListeAvecFab(
+                  child: RefreshIndicator(
+                    onRefresh: () async => _refresh(),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: items.length,
+                      itemBuilder: (context, i) {
+                        final d = items[i];
+                        final nom = d.anonyme
+                            ? t.anonyme
+                            : (_nomsMembres[d.memberId] ?? t.anonyme);
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: ListTile(
+                            leading: const Icon(Icons.card_giftcard_outlined,
+                                color: AppTheme.or),
+                            title: Text(d.description,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                            subtitle: Text(
+                              '$nom · ${_libelleType(d, t)} · ${d.quantite}${d.unite == null ? '' : ' ${d.unite}'}${d.heures == null ? '' : ' · ${d.heures} ${t.heures.toLowerCase()}'} · ${formatDateSeule(DateTime.tryParse(d.dateDon))}',
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 );
               },

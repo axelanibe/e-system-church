@@ -8,6 +8,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import '../widgets/liste_avec_fab.dart';
 
 /// T10 — Action sociale : bénéficiaires et suivi des aides
 /// (vivres, financière, médicale, autre).
@@ -20,6 +21,8 @@ class ActionSocialeScreen extends StatefulWidget {
 
 class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
   int _tab = 0;
+  // Un bool par onglet : le FAB se masque quand l'onglet courant est vide.
+  final List<bool> _ongletVide = [false, false];
   late Future<List<Beneficiaire>> _beneficiairesFuture;
   late Future<List<Aide>> _aidesFuture;
   late Future<MemberPage> _membresFuture;
@@ -218,6 +221,13 @@ class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
           );
         }
         final items = snapshot.data!;
+        if (items.isEmpty != _ongletVide[0]) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _ongletVide[0] != items.isEmpty) {
+              setState(() => _ongletVide[0] = items.isEmpty);
+            }
+          });
+        }
         if (items.isEmpty) {
           return EmptyState(
             icon: Icons.volunteer_activism_outlined,
@@ -233,39 +243,41 @@ class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
             },
           );
         }
-        return RefreshIndicator(
-          onRefresh: () async => _refresh(),
-          child: ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final b = items[index];
-              return ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.volunteer_activism_outlined),
-                ),
-                title: Text(b.nom),
-                subtitle: Text(
-                  '${b.besoin ?? 'Besoin à compléter'}'
-                  '${b.telephone != null ? ' · ${b.telephone}' : ''}',
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    StatusChip(
-                      label: b.statutLabel,
-                      color: b.statut == 'clos'
-                          ? Colors.grey
-                          : AppTheme.violetProfond,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      tooltip: 'Supprimer',
-                      onPressed: () => _supprimerBeneficiaire(b),
-                    ),
-                  ],
-                ),
-              );
-            },
+        return ListeAvecFab(
+          child: RefreshIndicator(
+            onRefresh: () async => _refresh(),
+            child: ListView.builder(
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final b = items[index];
+                return ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.volunteer_activism_outlined),
+                  ),
+                  title: Text(b.nom),
+                  subtitle: Text(
+                    '${b.besoin ?? 'Besoin à compléter'}'
+                    '${b.telephone != null ? ' · ${b.telephone}' : ''}',
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      StatusChip(
+                        label: b.statutLabel,
+                        color: b.statut == 'clos'
+                            ? Colors.grey
+                            : AppTheme.violetProfond,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        tooltip: 'Supprimer',
+                        onPressed: () => _supprimerBeneficiaire(b),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         );
       },
@@ -286,6 +298,13 @@ class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
           );
         }
         final items = snapshot.data!;
+        if (items.isEmpty != _ongletVide[1]) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _ongletVide[1] != items.isEmpty) {
+              setState(() => _ongletVide[1] = items.isEmpty);
+            }
+          });
+        }
         if (items.isEmpty) {
           return EmptyState(
             icon: Icons.handshake_outlined,
@@ -301,47 +320,49 @@ class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
             },
           );
         }
-        return RefreshIndicator(
-          onRefresh: () async => _refresh(),
-          child: ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final a = items[index];
-              return ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.handshake_outlined),
-                ),
-                title: Text(
-                    beneficiairesNoms[a.beneficiaireId] ?? 'Bénéficiaire'),
-                subtitle: Text(
-                  '${a.typeLabel}'
-                  '${a.montantFcfa != null ? ' · ${formatMontant(a.montantFcfa!, context.watch<AppState>().devise)}' : ''}'
-                  '${a.dateAide != null ? ' · ${afficherDate(a.dateAide)}' : ''}',
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    StatusChip(
-                      label: a.statutLabel,
-                      color: a.statut == 'annulee'
-                          ? AppTheme.rougeErreur
-                          : AppTheme.violetProfond,
-                    ),
-                    if (a.statut == 'prevue')
-                      IconButton(
-                        icon: const Icon(Icons.check_outlined),
-                        tooltip: 'Marquer versée',
-                        onPressed: () => _marquerVersee(a),
+        return ListeAvecFab(
+          child: RefreshIndicator(
+            onRefresh: () async => _refresh(),
+            child: ListView.builder(
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final a = items[index];
+                return ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.handshake_outlined),
+                  ),
+                  title: Text(
+                      beneficiairesNoms[a.beneficiaireId] ?? 'Bénéficiaire'),
+                  subtitle: Text(
+                    '${a.typeLabel}'
+                    '${a.montantFcfa != null ? ' · ${formatMontant(a.montantFcfa!, context.watch<AppState>().devise)}' : ''}'
+                    '${a.dateAide != null ? ' · ${afficherDate(a.dateAide)}' : ''}',
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      StatusChip(
+                        label: a.statutLabel,
+                        color: a.statut == 'annulee'
+                            ? AppTheme.rougeErreur
+                            : AppTheme.violetProfond,
                       ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      tooltip: 'Supprimer',
-                      onPressed: () => _supprimerAide(a),
-                    ),
-                  ],
-                ),
-              );
-            },
+                      if (a.statut == 'prevue')
+                        IconButton(
+                          icon: const Icon(Icons.check_outlined),
+                          tooltip: 'Marquer versée',
+                          onPressed: () => _marquerVersee(a),
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        tooltip: 'Supprimer',
+                        onPressed: () => _supprimerAide(a),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         );
       },
@@ -386,23 +407,25 @@ class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
             );
           },
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            try {
-              if (_tab == 0) {
-                final membres = (await _membresFuture).membres;
-                if (mounted) await _createBeneficiaire(membres);
-              } else {
-                final beneficiaires = await _beneficiairesFuture;
-                if (mounted) await _createAide(beneficiaires);
-              }
-            } catch (e) {
-              if (context.mounted) showApiError(context, e);
-            }
-          },
-          icon: const Icon(Icons.add),
-          label: const Text('Ajouter'),
-        ),
+        floatingActionButton: _ongletVide[_tab]
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () async {
+                  try {
+                    if (_tab == 0) {
+                      final membres = (await _membresFuture).membres;
+                      if (mounted) await _createBeneficiaire(membres);
+                    } else {
+                      final beneficiaires = await _beneficiairesFuture;
+                      if (mounted) await _createAide(beneficiaires);
+                    }
+                  } catch (e) {
+                    if (context.mounted) showApiError(context, e);
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Ajouter'),
+              ),
       ),
     );
   }

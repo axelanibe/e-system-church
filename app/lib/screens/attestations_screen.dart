@@ -174,26 +174,31 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                     decoration: const InputDecoration(labelText: 'Lieu'),
                     maxLength: 200,
                   ),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: officiantCtrl,
                     decoration:
                         const InputDecoration(labelText: 'Officiant'),
                     maxLength: 200,
                   ),
-                  if (type == 'mariage')
+                  if (type == 'mariage') ...[
+                    const SizedBox(height: 12),
                     TextField(
                       controller: conjointCtrl,
                       decoration: const InputDecoration(
                           labelText: 'Nom du conjoint ou de la conjointe'),
                       maxLength: 200,
                     ),
+                  ],
                   if (type == 'naissance') ...[
+                    const SizedBox(height: 12),
                     TextField(
                       controller: pereCtrl,
                       decoration:
                           const InputDecoration(labelText: 'Nom du père'),
                       maxLength: 200,
                     ),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: mereCtrl,
                       decoration:
@@ -202,12 +207,14 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                     ),
                   ],
                   if (type == 'bapteme') ...[
+                    const SizedBox(height: 12),
                     TextField(
                       controller: parrainCtrl,
                       decoration: const InputDecoration(
                           labelText: 'Nom du parrain'),
                       maxLength: 200,
                     ),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: marraineCtrl,
                       decoration: const InputDecoration(
@@ -349,26 +356,31 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                           labelText: 'Lieu (vide = inchangé)'),
                       maxLength: 200,
                     ),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: officiantCtrl,
                       decoration: const InputDecoration(
                           labelText: 'Officiant (vide = inchangé)'),
                       maxLength: 200,
                     ),
-                    if (a.type == 'mariage')
+                    if (a.type == 'mariage') ...[
+                      const SizedBox(height: 12),
                       TextField(
                         controller: conjointCtrl,
                         decoration: const InputDecoration(
                             labelText: 'Conjoint(e) (vide = inchangé)'),
                         maxLength: 200,
                       ),
+                    ],
                     if (a.type == 'naissance') ...[
+                      const SizedBox(height: 12),
                       TextField(
                         controller: pereCtrl,
                         decoration: const InputDecoration(
                             labelText: 'Père (vide = inchangé)'),
                         maxLength: 200,
                       ),
+                      const SizedBox(height: 12),
                       TextField(
                         controller: mereCtrl,
                         decoration: const InputDecoration(
@@ -377,12 +389,14 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                       ),
                     ],
                     if (a.type == 'bapteme') ...[
+                      const SizedBox(height: 12),
                       TextField(
                         controller: parrainCtrl,
                         decoration: const InputDecoration(
                             labelText: 'Parrain (vide = inchangé)'),
                         maxLength: 200,
                       ),
+                      const SizedBox(height: 12),
                       TextField(
                         controller: marraineCtrl,
                         decoration: const InputDecoration(
