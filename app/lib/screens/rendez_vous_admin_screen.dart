@@ -28,14 +28,24 @@ const _rdvStatuts = {
   'annule': 'Annulé',
 };
 
+/// Périodes des créneaux du pasteur (migration 033, E-RV1), dans
+/// l'ordre de la Projection : matin, après-midi, soir.
+const _periodesCreneau = {
+  'matin': 'Matin',
+  'apres-midi': 'Après-midi',
+  'soir': 'Soir',
+};
+
 class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
   String? _statut;
   late Future<List<RendezVous>> _future;
+  late Future<List<CreneauPasteur>> _creneauxFuture;
 
   @override
   void initState() {
     super.initState();
     _future = context.read<AppState>().api.getRendezVousAdmin();
+    _creneauxFuture = context.read<AppState>().api.getCreneauxPasteur();
   }
 
   void _refresh() {
@@ -47,11 +57,123 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
     });
   }
 
+  void _refreshCreneaux() {
+    setState(() {
+      _creneauxFuture = context.read<AppState>().api.getCreneauxPasteur();
+    });
+  }
+
+  Future<void> _ajouterCreneau() async {
+    String? periode;
+    final libelleController = TextEditingController();
+    await showCreateDialog(
+      context: context,
+      title: 'Ajouter un créneau',
+      saveLabel: 'Ajouter',
+      fields: [
+        dialogDropdown<String>(
+          value: periode,
+          label: 'Période',
+          options: _periodesCreneau,
+          onChanged: (v) => periode = v,
+        ),
+        dialogTextField(
+          controller: libelleController,
+          label: 'Libellé du créneau',
+        ),
+      ],
+      isValid: () =>
+          periode != null &&
+          libelleController.text.trim().isNotEmpty &&
+          libelleController.text.trim().length <= 50,
+      onSave: () async {
+        try {
+          await context.read<AppState>().api.createCreneau(
+                periode: periode!,
+                libelle: libelleController.text.trim(),
+              );
+          if (mounted) showSuccess(context, 'Créneau ajouté.');
+          _refreshCreneaux();
+        } catch (e) {
+          if (mounted) showApiError(context, e);
+        }
+      },
+    );
+  }
+
+  Future<void> _modifierCreneau(CreneauPasteur creneau) async {
+    var periode = creneau.periode;
+    final libelleController =
+        TextEditingController(text: creneau.libelle);
+    await showCreateDialog(
+      context: context,
+      title: 'Modifier le créneau',
+      saveLabel: 'Enregistrer',
+      fields: [
+        dialogDropdown<String>(
+          value: periode,
+          label: 'Période',
+          options: _periodesCreneau,
+          onChanged: (v) => periode = v ?? periode,
+        ),
+        dialogTextField(
+          controller: libelleController,
+          label: 'Libellé du créneau',
+        ),
+      ],
+      isValid: () =>
+          libelleController.text.trim().isNotEmpty &&
+          libelleController.text.trim().length <= 50,
+      onSave: () async {
+        try {
+          await context.read<AppState>().api.updateCreneau(
+                creneau.id,
+                periode: periode,
+                libelle: libelleController.text.trim(),
+              );
+          if (mounted) showSuccess(context, 'Créneau modifié.');
+          _refreshCreneaux();
+        } catch (e) {
+          if (mounted) showApiError(context, e);
+        }
+      },
+    );
+  }
+
+  Future<void> _supprimerCreneau(CreneauPasteur creneau) async {
+    final api = context.read<AppState>().api;
+    final confirme = await confirmDelete(
+      context,
+      'Supprimer le créneau « ${creneau.libelle} » ?',
+    );
+    if (!confirme) return;
+    try {
+      await api.deleteCreneau(creneau.id);
+      if (mounted) showSuccess(context, 'Créneau supprimé.');
+      _refreshCreneaux();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
+  Future<void> _basculerCreneau(CreneauPasteur creneau) async {
+    try {
+      await context
+          .read<AppState>()
+          .api
+          .updateCreneau(creneau.id, actif: !creneau.actif);
+      _refreshCreneaux();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
   Future<void> _changerStatut(RendezVous rdv, String statut) async {
     final api = context.read<AppState>().api;
     String? creneau;
     if (statut == 'confirme') {
-      final creneauController = TextEditingController();
+      final creneauController =
+          TextEditingController(text: rdv.creneau ?? '');
       await showCreateDialog(
         context: context,
         title: 'Confirmer le rendez-vous',
@@ -135,12 +257,145 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
     );
   }
 
+  Widget _sectionCreneaux() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Mes créneaux',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: _ajouterCreneau,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Ajouter un créneau'),
+                  ),
+                ],
+              ),
+              FutureBuilder<List<CreneauPasteur>>(
+                future: _creneauxFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: LinearProgressIndicator(),
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        snapshot.error.toString(),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    );
+                  }
+                  final creneaux = snapshot.data!;
+                  if (creneaux.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text('Aucun créneau défini.'),
+                    );
+                  }
+                  return ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 220),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (final periode
+                              in _periodesCreneau.keys)
+                            if (creneaux.any(
+                                (c) => c.periode == periode)) ...[
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: Text(
+                                  _periodesCreneau[periode]!,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleSmall,
+                                ),
+                              ),
+                              for (final c in creneaux.where(
+                                  (c) => c.periode == periode))
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  dense: true,
+                                  title: Text(
+                                    c.libelle,
+                                    style: c.actif
+                                        ? null
+                                        : TextStyle(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.5),
+                                          ),
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        tooltip: c.actif
+                                            ? 'Désactiver'
+                                            : 'Activer',
+                                        icon: Icon(
+                                          c.actif
+                                              ? Icons.visibility_outlined
+                                              : Icons.visibility_off_outlined,
+                                        ),
+                                        onPressed: () =>
+                                            _basculerCreneau(c),
+                                      ),
+                                      IconButton(
+                                        tooltip: 'Modifier',
+                                        icon: const Icon(Icons.edit_outlined),
+                                        onPressed: () =>
+                                            _modifierCreneau(c),
+                                      ),
+                                      IconButton(
+                                        tooltip: 'Supprimer',
+                                        icon: const Icon(
+                                            Icons.delete_outlined),
+                                        onPressed: () =>
+                                            _supprimerCreneau(c),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Rendez-vous')),
       body: Column(
         children: [
+          _sectionCreneaux(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: SingleChildScrollView(

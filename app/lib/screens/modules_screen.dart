@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../config/app_theme.dart';
-import '../state/app_state.dart';
 import 'cartes_membres_screen.dart';
+import 'espace_membre_screen.dart';
 import 'settings_screen.dart';
 import 'cultes_direct_screen.dart';
 import 'gouvernance_screen.dart';
@@ -157,10 +156,11 @@ class ModulesScreen extends StatelessWidget {
         Navigator.of(context).pop();
         onAller?.call(index);
       case 'espaceMembre':
-        // Même accès que le tableau de bord (« Basculer vers
-        // l’espace fidèle ») : aperçu avec retour, sans changer
-        // de session.
-        context.read<AppState>().entrerApercuFidele();
+        // Tranche 3, E-FI1 : l'écran « membre » de la projection,
+        // ouvert directement, sans passer par l'aperçu complet
+        // de l'espace fidèle (celui du tableau de bord reste
+        // inchangé).
+        _pousser(context, const EspaceMembreScreen());
       case 'cultes':
         _pousser(context, const CultesDirectScreen());
       case 'cartes':
