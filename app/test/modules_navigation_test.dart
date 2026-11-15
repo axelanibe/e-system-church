@@ -150,13 +150,25 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Espace membre : la carte entre dans l’aperçu fidèle',
+  testWidgets(
+      'Espace membre : la carte ouvre l’écran membre, sans aperçu',
       (tester) async {
     final res = await _pomper(tester);
     expect(res.etat.apercuFidele, isFalse);
     await tester.tap(find.text('Espace membre'));
     await tester.pump();
-    expect(res.etat.apercuFidele, isTrue);
+    await tester.pumpAndSettle();
+    // Tranche 3, E-FI1 : l'écran « membre » s'ouvre directement,
+    // sans entrer dans l'aperçu fidèle (celui du tableau de bord
+    // reste inchangé).
+    expect(res.etat.apercuFidele, isFalse);
+    expect(find.text('ACTIONS RAPIDES'), findsOneWidget);
+    expect(find.text('Prendre rendez-vous'), findsNothing);
+    expect(find.byType(BackButton), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Modules de l’église'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
