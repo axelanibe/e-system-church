@@ -164,15 +164,6 @@ class _DonsNatureScreenState extends State<DonsNatureScreen> {
             ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Text(
-              t.donHorsFinances,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ),
           Expanded(
             child: FutureBuilder<List<DonNature>>(
               future: _future,

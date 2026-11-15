@@ -174,7 +174,7 @@ void main() {
           'Réunions',
           'Décisions',
           'Procès-verbaux',
-          'Aucune réunion du conseil pour l’instant.',
+          'Aucune réunion.',
         ],
       );
     });
@@ -184,7 +184,7 @@ void main() {
         tester,
         const DocumentsScreen(),
         titre: 'Documents',
-        attendus: ['Aucun document classé pour l’instant.'],
+        attendus: ['Aucun document classé.'],
       );
     });
 
@@ -193,7 +193,7 @@ void main() {
         tester,
         const ActionSocialeScreen(),
         titre: 'Action sociale',
-        attendus: ['Bénéficiaires', 'Aides', 'Aucun bénéficiaire pour l’instant.'],
+        attendus: ['Bénéficiaires', 'Aides', 'Aucun bénéficiaire.'],
       );
     });
 
@@ -202,7 +202,7 @@ void main() {
         tester,
         const PatrimoineScreen(),
         titre: 'Patrimoine',
-        attendus: ['Biens', 'Maintenance', 'Aucun bien du patrimoine pour l’instant.'],
+        attendus: ['Biens', 'Maintenance', 'Aucun bien.'],
       );
     });
   });
@@ -229,7 +229,7 @@ void main() {
         tester,
         const SauvegardeScreen(),
         titre: 'Sauvegardes',
-        attendus: ['Aucune sauvegarde pour le moment.'],
+        attendus: ['Aucune sauvegarde.'],
       );
     });
 
@@ -238,7 +238,7 @@ void main() {
         tester,
         const FileHorsLigneScreen(),
         titre: 'File hors ligne',
-        attendus: ['Aucune action en attente sur le serveur.'],
+        attendus: ['Aucune action en attente.'],
       );
     });
 
@@ -278,7 +278,7 @@ void main() {
         tester,
         const PromessesScreen(),
         titre: 'Promesses de don',
-        attendus: ['Aucune promesse pour l’instant.', 'Nouvelle promesse'],
+        attendus: ['Aucune promesse.', 'Nouvelle promesse'],
       );
     });
 
@@ -288,7 +288,7 @@ void main() {
         const DonsNatureScreen(),
         titre: 'Dons en nature',
         attendus: [
-          'Aucun don en nature pour l’instant.',
+          'Aucun don en nature.',
           'Nouveau don en nature'
         ],
       );
@@ -299,7 +299,7 @@ void main() {
         tester,
         const VisiteursScreen(),
         titre: 'Visiteurs',
-        attendus: ['Rien pour le moment.'],
+        attendus: ['Rien.'],
       );
     });
 
@@ -308,7 +308,7 @@ void main() {
         tester,
         const EvenementsVieScreen(),
         titre: 'Événements de vie',
-        attendus: ['Rien pour le moment.'],
+        attendus: ['Rien.'],
       );
     });
 
@@ -335,7 +335,7 @@ void main() {
         tester,
         const WhatsappScreen(),
         titre: 'WhatsApp',
-        attendus: ['Rien pour le moment.'],
+        attendus: ['Rien.'],
       );
     });
 
@@ -353,7 +353,7 @@ void main() {
         tester,
         const ListesConfigurablesScreen(),
         titre: 'Listes configurables',
-        attendus: ['Rien pour le moment.'],
+        attendus: ['Rien.'],
       );
     });
 

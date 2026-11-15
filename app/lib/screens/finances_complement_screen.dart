@@ -202,7 +202,6 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
         StatefulBuilder(
           builder: (context, setDialogState) => SwitchListTile(
             title: const Text('Dépense récurrente'),
-            subtitle: const Text('Sinon, dépense ponctuelle.'),
             value: estRecurrente,
             onChanged: (v) => setDialogState(() => estRecurrente = v),
           ),
@@ -251,7 +250,6 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
         StatefulBuilder(
           builder: (context, setDialogState) => SwitchListTile(
             title: const Text('Dépense récurrente'),
-            subtitle: const Text('Sinon, dépense ponctuelle.'),
             value: estRecurrente,
             onChanged: (v) => setDialogState(() => estRecurrente = v),
           ),
@@ -726,7 +724,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                   if (postes.isEmpty && budgets.isEmpty) {
                     return EmptyState(
                       icon: Icons.account_balance_outlined,
-                      message: 'Aucun poste budgétaire pour l’instant.',
+                      message: 'Aucun poste budgétaire.',
                       actionLabel: 'Créer un poste budgétaire',
                       onAction: _createPoste,
                     );
@@ -743,7 +741,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                         if (postes.isEmpty)
                           const EmptyState(
                             icon: Icons.account_balance_outlined,
-                            message: 'Aucun poste budgétaire pour l’instant.',
+                            message: 'Aucun poste budgétaire.',
                           )
                         else
                           ...postes.map((p) => Card(
@@ -806,7 +804,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                         if (budgets.isEmpty)
                           const EmptyState(
                             icon: Icons.pie_chart_outline,
-                            message: 'Aucun budget défini pour l’instant.',
+                            message: 'Aucun budget défini.',
                           )
                         else
                           ...budgets.map((b) {
@@ -913,7 +911,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                 return EmptyState(
                   icon: Icons.receipt_long_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucune dépense enregistrée pour l’instant.'
+                      ? 'Aucune dépense enregistrée.'
                       : 'Aucune dépense ne correspond à la recherche.',
                   actionLabel: 'Enregistrer une dépense',
                   onAction: () async {
@@ -1129,7 +1127,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                 return EmptyState(
                   icon: Icons.swap_horiz,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucun mouvement de caisse pour l’instant.'
+                      ? 'Aucun mouvement de caisse.'
                       : 'Aucun mouvement ne correspond à la recherche.',
                   actionLabel: 'Enregistrer un mouvement',
                   onAction: _createMouvement,
@@ -1261,10 +1259,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
           ),
         Expanded(
           child: _rapportFuture == null
-              ? const EmptyState(
-                  icon: Icons.assessment_outlined,
-                  message: 'Choisissez une année puis affichez le rapport financier.',
-                )
+              ? const SizedBox.shrink()
               : FutureBuilder<RapportFinancier>(
                   future: _rapportFuture,
                   builder: (context, snapshot) {
@@ -1331,7 +1326,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                           if (rapport.parPoste.isEmpty)
                             const EmptyState(
                               icon: Icons.account_balance_outlined,
-                              message: 'Aucun poste budgétaire pour l’instant.',
+                              message: 'Aucun poste budgétaire.',
                             )
                           else
                             ...rapport.parPoste.map((l) {
@@ -1357,7 +1352,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                             const EmptyState(
                               icon: Icons.account_tree_outlined,
                               message:
-                                  'Aucune sous-église rattachée pour l’instant.',
+                                  'Aucune sous-église rattachée.',
                             )
                           else
                             ...rapport.parBranche.map((b) {
@@ -1600,7 +1595,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                     if (suivi.parCategories.isEmpty)
                       const EmptyState(
                         icon: Icons.category_outlined,
-                        message: 'Aucun poste de dépense pour l’instant.',
+                        message: 'Aucun poste de dépense.',
                       )
                     else
                       ...suivi.parCategories.map((l) => ligneSuivi(l)),
@@ -1608,7 +1603,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                     if (suivi.parPostes.isEmpty)
                       const EmptyState(
                         icon: Icons.account_balance_outlined,
-                        message: 'Aucun poste de dépense pour l’instant.',
+                        message: 'Aucun poste de dépense.',
                       )
                     else
                       ...suivi.parPostes

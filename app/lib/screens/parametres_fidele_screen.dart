@@ -44,11 +44,6 @@ class _ParametresFideleScreenState extends State<ParametresFideleScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Besoin d’aide ? Votre église peut vous aider : carte de '
-              'membre, cotisations, cultes, messagerie.',
-            ),
-            const SizedBox(height: 12),
             Text('Votre église : ${eglise.name}'),
             if (eglise.city != null && eglise.city!.isNotEmpty)
               Text('Ville : ${eglise.city}'),
@@ -105,7 +100,6 @@ class _ParametresFideleScreenState extends State<ParametresFideleScreen> {
                       ListTile(
                         leading: const Icon(Icons.badge_outlined),
                         title: Text('Matricule : ${profil.matricule}'),
-                        subtitle: const Text('Votre carte de membre'),
                       ),
                     ListTile(
                       leading: const Icon(Icons.church_outlined),
@@ -123,8 +117,6 @@ class _ParametresFideleScreenState extends State<ParametresFideleScreen> {
                     ListTile(
                       leading: const Icon(Icons.visibility_outlined),
                       title: const Text('Qui a consulté ma fiche'),
-                      subtitle: const Text(
-                          'Les lectures de vos données sensibles.'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {
                         Navigator.of(context).push(
@@ -143,9 +135,6 @@ class _ParametresFideleScreenState extends State<ParametresFideleScreen> {
                 child: ListTile(
                   leading: Icon(Icons.notifications_outlined),
                   title: Text('Notifications'),
-                  subtitle: Text(
-                    'Aucun réglage de notification pour l’instant.',
-                  ),
                 ),
               ),
               const SectionTitle(title: 'Langue'),
@@ -173,9 +162,6 @@ class _ParametresFideleScreenState extends State<ParametresFideleScreen> {
                 child: ListTile(
                   leading: const Icon(Icons.info_outline),
                   title: const Text('Aide'),
-                  subtitle: const Text(
-                    'Comment utiliser votre espace fidèle.',
-                  ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _aide(profil),
                 ),

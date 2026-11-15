@@ -303,8 +303,6 @@ class _CultesScreenState extends State<CultesScreen> {
             child: ListTile(
               leading: const Icon(Icons.library_books_outlined),
               title: const Text('Médias & bibliothèque'),
-              subtitle: const Text(
-                  'Prédications, plans de lecture, livres et prêts.'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).push(
@@ -343,7 +341,7 @@ class _CultesScreenState extends State<CultesScreen> {
                 return EmptyState(
                   icon: Icons.event_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucun culte planifié pour l’instant.'
+                      ? 'Aucun culte planifié.'
                       : 'Aucun culte ne correspond à la recherche.',
                   actionLabel: 'Planifier un culte',
                   onAction: () async {
@@ -433,7 +431,7 @@ class _CultesScreenState extends State<CultesScreen> {
                 return EmptyState(
                   icon: Icons.category_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucun type de culte pour l’instant.'
+                      ? 'Aucun type de culte.'
                       : 'Aucun type ne correspond à la recherche.',
                   actionLabel: 'Créer un type de culte',
                   onAction: _createType,
@@ -504,7 +502,7 @@ class _CultesScreenState extends State<CultesScreen> {
                 return EmptyState(
                   icon: Icons.celebration_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucun événement spécial pour l’instant.'
+                      ? 'Aucun événement spécial.'
                       : 'Aucun événement ne correspond à la recherche.',
                   actionLabel: 'Créer un événement',
                   onAction: _createEvenement,
@@ -740,7 +738,7 @@ class _CulteDetailScreenState extends State<CulteDetailScreen> {
                   return EmptyState(
                     icon: Icons.list_outlined,
                     message: snapshot.data!.isEmpty
-                        ? 'Aucun élément dans l’ordre du culte pour l’instant.'
+                        ? 'Aucun élément dans l’ordre du culte.'
                         : 'Aucun élément ne correspond à la recherche.',
                     actionLabel: 'Ajouter un élément',
                     onAction: _addItem,

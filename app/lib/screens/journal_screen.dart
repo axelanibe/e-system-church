@@ -270,7 +270,6 @@ class _JournalScreenState extends State<JournalScreen> {
                                     controller: _titreController,
                                     decoration: const InputDecoration(
                                       labelText: 'Titre',
-                                      hintText: 'Titre de votre note',
                                     ),
                                   ),
                                   const SizedBox(height: 8),
@@ -278,7 +277,6 @@ class _JournalScreenState extends State<JournalScreen> {
                                     controller: _texteController,
                                     decoration: const InputDecoration(
                                       labelText: 'Texte',
-                                      hintText: 'Écrivez votre note ici',
                                     ),
                                     maxLines: 6,
                                   ),
@@ -320,14 +318,6 @@ class _JournalScreenState extends State<JournalScreen> {
                         ],
                         const SizedBox(height: 16),
                         const SectionTitle(title: 'Export et import'),
-                        const Padding(
-                          padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-                          child: Text(
-                            'Export et import JSON par fusion. L’import '
-                            'ajoute vos notes sans effacer celles déjà '
-                            'présentes.',
-                          ),
-                        ),
                         Row(
                           children: [
                             Expanded(

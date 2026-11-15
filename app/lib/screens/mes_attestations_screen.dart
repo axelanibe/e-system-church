@@ -71,7 +71,7 @@ class _MesAttestationsScreenState extends State<MesAttestationsScreen> {
           if (items.isEmpty) {
             return const EmptyState(
               icon: Icons.description_outlined,
-              message: 'Aucune attestation pour l’instant.',
+              message: 'Aucune attestation.',
             );
           }
           return RefreshIndicator(

@@ -59,11 +59,6 @@ class _AnnexeDetailScreenState extends State<AnnexeDetailScreen> {
           controller: nomController,
           label: 'Nom de l\u2019église',
         ),
-        const Text(
-          'Le code de l\u2019annexe ne change jamais.',
-          style: TextStyle(fontSize: 12),
-        ),
-        const SizedBox(height: 12),
         dialogTextField(
           controller: villeController,
           label: 'Ville',
@@ -71,19 +66,16 @@ class _AnnexeDetailScreenState extends State<AnnexeDetailScreen> {
         dialogTextField(
           controller: telephoneController,
           label: 'Téléphone',
-          hintText: 'Laisser vide pour ne pas modifier',
           keyboardType: TextInputType.phone,
         ),
         dialogTextField(
           controller: emailController,
           label: 'E-mail',
-          hintText: 'Laisser vide pour ne pas modifier',
           keyboardType: TextInputType.emailAddress,
         ),
         dialogTextField(
           controller: adresseController,
           label: 'Adresse',
-          hintText: 'Laisser vide pour ne pas modifier',
         ),
       ],
       isValid: () => nomController.text.trim().length >= 2,
@@ -158,7 +150,7 @@ class _AnnexeDetailScreenState extends State<AnnexeDetailScreen> {
                       Padding(
                         padding: const EdgeInsets.only(bottom: 4),
                         child: Text(
-                            '• Comptes utilisateurs TEST supprimés : ${apercu.utilisateursSupprimes}',
+                            '• Comptes utilisateurs supprimés : ${apercu.utilisateursSupprimes}',
                             style: const TextStyle(fontSize: 14)),
                       ),
                   ],
@@ -166,7 +158,7 @@ class _AnnexeDetailScreenState extends State<AnnexeDetailScreen> {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Cette annexe peut contenir de vrais membres : vérifiez les chiffres ci-dessus. Cette action est définitive.',
+                'Cette annexe peut contenir de vrais membres : vérifiez les chiffres ci-dessus.',
                 style: TextStyle(fontSize: 14),
               ),
             ],
@@ -249,7 +241,7 @@ class _AnnexeDetailScreenState extends State<AnnexeDetailScreen> {
                         Text('${d.code} · ${d.city ?? ''}'),
                         const SizedBox(height: 4),
                         Text(
-                          'Modules : ${d.modules.length}, tous actifs',
+                          'Modules : ${d.modules.length}',
                         ),
                       ],
                     ),
@@ -336,8 +328,6 @@ class _AnnexeDetailScreenState extends State<AnnexeDetailScreen> {
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.error),
                       ),
-                      subtitle: const Text(
-                          'Supprime définitivement l\u2019annexe et tout ce qu\u2019elle contient (membres, contributions, campagnes, attestations, transferts). L\u2019aperçu s\u2019affiche avant toute suppression.'),
                       trailing: _actionEnCours
                           ? const SizedBox(
                               width: 24,

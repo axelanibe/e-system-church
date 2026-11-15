@@ -4,7 +4,6 @@ import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/paiements.dart';
-import '../services/api_service.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
@@ -99,15 +98,6 @@ class _PaiementsScreenState extends State<PaiementsScreen> {
               },
             ),
           ),
-          if (!isAdmin)
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Text(
-                'Consultation seulement : seul un administrateur de '
-                'l’église peut configurer les moyens de paiement.',
-                textAlign: TextAlign.center,
-              ),
-            ),
           Expanded(
             child: _loading
                 ? const AppLoading()
@@ -119,7 +109,7 @@ class _PaiementsScreenState extends State<PaiementsScreen> {
                             ? const EmptyState(
                                 icon: Icons.payments_outlined,
                                 message:
-                                    'Aucun fournisseur disponible pour ce pays pour l’instant.',
+                                    'Aucun fournisseur.',
                               )
                             : ListView(
                                 padding: const EdgeInsets.all(16),
@@ -129,7 +119,7 @@ class _PaiementsScreenState extends State<PaiementsScreen> {
                                       padding:
                                           EdgeInsets.fromLTRB(16, 12, 16, 12),
                                       child: Text(
-                                        'Aucun moyen de paiement configuré pour l’instant.',
+                                        'Aucun moyen de paiement.',
                                         textAlign: TextAlign.center,
                                       ),
                                     ),
@@ -214,9 +204,6 @@ class _FournisseurCardState extends State<_FournisseurCard> {
 
   /// Message d'erreur lisible pour un 403 (non-admin) ou toute autre erreur.
   String _friendlyError(Object e) {
-    if (e is ApiException && e.statusCode == 403) {
-      return 'Seul un administrateur de l’église peut modifier les moyens de paiement.';
-    }
     return e.toString();
   }
 
@@ -392,9 +379,7 @@ class _FournisseurCardState extends State<_FournisseurCard> {
                   ],
                 ),
                 const Text(
-                  'À coller dans le portail du fournisseur : les '
-                  'paiements reçus confirment alors automatiquement les '
-                  'contributions en attente.',
+                  'À coller dans le portail du fournisseur.',
                   style: TextStyle(fontSize: 13),
                 ),
               ],
@@ -405,7 +390,6 @@ class _FournisseurCardState extends State<_FournisseurCard> {
                 controller: _libelleController,
                 decoration: const InputDecoration(
                   labelText: 'Libellé (facultatif)',
-                  hintText: 'Ex. compte principal',
                   border: OutlineInputBorder(),
                   isDense: true,
                 ),
@@ -421,9 +405,6 @@ class _FournisseurCardState extends State<_FournisseurCard> {
                     labelText: champ.optionnel
                         ? '${champ.label} (facultatif)'
                         : champ.label,
-                    hintText: config == null
-                        ? null
-                        : 'Laisser vide pour garder la valeur actuelle',
                     border: const OutlineInputBorder(),
                     isDense: true,
                   ),

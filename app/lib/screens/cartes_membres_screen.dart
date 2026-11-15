@@ -78,7 +78,7 @@ class _CartesMembresScreenState extends State<CartesMembresScreen> {
       body: !state.isAdmin
           ? const EmptyState(
               icon: Icons.badge_outlined,
-              message: 'Réservé à l’administrateur de l’église.',
+              message: 'Accès réservé.',
             )
           : FutureBuilder<List<Member>>(
               future: _future,
@@ -97,7 +97,7 @@ class _CartesMembresScreenState extends State<CartesMembresScreen> {
                 if (snapshot.data!.isEmpty) {
                   return const EmptyState(
                     icon: Icons.badge_outlined,
-                    message: 'Aucun membre pour l’instant.',
+                    message: 'Aucun membre.',
                   );
                 }
                 return Column(

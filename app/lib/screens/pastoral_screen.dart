@@ -204,9 +204,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
             children: [
               const Expanded(
                 child: Text(
-                  'Attention bienveillante : le radar signale les membres '
-                  'absents plusieurs cultes de suite, pour organiser un '
-                  'appel ou une visite, jamais une sanction.',
+                  'Les membres absents plusieurs cultes de suite remontent ici.',
                 ),
               ),
               const SizedBox(width: 12),
@@ -241,7 +239,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
               if (items.isEmpty) {
                 return const EmptyState(
                   icon: Icons.favorite_outline,
-                  message: 'Aucune alerte pour l’instant.',
+                  message: 'Aucune absence signalée',
                 );
               }
               return ListView.builder(
@@ -258,7 +256,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       subtitle: Text(
                         'Absent ${a.absencesConsecutives} cultes de suite\n'
                         '${a.alerte}'
-                        '${a.visiteMotif != null ? '\nVisite à domicile suggérée : ${a.visiteMotif}' : ''}',
+                        '${a.visiteMotif != null ? '\n${a.visiteMotif}' : ''}',
                       ),
                       isThreeLine: true,
                       trailing: TextButton(
@@ -555,7 +553,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
                     if (rencontres.isEmpty) {
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Text('Aucune rencontre pour l’instant.'),
+                        child: Text('Aucune rencontre.'),
                       );
                     }
                     return Column(
@@ -652,7 +650,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
                 return EmptyState(
                   icon: Icons.route_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucun parcours de nouveau converti pour l’instant.'
+                      ? 'Aucun parcours.'
                       : 'Aucun parcours ne correspond à la recherche.',
                   actionLabel: 'Créer un parcours',
                   onAction: () async {
@@ -735,7 +733,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
                 return EmptyState(
                   icon: Icons.home_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucune visite pastorale pour l’instant.'
+                      ? 'Aucune visite.'
                       : 'Aucune visite ne correspond à la recherche.',
                   actionLabel: 'Planifier une visite',
                   onAction: () async {
@@ -825,8 +823,8 @@ class _PastoralScreenState extends State<PastoralScreen> {
                   icon: Icons.handshake_outlined,
                   message: snapshot.data!.isEmpty
                       ? (_casOuverts
-                          ? 'Aucun cas ouvert pour l’instant.'
-                          : 'Aucun accompagnement pour l’instant.')
+                          ? 'Aucun cas ouvert.'
+                          : 'Aucun accompagnement.')
                       : 'Aucun accompagnement ne correspond à la recherche.',
                   actionLabel: 'Créer un accompagnement',
                   onAction: () async {

@@ -126,7 +126,7 @@ class _CheckinEnfantsScreenState extends State<CheckinEnfantsScreen> {
           : contenu;
       if (!RegExp(r'^KIDS-[A-Z0-9]{4}$').hasMatch(code)) {
         _afficher(
-          'QR enfant invalide : attendu un code #KIDS-XXXX.',
+          'Code enfant invalide.',
           succes: false,
         );
         return;
@@ -144,7 +144,7 @@ class _CheckinEnfantsScreenState extends State<CheckinEnfantsScreen> {
     }
     final codeEnfant = _codeEnfantController.text.trim().toUpperCase();
     if (!RegExp(r'^KIDS-[A-Z0-9]{4}$').hasMatch(codeEnfant)) {
-      _afficher('Code enfant invalide : format #KIDS-XXXX.', succes: false);
+      _afficher('Code enfant invalide.', succes: false);
       return;
     }
     final codeParent = _codeParentController.text.trim();
@@ -259,9 +259,7 @@ class _CheckinEnfantsScreenState extends State<CheckinEnfantsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Enfant : ${checkin.enfantNom ?? checkin.codeAffiche}. '
-              'L’alerte est enregistrée, le parent est prévenu en app, '
-              'sans SMS.',
+              'Enfant : ${checkin.enfantNom ?? checkin.codeAffiche}.',
             ),
             const SizedBox(height: 12),
             TextField(
@@ -434,7 +432,7 @@ class _CheckinEnfantsScreenState extends State<CheckinEnfantsScreen> {
           TextField(
             controller: _codeParentController,
             decoration: const InputDecoration(
-              labelText: 'Code parent (matricule, ou QR scanné)',
+              labelText: 'Code parent (matricule)',
             ),
             textCapitalization: TextCapitalization.characters,
           ),
@@ -442,7 +440,7 @@ class _CheckinEnfantsScreenState extends State<CheckinEnfantsScreen> {
           TextField(
             controller: _codeEnfantController,
             decoration: const InputDecoration(
-              labelText: 'Code enfant (#KIDS-XXXX, ou QR scanné)',
+              labelText: 'Code enfant (#KIDS-XXXX)',
             ),
             textCapitalization: TextCapitalization.characters,
           ),

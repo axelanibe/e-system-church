@@ -79,7 +79,6 @@ class _BudgetsDepartementsScreenState
             keyboardType: TextInputType.number,
             decoration: const InputDecoration(
               labelText: 'Enveloppe (FCFA) *',
-              hintText: 'Ex. 60000',
               border: OutlineInputBorder(),
             ),
             validator: (v) {
@@ -242,9 +241,7 @@ class _BudgetsDepartementsScreenState
                 if (suivi.parDepartements.isEmpty)
                   const EmptyState(
                     icon: Icons.calendar_month_outlined,
-                    message: 'Aucun département pour le moment. Les '
-                        'budgets se créent par département, avec leur '
-                        'enveloppe en FCFA.',
+                    message: 'Aucun département.',
                   )
                 else
                   ...suivi.parDepartements.map(

@@ -59,7 +59,6 @@ class _ComptesBancairesScreenState extends State<ComptesBancairesScreen> {
                     controller: banqueController,
                     decoration: const InputDecoration(
                       labelText: 'Banque *',
-                      hintText: 'Ex. Banque Atlantique',
                       border: OutlineInputBorder(),
                     ),
                     validator: (v) => (v?.trim().isEmpty ?? true)
@@ -226,8 +225,7 @@ class _ComptesBancairesScreenState extends State<ComptesBancairesScreen> {
           if (comptes.isEmpty) {
             return const EmptyState(
               icon: Icons.account_balance_outlined,
-              message: 'Aucun compte enregistré. Les comptes de l’'
-                  'église s’ajouteront ici pour le rapprochement.',
+              message: 'Aucun compte enregistré.',
             );
           }
           return RefreshIndicator(

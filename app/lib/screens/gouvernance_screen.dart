@@ -28,7 +28,7 @@ class GouvernanceScreen extends StatelessWidget {
     required BuildContext context,
     required IconData icone,
     required String titre,
-    required String sousTitre,
+    String? sousTitre,
     required Widget ecran,
   }) {
     return Card(
@@ -43,11 +43,13 @@ class GouvernanceScreen extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: Text(
-          sousTitre,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
+        subtitle: sousTitre == null
+            ? null
+            : Text(
+                sousTitre,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => _ouvrir(context, ecran),
       ),
@@ -65,28 +67,24 @@ class GouvernanceScreen extends StatelessWidget {
             context: context,
             icone: Icons.verified_outlined,
             titre: 'Mandats',
-            sousTitre: 'Mandats des responsables, avec leurs dates.',
             ecran: const MandatsScreen(),
           ),
           _carte(
             context: context,
             icone: Icons.how_to_reg_outlined,
             titre: 'Nominations',
-            sousTitre: 'Chaque nomination garde sa décision et sa date d’effet.',
             ecran: const MandatsScreen(ongletInitial: 1),
           ),
           _carte(
             context: context,
             icone: Icons.description_outlined,
             titre: 'Procès-verbaux',
-            sousTitre: 'Les réunions du bureau produisent leur procès-verbal.',
             ecran: const ReunionsConseilScreen(ongletInitial: 2),
           ),
           _carte(
             context: context,
             icone: Icons.folder_outlined,
             titre: 'Documents',
-            sousTitre: 'Statuts, règlements, modèles et courriers.',
             ecran: const DocumentsScreen(),
           ),
           _carte(

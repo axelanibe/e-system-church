@@ -124,7 +124,7 @@ void main() {
     testWidgets('non admin : message réservé, pas de liste',
         (tester) async {
       await _ouvrir(tester, const CartesMembresScreen(), admin: false);
-      expect(find.text('Réservé à l’administrateur de l’église.'),
+      expect(find.text('Accès réservé.'),
           findsOneWidget);
       expect(find.text('Awa Koné'), findsNothing);
       expect(tester.takeException(), isNull);

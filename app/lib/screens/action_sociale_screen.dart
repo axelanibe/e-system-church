@@ -21,8 +21,6 @@ class ActionSocialeScreen extends StatefulWidget {
 
 class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
   int _tab = 0;
-  // Un bool par onglet : le FAB se masque quand l'onglet courant est vide.
-  final List<bool> _ongletVide = [false, false];
   late Future<List<Beneficiaire>> _beneficiairesFuture;
   late Future<List<Aide>> _aidesFuture;
   late Future<MemberPage> _membresFuture;
@@ -221,26 +219,10 @@ class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
           );
         }
         final items = snapshot.data!;
-        if (items.isEmpty != _ongletVide[0]) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _ongletVide[0] != items.isEmpty) {
-              setState(() => _ongletVide[0] = items.isEmpty);
-            }
-          });
-        }
         if (items.isEmpty) {
-          return EmptyState(
+          return const EmptyState(
             icon: Icons.volunteer_activism_outlined,
-            message: 'Aucun bénéficiaire pour l’instant.',
-            actionLabel: 'Ajouter un bénéficiaire',
-            onAction: () async {
-              try {
-                final membres = (await _membresFuture).membres;
-                if (mounted) await _createBeneficiaire(membres);
-              } catch (e) {
-                if (context.mounted) showApiError(context, e);
-              }
-            },
+            message: 'Aucun bénéficiaire.',
           );
         }
         return ListeAvecFab(
@@ -256,7 +238,7 @@ class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
                   ),
                   title: Text(b.nom),
                   subtitle: Text(
-                    '${b.besoin ?? 'Besoin à compléter'}'
+                    '${b.besoin ?? ''}'
                     '${b.telephone != null ? ' · ${b.telephone}' : ''}',
                   ),
                   trailing: Row(
@@ -298,26 +280,10 @@ class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
           );
         }
         final items = snapshot.data!;
-        if (items.isEmpty != _ongletVide[1]) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _ongletVide[1] != items.isEmpty) {
-              setState(() => _ongletVide[1] = items.isEmpty);
-            }
-          });
-        }
         if (items.isEmpty) {
-          return EmptyState(
+          return const EmptyState(
             icon: Icons.handshake_outlined,
-            message: 'Aucune aide enregistrée pour l’instant.',
-            actionLabel: 'Enregistrer une aide',
-            onAction: () async {
-              try {
-                final beneficiaires = await _beneficiairesFuture;
-                if (mounted) await _createAide(beneficiaires);
-              } catch (e) {
-                if (context.mounted) showApiError(context, e);
-              }
-            },
+            message: 'Aucune aide.',
           );
         }
         return ListeAvecFab(
@@ -407,25 +373,23 @@ class _ActionSocialeScreenState extends State<ActionSocialeScreen> {
             );
           },
         ),
-        floatingActionButton: _ongletVide[_tab]
-            ? null
-            : FloatingActionButton.extended(
-                onPressed: () async {
-                  try {
-                    if (_tab == 0) {
-                      final membres = (await _membresFuture).membres;
-                      if (mounted) await _createBeneficiaire(membres);
-                    } else {
-                      final beneficiaires = await _beneficiairesFuture;
-                      if (mounted) await _createAide(beneficiaires);
-                    }
-                  } catch (e) {
-                    if (context.mounted) showApiError(context, e);
-                  }
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Ajouter'),
-              ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () async {
+            try {
+              if (_tab == 0) {
+                final membres = (await _membresFuture).membres;
+                if (mounted) await _createBeneficiaire(membres);
+              } else {
+                final beneficiaires = await _beneficiairesFuture;
+                if (mounted) await _createAide(beneficiaires);
+              }
+            } catch (e) {
+              if (context.mounted) showApiError(context, e);
+            }
+          },
+          icon: const Icon(Icons.add),
+          label: const Text('Ajouter'),
+        ),
       ),
     );
   }

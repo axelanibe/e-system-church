@@ -204,13 +204,12 @@ class _QrScanScreenState extends State<QrScanScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  _pointes == 0
-                      ? 'Le scan reprend tout seul après chaque pointage.'
-                      : '${pluriel(_pointes, 'présence pointée', 'présences pointées')} pendant ce scan.',
-                  style: const TextStyle(color: Colors.white70),
-                  textAlign: TextAlign.center,
-                ),
+                if (_pointes > 0)
+                  Text(
+                    '${pluriel(_pointes, 'présence pointée', 'présences pointées')} pendant ce scan.',
+                    style: const TextStyle(color: Colors.white70),
+                    textAlign: TextAlign.center,
+                  ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: () => Navigator.of(context).pop(),
@@ -257,8 +256,7 @@ class _ErreurCamera extends StatelessWidget {
                 ? 'L’appareil photo est nécessaire pour scanner une carte. '
                     'Autorisez l’appareil photo dans les réglages du '
                     'téléphone, ou saisissez le matricule à la main.'
-                : 'La caméra n’a pas pu démarrer sur ce téléphone. '
-                    'Saisissez le matricule à la main.',
+                : 'La caméra n’a pas pu démarrer sur ce téléphone.',
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),

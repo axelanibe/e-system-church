@@ -235,7 +235,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 if (items.isEmpty) {
                   return EmptyState(
                     icon: Icons.folder_outlined,
-                    message: 'Aucun document classé pour l’instant.',
+                    message: 'Aucun document classé.',
                     actionLabel: 'Créer un document',
                     onAction: _create,
                   );

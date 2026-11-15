@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
-import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/rapport_annexe.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
-import 'exemple_bilan_screen.dart';
 
 /// Rapports reçus (tranche P5) : l'église mère lit ici les rapports
 /// envoyés par ses églises annexes, qui arrivent aussi par e-mail.
 /// Textes repris mot pour mot de la projection validée par Axel le
-/// 12 novembre 2026. Les vrais rapports reçus s'affichent en premier ;
-/// l'entrée d'exemple, marquée EXEMPLE, reste en bas, comme dans la
-/// projection, sans jamais se présenter comme un vrai rapport reçu.
+/// 12 novembre 2026. Les vrais rapports reçus s'affichent en premier.
 class RapportsRecusScreen extends StatefulWidget {
   const RapportsRecusScreen({super.key});
 
@@ -31,12 +27,6 @@ class _RapportsRecusScreenState extends State<RapportsRecusScreen> {
 
   void _refresh() =>
       setState(() => _future = context.read<AppState>().api.getRapportsRecus());
-
-  void _ouvrirExemple() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ExempleBilanScreen()),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,9 +71,6 @@ class _RapportsRecusScreenState extends State<RapportsRecusScreen> {
                         style: TextStyle(fontSize: 16),
                       ),
                       const SizedBox(height: 16),
-                      // La projection montre la carte d'exemple même
-                      // quand aucun rapport n'est arrivé : pas d'état
-                      // vide. E-RR2.
                       if (rapports.isNotEmpty)
                         ...rapports.map(
                           (r) => Card(
@@ -129,71 +116,11 @@ class _RapportsRecusScreenState extends State<RapportsRecusScreen> {
                                       style: const TextStyle(fontSize: 16),
                                     ),
                                   ],
-                                  if (r.enAttenteEnvoi) ...[
-                                    const SizedBox(height: 8),
-                                    const Text(
-                                      'En attente d’envoi par e-mail.',
-                                      style: TextStyle(fontSize: 16),
-                                    ),
-                                  ],
                                 ],
                               ),
                             ),
                           ),
                         ),
-                      const SizedBox(height: 16),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Expanded(
-                                    child: Text(
-                                      'Bilan annuel',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.violetProfond,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Text(
-                                      'EXEMPLE',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Envoyé par une église annexe. Rapport '
-                                'd’exemple, avec des chiffres d’exemple.',
-                                style: TextStyle(fontSize: 16),
-                              ),
-                              const SizedBox(height: 12),
-                              OutlinedButton(
-                                onPressed: _ouvrirExemple,
-                                child: const Text('Ouvrir'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),

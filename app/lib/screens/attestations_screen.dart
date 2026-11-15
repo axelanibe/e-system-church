@@ -328,7 +328,6 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                     controller: motifCtrl,
                     decoration: const InputDecoration(
                       labelText: 'Motif de la correction',
-                      hintText: 'Ex. don oublié ajouté',
                     ),
                     maxLength: 500,
                     autofocus: true,

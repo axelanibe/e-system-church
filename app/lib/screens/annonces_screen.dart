@@ -93,8 +93,6 @@ class _AnnoncesScreenState extends State<AnnoncesScreen> {
                   const SizedBox(height: 12),
                   SwitchListTile(
                     title: const Text('Diffuser à tout le réseau'),
-                    subtitle: const Text(
-                        'Les sous-églises verront aussi cette annonce.'),
                     value: broadcast,
                     onChanged: (v) => setDialogState(() => broadcast = v),
                   ),
@@ -162,7 +160,7 @@ class _AnnoncesScreenState extends State<AnnoncesScreen> {
           if (annonces.isEmpty) {
             return EmptyState(
               icon: Icons.campaign_outlined,
-              message: 'Aucune annonce pour l’instant.',
+              message: 'Aucune annonce.',
               actionLabel: state.isAdmin ? 'Publier une annonce' : null,
               onAction: state.isAdmin ? _create : null,
             );

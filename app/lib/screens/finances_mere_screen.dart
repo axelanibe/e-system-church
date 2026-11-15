@@ -130,10 +130,8 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
     if (!state.isAdmin) {
       return Scaffold(
         appBar: AppBar(title: const Text('Finances de la mère')),
-        body: const EmptyState(
-          icon: Icons.lock_outline,
-          message:
-              'Seul l’admin de l’église mère voit les finances du réseau.',
+        body: const Center(
+          child: Icon(Icons.lock_outline, size: 48),
         ),
       );
     }
@@ -438,7 +436,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
     if (rapport.branches.isEmpty) {
       return const EmptyState(
         icon: Icons.account_tree_outlined,
-        message: 'Aucune église annexe pour l’instant.',
+        message: 'Aucune église annexe.',
       );
     }
     final selection = rapport.branches.firstWhere(

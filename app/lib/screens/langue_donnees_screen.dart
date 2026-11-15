@@ -49,30 +49,15 @@ class LangueDonneesScreen extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            t.langue,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-          ),
           const SectionTitle(title: 'Données'),
           Card(
             child: SwitchListTile(
               title: Text(t.modeEconomique),
-              subtitle: Text(t.modeEconomiqueDetail),
               value: prefs.modeEconomique,
               onChanged: (v) => context
                   .read<PreferencesLocales>()
                   .definirModeEconomique(v),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            t.repliSmsNote,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
           ),
           if (estMembre) ...[
             const SizedBox(height: 8),

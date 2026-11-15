@@ -90,13 +90,6 @@ class PlusFideleScreen extends StatelessWidget {
                 titre: 'Prière du jour',
                 onTap: () {
                   onAllerAccueil?.call();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'La prière du jour est sur votre accueil.',
-                      ),
-                    ),
-                  );
                 },
               ),
               _LigneMenu(
@@ -104,13 +97,6 @@ class PlusFideleScreen extends StatelessWidget {
                 titre: 'Sujet de prière privé',
                 onTap: () {
                   onAllerAccueil?.call();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Votre sujet de prière privé est sur votre accueil.',
-                      ),
-                    ),
-                  );
                 },
               ),
               _LigneMenu(
@@ -146,15 +132,6 @@ class PlusFideleScreen extends StatelessWidget {
                 onTap: () {
                   if (apercu) {
                     context.read<AppState>().sortirApercuFidele();
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'L’espace admin est réservé aux responsables '
-                          'de votre église.',
-                        ),
-                      ),
-                    );
                   }
                 },
               ),
