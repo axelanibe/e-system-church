@@ -381,6 +381,9 @@ class _FamillesScreenState extends State<FamillesScreen> {
                   },
                 ),
               ),
+              // Marge basse pour le bouton flottant : la section fixe
+              // est hors de la liste, ListeAvecFab ne la protège pas.
+              const SizedBox(height: 88),
             ],
           ),
         ),
@@ -526,6 +529,10 @@ class _FamillesScreenState extends State<FamillesScreen> {
                             size: 20,
                           ),
                           border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: true,
+                          fillColor: Colors.transparent,
                           contentPadding: const EdgeInsets.symmetric(
                             vertical: 14,
                             horizontal: 16,

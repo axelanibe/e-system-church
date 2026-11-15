@@ -90,7 +90,7 @@ class _ImpressionCartesScreenState extends State<ImpressionCartesScreen> {
 
   Widget _listeCartes() {
     return ListView.separated(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 88),
       itemCount: widget.membres.length,
       separatorBuilder: (_, __) => const SizedBox(height: 24),
       itemBuilder: (context, i) {

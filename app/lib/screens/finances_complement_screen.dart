@@ -929,6 +929,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
               return RefreshIndicator(
                 onRefresh: () async => _refresh(),
                 child: ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 88),
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     final d = items[index];
@@ -1137,6 +1138,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
               return RefreshIndicator(
                 onRefresh: () async => _refresh(),
                 child: ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 88),
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     final m = items[index];
@@ -1422,6 +1424,9 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
             ),
           ),
         ),
+        // Marge basse pour le bouton flottant : la carte SYCEBNL est
+        // une section fixe hors de la liste défilante.
+        const SizedBox(height: 88),
       ],
     );
   }

@@ -25,6 +25,7 @@ class ExempleBilanScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Container(
+                  alignment: Alignment.center,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 6,
