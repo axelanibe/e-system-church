@@ -273,6 +273,8 @@ class _ClotureCaisseScreenState extends State<ClotureCaisseScreen> {
                           children: [
                             Text(
                               'Écart : ${formatMontant(cloture.ecartFcfa, state.devise)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: cloture.ecartFcfa != 0

@@ -6,6 +6,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import '../widgets/liste_avec_fab.dart';
 
 /// T10 — Documents classés : statuts, règlements, modèles et courriers
 /// entrants / sortants, avec recherche et filtres. Un modèle est un
@@ -40,6 +41,10 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   String? _categorie;
   String? _sens;
   late Future<List<GouvernanceDocument>> _future;
+
+  // La liste est-elle vide ? Sert à masquer le FAB quand l'état vide
+  // affiche déjà le bouton de création (un seul bouton, pas deux).
+  bool _listeVide = false;
 
   @override
   void initState() {
@@ -220,6 +225,13 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                   );
                 }
                 final items = snapshot.data!;
+                if (items.isEmpty != _listeVide) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _listeVide != items.isEmpty) {
+                      setState(() => _listeVide = items.isEmpty);
+                    }
+                  });
+                }
                 if (items.isEmpty) {
                   return EmptyState(
                     icon: Icons.folder_outlined,
@@ -228,30 +240,32 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                     onAction: _create,
                   );
                 }
-                return RefreshIndicator(
-                  onRefresh: () async => _refresh(),
-                  child: ListView.builder(
-                    itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      final d = items[index];
-                      return ListTile(
-                        leading: const CircleAvatar(
-                          child: Icon(Icons.folder_outlined),
-                        ),
-                        title: Text(d.titre),
-                        subtitle: Text(
-                          '${d.categorieLabel}'
-                          '${d.sens != null ? ' · ${d.sensLabel}' : ''}'
-                          '${d.reference != null ? ' · ${d.reference}' : ''}'
-                          '${d.dateDocument != null ? ' · ${afficherDate(d.dateDocument)}' : ''}',
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          tooltip: 'Supprimer',
-                          onPressed: () => _supprimer(d),
-                        ),
-                      );
-                    },
+                return ListeAvecFab(
+                  child: RefreshIndicator(
+                    onRefresh: () async => _refresh(),
+                    child: ListView.builder(
+                      itemCount: items.length,
+                      itemBuilder: (context, index) {
+                        final d = items[index];
+                        return ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.folder_outlined),
+                          ),
+                          title: Text(d.titre),
+                          subtitle: Text(
+                            '${d.categorieLabel}'
+                            '${d.sens != null ? ' · ${d.sensLabel}' : ''}'
+                            '${d.reference != null ? ' · ${d.reference}' : ''}'
+                            '${d.dateDocument != null ? ' · ${afficherDate(d.dateDocument)}' : ''}',
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            tooltip: 'Supprimer',
+                            onPressed: () => _supprimer(d),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 );
               },
@@ -259,11 +273,13 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _create,
-        icon: const Icon(Icons.add),
-        label: const Text('Ajouter'),
-      ),
+      floatingActionButton: _listeVide
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _create,
+              icon: const Icon(Icons.add),
+              label: const Text('Ajouter'),
+            ),
     );
   }
 }

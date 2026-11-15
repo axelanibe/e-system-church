@@ -244,54 +244,78 @@ class _MembresScreenState extends State<MembresScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: _onSearchChanged,
-                    decoration: const InputDecoration(
-                      labelText: 'Rechercher (nom ou matricule)',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
+            // En largeur étroite, champ seul sur une ligne, boutons
+            // sur la suivante : la rangée rigide écrasait le champ
+            // entre « Importer », « Cartes » et « Visiteurs ».
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final field = TextField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  decoration: const InputDecoration(
+                    labelText: 'Rechercher (nom ou matricule)',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                  ),
+                );
+                final actions = <Widget>[
+                  if (state.isAdmin) ...[
+                    OutlinedButton.icon(
+                      onPressed: _openImport,
+                      icon: const Icon(Icons.upload_outlined),
+                      label: const Text('Importer'),
                     ),
-                  ),
-                ),
-                if (state.isAdmin) ...[
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: _openImport,
-                    icon: const Icon(Icons.upload_outlined),
-                    label: const Text('Importer'),
-                  ),
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const CartesMembresScreen(),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const CartesMembresScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.print_outlined),
+                      label: const Text('Cartes'),
+                    ),
+                  ],
+                  if (state.canManageMembers)
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const VisiteursScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.person_add_alt_1_outlined),
+                      label: const Text('Visiteurs'),
+                    ),
+                ];
+                if (constraints.maxWidth < 480) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      field,
+                      if (actions.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: actions,
                         ),
-                      );
-                    },
-                    icon: const Icon(Icons.print_outlined),
-                    label: const Text('Cartes'),
-                  ),
-                ],
-                if (state.canManageMembers) ...[
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const VisiteursScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.person_add_alt_1_outlined),
-                    label: const Text('Visiteurs'),
-                  ),
-                ],
-              ],
+                      ],
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: field),
+                    for (final action in actions) ...[
+                      const SizedBox(width: 8),
+                      action,
+                    ],
+                  ],
+                );
+              },
             ),
           ),
           _anniversairesCard(),

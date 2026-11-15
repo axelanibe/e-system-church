@@ -644,71 +644,100 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                       ),
                     ),
                     const SectionTitle(title: 'Horaires des cultes'),
-                    if (horaires.isEmpty)
-                      const EmptyState(
-                        icon: Icons.schedule_outlined,
-                        message:
-                            'Aucun horaire de culte renseigné pour l’instant.',
-                      )
-                    else
-                      ...horaires.map((h) => ListTile(
-                            leading: const Icon(Icons.schedule_outlined),
-                            title:
-                                Text(h.titre.isEmpty ? 'Culte' : h.titre),
-                            subtitle: Text('${h.jour} à ${h.heure}'),
-                          )),
+                    Card(
+                      child: Column(
+                        children: [
+                          if (horaires.isEmpty)
+                            const EmptyState(
+                              icon: Icons.schedule_outlined,
+                              message:
+                                  'Aucun horaire de culte renseigné pour l’instant.',
+                            )
+                          else
+                            ...horaires.map((h) => ListTile(
+                                  leading:
+                                      const Icon(Icons.schedule_outlined),
+                                  title: Text(
+                                      h.titre.isEmpty ? 'Culte' : h.titre),
+                                  subtitle: Text('${h.jour} à ${h.heure}'),
+                                )),
+                        ],
+                      ),
+                    ),
                     const SectionTitle(title: 'Contacts'),
-                    ListTile(
-                      leading: const Icon(Icons.phone_outlined),
-                      title: Text(parametres?.telephone ??
-                          'Aucun téléphone renseigné'),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.email_outlined),
-                      title: Text(
-                          parametres?.email ?? 'Aucun e-mail renseigné'),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.location_on_outlined),
-                      title: Text(parametres?.adresse ??
-                          'Aucune adresse renseignée'),
-                    ),
-                    if (eglise.devise != null)
-                      ListTile(
-                        leading: const Icon(Icons.attach_money_outlined),
-                        title: Text('Devise : ${eglise.devise}'),
-                        subtitle: eglise.fuseauHoraire == null
-                            ? null
-                            : Text(
-                                'Fuseau horaire : ${eglise.fuseauHoraire}'),
+                    Card(
+                      child: Column(
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.phone_outlined),
+                            title: Text(parametres?.telephone ??
+                                'Aucun téléphone renseigné'),
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.email_outlined),
+                            title: Text(parametres?.email ??
+                                'Aucun e-mail renseigné'),
+                          ),
+                          ListTile(
+                            leading:
+                                const Icon(Icons.location_on_outlined),
+                            title: Text(parametres?.adresse ??
+                                'Aucune adresse renseignée'),
+                          ),
+                          if (eglise.devise != null)
+                            ListTile(
+                              leading:
+                                  const Icon(Icons.attach_money_outlined),
+                              title: Text('Devise : ${eglise.devise}'),
+                              subtitle: eglise.fuseauHoraire == null
+                                  ? null
+                                  : Text(
+                                      'Fuseau horaire : ${eglise.fuseauHoraire}'),
+                            ),
+                        ],
                       ),
+                    ),
                     const SectionTitle(title: 'Pasteur principal'),
-                    if (profil.pasteurPrincipal == null)
-                      const EmptyState(
-                        icon: Icons.person_outline,
-                        message:
-                            'Aucun pasteur principal renseigné pour l’instant.',
-                      )
-                    else
-                      ListTile(
-                        leading: const CircleAvatar(
-                          child: Icon(Icons.person_outline),
-                        ),
-                        title: Text(profil.pasteurPrincipal!),
+                    Card(
+                      child: Column(
+                        children: [
+                          if (profil.pasteurPrincipal == null)
+                            const EmptyState(
+                              icon: Icons.person_outline,
+                              message:
+                                  'Aucun pasteur principal renseigné pour l’instant.',
+                            )
+                          else
+                            ListTile(
+                              leading: const CircleAvatar(
+                                child: Icon(Icons.person_outline),
+                              ),
+                              title: Text(profil.pasteurPrincipal!),
+                            ),
+                        ],
                       ),
+                    ),
                     const SectionTitle(title: 'Antennes'),
-                    if (profil.antennes.isEmpty)
-                      const EmptyState(
-                        icon: Icons.account_tree_outlined,
-                        message: 'Aucune antenne rattachée pour l’instant.',
-                      )
-                    else
-                      ...profil.antennes.map((a) => ListTile(
-                            leading: ChurchAvatar(church: a, radius: 20),
-                            title: Text(a.name),
-                            subtitle: Text(
-                                '${a.code}${a.city != null ? ' · ${a.city}' : ''}'),
-                          )),
+                    Card(
+                      child: Column(
+                        children: [
+                          if (profil.antennes.isEmpty)
+                            const EmptyState(
+                              icon: Icons.account_tree_outlined,
+                              message:
+                                  'Aucune antenne rattachée pour l’instant.',
+                            )
+                          else
+                            ...profil.antennes.map((a) => ListTile(
+                                  leading:
+                                      ChurchAvatar(church: a, radius: 20),
+                                  title: Text(a.name),
+                                  subtitle: Text(
+                                      '${a.code}${a.city != null ? ' · ${a.city}' : ''}'),
+                                )),
+                        ],
+                      ),
+                    ),
                     if (state.isAdmin) ...[
                       const SectionTitle(title: 'Codes d’invitation'),
                       const Text(

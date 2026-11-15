@@ -8,6 +8,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import '../widgets/liste_avec_fab.dart';
 
 /// T10 — Réunions du conseil, décisions et procès-verbaux. Le
 /// signataire d'un procès-verbal est prérempli depuis les paramètres
@@ -23,6 +24,12 @@ class ReunionsConseilScreen extends StatefulWidget {
 
 class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
   int _tab = 0;
+
+  // L'onglet actif est-il vide ? Sert à masquer le FAB quand l'état
+  // vide affiche déjà le bouton de création (un seul bouton).
+  bool _reunionsVides = false;
+  bool _decisionsVides = false;
+  bool _pvVides = false;
   late Future<List<ReunionConseil>> _reunionsFuture;
   late Future<List<Decision>> _decisionsFuture;
   late Future<List<ProcesVerbal>> _pvFuture;
@@ -289,6 +296,13 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
           );
         }
         final items = snapshot.data!;
+        if (items.isEmpty != _reunionsVides) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _reunionsVides != items.isEmpty) {
+              setState(() => _reunionsVides = items.isEmpty);
+            }
+          });
+        }
         if (items.isEmpty) {
           return EmptyState(
             icon: Icons.event_available_outlined,
@@ -297,12 +311,13 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
             onAction: _createReunion,
           );
         }
-        return RefreshIndicator(
-          onRefresh: () async => _refresh(),
-          child: ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final r = items[index];
+        return ListeAvecFab(
+          child: RefreshIndicator(
+            onRefresh: () async => _refresh(),
+            child: ListView.builder(
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final r = items[index];
               return ListTile(
                 leading: const CircleAvatar(
                   child: Icon(Icons.event_available_outlined),
@@ -331,6 +346,7 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
               );
             },
           ),
+        ),
         );
       },
     );
@@ -350,6 +366,13 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
           );
         }
         final items = snapshot.data!;
+        if (items.isEmpty != _decisionsVides) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _decisionsVides != items.isEmpty) {
+              setState(() => _decisionsVides = items.isEmpty);
+            }
+          });
+        }
         if (items.isEmpty) {
           return EmptyState(
             icon: Icons.gavel_outlined,
@@ -365,12 +388,13 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
             },
           );
         }
-        return RefreshIndicator(
-          onRefresh: () async => _refresh(),
-          child: ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final d = items[index];
+        return ListeAvecFab(
+          child: RefreshIndicator(
+            onRefresh: () async => _refresh(),
+            child: ListView.builder(
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final d = items[index];
               return ListTile(
                 leading: const CircleAvatar(
                   child: Icon(Icons.gavel_outlined),
@@ -399,6 +423,7 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
               );
             },
           ),
+        ),
         );
       },
     );
@@ -418,6 +443,13 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
           );
         }
         final items = snapshot.data!;
+        if (items.isEmpty != _pvVides) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _pvVides != items.isEmpty) {
+              setState(() => _pvVides = items.isEmpty);
+            }
+          });
+        }
         if (items.isEmpty) {
           return EmptyState(
             icon: Icons.description_outlined,
@@ -433,12 +465,13 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
             },
           );
         }
-        return RefreshIndicator(
-          onRefresh: () async => _refresh(),
-          child: ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final pv = items[index];
+        return ListeAvecFab(
+          child: RefreshIndicator(
+            onRefresh: () async => _refresh(),
+            child: ListView.builder(
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final pv = items[index];
               return ListTile(
                 leading: const CircleAvatar(
                   child: Icon(Icons.description_outlined),
@@ -474,6 +507,7 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
               );
             },
           ),
+        ),
         );
       },
     );
@@ -529,28 +563,33 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
             );
           },
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            try {
-              final reunions = await _reunionsFuture;
-              if (!mounted) return;
-              if (_tab == 0) {
-                await _createReunion();
-              } else if (_tab == 1) {
-                await _createDecision(reunions);
-              } else {
-                final params = await _parametresFuture;
-                if (mounted) {
-                  await _createPv(reunions, params.signataireProcesVerbaux);
-                }
-              }
-            } catch (e) {
-              if (context.mounted) showApiError(context, e);
-            }
-          },
-          icon: const Icon(Icons.add),
-          label: const Text('Ajouter'),
-        ),
+        floatingActionButton: ((_tab == 0 && _reunionsVides) ||
+                (_tab == 1 && _decisionsVides) ||
+                (_tab == 2 && _pvVides))
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () async {
+                  try {
+                    final reunions = await _reunionsFuture;
+                    if (!mounted) return;
+                    if (_tab == 0) {
+                      await _createReunion();
+                    } else if (_tab == 1) {
+                      await _createDecision(reunions);
+                    } else {
+                      final params = await _parametresFuture;
+                      if (mounted) {
+                        await _createPv(
+                            reunions, params.signataireProcesVerbaux);
+                      }
+                    }
+                  } catch (e) {
+                    if (context.mounted) showApiError(context, e);
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Ajouter'),
+              ),
       ),
     );
   }

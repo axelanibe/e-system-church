@@ -504,10 +504,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             if (statuts.isEmpty)
-              const EmptyState(
-                icon: Icons.history,
-                message: 'Aucun changement de statut enregistré.',
-              )
+              const Text('Aucun changement de statut enregistré.')
             else
               ...statuts.map((s) => ListTile(
                     leading: const Icon(Icons.history),
@@ -533,10 +530,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             if (departements.isEmpty)
-              const EmptyState(
-                icon: Icons.group_work_outlined,
-                message: 'Ce membre n’appartient à aucun département.',
-              )
+              const Text('Ce membre n’appartient à aucun département.')
             else
               ...departements.map((d) => ListTile(
                     leading: const Icon(Icons.group_work_outlined),
@@ -560,10 +554,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             if (cellules.isEmpty)
-              const EmptyState(
-                icon: Icons.groups_outlined,
-                message: 'Ce membre n’appartient à aucune cellule.',
-              )
+              const Text('Ce membre n’appartient à aucune cellule.')
             else
               ...cellules.map((c) => ListTile(
                     leading: const Icon(Icons.groups_outlined),
@@ -589,10 +580,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             if (enfants.isEmpty && parents.isEmpty)
-              const EmptyState(
-                icon: Icons.family_restroom_outlined,
-                message: 'Aucun lien parent-enfant enregistré.',
-              )
+              const Text('Aucun lien parent-enfant enregistré.')
             else ...[
               ...enfants.map((l) => ListTile(
                     leading: const Icon(Icons.child_care_outlined),

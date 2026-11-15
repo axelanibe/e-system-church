@@ -6,6 +6,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
+import '../widgets/liste_avec_fab.dart';
 
 /// Annonces : les miennes + celles diffusées par mes églises mères.
 /// Création (admin seulement) avec diffusion à tout le réseau.
@@ -18,6 +19,10 @@ class AnnoncesScreen extends StatefulWidget {
 
 class _AnnoncesScreenState extends State<AnnoncesScreen> {
   late Future<List<Announcement>> _future;
+
+  // La liste est-elle vide ? Sert à masquer le FAB quand l'état vide
+  // affiche déjà le bouton de création (un seul bouton, pas deux).
+  bool _listeVide = false;
 
   @override
   void initState() {
@@ -147,6 +152,13 @@ class _AnnoncesScreenState extends State<AnnoncesScreen> {
             );
           }
           final annonces = snapshot.data!;
+          if (annonces.isEmpty != _listeVide) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _listeVide != annonces.isEmpty) {
+                setState(() => _listeVide = annonces.isEmpty);
+              }
+            });
+          }
           if (annonces.isEmpty) {
             return EmptyState(
               icon: Icons.campaign_outlined,
@@ -155,64 +167,66 @@ class _AnnoncesScreenState extends State<AnnoncesScreen> {
               onAction: state.isAdmin ? _create : null,
             );
           }
-          return RefreshIndicator(
-            onRefresh: () async => _refresh(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: annonces.length,
-              itemBuilder: (context, index) {
-                final a = annonces[index];
-                final isMine = a.churchId == state.church?.id;
-                return Card(
-                  child: ListTile(
-                    leading: Icon(
-                      a.broadcast
-                          ? Icons.cell_tower_outlined
-                          : Icons.campaign_outlined,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    title: Text(a.title),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(a.body),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${a.egliseNom ?? ''} · ${formatDateTime(a.createdAt)}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (a.broadcast)
-                          const Chip(
-                            label: Text('Réseau'),
-                            visualDensity: VisualDensity.compact,
-                          )
-                        else if (isMine)
-                          const Chip(
-                            label: Text('Mon église'),
-                            visualDensity: VisualDensity.compact,
+          return ListeAvecFab(
+            child: RefreshIndicator(
+              onRefresh: () async => _refresh(),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: annonces.length,
+                itemBuilder: (context, index) {
+                  final a = annonces[index];
+                  final isMine = a.churchId == state.church?.id;
+                  return Card(
+                    child: ListTile(
+                      leading: Icon(
+                        a.broadcast
+                            ? Icons.cell_tower_outlined
+                            : Icons.campaign_outlined,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      title: Text(a.title),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(a.body),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${a.egliseNom ?? ''} · ${formatDateTime(a.createdAt)}',
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
-                        if (isMine)
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            tooltip: 'Supprimer',
-                            onPressed: () => _deleteAnnonce(a),
-                          ),
-                      ],
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (a.broadcast)
+                            const Chip(
+                              label: Text('Réseau'),
+                              visualDensity: VisualDensity.compact,
+                            )
+                          else if (isMine)
+                            const Chip(
+                              label: Text('Mon église'),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          if (isMine)
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              tooltip: 'Supprimer',
+                              onPressed: () => _deleteAnnonce(a),
+                            ),
+                        ],
+                      ),
+                      isThreeLine: true,
                     ),
-                    isThreeLine: true,
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           );
         },
       ),
-      floatingActionButton: state.isAdmin
+      floatingActionButton: state.isAdmin && !_listeVide
           ? FloatingActionButton.extended(
               onPressed: _create,
               icon: const Icon(Icons.add),
