@@ -9,7 +9,7 @@
 //      après lui dans l'ordre global (db/schema.sql puis migrations
 //      triées). C'est le motif exact du bug 028.
 //   2. Statique, sans base : les numéros en double sont exactement
-//      001, 005 et 011, et les numéros manquants exactement 017 et 027
+//      001, 005 et 011, et le numéro manquant exactement 017
 //      (voir db/migrations/README.md). Tout nouveau doublon ou trou
 //      fait échouer le test : il faut alors le documenter dans le
 //      README avant de fusionner.
@@ -140,8 +140,8 @@ for (let i = 1; i <= max; i++) {
   if (!parNumero[i]) manquants.push(i);
 }
 check(
-  "numéros manquants exactement 017, 027 (documentés)",
-  JSON.stringify(manquants) === JSON.stringify([17, 27]),
+  "numéro manquant exactement 017 (documenté)",
+  JSON.stringify(manquants) === JSON.stringify([17]),
   `trouvés : ${manquants.join(", ") || "aucun"}`,
 );
 

@@ -15,7 +15,7 @@ import argon2 from "argon2";
 
 const DB =
   process.env.DATABASE_URL ??
-  "postgres://postgres@127.0.0.1:5432/esc_exports_test";
+  "postgres://postgres:postgres@127.0.0.1:5432/esc_exports_test";
 const ADMIN_DB = DB.replace(/\/[^/]*$/, "/postgres");
 const BASE = "http://127.0.0.1:3123";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

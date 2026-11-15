@@ -59,7 +59,9 @@ toute migration « 001bis » casserait la traçabilité.
 | Numéro | Raison |
 |---|---|
 | 017 | Trou historique dans la numérotation (aucun fichier 017). |
-| 027 | Migration T9 (école biblique + Bible), dans la PR #88 uniquement, pas sur `main`. |
+
+Le numéro 027, anciennement manquant, est comblé par la T9
+(`027_ecole_biblique.sql`, école biblique + Bible, PR #119).
 
 Tout nouveau doublon ou trou fait échouer
 `server/test-migrations-t13.mjs` : le documenter ici avant de fusionner.
