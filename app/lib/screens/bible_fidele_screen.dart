@@ -137,12 +137,6 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
                             ))
                         .toList(),
                   ),
-                const SizedBox(height: 8),
-                Text(
-                  '${livres.length} ${livres.length > 1 ? 'livres' : 'livre'} '
-                  'dans cette liste.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
                 const SizedBox(height: 16),
                 const SectionTitle(title: 'Passage'),
                 Card(
@@ -184,8 +178,7 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Le texte de ce passage n’est pas encore '
-                          'disponible.',
+                          'Passage indisponible.',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],

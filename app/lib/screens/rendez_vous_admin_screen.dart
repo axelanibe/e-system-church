@@ -60,7 +60,6 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
           dialogTextField(
             controller: creneauController,
             label: 'Créneau confirmé',
-            hintText: 'Ex. Samedi 10 h',
           ),
         ],
         isValid: () => creneauController.text.trim().isNotEmpty,
@@ -184,7 +183,7 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
                 if (items.isEmpty) {
                   return const EmptyState(
                     icon: Icons.calendar_month_outlined,
-                    message: 'Aucun rendez-vous pour l’instant.',
+                    message: 'Aucun rendez-vous',
                   );
                 }
                 return RefreshIndicator(

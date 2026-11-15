@@ -294,7 +294,7 @@ class _PrieresScreenState extends State<PrieresScreen> {
                 return EmptyState(
                   icon: Icons.volunteer_activism_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucune demande de prière pour l’instant.'
+                      ? 'Aucune demande.'
                       : 'Aucune demande ne correspond à la recherche.',
                   actionLabel: 'Créer une demande',
                   onAction: () => _createDemande(membres),
@@ -435,7 +435,7 @@ class _PrieresScreenState extends State<PrieresScreen> {
                 return EmptyState(
                   icon: Icons.mail_outline,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucun message interne pour l’instant.'
+                      ? 'Aucun message.'
                       : 'Aucun message ne correspond à la recherche.',
                   actionLabel: 'Écrire un message',
                   onAction: () => _createMessage(membres),

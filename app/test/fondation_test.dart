@@ -106,18 +106,15 @@ void main() {
           findsOneWidget);
     });
 
-    testWidgets('EnteteEcran montre titre et sous-titre', (tester) async {
+    testWidgets('EnteteEcran montre le titre', (tester) async {
       await tester.pumpWidget(const MaterialApp(
         home: Scaffold(
           body: EnteteEcran(
             titre: 'Accueil',
-            sousTitre: 'Voici votre église en un coup d’œil.',
           ),
         ),
       ));
       expect(find.text('Accueil'), findsOneWidget);
-      expect(find.text('Voici votre église en un coup d’œil.'),
-          findsOneWidget);
     });
 
     testWidgets('BarreDuBas : 5 libellés maximum', (tester) async {

@@ -3,19 +3,17 @@ import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import 'logo_app.dart';
 
-/// En-tête clair, en haut de chaque coquille : titre de l'écran,
-/// sous-titre quand l'écran en a un, et l'icône ESC.
+/// En-tête clair, en haut de chaque coquille : titre de l'écran
+/// et l'icône ESC.
 /// [leading] est le bouton de gauche : menu du tiroir dans les
 /// coquilles, retour sur les écrans poussés.
 class EnTeteClair extends StatelessWidget {
   final String titre;
-  final String? sousTitre;
   final Widget? leading;
 
   const EnTeteClair({
     super.key,
     required this.titre,
-    this.sousTitre,
     this.leading,
   });
 
@@ -43,21 +41,6 @@ class EnTeteClair extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
-                if (sousTitre != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    sousTitre!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(
-                          color:
-                              AppTheme.violetProfond.withValues(alpha: 0.7),
-                        ),
-                  ),
-                ],
               ],
             ),
           ),

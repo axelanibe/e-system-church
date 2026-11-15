@@ -177,9 +177,9 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
                           label: Text(_dateTexte),
                         ),
                         const SizedBox(height: 12),
-                        const Text(
-                          'Le créneau sera convenu avec votre pasteur.',
-                        ),
+                        const Text('Créneau'),
+                        const SizedBox(height: 8),
+                        const Text('À compléter'),
                       ],
                     ),
                   ),
@@ -189,7 +189,6 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
                   controller: _motifController,
                   decoration: const InputDecoration(
                     labelText: 'Motif du rendez-vous',
-                    hintText: 'Décrivez brièvement le motif.',
                   ),
                   maxLines: 3,
                 ),

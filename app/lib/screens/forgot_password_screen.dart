@@ -88,11 +88,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text(
-                          'Saisissez l’e-mail de votre compte. Vous recevrez '
-                          'un lien pour choisir un nouveau mot de passe.',
-                        ),
-                        const SizedBox(height: 24),
                         TextFormField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,

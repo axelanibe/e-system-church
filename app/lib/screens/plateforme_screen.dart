@@ -42,7 +42,7 @@ class _PlateformeScreenState extends State<PlateformeScreen> {
         body: const EmptyState(
           icon: Icons.lock_outline,
           message:
-              'Seuls l’admin de la plateforme et ses aides voient les chiffres globaux.',
+              '',
         ),
       );
     }
@@ -86,19 +86,6 @@ class _PlateformeScreenState extends State<PlateformeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Card(
-                        color: AppTheme.orClair,
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Text(
-                            'Chiffres globaux de toutes les églises mères '
-                            'ensemble. Aucun détail nominatif, aucune '
-                            'gestion des membres au jour le jour : la '
-                            'plateforme voit seulement les chiffres.',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
                       const SectionTitle(title: 'Églises'),
                       LayoutBuilder(
                         builder: (context, constraints) {
@@ -124,7 +111,7 @@ class _PlateformeScreenState extends State<PlateformeScreen> {
                                 icon: Icons.account_tree_outlined,
                               ),
                               StatCard(
-                                label: 'Églises au total',
+                                label: 'Églises',
                                 value: '${chiffres.eglisesTotal}',
                                 icon: Icons.church_outlined,
                               ),
@@ -309,10 +296,6 @@ class _AccesPlateformeSectionState extends State<_AccesPlateformeSection> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SectionTitle(title: 'Accès Plateforme'),
-        const Text(
-          'Les personnes qui aident l’admin de la plateforme, avec leurs droits limités. Chacune a sa propre connexion, révocable.',
-        ),
-        const SizedBox(height: 12),
         FutureBuilder<List<AccesPlateforme>>(
           future: _future,
           builder: (context, snapshot) {
@@ -329,7 +312,7 @@ class _AccesPlateformeSectionState extends State<_AccesPlateformeSection> {
             if (acces.isEmpty) {
               return const EmptyState(
                 icon: Icons.admin_panel_settings_outlined,
-                message: 'Aucun accès pour l’instant.',
+                message: 'Aucun accès.',
               );
             }
             return Column(
@@ -425,7 +408,7 @@ class _AccesPlateformeSectionState extends State<_AccesPlateformeSection> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'Nouveau compte : envoyez ce lien à la personne pour qu’elle crée son mot de passe.',
+                    'Envoyez ce lien à la personne.',
                   ),
                   const SizedBox(height: 8),
                   SelectableText(_dernierCree!.lienInvitation!),

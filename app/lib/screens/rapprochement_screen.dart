@@ -167,11 +167,6 @@ class _RapprochementScreenState extends State<RapprochementScreen> {
                   ligne: rapp.nonVentile,
                   devise: state.devise,
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Un écart signale des écritures manuelles ou des mouvements antérieurs à la mise en place du rapprochement, sans écriture automatique. Les mouvements sans canal sont regroupés en « Non ventilé ».',
-                  textAlign: TextAlign.center,
-                ),
               ],
             ),
           );

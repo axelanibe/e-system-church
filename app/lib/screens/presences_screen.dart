@@ -286,10 +286,7 @@ class _PresencesScreenState extends State<PresencesScreen> {
           ),
           Expanded(
             child: _presencesFuture == null
-                ? const EmptyState(
-                    icon: Icons.how_to_reg_outlined,
-                    message: 'Choisissez un culte pour voir sa feuille de présence.',
-                  )
+                ? const SizedBox.shrink()
                 : FutureBuilder<List<Presence>>(
                     future: _presencesFuture,
                     builder: (context, snapshot) {
@@ -317,7 +314,7 @@ class _PresencesScreenState extends State<PresencesScreen> {
                         return EmptyState(
                           icon: Icons.how_to_reg_outlined,
                           message: snapshot.data!.isEmpty
-                              ? 'Aucune présence pointée pour ce culte pour l’instant.'
+                              ? 'Aucune présence.'
                               : 'Aucune présence ne correspond à la recherche.',
                         );
                       }

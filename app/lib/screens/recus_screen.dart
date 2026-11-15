@@ -114,9 +114,7 @@ class _RecusScreenState extends State<RecusScreen> {
                 if (contributions.isEmpty) {
                   return const EmptyState(
                     icon: Icons.receipt_long_outlined,
-                    message: 'Aucun reçu pour le moment. Les reçus '
-                        'numérotés apparaissent ici dès qu’une contribution '
-                        'est confirmée par le pasteur.',
+                    message: 'Aucun reçu.',
                   );
                 }
                 return RefreshIndicator(

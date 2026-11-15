@@ -36,13 +36,13 @@ class T12Strings {
 
   // -- États -----------------------------------------------------------------
   String get chargement => _t('Chargement…', 'Loading…');
-  String get vide => _t('Rien pour le moment.', 'Nothing yet.');
+  String get vide => _t('Rien.', 'Nothing yet.');
   String get videPromesses =>
-      _t('Aucune promesse pour l’instant.', 'No pledges yet.');
+      _t('Aucune promesse.', 'No pledges yet.');
   String get videDonsNature =>
-      _t('Aucun don en nature pour l’instant.', 'No in-kind gifts yet.');
+      _t('Aucun don en nature.', 'No in-kind gifts yet.');
   String get aucuneDonneePeriode =>
-      _t('Aucune donnée pour cette période.', 'No data for this period.');
+      _t('Aucune donnée.', 'No data for this period.');
   String get erreurChargement => _t('Chargement impossible.', 'Could not load.');
   String get enregistre => _t('Enregistré.', 'Saved.');
   String get montantInvalide => _t('Montant invalide.', 'Invalid amount.');
@@ -79,9 +79,6 @@ class T12Strings {
   String get temps => _t('Temps', 'Time');
   String get heures => _t('Heures', 'Hours');
   String get anonyme => _t('Don anonyme', 'Anonymous gift');
-  String get donHorsFinances => _t(
-      'Les dons en nature ne comptent pas dans les totaux financiers.',
-      'In-kind gifts never count in financial totals.');
 
   // -- Visiteurs (US6) ---------------------------------------------------------
   String get nouveauVisiteur => _t('Nouveau visiteur', 'New visitor');
@@ -118,7 +115,7 @@ class T12Strings {
   // -- Portefeuille (US9) ---------------------------------------------------------
   String get exporterPass => _t('Exporter le pass', 'Export the pass');
   String get aucunCompteWallet => _t(
-      'Aucun compte Apple Wallet ni Google Wallet n’est branché : l’export est un fichier pass générique, sans coût engagé.',
+      'Export : fichier pass générique.',
       'No Apple Wallet or Google Wallet account is connected: the export is a generic pass file, with no cost incurred.');
   String get passCopie => _t('Pass copié.', 'Pass copied.');
 
@@ -129,9 +126,6 @@ class T12Strings {
   String get consentementSms => _t(
       'Recevoir les rappels par SMS si les données sont coupées',
       'Receive reminders by SMS if data is off');
-  String get aucunFournisseur => _t(
-      'Aucun fournisseur WhatsApp n’est branché : aucun envoi réel n’est possible tant qu’Axel n’a pas choisi le canal.',
-      'No WhatsApp provider is connected: no real message can be sent until Axel chooses the channel.');
   String get consentementsEnregistres => _t('Consentements enregistrés.', 'Consents saved.');
 
   // -- Alertes mère (US11) ------------------------------------------------------------

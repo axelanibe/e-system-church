@@ -59,15 +59,9 @@ class _CotisationsScreenState extends State<CotisationsScreen> {
             children: [
               if (moyens.isEmpty)
                 const Text(
-                  'Aucun moyen de paiement configuré pour l’instant. '
-                  'Contactez votre église pour payer votre cotisation.',
+                  'Aucun moyen de paiement configuré.',
                 )
               else ...[
-                const Text(
-                  'Payez sur le numéro de votre église, avec le moyen '
-                  'de votre choix :',
-                ),
-                const SizedBox(height: 12),
                 ...moyens.map((m) => ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.payments_outlined),
@@ -79,11 +73,6 @@ class _CotisationsScreenState extends State<CotisationsScreen> {
                         ].join(' · '),
                       ),
                     )),
-                const SizedBox(height: 8),
-                const Text(
-                  'Après votre paiement, votre cotisation apparaîtra '
-                  'ici une fois confirmée par votre église, avec son reçu.',
-                ),
               ],
             ],
           ),

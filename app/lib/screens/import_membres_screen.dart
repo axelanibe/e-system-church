@@ -299,13 +299,6 @@ class _ImportMembresScreenState extends State<ImportMembresScreen> {
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    const Text(
-                      'Importez la liste de fidèles de votre église depuis un fichier CSV ou Excel (.xlsx). '
-                      'Nom et prénom obligatoires, le reste est facultatif. '
-                      'Le matricule est attribué automatiquement, aucun compte n’est créé. '
-                      'Supprimez la ligne d’exemple du modèle avant l’import.',
-                    ),
-                    const SizedBox(height: 16),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,

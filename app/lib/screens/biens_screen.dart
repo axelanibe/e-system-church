@@ -336,7 +336,7 @@ class _BiensScreenState extends State<BiensScreen> {
                     }
                     return EmptyState(
                       icon: Icons.meeting_room_outlined,
-                      message: 'Aucune salle pour l’instant.',
+                      message: 'Aucune salle.',
                       actionLabel: 'Créer une salle',
                       onAction: _createSalle,
                     );
@@ -351,7 +351,7 @@ class _BiensScreenState extends State<BiensScreen> {
                             icon: Icons.meeting_room_outlined,
                             message: _query.isNotEmpty
                                 ? 'Aucune salle ne correspond à la recherche.'
-                                : 'Aucune salle pour l’instant.',
+                                : 'Aucune salle.',
                           )
                         else
                           ...salles.map((s) => ListTile(
@@ -375,7 +375,7 @@ class _BiensScreenState extends State<BiensScreen> {
                             icon: Icons.event_available_outlined,
                             message: _query.isNotEmpty
                                 ? 'Aucune réservation ne correspond à la recherche.'
-                                : 'Aucune réservation de salle pour l’instant.',
+                                : 'Aucune réservation.',
                           )
                         else
                           ...reservations.map((r) => ListTile(
@@ -462,7 +462,7 @@ class _BiensScreenState extends State<BiensScreen> {
                   if (items.isEmpty && maintenances.isEmpty) {
                     return EmptyState(
                       icon: Icons.inventory_2_outlined,
-                      message: 'Aucun matériel enregistré pour l’instant.',
+                      message: 'Aucun matériel.',
                       actionLabel: 'Ajouter du matériel',
                       onAction: () async {
                         try {
@@ -484,7 +484,7 @@ class _BiensScreenState extends State<BiensScreen> {
                             icon: Icons.inventory_2_outlined,
                             message: _query.isNotEmpty
                                 ? 'Aucun matériel ne correspond à la recherche.'
-                                : 'Aucun matériel pour l’instant.',
+                                : 'Aucun matériel.',
                           )
                         else
                           ...items.map((m) => ListTile(
@@ -503,7 +503,7 @@ class _BiensScreenState extends State<BiensScreen> {
                             icon: Icons.build_outlined,
                             message: _query.isNotEmpty
                                 ? 'Aucune maintenance ne correspond à la recherche.'
-                                : 'Aucune maintenance enregistrée pour l’instant.',
+                                : 'Aucune maintenance.',
                           )
                         else
                           ...maintenances.map((m) => ListTile(
@@ -587,7 +587,6 @@ class _BiensScreenState extends State<BiensScreen> {
                       final choix = await showDialog<String>(
                         context: context,
                         builder: (ctx) => SimpleDialog(
-                          title: const Text('Que voulez-vous ajouter ?'),
                           children: [
                             SimpleDialogOption(
                               onPressed: () =>
@@ -612,7 +611,6 @@ class _BiensScreenState extends State<BiensScreen> {
                       final choix = await showDialog<String>(
                         context: context,
                         builder: (ctx) => SimpleDialog(
-                          title: const Text('Que voulez-vous ajouter ?'),
                           children: [
                             SimpleDialogOption(
                               onPressed: () =>

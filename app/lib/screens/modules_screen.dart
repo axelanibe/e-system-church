@@ -9,7 +9,6 @@ import 'cultes_direct_screen.dart';
 import 'gouvernance_screen.dart';
 import 'paiements_screen.dart';
 import 'pastoral_screen.dart';
-import 'promesses_screen.dart';
 
 /// Modules de l'église (modèle projection, écran « Tous les modules »,
 /// captures IMG_4018 à IMG_4020) : grille 2 colonnes, icône or,
@@ -114,16 +113,9 @@ class ModulesScreen extends StatelessWidget {
     (
       'paiements',
       'Paiements automatiques',
-      'Webhook Wave, puis Orange Money, puis MTN.',
+      '',
       'T8 · Construit, en ligne',
       Icons.credit_card_outlined,
-    ),
-    (
-      'usRestantes',
-      'US restantes et dette',
-      'US4 à US17 restantes et dette.',
-      'T12 · Construit, en ligne',
-      Icons.receipt_long_outlined,
     ),
     (
       'qualite',
@@ -187,11 +179,6 @@ class ModulesScreen extends StatelessWidget {
         _pousser(context, const SettingsScreen());
       case 'paiements':
         _pousser(context, const PaiementsScreen());
-      case 'usRestantes':
-        // Entrée des US restantes : les promesses (US4), les
-        // autres écrans se rejoignent depuis Finances, Membres,
-        // Suivi pastoral, Mes annexes et Réglages.
-        _pousser(context, const PromessesScreen());
       case 'qualite':
         _info(
           context,
@@ -237,11 +224,6 @@ class ModulesScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Chaque module de l’application finale, construit ou prévu. '
-            'Tous les modules sont affichés pour toutes les églises.',
-          ),
-          const SizedBox(height: 16),
           LayoutBuilder(
             builder: (context, constraints) {
               final crossAxisCount = constraints.maxWidth > 600 ? 3 : 2;

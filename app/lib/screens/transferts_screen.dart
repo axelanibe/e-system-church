@@ -95,7 +95,7 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
       _codeController.clear();
       _motifController.clear();
       showSuccess(context,
-          'Demande envoyée. Le pasteur de départ doit d’abord accepter, puis celui de l’église d’arrivée.');
+          'Demande envoyée.');
       await _refresh();
     } catch (e) {
       if (mounted) showApiError(context, e);
@@ -238,15 +238,11 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                           Text('Demander un transfert',
                               style: Theme.of(context).textTheme.titleMedium),
                           const SizedBox(height: 8),
-                          const Text(
-                              'Le membre quitte votre église pour une autre branche. La demande est validée par votre pasteur, puis par le pasteur de l’église d’arrivée.'),
-                          const SizedBox(height: 12),
                           TextField(
                             controller: _matriculeController,
                             textCapitalization: TextCapitalization.characters,
                             decoration: const InputDecoration(
                               labelText: 'Matricule du membre',
-                              hintText: 'Ex. M-LK-150390-01',
                               border: OutlineInputBorder(),
                             ),
                           ),
@@ -256,7 +252,6 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                             textCapitalization: TextCapitalization.characters,
                             decoration: const InputDecoration(
                               labelText: 'Code de l’église d’arrivée',
-                              hintText: 'Ex. GD-YOP',
                               border: OutlineInputBorder(),
                             ),
                           ),
@@ -265,7 +260,6 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                             controller: _motifController,
                             decoration: const InputDecoration(
                               labelText: 'Motif (facultatif)',
-                              hintText: 'Ex. Déménagement',
                               border: OutlineInputBorder(),
                             ),
                           ),

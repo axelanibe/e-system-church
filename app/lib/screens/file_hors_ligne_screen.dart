@@ -193,7 +193,7 @@ class _FileHorsLigneScreenState extends State<FileHorsLigneScreen> {
                     const Card(
                       child: Padding(
                         padding: EdgeInsets.all(16),
-                        child: Text('Aucune action en attente sur le serveur.'),
+                        child: Text('Aucune action en attente.'),
                       ),
                     ),
                   for (final action in _actionsServeur) _carteAction(action),
@@ -208,7 +208,7 @@ class _FileHorsLigneScreenState extends State<FileHorsLigneScreen> {
                       child: Padding(
                         padding: EdgeInsets.all(16),
                         child: Text(
-                            'Aucune action en attente sur cet appareil.'),
+                            'Aucune action en attente.'),
                       ),
                     ),
                   for (final action in _actionsLocales) _carteLocale(action),

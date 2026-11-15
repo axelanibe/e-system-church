@@ -223,8 +223,6 @@ class _FinancesScreenState extends State<FinancesScreen> {
                         child: ListTile(
                           leading: const Icon(Icons.volunteer_activism_outlined),
                           title: const Text('Campagnes de collecte'),
-                          subtitle: const Text(
-                              'Objectif, période et progression des collectes.'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () async {
                             await Navigator.of(context).push(
@@ -240,8 +238,6 @@ class _FinancesScreenState extends State<FinancesScreen> {
                         child: ListTile(
                           leading: const Icon(Icons.handshake_outlined),
                           title: const Text('Promesses de don'),
-                          subtitle: const Text(
-                              'Engagements avec échéancier et versements.'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () async {
                             await Navigator.of(context).push(
@@ -258,8 +254,6 @@ class _FinancesScreenState extends State<FinancesScreen> {
                           leading:
                               const Icon(Icons.card_giftcard_outlined),
                           title: const Text('Dons en nature'),
-                          subtitle: const Text(
-                              'Matériel, nourriture, temps. Hors totaux financiers.'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () async {
                             await Navigator.of(context).push(
@@ -275,8 +269,6 @@ class _FinancesScreenState extends State<FinancesScreen> {
                         child: ListTile(
                           leading: const Icon(Icons.visibility_outlined),
                           title: const Text('Transparence financière'),
-                          subtitle: const Text(
-                              'Totaux agrégés par type et par poste.'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
                             Navigator.of(context).push(
@@ -292,8 +284,6 @@ class _FinancesScreenState extends State<FinancesScreen> {
                           leading:
                               const Icon(Icons.account_balance_outlined),
                           title: const Text('Budget & caisse'),
-                          subtitle: const Text(
-                              'Postes budgétaires, budgets, dépenses et caisse.'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
                             Navigator.of(context).push(
@@ -312,8 +302,6 @@ class _FinancesScreenState extends State<FinancesScreen> {
                                 const Icon(Icons.account_tree_outlined),
                             title:
                                 const Text('Finances de mon réseau'),
-                            subtitle: const Text(
-                                'Comparer les branches et voir le détail de chacune.'),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.of(context).push(

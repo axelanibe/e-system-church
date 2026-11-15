@@ -229,13 +229,6 @@ class _SycebnlScreenState extends State<SycebnlScreen> {
                     ),
                   ),
                   SizedBox(height: 8),
-                  Text(
-                    'Les charges additionnent les dépenses confirmées du registre et celles de Budget et caisse, sauf les refusées. Une même dépense ne se saisit qu\'une seule fois.',
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'La trésorerie est l\'excédent cumulé de votre comptabilité, la caisse se tient à part.',
-                  ),
                 ],
               ),
             ),
@@ -266,11 +259,6 @@ class _SycebnlScreenState extends State<SycebnlScreen> {
                     : const Text('Générer'),
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Touchez Générer pour afficher les quatre états, remplis '
-            'par les chiffres de votre église.',
           ),
           if (etats != null) ...[
             const SectionTitle(title: 'Les quatre états, système normal'),

@@ -122,12 +122,6 @@ class _MessagesFideleScreenState extends State<MessagesFideleScreen> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        Text(
-                          'Conversation privée, dans l’application.',
-                          style: Theme.of(context).textTheme.bodySmall,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
                       ],
                     ),
                   ),
@@ -139,9 +133,7 @@ class _MessagesFideleScreenState extends State<MessagesFideleScreen> {
               child: messages.isEmpty
                   ? const EmptyState(
                       icon: Icons.mail_outline,
-                      message: 'Aucun message pour le moment. Votre '
-                          'conversation privée avec votre église commencera '
-                          'ici.',
+                      message: 'Aucun message.',
                     )
                   : ListView.builder(
                       controller: _scroll,
@@ -229,14 +221,6 @@ class _MessagesFideleScreenState extends State<MessagesFideleScreen> {
                     child: Text(_envoi ? 'Envoi…' : 'Envoyer'),
                   ),
                 ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Text(
-                'Message privé, envoyé dans l’application, pas par e-mail.',
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
               ),
             ),
           ],

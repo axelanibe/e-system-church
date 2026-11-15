@@ -103,8 +103,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       const SizedBox(height: 16),
                       Text(
                         _isInitialisation
-                            ? 'Mot de passe initialisé. Vous pouvez vous connecter.'
-                            : 'Mot de passe réinitialisé. Vous pouvez vous connecter.',
+                            ? 'Mot de passe initialisé.'
+                            : 'Mot de passe réinitialisé.',
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 24),
@@ -121,10 +121,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       children: [
                         Text(
                           _isInitialisation
-                              ? 'Collez le lien d’invitation reçu de votre église, '
+                              ? 'Collez le lien reçu, '
                                   'puis choisissez votre mot de passe.'
-                              : 'Collez le lien reçu par e-mail (ou de votre '
-                                  'administrateur), puis choisissez un nouveau '
+                              : 'Collez le lien reçu, puis choisissez un nouveau '
                                   'mot de passe.',
                         ),
                         const SizedBox(height: 24),

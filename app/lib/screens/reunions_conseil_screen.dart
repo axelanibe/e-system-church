@@ -306,7 +306,7 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
         if (items.isEmpty) {
           return EmptyState(
             icon: Icons.event_available_outlined,
-            message: 'Aucune réunion du conseil pour l’instant.',
+            message: 'Aucune réunion.',
             actionLabel: 'Créer une réunion',
             onAction: _createReunion,
           );
@@ -376,7 +376,7 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
         if (items.isEmpty) {
           return EmptyState(
             icon: Icons.gavel_outlined,
-            message: 'Aucune décision pour l’instant.',
+            message: 'Aucune décision.',
             actionLabel: 'Créer une décision',
             onAction: () async {
               try {
@@ -453,7 +453,7 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
         if (items.isEmpty) {
           return EmptyState(
             icon: Icons.description_outlined,
-            message: 'Aucun procès-verbal pour l’instant.',
+            message: 'Aucun procès-verbal.',
             actionLabel: 'Créer un procès-verbal',
             onAction: () async {
               try {

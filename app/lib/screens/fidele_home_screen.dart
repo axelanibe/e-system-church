@@ -133,7 +133,7 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
         showSuccess(
           context,
           confirme
-              ? 'Présence confirmée. Votre église vous attend.'
+              ? 'Présence confirmée.'
               : 'Présence annulée.',
         );
       }
@@ -375,11 +375,6 @@ class _FideleHomeScreenState extends State<FideleHomeScreen> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const Text(
-                            'Votre sujet reste privé. Il est transmis '
-                            'uniquement aux responsables désignés.',
-                          ),
-                          const SizedBox(height: 8),
                           _PriereDuJour(
                             memberId: profil.memberId,
                             membreNom: profil.user.fullName,
@@ -480,7 +475,6 @@ class _GrilleAcces extends StatelessWidget {
         _TuileLarge(
           icone: Icons.event_available_outlined,
           titre: 'Prendre rendez-vous',
-          sousTitre: 'Solliciter un entretien avec votre pasteur.',
           onTap: onRendezVous,
         ),
       ],
@@ -555,13 +549,11 @@ class _TuileAcces extends StatelessWidget {
 class _TuileLarge extends StatelessWidget {
   final IconData icone;
   final String titre;
-  final String sousTitre;
   final VoidCallback onTap;
 
   const _TuileLarge({
     required this.icone,
     required this.titre,
-    required this.sousTitre,
     required this.onTap,
   });
 
@@ -593,11 +585,6 @@ class _TuileLarge extends StatelessWidget {
                       titre,
                       style: Theme.of(context).textTheme.titleMedium,
                       maxLines: 2,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      sousTitre,
-                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ),
@@ -656,8 +643,7 @@ class _ProchainCulte extends StatelessWidget {
         if (cultes.isEmpty) {
           return const EmptyState(
             icon: Icons.event_outlined,
-            message: 'Aucun culte prévu pour l’instant. Revenez bientôt, '
-                'votre église vous attend.',
+            message: 'Aucun culte programmé',
           );
         }
         final culte = cultes.first;
@@ -1198,7 +1184,6 @@ class _PriereDuJourState extends State<_PriereDuJour> {
             controller: _sujetController,
             decoration: const InputDecoration(
               labelText: 'Écrivez votre sujet de prière',
-              hintText: 'Par exemple : ma famille, mon travail…',
             ),
             maxLength: 300,
           ),
@@ -1207,7 +1192,6 @@ class _PriereDuJourState extends State<_PriereDuJour> {
             controller: _detailsController,
             decoration: const InputDecoration(
               labelText: 'Détails (facultatif)',
-              hintText: 'Quelques mots pour votre pasteur.',
             ),
             maxLines: 3,
           ),

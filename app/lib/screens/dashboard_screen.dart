@@ -221,17 +221,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       .titleMedium
                                       ?.copyWith(color: Colors.white),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Prévisualisez l’interface dédiée aux '
-                                  'membres de votre assemblée.',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: Colors.white70,
-                                      ),
-                                ),
                               ],
                             ),
                           ),
@@ -272,10 +261,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               .textTheme
                               .titleMedium,
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
-                            'Chiffres globaux de toutes les églises mères '
-                            'ensemble, sans détail nominatif.'),
                         const SizedBox(height: 12),
                         BoutonDoux(
                           label: 'Voir les chiffres de la plateforme',
@@ -457,30 +442,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   value: '${data.membresTotal}',
                                   icon: Icons.people_outline,
                                   color: AppTheme.violetProfond,
-                                  aide: 'Personnes inscrites dans votre '
-                                      'église.',
                                 ),
                                 StatCard(
                                   label: 'Présences du jour',
                                   value: '${data.presencesJour}',
                                   icon: Icons.how_to_reg_outlined,
                                   color: AppTheme.vertFonce,
-                                  aide: 'Présences pointées aujourd’hui.',
                                 ),
                                 StatCard(
                                   label: 'Cotisations du mois',
                                   value: formatFcfa(data.cotisationsMois),
                                   icon: Icons.savings_outlined,
                                   color: AppTheme.orFonce,
-                                  aide: 'Cotisations payées ce mois-ci.',
                                 ),
                                 StatCard(
                                   label: 'Nouveaux membres',
                                   value: '${data.nouveauxMembres}',
                                   icon: Icons.person_add_outlined,
                                   color: AppTheme.violetProfond,
-                                  aide: 'Nouveaux convertis inscrits dans '
-                                      'votre église.',
                                 ),
                               ],
                             );
@@ -512,10 +491,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         textAlign: TextAlign.center,
                                       ),
                                     ),
-                                  ] else
-                                    const Text(
-                                      'Votre église est une annexe : elle ne peut pas avoir de sous-église.',
-                                    ),
+                                  ],
                                 ] else ...[
                                   Text(
                                     'Total de mes églises',

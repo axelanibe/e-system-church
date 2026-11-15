@@ -126,14 +126,6 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'Créez votre compte avec le code fidèle de votre '
-                    'église. Le code fait foi : aucune validation n’est '
-                    'nécessaire. Votre matricule vous est attribué '
-                    'automatiquement et votre carte de membre est créée '
-                    'tout de suite.',
-                  ),
-                  const SizedBox(height: 24),
                   TextFormField(
                     controller: _nomPrenomController,
                     textInputAction: TextInputAction.next,
@@ -208,7 +200,6 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Sexe (optionnel)',
                       hintText: 'Non précisé',
-                      helperText: 'Sert à construire votre matricule.',
                       helperMaxLines: 2,
                       prefixIcon: Icon(Icons.person_outline),
                       border: OutlineInputBorder(),
@@ -230,11 +221,10 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                     ],
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
-                      labelText: 'Code fidèle de l’église (ex. ESC-F-0411)',
+                      labelText: 'Code fidèle de l’église',
                       helperText:
                           'Demandez le code fidèle à votre pasteur ou à un '
-                          'responsable. Le tiret s’ajoute tout seul : tapez '
-                          'seulement les caractères.',
+                          'responsable.',
                       helperMaxLines: 2,
                       prefixIcon: Icon(Icons.key_outlined),
                       border: OutlineInputBorder(),
@@ -252,7 +242,6 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Département (optionnel)',
-                      hintText: 'Ex. Louange et adoration, Jeunesse…',
                       prefixIcon: Icon(Icons.group_work_outlined),
                       border: OutlineInputBorder(),
                     ),

@@ -90,7 +90,7 @@ class _CodesTutelleScreenState extends State<CodesTutelleScreen> {
                   child: Padding(
                     padding: EdgeInsets.all(16),
                     child: Text(
-                      'Un code de tutelle ESC-T-… ne sert qu’une fois : donnez-le à une église qui veut se rattacher à vous. Dès que la mère accepte la demande, le code n’est plus valide, automatiquement, et l’église devient une de vos annexes. Votre code permanent ESC-… reste valable pour les membres et les autres demandes.',
+                      'Code à usage unique : donnez-le à une église qui veut se rattacher à vous.',
                     ),
                   ),
                 ),

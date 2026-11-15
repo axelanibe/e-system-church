@@ -10,9 +10,8 @@ import '../widgets/common_widgets.dart';
 
 /// WhatsApp avec consentement (US10) : la liste des membres qui ont
 /// consenti, avec leur téléphone. Aucun message n'est envoyé ici :
-/// aucun fournisseur n'est branché, aucun envoi réel n'est possible
-/// tant qu'Axel n'a pas choisi le canal. Un membre qui n'a pas consenti
-/// n'apparaît jamais.
+/// aucun fournisseur n'est branché, aucun envoi réel n'est possible.
+/// Un membre qui n'a pas consenti n'apparaît jamais.
 class WhatsappScreen extends StatefulWidget {
   const WhatsappScreen({super.key});
 
@@ -39,15 +38,6 @@ class _WhatsappScreenState extends State<WhatsappScreen> {
       appBar: AppBar(title: Text(t.whatsapp)),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Text(
-              t.aucunFournisseur,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ),
           Expanded(
             child: FutureBuilder<List<WhatsappConsentement>>(
               future: _future,

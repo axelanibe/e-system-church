@@ -188,13 +188,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           Text(
                             _parametres?.notificationsConfigurees == true
                                 ? 'Fournisseur configuré : ${_parametres!.notificationFournisseur ?? ''}.'
-                                : 'Aucun fournisseur choisi pour le moment : les notifications restent en file, rien n’est envoyé.',
+                                : 'Aucun fournisseur.',
                           ),
                           const SizedBox(height: 12),
                           TextField(
                             controller: _fournisseurController,
                             decoration: const InputDecoration(
-                              labelText: 'Fournisseur (à compléter)',
+                              labelText: 'Fournisseur',
                               border: OutlineInputBorder(),
                             ),
                           ),
@@ -212,7 +212,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             controller: _plafondController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
-                              labelText: 'Plafond mensuel (nombre)',
+                              labelText: 'Plafond mensuel',
                               border: OutlineInputBorder(),
                             ),
                           ),
