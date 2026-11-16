@@ -114,6 +114,11 @@ class _NouvelleDepenseScreenState extends State<NouvelleDepenseScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const Text(
+                        'Saisir une dépense, avec sa référence automatique.',
+                        style: TextStyle(fontSize: 12.5),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
                         'Référence',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),

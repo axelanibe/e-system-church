@@ -87,7 +87,7 @@ class TiroirCourt extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     sousTitre,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 11.5,
@@ -164,7 +164,7 @@ class TiroirCourt extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   sousTitre,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 11.5,

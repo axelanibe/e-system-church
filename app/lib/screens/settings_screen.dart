@@ -288,7 +288,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Widget _carteConfiance({
+  Widget _ligneConfiance({
     required BuildContext context,
     required IconData icone,
     required String titre,
@@ -296,28 +296,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Widget? ecran,
     VoidCallback? onTap,
   }) {
-    return Card(
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: AppTheme.orClair,
-          child: Icon(icone, color: AppTheme.orFonce),
-        ),
-        title: Text(
-          titre,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-              fontWeight: FontWeight.bold, fontSize: 13.5),
-        ),
-        subtitle: Text(
-          sousTitre,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 11.5),
-        ),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap ?? (ecran == null ? null : () => _ouvrir(context, ecran)),
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: AppTheme.orClair,
+        child: Icon(icone, color: AppTheme.orFonce),
       ),
+      title: Text(
+        titre,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+            fontWeight: FontWeight.bold, fontSize: 13.5),
+      ),
+      subtitle: Text(
+        sousTitre,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 11.5),
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap ?? (ecran == null ? null : () => _ouvrir(context, ecran)),
     );
   }
 
@@ -527,30 +525,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Maquette, écran 14 : phrase d'intro.
+                  Text(
+                    'Confiance, clés marchandes et réglages de '
+                    'l’application.',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                   const SectionTitle(title: 'Confiance'),
-                  _carteConfiance(
-                    context: context,
-                    icone: Icons.phonelink_lock_outlined,
-                    titre: 'Double authentification',
-                    sousTitre:
-                        'Un code supplémentaire protège les comptes sensibles.',
-                    ecran: const DeuxFaScreen(),
-                  ),
-                  _carteConfiance(
-                    context: context,
-                    icone: Icons.fact_check_outlined,
-                    titre: 'Journal d’audit',
-                    sousTitre:
-                        'Actions sensibles tracées, avec auteur et horodatage.',
-                    ecran: const AuditScreen(),
-                  ),
-                  _carteConfiance(
-                    context: context,
-                    icone: Icons.lock_outline,
-                    titre: 'Mot de passe',
-                    sousTitre:
-                        'Vérifie l’ancien mot de passe. Les autres sessions sont déconnectées.',
-                    onTap: () => showChangePasswordDialog(context),
+                  // Maquette, écran 14 : les 3 entrées Confiance dans
+                  // une seule carte, pas 3 cartes séparées.
+                  Card(
+                    child: Column(
+                      children: [
+                        _ligneConfiance(
+                          context: context,
+                          icone: Icons.phonelink_lock_outlined,
+                          titre: 'Double authentification',
+                          sousTitre:
+                              'Un code supplémentaire protège les comptes sensibles.',
+                          ecran: const DeuxFaScreen(),
+                        ),
+                        const Divider(height: 1),
+                        _ligneConfiance(
+                          context: context,
+                          icone: Icons.fact_check_outlined,
+                          titre: 'Journal d’audit',
+                          sousTitre:
+                              'Actions sensibles tracées, avec auteur et horodatage.',
+                          ecran: const AuditScreen(),
+                        ),
+                        const Divider(height: 1),
+                        _ligneConfiance(
+                          context: context,
+                          icone: Icons.lock_outline,
+                          titre: 'Mot de passe',
+                          sousTitre:
+                              'Vérifie l’ancien mot de passe. Les autres sessions sont déconnectées.',
+                          onTap: () => showChangePasswordDialog(context),
+                        ),
+                      ],
+                    ),
                   ),
                   const SectionTitle(title: 'Église'),
                   Card(
@@ -1067,6 +1084,14 @@ class _ClesMarchandesSectionState extends State<_ClesMarchandesSection> {
               ),
             ),
             const SizedBox(height: 16),
+            // Maquette, écran 14 : les paiements automatiques
+            // réutilisent ces comptes, aucune clé ne se ressaisit
+            // dans leur écran.
+            const Text(
+              'Les paiements automatiques utilisent ces mêmes comptes marchands : aucune clé ne se ressaisit dans leur écran.',
+              style: TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 12),
             FilledButton(
               onPressed: _enregistrement ? null : _enregistrer,
               child: const Text('Enregistrer les clés', style: TextStyle(fontSize: 13.5)),

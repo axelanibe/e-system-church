@@ -103,6 +103,20 @@ class _PlateformeScreenState extends State<PlateformeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      const Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text(
+                            'La Plateforme (super utilisateur) a ses '
+                            'identifiants et ses droits propres, hors '
+                            'application d’église. Rien ici ne s’ouvre '
+                            'depuis une église : ces vues complètent le '
+                            'parcours de toute l’application.',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       const SectionTitle(title: 'Églises'),
                       LayoutBuilder(
                         builder: (context, constraints) {
@@ -758,15 +772,26 @@ class _NettoyageTestSectionState extends State<_NettoyageTestSection> {
             padding: const EdgeInsets.all(16),
             children: [
               const SectionTitle(title: 'Nettoyage des comptes TEST', taille: 12.5),
-              Text(
-                'Aperçu : ${apercu.total} élément(s) TEST détecté(s).',
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 12.5),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'La suppression se fait en une seule transaction, après confirmation.',
-                style: TextStyle(fontSize: 12.5),
+              Card(
+                color: AppTheme.rougeErreur.withValues(alpha: 0.12),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Aperçu : ${apercu.total} élément(s) TEST détecté(s).',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 12.5),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'La suppression se fait en une seule transaction, après confirmation.',
+                        style: TextStyle(fontSize: 12.5),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               if (apercu.elements.isEmpty)

@@ -8,12 +8,13 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import 'common_widgets.dart';
 
-/// Visuel de la carte de membre, modèle CONNEXION PROPHÉTIQUE :
-/// nom en blanc 20 px, matricule en or, établissement en blanc
-/// atténué, QR bien visible dans un encadré blanc. Couleurs
-/// e-System : dégradé violet, barre or. Photo, nom, matricule,
-/// église, Membre depuis, QR. Rien d'autre. Réutilisé par la fiche
-/// membre, par la page Carte seule et par l'impression des cartes.
+/// Visuel de la carte de membre, mise en page horizontale de la
+/// maquette (écran 38) : photo, nom et matricule en haut à gauche,
+/// pastille ESC à droite, lignes Église, Annexe et Membre depuis,
+/// puis QR à gauche et code de vérification à droite. Couleurs
+/// e-System : dégradé violet, barre or. Rien d'autre. Réutilisé par
+/// la fiche membre, par la page Carte seule et par l'impression
+/// des cartes.
 class CarteMembreVisuelle extends StatelessWidget {
   final Member member;
   final String qrData;
@@ -50,90 +51,99 @@ class CarteMembreVisuelle extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Container(height: 6, color: AppTheme.or),
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'CARTE DE MEMBRE',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: Colors.white70,
-                          letterSpacing: 1.2,
+                  // En-tête horizontal (maquette, écran 38) : photo,
+                  // nom et matricule à gauche, pastille ESC à droite.
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: Colors.white24,
+                        backgroundImage: member.photoUrl != null
+                            ? NetworkImage(member.photoUrl!)
+                            : null,
+                        child: member.photoUrl == null
+                            ? Text(
+                                member.fullName.isNotEmpty
+                                    ? member.fullName[0].toUpperCase()
+                                    : '?',
+                                style: const TextStyle(
+                                    fontSize: 23, color: Colors.white),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              member.fullName,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
+                                  ?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 17),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Matricule : ${member.matricule}',
+                              style: AppTheme.styleCode.copyWith(
+                                color: AppTheme.or,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
                         ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'e-System Church',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(
-                          color: AppTheme.or,
-                          fontWeight: FontWeight.bold,
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        width: 40,
+                        height: 40,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppTheme.violetProfond,
+                          borderRadius: BorderRadius.circular(11),
+                          border:
+                              Border.all(color: AppTheme.or, width: 2),
                         ),
-                  ),
-                  const SizedBox(height: 16),
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: Colors.white24,
-                    backgroundImage: member.photoUrl != null
-                        ? NetworkImage(member.photoUrl!)
-                        : null,
-                    child: member.photoUrl == null
-                        ? Text(
-                            member.fullName.isNotEmpty
-                                ? member.fullName[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(
-                                fontSize: 32, color: Colors.white),
-                          )
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    member.fullName,
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall
-                        ?.copyWith(
-                            color: Colors.white,
+                        child: const Text(
+                          'ESC',
+                          style: TextStyle(
+                            color: AppTheme.or,
                             fontWeight: FontWeight.bold,
-                            fontSize: 17),
-                    textAlign: TextAlign.center,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Matricule : ${member.matricule}',
-                    style: AppTheme.styleCode.copyWith(
-                      color: AppTheme.or,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  if (nomEglise != null) ...[
-                    const SizedBox(height: 4),
+                  const SizedBox(height: 13),
+                  if (nomEglise != null)
                     Text(
                       'Église : $nomEglise',
                       style: Theme.of(context)
                           .textTheme
                           .bodyMedium
                           ?.copyWith(color: Colors.white70, fontSize: 12.5),
-                      textAlign: TextAlign.center,
                     ),
-                  ],
-                  if (estAnnexe) ...[
-                    const SizedBox(height: 4),
+                  if (estAnnexe)
                     Text(
                       'Annexe : $nomEglise · ${eglise!.code}',
                       style: Theme.of(context)
                           .textTheme
                           .bodyMedium
                           ?.copyWith(color: Colors.white70, fontSize: 12.5),
-                      textAlign: TextAlign.center,
                     ),
-                  ],
                   if (member.createdAt != null)
                     Text(
                       'Membre depuis : ${formatDate(member.createdAt)}',
@@ -141,7 +151,6 @@ class CarteMembreVisuelle extends StatelessWidget {
                           .textTheme
                           .bodyMedium
                           ?.copyWith(color: Colors.white70, fontSize: 12.5),
-                      textAlign: TextAlign.center,
                     ),
                   if (avecStatut) ...[
                     const SizedBox(height: 8),
@@ -150,45 +159,55 @@ class CarteMembreVisuelle extends StatelessWidget {
                       color: couleurStatut,
                     ),
                   ],
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: QrImageView(
-                      data: qrData,
-                      version: QrVersions.auto,
-                      size: 180,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: 'Code de vérification : ',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: Colors.white70, fontSize: 11.5),
+                  const SizedBox(height: 14),
+                  // QR à gauche, code de vérification à droite
+                  // (maquette, écran 38).
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        TextSpan(
-                          text: qrData,
-                          style: AppTheme.styleCode.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11.5,
+                        child: QrImageView(
+                          data: qrData,
+                          version: QrVersions.auto,
+                          size: 104,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Code de vérification : ',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                        color: Colors.white70,
+                                        fontSize: 11.5),
+                              ),
+                              TextSpan(
+                                text: qrData,
+                                style: AppTheme.styleCode.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                    textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
+            Container(height: 6, color: AppTheme.or),
           ],
         ),
       ),

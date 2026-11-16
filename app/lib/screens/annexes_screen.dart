@@ -89,6 +89,16 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
           children: [
+            // Maquette, écran 12 : phrase d'intro.
+            Text(
+              'Mon église et ses annexes, transferts, rattachements, '
+              'alertes.',
+              style: TextStyle(
+                fontSize: 12.5,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: _recherche,
               decoration: const InputDecoration(

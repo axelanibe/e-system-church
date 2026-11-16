@@ -145,6 +145,16 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                // Maquette, écran 11 : phrase d'intro.
+                Text(
+                  'Rejoindre une église mère et suivre les demandes, '
+                  'reçues comme émises.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 16),
                 if (state.isAdmin) ...[
                   Card(
                     child: Padding(
@@ -158,30 +168,27 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
                                   .titleMedium
                                   ?.copyWith(fontSize: 15)),
                           const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _codeController,
-                                  textCapitalization:
-                                      TextCapitalization.characters,
-                                  inputFormatters: [
-                                    CodeInputFormatter(
-                                        expectedPrefix: 'ESC-'),
-                                  ],
-                                  decoration: const InputDecoration(
-                                    labelText: 'Code de l’église mère',
-                                    hintText: 'Saisir le code',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              FilledButton(
-                                onPressed: _sending ? null : _request,
-                                child: const Text('Envoyer la demande', style: TextStyle(fontSize: 13.5)),
-                              ),
+                          // Maquette, écran 11 : champ pleine largeur,
+                          // puis bouton pleine largeur dessous (pas
+                          // côte à côte).
+                          TextField(
+                            controller: _codeController,
+                            textCapitalization:
+                                TextCapitalization.characters,
+                            inputFormatters: [
+                              CodeInputFormatter(
+                                  expectedPrefix: 'ESC-'),
                             ],
+                            decoration: const InputDecoration(
+                              labelText: 'Code de l’église mère',
+                              hintText: 'Saisir le code',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton(
+                            onPressed: _sending ? null : _request,
+                            child: const Text('Envoyer la demande', style: TextStyle(fontSize: 13.5)),
                           ),
                         ],
                       ),

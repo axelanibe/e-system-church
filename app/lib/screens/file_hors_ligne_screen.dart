@@ -151,6 +151,16 @@ class _FileHorsLigneScreenState extends State<FileHorsLigneScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  // Maquette, écran 17 : phrase d'intro.
+                  Text(
+                    'Les actions faites sans connexion, en attente de '
+                    'synchronisation.',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   if (_erreur != null)
                     Card(
                       color: AppTheme.rougeErreur.withValues(alpha: 0.08),
@@ -188,13 +198,26 @@ class _FileHorsLigneScreenState extends State<FileHorsLigneScreen> {
                   ),
                   const SizedBox(height: 16),
                   if (_actionsServeur.isEmpty && _actionsLocales.isEmpty)
-                    const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text(
-                          'Tout est synchronisé.',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 13),
+                    // Maquette, écran 17 : bannière verte
+                    // « Tout est synchronisé. », pas une carte neutre.
+                    Card(
+                      color: AppTheme.vertFonce.withValues(alpha: 0.08),
+                      child: const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle_outline,
+                                color: AppTheme.vertFonce),
+                            SizedBox(width: 8),
+                            Text(
+                              'Tout est synchronisé.',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppTheme.vertFonce,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

@@ -7,6 +7,7 @@ import '../services/api_service.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/logo_app.dart';
+import '../widgets/selecteur_indicatif_pays.dart';
 import 'forgot_password_screen.dart';
 import 'login_plateforme_screen.dart';
 import 'register_fidele_screen.dart';
@@ -36,8 +37,9 @@ const _rembourrage = EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0);
 /// Écran de connexion : e-mail ou téléphone + mot de passe, JWT stocké
 /// en sécurité. La connexion exige un compte réel créé sur le serveur.
 /// Mise en page d'après la maquette (écran 27) : logo 76x76, « Bienvenue »
-/// et son sous-titre, libellés au-dessus des champs avec l'aide en
-/// dessous, note de verrouillage après 5 mots de passe incorrects,
+/// et son sous-titre, libellés au-dessus des champs, texte d'aide
+/// dans le champ (hintText), note de verrouillage après 5 mots de
+/// passe incorrects (15 minutes),
 /// « Mot de passe oublié » sous la note, deux cartes d'action, accès
 /// administrateur de la plateforme discret en pied de page. Le logo est
 /// la vraie image (LogoApp), jamais le texte « ESC » de la maquette.
@@ -57,6 +59,9 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
   bool _obscurePassword = true;
   bool _demande2fa = false;
+  // Indicatif du champ « E-mail ou téléphone » : Côte d’Ivoire au
+  // départ, l’utilisateur peut choisir un autre pays.
+  String _indicatifIso = 'CI';
 
   @override
   void dispose() {
@@ -73,8 +78,14 @@ class _LoginScreenState extends State<LoginScreen> {
       _error = null;
     });
     try {
+      // E-mail : l’indicatif est ignoré. Numéro : l’indicatif choisi
+      // est préfixé, le serveur normalise ensuite.
+      final identifiant = composerTelephoneAvecIndicatif(
+        indicatifParIso(_indicatifIso).indicatif,
+        _identifiantController.text.trim(),
+      );
       await context.read<AppState>().login(
-            identifiant: _identifiantController.text.trim(),
+            identifiant: identifiant,
             password: _passwordController.text,
             code2fa: _demande2fa ? _code2faController.text.trim() : null,
           );
@@ -177,14 +188,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 32),
 
                         // 2. Formulaire de connexion : libellé au-dessus
-                        // du champ, aide en dessous (maquette, écran 27),
-                        // pas de libellé flottant.
+                        // du champ, aide dans le champ (hintText,
+                        // maquette, écran 27), pas de libellé flottant.
                         _buildTextField(
                           context: context,
                           controller: _identifiantController,
                           label: 'E-mail ou téléphone *',
-                          helper: 'E-mail ou numéro de téléphone',
+                          hint: 'E-mail ou numéro de téléphone',
                           icon: Icons.person_outline,
+                          prefix: SelecteurIndicatifPays(
+                            iso: _indicatifIso,
+                            onChanged: (iso) =>
+                                setState(() => _indicatifIso = iso),
+                          ),
                           keyboardType: TextInputType.text,
                           textInputAction: TextInputAction.next,
                           validator: validerIdentifiant,
@@ -194,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           context: context,
                           controller: _passwordController,
                           label: 'Mot de passe *',
-                          helper: '••••••••',
+                          hint: '••••••••',
                           icon: Icons.lock_outline,
                           obscureText: _obscurePassword,
                           textInputAction: TextInputAction.done,
@@ -280,7 +296,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         // quel champ est faux.
                         Text(
                           'Après 5 mots de passe incorrects, la connexion '
-                          'se verrouille temporairement — sans indiquer '
+                          'se verrouille pendant 15 minutes — sans indiquer '
                           'quel champ est faux.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -302,90 +318,102 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
                                   vertical: 8, horizontal: 4),
-                              minimumSize: Size.zero,
+                              minimumSize: const Size(0, 0),
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
-                            child: Text(
+                            child: const Text(
                               'Mot de passe oublié',
                               style: TextStyle(
-                                color: scheme.primary,
+                                color: AppTheme.orFonce,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13,
+                                decoration: TextDecoration.underline,
                               ),
                             ),
                           ),
                         ),
 
-                        // 3. Séparateur visuel.
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 26),
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  const Expanded(
-                                      child: Divider(
-                                          color: AppTheme.bordure,
-                                          thickness: 1)),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 14),
-                                    child: Text(
-                                      'Nouveau sur e-System Church',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: scheme.onSurface,
-                                      ),
-                                    ),
+                        // 3. Carte « Nouveau sur e-System Church »
+                        // (maquette, écran 27) : titre, sous-titre,
+                        // bouton or « Inscrire mon église » puis bouton
+                        // fantôme « Je suis membre d'une église ».
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  'Nouveau sur e-System Church',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: scheme.onSurface,
                                   ),
-                                  const Expanded(
-                                      child: Divider(
-                                          color: AppTheme.bordure,
-                                          thickness: 1)),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Choisissez votre situation pour commencer.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  color: scheme.onSurfaceVariant,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Choisissez votre situation pour commencer.',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                FilledButton(
+                                  onPressed: _loading
+                                      ? null
+                                      : () => Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const RegisterScreen(),
+                                            ),
+                                          ),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: AppTheme.or,
+                                    foregroundColor: AppTheme.violetProfond,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Inscrire mon église',
+                                    style: TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 9),
+                                OutlinedButton(
+                                  onPressed: _loading
+                                      ? null
+                                      : () => Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const RegisterFideleScreen(),
+                                            ),
+                                          ),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Je suis membre d’une église',
+                                    style: TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-
-                        // 4. Cartes d'action secondaires.
-                        _buildActionCard(
-                          context: context,
-                          icon: Icons.church_outlined,
-                          title: 'Inscrire mon église',
-                          subtitle: 'Pour créer une nouvelle église.',
-                          onTap: _loading
-                              ? null
-                              : () => Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => const RegisterScreen(),
-                                    ),
-                                  ),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildActionCard(
-                          context: context,
-                          icon: Icons.group_add_outlined,
-                          title: 'Je suis membre d’une église',
-                          subtitle: 'Pour rejoindre votre église avec son code.',
-                          onTap: _loading
-                              ? null
-                              : () => Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const RegisterFideleScreen(),
-                                    ),
-                                  ),
                         ),
                         const SizedBox(height: 28),
 
@@ -441,8 +469,9 @@ class _LoginScreenState extends State<LoginScreen> {
     required BuildContext context,
     required TextEditingController controller,
     required String label,
-    String? helper,
+    String? hint,
     required IconData icon,
+    Widget? prefix,
     bool obscureText = false,
     Widget? suffixIcon,
     TextInputType? keyboardType,
@@ -463,9 +492,15 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         const SizedBox(height: 6),
+        // Le conteneur ne porte que l’ombre : le fond blanc est
+        // dans le champ (filled), pas dans le conteneur. Avant, le
+        // fond blanc du conteneur débordait sous la bordure et le
+        // texte d’aide (helperText) y apparaissait dans une seconde
+        // boîte blanche ; un message d’erreur sous la bordure aurait
+        // recréé la même seconde boîte. Le champ ne rend plus qu’une
+        // seule boîte, en état normal comme en erreur.
         Container(
           decoration: BoxDecoration(
-            color: scheme.surface,
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
@@ -487,13 +522,16 @@ class _LoginScreenState extends State<LoginScreen> {
             // coupé à droite (page penchée d'un côté).
             style: TextStyle(fontSize: 16, color: scheme.onSurface),
             decoration: InputDecoration(
-              helperText: helper,
-              helperStyle: TextStyle(
+              filled: true,
+              fillColor: scheme.surface,
+              hintText: hint,
+              hintStyle: TextStyle(
                 color: scheme.onSurfaceVariant,
                 fontSize: 13.5,
               ),
               prefixIcon:
                   Icon(icon, color: scheme.onSurfaceVariant, size: 20),
+              prefix: prefix,
               suffixIcon: suffixIcon,
               contentPadding:
                   const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
@@ -513,66 +551,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildActionCard({
-    required BuildContext context,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback? onTap,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.surface,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTheme.bordure, width: 1.2),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: scheme.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: scheme.primary, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right,
-                  color: scheme.onSurfaceVariant, size: 22),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

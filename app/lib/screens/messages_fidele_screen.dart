@@ -122,6 +122,15 @@ class _MessagesFideleScreenState extends State<MessagesFideleScreen> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Message privé à son église ; les réponses se '
+                          'lisent dans l’application.',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(fontSize: 11.5),
+                        ),
                       ],
                     ),
                   ),

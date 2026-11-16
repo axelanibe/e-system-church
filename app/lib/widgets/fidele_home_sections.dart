@@ -19,23 +19,20 @@ import '../widgets/soft_card.dart';
 import '../screens/bible_fidele_screen.dart';
 import '../screens/carte_fidele_screen.dart';
 import '../screens/cotisations_screen.dart';
-import '../screens/ecole_biblique_screen.dart';
 import '../screens/journal_screen.dart';
 import '../screens/mes_attestations_screen.dart';
 import '../screens/messages_fidele_screen.dart';
-import '../screens/rendez_vous_screen.dart';
 
 /// Contenu partagé des deux écrans d'accueil fidèle (tranche 3,
 /// E-FI1) : « fidele-accueil » (onglet Accueil de la coquille
 /// fidèle) et « membre » (Espace membre, ouvert depuis Modules).
 /// Mêmes données, même chargement, mêmes sections, seul l'ordre
 /// des blocs et la section outils changent, selon la projection :
-/// - fidele-accueil : « Mes accès », 6 outils dont Prendre
-///   rendez-vous, camps et attestations avant Prière du jour et
+/// - fidele-accueil : « Actions rapides », 4 outils de la maquette
+///   (écran 37), camps et attestations avant Prière du jour et
 ///   Sujet de prière privé.
-/// - membre : « Actions rapides », 5 outils sans Prendre
-///   rendez-vous, Prière du jour et Sujet de prière privé avant
-///   camps et attestations.
+/// - membre : « Actions rapides », 4 outils, Prière du jour et Sujet
+///   de prière privé avant camps et attestations.
 /// Contenu seul, sans Scaffold ni barre : la coquille fidèle
 /// fournit l'écran et la barre du bas. En-tête, carte membre premium,
 /// prochain culte avec compte à rebours et « Je serai présent »,
@@ -50,10 +47,6 @@ class FideleHomeContenu extends StatefulWidget {
   /// « Actions rapides ».
   final String titreOutils;
 
-  /// Vrai pour « fidele-accueil » : la grille outils gagne la
-  /// carte pleine largeur « Prendre rendez-vous ».
-  final bool avecRendezVous;
-
   /// Conservé pour l'appelant : l'ordre des blocs est désormais fixé
   /// par la maquette (écran 37), Prière du jour et Sujet de prière
   /// privé avant Mes camps et Mes attestations, pour les deux écrans.
@@ -62,7 +55,6 @@ class FideleHomeContenu extends StatefulWidget {
   const FideleHomeContenu({
     super.key,
     required this.titreOutils,
-    required this.avecRendezVous,
     required this.priereAvantCamps,
   });
 
@@ -263,9 +255,15 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Padding(
-                            padding:
-                                const EdgeInsets.fromLTRB(4, 8, 4, 16),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(
+                                color: AppTheme.bordure,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            padding: const EdgeInsets.all(16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -296,18 +294,6 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                                       ?.copyWith(fontSize: 13.5),
                                 ),
                                 const SizedBox(height: 4),
-                                Text(
-                                  profil.church.name,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
-                                      ),
-                                ),
-                                const SizedBox(height: 8),
                                 Text(
                                   'Retrouvez ici votre carte, votre '
                                   'parcours et vos prochains rendez-vous.',
@@ -342,17 +328,14 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                     },
                   ),
                   const SizedBox(height: 8),
-                  const SectionTitle(title: 'Prochain culte', taille: 15),
                   _ProchainCulte(
                     future: _cultesFuture,
                     rsvpParCulte: _rsvpParCulte,
                     onBasculerPresence: _basculerPresence,
                   ),
                   const SizedBox(height: 8),
-                  const SectionTitle(title: 'Mon Parcours', taille: 15),
                   _ParcoursSection(future: _carteFuture),
                   const SizedBox(height: 8),
-                  const SectionTitle(title: 'Vos chiffres'),
                   _ChiffresSection(
                     presencesFuture: _presencesFuture,
                     contributionsFuture: _contributionsFuture,
@@ -371,7 +354,6 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                   // coquille fidèle n'a pas d'onglet Prière.
                   SectionTitle(title: widget.titreOutils),
                   _GrilleOutils(
-                    avecRendezVous: widget.avecRendezVous,
                     onBible: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         // La Bible est un écran sans Scaffold propre : elle
@@ -381,15 +363,10 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                         // écrans fidèles (École, Cotisations…).
                         builder: (_) => Scaffold(
                           appBar: AppBar(
-                            title: const Text('Ma Bible'),
+                            title: const Text('Bible et école biblique'),
                           ),
                           body: const BibleFideleScreen(),
                         ),
-                      ),
-                    ),
-                    onEcole: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const EcoleBibliqueScreen(),
                       ),
                     ),
                     onCotisations: () => Navigator.of(context).push(
@@ -405,11 +382,6 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                     onMessages: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => const MessagesFideleScreen(),
-                      ),
-                    ),
-                    onRendezVous: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const RendezVousScreen(),
                       ),
                     ),
                   ),
@@ -452,28 +424,22 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
   }
 }
 
-/// Grille 2 par 2 des accès du fidèle, au texte complet : titres
-/// entiers, descriptions complètes, « Ouvrir » sur sa propre ligne
-/// en bas de chaque carte (maquette de refonte). Sur
-/// « fidele-accueil », « Prendre rendez-vous » est une carte pleine
-/// largeur sous la grille ; sur « membre », elle est absente.
+/// Grille 2 par 2 des accès du fidèle (maquette, écran 37) : 4 tuiles,
+/// Ma Bible, Mes cotisations, Mon journal, Message à mon église, au
+/// texte complet, « Ouvrir » sur sa propre ligne en bas de chaque
+/// carte. L'école biblique s'ouvre depuis l'onglet Bible, le
+/// rendez-vous depuis le menu Plus : un seul point d'entrée chacun.
 class _GrilleOutils extends StatelessWidget {
-  final bool avecRendezVous;
   final VoidCallback onBible;
-  final VoidCallback onEcole;
   final VoidCallback onCotisations;
   final VoidCallback onJournal;
   final VoidCallback onMessages;
-  final VoidCallback onRendezVous;
 
   const _GrilleOutils({
-    required this.avecRendezVous,
     required this.onBible,
-    required this.onEcole,
     required this.onCotisations,
     required this.onJournal,
     required this.onMessages,
-    required this.onRendezVous,
   });
 
   @override
@@ -516,12 +482,6 @@ class _GrilleOutils extends StatelessWidget {
                   onTap: onJournal,
                 ),
                 _TuileAcces(
-                  icone: Icons.school_outlined,
-                  titre: 'École biblique',
-                  sousTitre: 'Cours, leçons et ma progression.',
-                  onTap: onEcole,
-                ),
-                _TuileAcces(
                   icone: Icons.mail_outline,
                   titre: 'Message à mon église',
                   sousTitre: 'Messagerie privée, dans l’application.',
@@ -531,14 +491,6 @@ class _GrilleOutils extends StatelessWidget {
             );
           },
         ),
-        if (avecRendezVous) ...[
-          const SizedBox(height: 12),
-          _TuileLarge(
-            icone: Icons.event_available_outlined,
-            titre: 'Prendre rendez-vous',
-            onTap: onRendezVous,
-          ),
-        ],
       ],
     );
   }
@@ -611,73 +563,11 @@ class _TuileAcces extends StatelessWidget {
   }
 }
 
-/// Carte pleine largeur : icône, titre et description à gauche,
-/// lien Ouvrir à droite, sans troncature.
-class _TuileLarge extends StatelessWidget {
-  final IconData icone;
-  final String titre;
-  final VoidCallback onTap;
-
-  const _TuileLarge({
-    required this.icone,
-    required this.titre,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppTheme.orClair,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icone, color: AppTheme.orFonce, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      titre,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontSize: 13.5,
-                          ),
-                      maxLines: 2,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Ouvrir →',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.orAttention,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Prochain culte en vedette : le plus proche, avec son compte à
-/// rebours (jours, heures, minutes) et « Je serai présent ».
-/// État vide chaleureux sinon.
+/// Prochain culte (maquette, écran 37) : carte blanche, titre violet
+/// et pastille or « À venir », compte à rebours (jours, heures,
+/// minutes), lieu et heure côte à côte, puis « Je serai présent ».
+/// Sans culte : mêmes cases à « -- », lieu et heure « à confirmer »,
+/// sans bouton (aucun culte à confirmer).
 class _ProchainCulte extends StatelessWidget {
   final Future<List<Culte>> future;
   final Map<String, bool> rsvpParCulte;
@@ -710,31 +600,28 @@ class _ProchainCulte extends StatelessWidget {
             if (db == null) return -1;
             return da.compareTo(db);
           });
-        if (cultes.isEmpty) {
-          return const EmptyState(
-            icon: Icons.event_outlined,
-            message: 'Aucun culte programmé',
-          );
-        }
-        final culte = cultes.first;
-        final confirme = rsvpParCulte[culte.id] ?? culte.seraiPresent;
+        final culte = cultes.isEmpty ? null : cultes.first;
+        final confirme = culte == null
+            ? false
+            : rsvpParCulte[culte.id] ?? culte.seraiPresent;
         final theme = Theme.of(context);
         return Container(
           decoration: BoxDecoration(
-            color: AppTheme.violetProfond,
+            color: Colors.white,
+            border: Border.all(color: AppTheme.bordure),
             borderRadius: BorderRadius.circular(16),
           ),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Text(
-                    'PROCHAIN CULTE',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: Colors.white70,
-                      letterSpacing: 1.2,
+                    'Prochain culte',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: AppTheme.violetProfond,
+                      fontWeight: FontWeight.bold,
                       fontSize: 15,
                     ),
                   ),
@@ -751,8 +638,6 @@ class _ProchainCulte extends StatelessWidget {
                     child: Text(
                       'À venir',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        // T13, D02 : jamais de texte blanc sur or (2,24:1).
-                        // Bleu nuit sur or : 7,36:1.
                         color: AppTheme.violetProfond,
                         fontWeight: FontWeight.bold,
                         fontSize: 11.5,
@@ -761,85 +646,95 @@ class _ProchainCulte extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                culte.titre,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Le prochain rendez vous de votre église.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Compte à rebours',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(height: 6),
-              _CompteRebours(date: culte.date),
-              const SizedBox(height: 12),
-              Text(
-                'Lieu',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.white70,
-                  fontSize: 10,
-                ),
-              ),
-              Text(
-                culte.lieu ?? 'Lieu à confirmer',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white,
-                  fontSize: 13,
-                ),
-              ),
-              Text(
-                'Heure',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.white70,
-                  fontSize: 10,
-                ),
-              ),
-              Text(
-                culte.date != null
-                    ? formatDateTime(culte.date)
-                    : 'Heure à confirmer',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white,
-                  fontSize: 13,
-                ),
-              ),
-              if (culte.orateur != null)
+              if (culte != null) ...[
+                const SizedBox(height: 8),
                 Text(
-                  'Avec ${culte.orateur}',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.white70,
+                  culte.titre,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () =>
-                      onBasculerPresence(culte, !confirme),
-                  icon: Icon(
-                    confirme
-                        ? Icons.check_circle_outline
-                        : Icons.event_available_outlined,
+              ],
+              const SizedBox(height: 12),
+              _CompteRebours(date: culte?.date),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'LIEU',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 10,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          culte?.lieu ?? 'Lieu à confirmer',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  label: Text(
-                    confirme ? 'Présence confirmée' : 'Je serai présent',
-                    style: const TextStyle(fontSize: 13.5),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'HEURE',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 10,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          culte?.date != null
+                              ? formatDateTime(culte!.date)
+                              : 'Heure à confirmer',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
+              if (culte?.orateur != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Avec ${culte!.orateur}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color:
+                          Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              if (culte != null) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () =>
+                        onBasculerPresence(culte, !confirme),
+                    icon: Icon(
+                      confirme
+                          ? Icons.check_circle_outline
+                          : Icons.event_available_outlined,
+                    ),
+                    label: Text(
+                      confirme ? 'Présence confirmée' : 'Je serai présent',
+                      style: const TextStyle(fontSize: 13.5),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         );
@@ -918,7 +813,7 @@ class _CaseCompte extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white12,
+          color: AppTheme.fondPapier,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -926,7 +821,6 @@ class _CaseCompte extends StatelessWidget {
             Text(
               valeur,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 19,
                   ),
@@ -934,7 +828,7 @@ class _CaseCompte extends StatelessWidget {
             Text(
               unite,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.white70,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 9.5,
               ),
             ),
@@ -1472,8 +1366,8 @@ class _SujetPrierePriveState extends State<_SujetPrierePrive> {
             maxLines: 3,
           ),
           SwitchListTile(
-            title: const Text('Sujet confidentiel', style: TextStyle(fontSize: 13.5)),
-            subtitle: const Text('Visible seulement par votre pasteur.', style: TextStyle(fontSize: 11.5)),
+            title: const Text('Demande confidentielle', style: TextStyle(fontSize: 13.5)),
+            subtitle: const Text('Seuls les responsables de prière la lisent.', style: TextStyle(fontSize: 11.5)),
             value: _confidentiel,
             onChanged: (v) => setState(() => _confidentiel = v),
           ),

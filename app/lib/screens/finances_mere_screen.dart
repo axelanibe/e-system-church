@@ -396,6 +396,12 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const Text(
+                  'Les totaux financiers des annexes, tels qu’elles les '
+                  'envoient dans leurs rapports.',
+                  style: TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 12),
                 _carteTotaux(context, rapport),
                 const SizedBox(height: 16),
                 if (rapport.branches.isEmpty)
@@ -404,7 +410,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                     message: 'Aucune annexe rattachée pour l’instant.',
                   )
                 else ...[
-                  const SectionTitle(title: 'Comparer les branches'),
+                  const SectionTitle(title: 'Par annexe'),
                   ...rapport.branches.map(
                     (b) => _carteComparaison(context, b, maxEntrees),
                   ),
@@ -444,6 +450,16 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                     ),
                   ),
                 ],
+                const SizedBox(height: 16),
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      'Lecture seule : l’église mère voit les totaux de chaque annexe, pas le détail de ses comptes — chaque annexe garde sa propre caisse et son propre espace. La gestion des annexes se fait dans Mes annexes.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -475,6 +491,12 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              const Text(
+                'Les totaux financiers des annexes, tels qu’elles les '
+                'envoient dans leurs rapports.',
+                style: TextStyle(fontSize: 12),
+              ),
+              const SizedBox(height: 12),
               _carteTotaux(context, rapport),
               const SizedBox(height: 16),
               const SectionTitle(title: 'Branches du réseau'),
@@ -496,6 +518,16 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    'Lecture seule : l’église mère voit les totaux de chaque annexe, pas le détail de ses comptes — chaque annexe garde sa propre caisse et son propre espace. La gestion des annexes se fait dans Mes annexes.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -510,7 +542,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SectionTitle(title: 'Comparer les branches'),
+                      const SectionTitle(title: 'Par annexe'),
                       ...rapport.branches.map(
                         (b) =>
                             _carteComparaison(context, b, maxEntrees),

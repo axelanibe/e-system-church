@@ -48,6 +48,12 @@ class _FamillesScreenState extends State<FamillesScreen> {
   final _searchController = TextEditingController();
   String _query = '';
 
+  // Liste brute vide (avant recherche) par onglet : masque la
+  // recherche de l'onglet quand sa liste est vide (maquette écran 4 :
+  // pas de recherche sur une liste vide).
+  bool _famillesVides = false;
+  bool _cellulesVides = false;
+
   late Future<List<Famille>> _famillesFuture;
   late Future<List<Cellule>> _cellulesFuture;
   late Future<MemberPage> _membresFuture;
@@ -93,14 +99,16 @@ class _FamillesScreenState extends State<FamillesScreen> {
     await showCreateDialog(
       context: context,
       title: 'Nouvelle famille',
-      saveLabel: 'Créer',
+      saveLabel: 'Créer la famille',
       fields: [
         dialogTextField(controller: nomController, label: 'Nom de la famille'),
         dialogDropdown<String?>(
           value: chefId,
-          label: 'Chef de famille',
+          label: 'Responsable',
           options: {
-            null: 'Aucun',
+            null: membres.isEmpty
+                ? 'Aucun membre — créez d’abord un membre'
+                : 'Aucun',
             for (final m in membres) m.id: '${m.fullName} (${m.matricule})',
           },
           onChanged: (v) => chefId = v,
@@ -143,7 +151,7 @@ class _FamillesScreenState extends State<FamillesScreen> {
     await showCreateDialog(
       context: context,
       title: 'Nouvelle cellule',
-      saveLabel: 'Créer',
+      saveLabel: 'Créer la cellule',
       fields: [
         dialogTextField(controller: nomController, label: 'Nom de la cellule'),
         dialogTextField(controller: quartierController, label: 'Quartier'),
@@ -296,6 +304,16 @@ class _FamillesScreenState extends State<FamillesScreen> {
               final familles = snapshot.data!
                   .where((f) => _matches(f.nom))
                   .toList();
+              // Vide brut (avant recherche) : une recherche sans
+              // résultat ne masque pas la recherche.
+              final famillesVides = snapshot.data!.isEmpty;
+              if (famillesVides != _famillesVides) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _famillesVides != famillesVides) {
+                    setState(() => _famillesVides = famillesVides);
+                  }
+                });
+              }
               if (familles.isEmpty) {
                 return _etatVide(
                   icon: Icons.family_restroom_outlined,
@@ -363,6 +381,16 @@ class _FamillesScreenState extends State<FamillesScreen> {
               final items = snapshot.data!
                   .where((c) => _matches(c.nom))
                   .toList();
+              // Vide brut (avant recherche) : une recherche sans
+              // résultat ne masque pas la recherche.
+              final cellulesVides = snapshot.data!.isEmpty;
+              if (cellulesVides != _cellulesVides) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _cellulesVides != cellulesVides) {
+                    setState(() => _cellulesVides = cellulesVides);
+                  }
+                });
+              }
               if (items.isEmpty) {
                 return _etatVide(
                   icon: Icons.groups_outlined,
@@ -450,56 +478,58 @@ class _FamillesScreenState extends State<FamillesScreen> {
                         Tab(text: 'Cellules'),
                       ],
                     ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (v) =>
-                            setState(() => _query = v.trim()),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: AppTheme.violetProfond,
+                  // Recherche masquée quand l'onglet courant est vide.
+                  if (!(_tab == 0 ? _famillesVides : _cellulesVides))
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        decoration: InputDecoration(
-                          hintText: _tab == 0
-                              ? 'Rechercher une famille...'
-                              : 'Rechercher une cellule...',
-                          hintStyle: TextStyle(
-                            color: AppTheme.violetProfond
-                                .withValues(alpha: 0.7),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (v) =>
+                              setState(() => _query = v.trim()),
+                          style: const TextStyle(
                             fontSize: 16,
+                            color: AppTheme.violetProfond,
                           ),
-                          prefixIcon: Icon(
-                            Icons.search,
-                            color: AppTheme.violetProfond
-                                .withValues(alpha: 0.7),
-                            size: 20,
-                          ),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          filled: true,
-                          fillColor: Colors.transparent,
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 14,
-                            horizontal: 16,
+                          decoration: InputDecoration(
+                            hintText: _tab == 0
+                                ? 'Rechercher une famille...'
+                                : 'Rechercher une cellule...',
+                            hintStyle: TextStyle(
+                              color: AppTheme.violetProfond
+                                  .withValues(alpha: 0.7),
+                              fontSize: 16,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: AppTheme.violetProfond
+                                  .withValues(alpha: 0.7),
+                              size: 20,
+                            ),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: true,
+                            fillColor: Colors.transparent,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 14,
+                              horizontal: 16,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),

@@ -111,7 +111,8 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                 children: [
                   DropdownButtonFormField<String>(
                     initialValue: type,
-                    decoration: const InputDecoration(labelText: 'Type'),
+                    decoration:
+                        const InputDecoration(labelText: 'Type d’acte *'),
                     items: _typesEvenement
                         .map((t) => DropdownMenuItem(
                               value: t,
@@ -125,8 +126,12 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     initialValue: memberId,
-                    decoration: const InputDecoration(
-                        labelText: 'Membre concerné *'),
+                    decoration: InputDecoration(
+                      labelText: 'Membre *',
+                      hintText: _membres.isEmpty
+                          ? 'Aucun membre — créez d’abord un membre'
+                          : null,
+                    ),
                     items: _membres
                         .map((m) => DropdownMenuItem(
                               value: m.id,
@@ -140,7 +145,7 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                     children: [
                       Expanded(
                         child: Text(dateEvenement == null
-                            ? 'Date de l’événement *'
+                            ? 'Date de l’acte *'
                             : formatDate(dateEvenement)),
                       ),
                       TextButton(
@@ -437,6 +442,14 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
       appBar: AppBar(title: const Text('Attestations d’actes')),
       body: Column(
         children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Text(
+              'Délivrer une attestation d’acte pastoral : baptême, '
+              'mariage, naissance.',
+              style: TextStyle(fontSize: 12.5),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Row(

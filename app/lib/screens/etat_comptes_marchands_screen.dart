@@ -65,19 +65,26 @@ class _EtatComptesMarchandsScreenState
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                const Text(
-                  'État des comptes seulement. Les numéros marchands et les clés se saisissent uniquement dans Réglages et confidentialité, section « Clés marchandes et API » — aucun champ de clé ici.',
-                  style: TextStyle(fontSize: 12),
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      'État des comptes seulement. Les numéros marchands et les clés se saisissent uniquement dans Réglages et confidentialité, section « Clés marchandes et API » — aucun champ de clé ici.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
-                for (final (code, nom, sousTitre) in _comptes)
+                for (final (code, nom, sousTitre) in _comptes) ...[
+                  SectionTitle(title: nom),
                   _CompteCard(
-                    nom: nom,
                     sousTitre: sousTitre,
                     config: configs
                         .where((c) => c.fournisseurCode == code)
                         .firstOrNull,
                   ),
+                  const SizedBox(height: 8),
+                ],
               ],
             ),
           );
@@ -88,12 +95,10 @@ class _EtatComptesMarchandsScreenState
 }
 
 class _CompteCard extends StatelessWidget {
-  final String nom;
   final String sousTitre;
   final EglisePaiement? config;
 
   const _CompteCard({
-    required this.nom,
     required this.sousTitre,
     required this.config,
   });
@@ -114,8 +119,11 @@ class _CompteCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
+                  // Maquette, écran 29 : le titre de la carte est
+                  // « Compte Wave », le nom du fournisseur est
+                  // l'en-tête de section au-dessus de la carte.
                   child: Text(
-                    nom,
+                    sousTitre,
                     style: Theme.of(context)
                         .textTheme
                         .titleMedium
@@ -131,8 +139,6 @@ class _CompteCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            Text(sousTitre),
-            const SizedBox(height: 8),
             if (!configure)
               const Text('Non configuré — aucune clé enregistrée')
             else ...[

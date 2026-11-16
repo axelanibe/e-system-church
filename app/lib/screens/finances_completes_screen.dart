@@ -156,49 +156,10 @@ class _ContenuFinancesCompletesState
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               children: [
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final crossAxisCount =
-                        constraints.maxWidth > 600 ? 4 : 2;
-                    return GridView.count(
-                      crossAxisCount: crossAxisCount,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1.9,
-                      children: [
-                        StatCard(
-                          label: 'Cotisations du mois',
-                          value: formatMontant(
-                              suivi.totaux.totalPayeFcfa, state.devise),
-                          icon: Icons.payments_outlined,
-                          color: AppTheme.violetProfond,
-                        ),
-                        StatCard(
-                          label: 'Caisse',
-                          value:
-                              formatMontant(d.solde.solde, state.devise),
-                          icon: Icons.account_balance_wallet_outlined,
-                          color: AppTheme.violetProfond,
-                        ),
-                        StatCard(
-                          label: 'Entrées du jour',
-                          value: formatMontant(d.entreesJour, state.devise),
-                          icon: Icons.trending_up,
-                          color: AppTheme.violetProfond,
-                        ),
-                        StatCard(
-                          label: 'Sorties du jour',
-                          value: formatMontant(d.sortiesJour, state.devise),
-                          icon: Icons.trending_down,
-                          color: AppTheme.violetProfond,
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
+                // Une seule grille de chiffres : celle de l'onglet
+                // Contributions (maquette écrans 2–3). Le panneau
+                // « Finances complètes » de la maquette n'a pas de
+                // grille : celle-ci, identique, est supprimée. E8.
                 _CarteFonction(
                   icone: Icons.payments_outlined,
                   titre: 'Cotisations',
@@ -249,6 +210,15 @@ class _ContenuFinancesCompletesState
                   badge: pluriel(d.nombreRecus, 'reçu'),
                   onTap: () => _ouvrir(const RecusScreen()),
                 ),
+                // Maquette, écrans 2–3 : les budgets vivent dans
+                // « Budget & caisse », onglet Contributions.
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+                  child: Text(
+                    'Budgets : « Budget & caisse », onglet Contributions.',
+                    style: TextStyle(fontSize: 12.5),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 const SectionTitle(title: 'Déclarations et exports'),
                 Card(
@@ -262,8 +232,9 @@ class _ContenuFinancesCompletesState
                           style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
+                        // Maquette, écrans 2–3 : sous-titre SYCEBNL.
                         const Text(
-                          'Bilan, compte de résultat, tableau des flux de trésorerie et notes annexes, à produire depuis votre comptabilité. L’export reste disponible pour toutes les églises, même quand le dépôt n’est pas imposé.',
+                          'Bilan, compte de résultat, flux de trésorerie',
                           style: TextStyle(fontSize: 11.5),
                         ),
                         const SizedBox(height: 12),

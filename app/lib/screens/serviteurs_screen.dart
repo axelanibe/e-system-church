@@ -546,7 +546,7 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
                 },
                 icon: const Icon(Icons.add),
                 label: Text(
-                    _tab == 0 ? 'Nouveau serviteur' : 'Nouveau service',
+                    _tab == 0 ? 'Affecter un serviteur' : 'Nouveau service',
                     style: const TextStyle(fontSize: 13.5)),
               ),
       ),

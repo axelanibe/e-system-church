@@ -12,13 +12,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-/// Tests de la tranche « carte modèle CP + espace cartes impression » :
-/// la carte suit le modèle CONNEXION PROPHÉTIQUE (nom blanc 20 px,
-/// matricule en or avec « Matricule : », établissement, QR 180 dans
-/// un encadré blanc), l'espace cartes liste les cartes (admin
-/// seulement) et la vue d'impression les montre seules. Chaque écran
-/// s'ouvre, ne déborde pas sur un téléphone (390 x 580) et revient
-/// en arrière. Aucun appel réseau : le faux service sert deux
+/// Tests de la carte horizontale maquette (écran 38) et de l'espace
+/// cartes impression : la carte suit la maquette (nom blanc 17 px,
+/// matricule en or avec « Matricule : », établissement, pastille ESC,
+/// QR 104 dans un encadré blanc), l'espace cartes liste les cartes
+/// (admin seulement) et la vue d'impression les montre seules. Chaque
+/// écran s'ouvre, ne déborde pas sur un téléphone (390 x 580) et
+/// revient en arrière. Aucun appel réseau : le faux service sert deux
 /// membres (Awa Koné GD-001, Koffi Yao GD-002).
 class _EtatFaux extends AppState {
   _EtatFaux(this._api, {this.admin = true});
@@ -84,8 +84,8 @@ const _membre = Member(
 );
 
 void main() {
-  group('Carte modèle CP', () {
-    testWidgets('nom, matricule en or avec préfixe, QR, sans répétition',
+  group('Carte horizontale maquette', () {
+    testWidgets('nom, matricule en or, pastille ESC, QR, sans répétition',
         (tester) async {
       await _ouvrir(
         tester,
@@ -95,12 +95,13 @@ void main() {
           carteSeule: true,
         ),
       );
-      expect(find.text('CARTE DE MEMBRE'), findsOneWidget);
+      // La maquette 38 n'a pas de titre « CARTE DE MEMBRE », la
+      // pastille ESC porte la marque.
+      expect(find.text('ESC'), findsOneWidget);
       expect(find.text('Awa Koné'), findsOneWidget);
       expect(find.text('Matricule : GD-001'), findsOneWidget);
       // Le matricule nu ne se répète plus sous le QR (modèle CP).
       expect(find.text('GD-001'), findsNothing);
-      expect(find.text('e-System Church'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

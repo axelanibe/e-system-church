@@ -189,7 +189,7 @@ void main() {
       ));
       expect(find.text('Marie Kouassi'), findsOneWidget);
       expect(find.text('Matricule : ESC-M-0001'), findsOneWidget);
-      expect(find.text('Église Test'), findsOneWidget);
+      expect(find.text('Église : Église Test'), findsOneWidget);
       expect(find.text('Voir ma carte de membre'), findsOneWidget);
     });
 

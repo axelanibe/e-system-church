@@ -65,7 +65,8 @@ Future<({AppState etat, List<int> onglets})> _pomper(
 Future<void> _defilerJusqua(WidgetTester tester, Finder cible) async {
   for (var i = 0; i < 10; i++) {
     if (cible.evaluate().isNotEmpty) return;
-    await tester.drag(find.byType(ListView).first, const Offset(0, -400));
+    await tester.drag(
+        find.byType(CustomScrollView).first, const Offset(0, -400));
     await tester.pump(const Duration(milliseconds: 200));
   }
   expect(cible, findsWidgets);

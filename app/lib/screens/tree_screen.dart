@@ -167,35 +167,33 @@ class _ArbreReseauState extends State<ArbreReseau> {
                 onRenamed: _refresh,
               ),
             ),
-            // Le bouton reste visible pour une mère même quand
-            // le réseau n'est plus vide : c'est le seul moyen
-            // de créer une autre sous-église (plus de FAB).
+            // Maquette, écran 12 : bouton pleine largeur, sans carte
+            // autour, directement sous « Mon réseau ». Le bouton
+            // reste visible pour une mère même quand le réseau n'est
+            // plus vide : c'est le seul moyen de créer une autre
+            // sous-église (plus de FAB).
             if (reseauVide || result.arbre.isMere) ...[
               const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (!result.arbre.isMere)
-                        const Text(
-                          'Une annexe ne peut pas avoir de '
-                          'sous-église.',
-                        ),
-                      // Le bouton n'existe que pour une mère.
-                      if (result.arbre.isMere) ...[
-                        const SizedBox(height: 16),
-                        FilledButton.icon(
-                          onPressed: _addSubChurch,
-                          icon: const Icon(Icons.add),
-                          label: const Text('Créer une sous-église', style: TextStyle(fontSize: 13.5)),
-                        ),
-                      ],
-                    ],
+              if (!result.arbre.isMere)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      'Une annexe ne peut pas avoir de sous-église.',
+                    ),
                   ),
                 ),
-              ),
+              // Le bouton n'existe que pour une mère.
+              if (result.arbre.isMere)
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _addSubChurch,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Créer une sous-église',
+                        style: TextStyle(fontSize: 13.5)),
+                  ),
+                ),
             ],
           ],
         );

@@ -71,8 +71,13 @@ class _MessagesAdminScreenState extends State<MessagesAdminScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              const Text(
+                'Messages de l’administration aux églises du réseau.',
+                style: TextStyle(fontSize: 12.5),
+              ),
+              const SizedBox(height: 12),
               const EmptyState(
-                icon: Icons.mail_outline,
+                icon: Icons.chat_bubble_outline,
                 message: 'Aucun message de l’administration.',
               ),
               const SizedBox(height: 16),
@@ -118,20 +123,20 @@ class _MessagesAdminScreenState extends State<MessagesAdminScreen> {
                           border: OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: _envoi ? null : _envoyer,
-                        child: const Text('Envoyer le message', style: TextStyle(fontSize: 13.5)),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'L’envoi aux annexes nécessite une route serveur, '
-                        'à brancher côté serveur avant d’envoyer.',
-                        style: TextStyle(fontSize: 14),
-                      ),
                     ],
                   ),
                 ),
+              ),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: _envoi ? null : _envoyer,
+                child: const Text('Envoyer le message', style: TextStyle(fontSize: 13.5)),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'L’envoi aux annexes nécessite une route serveur, '
+                'à brancher côté serveur avant d’envoyer.',
+                style: TextStyle(fontSize: 14),
               ),
             ],
           );

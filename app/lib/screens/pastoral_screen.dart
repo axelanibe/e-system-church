@@ -66,9 +66,12 @@ class _PastoralScreenState extends State<PastoralScreen> {
   String? _visiteType;
   bool _casOuverts = false;
 
-  // Une section est-elle vide ? Sert à masquer le bouton de création
-  // de l'en-tête quand l'état vide affiche déjà le sien (motif
-  // Serviteurs : un seul bouton, pas deux).
+  // La liste brute d'une section est-elle vide (avant recherche) ?
+  // Sert à masquer recherche et filtres quand la liste est vide
+  // (maquette, écrans 5 et 39 : pas de recherche sur une liste vide).
+  // La création, elle, reste dans l'en-tête (« + Nouveau… », toujours
+  // visible) : un seul point d'entrée par fonction, l'état vide
+  // n'affiche pas de bouton de création.
   bool _parcoursVides = false;
   bool _visitesVides = false;
   bool _accompagnementsVides = false;
@@ -399,7 +402,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
     await showCreateDialog(
       context: context,
       title: 'Nouvelle visite pastorale',
-      saveLabel: 'Créer',
+      saveLabel: 'Enregistrer la visite',
       fields: [
         dialogDropdown<String?>(
           value: memberId,
@@ -659,14 +662,15 @@ class _PastoralScreenState extends State<PastoralScreen> {
       children: [
         _enTeteSection(
           'Parcours',
-          onAjouter: _parcoursVides ? null : () => _nouveau(1),
+          onAjouter: () => _nouveau(1),
           libelleAjouter: 'Nouveau parcours',
         ),
-        searchField(
-          controller: _rechercheParcoursController,
-          onChanged: (v) => setState(() => _queryParcours = v.trim()),
-          label: 'Rechercher un parcours',
-        ),
+        if (!_parcoursVides)
+          searchField(
+            controller: _rechercheParcoursController,
+            onChanged: (v) => setState(() => _queryParcours = v.trim()),
+            label: 'Rechercher un parcours',
+          ),
         FutureBuilder<List<ParcoursNouveau>>(
             future: _parcoursFuture,
             builder: (context, snapshot) {
@@ -683,28 +687,24 @@ class _PastoralScreenState extends State<PastoralScreen> {
                   .where((p) =>
                       _matches(noms[p.memberId] ?? p.memberId, _queryParcours))
                   .toList();
-              if (items.isEmpty != _parcoursVides) {
+              // Vide brut (avant recherche) : une recherche sans
+              // résultat ne masque pas la recherche.
+              final videParcours = snapshot.data!.isEmpty;
+              if (videParcours != _parcoursVides) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted && _parcoursVides != items.isEmpty) {
-                    setState(() => _parcoursVides = items.isEmpty);
+                  if (mounted && _parcoursVides != videParcours) {
+                    setState(() => _parcoursVides = videParcours);
                   }
                 });
               }
               if (items.isEmpty) {
+                // Un seul point d'entrée : « + Nouveau parcours »
+                // dans l'en-tête, toujours visible (maquette écran 5).
                 return EmptyState(
                   icon: Icons.route_outlined,
                   message: snapshot.data!.isEmpty
                       ? 'Aucun parcours.'
                       : 'Aucun parcours ne correspond à la recherche.',
-                  actionLabel: 'Créer un parcours',
-                  onAction: () async {
-                    try {
-                      final membres = await _membres();
-                      if (mounted) await _createParcours(membres);
-                    } catch (e) {
-                      if (context.mounted) showApiError(context, e);
-                    }
-                  },
                 );
               }
               return ListView.builder(
@@ -741,23 +741,25 @@ class _PastoralScreenState extends State<PastoralScreen> {
       children: [
         _enTeteSection(
           'Visites',
-          onAjouter: _visitesVides ? null : () => _nouveau(2),
+          onAjouter: () => _nouveau(2),
           libelleAjouter: 'Nouvelle visite',
         ),
-        searchField(
-          controller: _rechercheVisitesController,
-          onChanged: (v) => setState(() => _queryVisites = v.trim()),
-          label: 'Rechercher une visite',
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-          child: _filtreChips(
-            valeurs: const [null, 'domicile', 'hopital'],
-            selection: _visiteType,
-            label: (v) => v == null ? 'Toutes' : _typesVisite[v]!,
-            onSelect: (v) => setState(() => _visiteType = v),
+        if (!_visitesVides)
+          searchField(
+            controller: _rechercheVisitesController,
+            onChanged: (v) => setState(() => _queryVisites = v.trim()),
+            label: 'Rechercher une visite',
           ),
-        ),
+        if (!_visitesVides)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: _filtreChips(
+              valeurs: const [null, 'domicile', 'hopital'],
+              selection: _visiteType,
+              label: (v) => v == null ? 'Toutes' : _typesVisite[v]!,
+              onSelect: (v) => setState(() => _visiteType = v),
+            ),
+          ),
         FutureBuilder<List<VisitePastorale>>(
             future: _visitesFuture,
             builder: (context, snapshot) {
@@ -774,28 +776,24 @@ class _PastoralScreenState extends State<PastoralScreen> {
                   .where((v) =>
                       _matches(noms[v.memberId] ?? v.memberId, _queryVisites))
                   .toList();
-              if (items.isEmpty != _visitesVides) {
+              // Vide brut (avant recherche) : une recherche sans
+              // résultat ne masque ni la recherche ni les filtres.
+              final videVisites = snapshot.data!.isEmpty;
+              if (videVisites != _visitesVides) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted && _visitesVides != items.isEmpty) {
-                    setState(() => _visitesVides = items.isEmpty);
+                  if (mounted && _visitesVides != videVisites) {
+                    setState(() => _visitesVides = videVisites);
                   }
                 });
               }
               if (items.isEmpty) {
+                // Un seul point d'entrée : « + Nouvelle visite »
+                // dans l'en-tête, toujours visible (maquette écran 5).
                 return EmptyState(
                   icon: Icons.home_outlined,
                   message: snapshot.data!.isEmpty
                       ? 'Aucune visite.'
                       : 'Aucune visite ne correspond à la recherche.',
-                  actionLabel: 'Planifier une visite',
-                  onAction: () async {
-                    try {
-                      final membres = await _membres();
-                      if (mounted) await _createVisite(membres);
-                    } catch (e) {
-                      if (context.mounted) showApiError(context, e);
-                    }
-                  },
                 );
               }
               return ListView.builder(
@@ -837,24 +835,26 @@ class _PastoralScreenState extends State<PastoralScreen> {
       children: [
         _enTeteSection(
           'Accompagnements',
-          onAjouter: _accompagnementsVides ? null : () => _nouveau(3),
+          onAjouter: () => _nouveau(3),
           libelleAjouter: 'Nouvel accompagnement',
         ),
-        searchField(
-          controller: _rechercheAccompagnementsController,
-          onChanged: (v) =>
-              setState(() => _queryAccompagnements = v.trim()),
-          label: 'Rechercher un accompagnement',
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-          child: _filtreChips(
-            valeurs: const [null, 'ouverts'],
-            selection: _casOuverts ? 'ouverts' : null,
-            label: (v) => v == null ? 'Tous' : 'Cas ouverts',
-            onSelect: (v) => setState(() => _casOuverts = v == 'ouverts'),
+        if (!_accompagnementsVides)
+          searchField(
+            controller: _rechercheAccompagnementsController,
+            onChanged: (v) =>
+                setState(() => _queryAccompagnements = v.trim()),
+            label: 'Rechercher un accompagnement',
           ),
-        ),
+        if (!_accompagnementsVides)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: _filtreChips(
+              valeurs: const [null, 'ouverts'],
+              selection: _casOuverts ? 'ouverts' : null,
+              label: (v) => v == null ? 'Tous' : 'Cas ouverts',
+              onSelect: (v) => setState(() => _casOuverts = v == 'ouverts'),
+            ),
+          ),
         FutureBuilder<List<Accompagnement>>(
             future: _accompagnementsFuture,
             builder: (context, snapshot) {
@@ -871,16 +871,21 @@ class _PastoralScreenState extends State<PastoralScreen> {
                   .where((a) => _matches(
                       noms[a.memberId] ?? a.memberId, _queryAccompagnements))
                   .toList();
-              if (items.isEmpty != _accompagnementsVides) {
+              // Vide brut (avant recherche) : une recherche sans
+              // résultat ne masque ni la recherche ni les filtres.
+              final videAccompagnements = snapshot.data!.isEmpty;
+              if (videAccompagnements != _accompagnementsVides) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (mounted &&
-                      _accompagnementsVides != items.isEmpty) {
-                    setState(
-                        () => _accompagnementsVides = items.isEmpty);
+                      _accompagnementsVides != videAccompagnements) {
+                    setState(() =>
+                        _accompagnementsVides = videAccompagnements);
                   }
                 });
               }
               if (items.isEmpty) {
+                // Un seul point d'entrée : « + Nouvel accompagnement »
+                // dans l'en-tête, toujours visible (maquette écran 5).
                 return EmptyState(
                   icon: Icons.handshake_outlined,
                   message: snapshot.data!.isEmpty
@@ -888,15 +893,6 @@ class _PastoralScreenState extends State<PastoralScreen> {
                           ? 'Aucun cas ouvert.'
                           : 'Aucun accompagnement.')
                       : 'Aucun accompagnement ne correspond à la recherche.',
-                  actionLabel: 'Créer un accompagnement',
-                  onAction: () async {
-                    try {
-                      final membres = await _membres();
-                      if (mounted) await _createAccompagnement(membres);
-                    } catch (e) {
-                      if (context.mounted) showApiError(context, e);
-                    }
-                  },
                 );
               }
               return ListView.builder(
@@ -932,25 +928,11 @@ class _PastoralScreenState extends State<PastoralScreen> {
     // Projection : un seul écran à défiler, 4 sections en ligne
     // (Radar, Parcours, Visites, Accompagnements), pas d'onglets. E-R2.
     return Scaffold(
+      // Maquette, écrans 5 et 39 : « Événements de vie » hors de
+      // l'AppBar, lien texte violet en tête du contenu (même motif
+      // que « Ouvrir les rendez-vous » en bas d'écran).
       appBar: AppBar(
         title: const Text('Suivi pastoral'),
-        actions: [
-          // Libellé visible, pas une icône seule (E-R7).
-          TextButton.icon(
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.white,
-            ),
-            icon: const Icon(Icons.cake_outlined),
-            label: const Text('Événements de vie', style: TextStyle(fontSize: 12.5)),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const EvenementsVieScreen(),
-                ),
-              );
-            },
-          ),
-        ],
       ),
       body: FutureBuilder<MemberPage>(
         future: _membresFuture,
@@ -976,27 +958,68 @@ class _PastoralScreenState extends State<PastoralScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               child: Column(
                 children: [
+                  // Maquette, écrans 5 et 39 : « Événements de vie »
+                  // hors de l'AppBar, lien texte violet en tête du
+                  // contenu, un seul point d'entrée vers cet écran.
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  const EvenementsVieScreen(),
+                            ),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.violetProfond,
+                          padding: EdgeInsets.zero,
+                        ),
+                        icon:
+                            const Icon(Icons.cake_outlined, size: 18),
+                        label: const Text(
+                          'Événements de vie',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ),
+                  ),
                   _sectionRadar(),
                   _sectionParcours(noms),
                   _sectionVisites(noms),
                   _sectionAccompagnements(noms),
-                  // Maquette, écran 39 : bouton en bas d'écran.
+                  // Maquette, écran 39 : lien texte violet, pas un bouton.
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                const RendezVousAdminScreen(),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.event_available_outlined),
-                      label: const Text(
-                        'Ouvrir les rendez-vous',
-                        // Maquette, écran 39 : 13 px.
-                        style: TextStyle(fontSize: 13),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  const RendezVousAdminScreen(),
+                            ),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.violetProfond,
+                          padding: EdgeInsets.zero,
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Ouvrir les rendez-vous',
+                              // Maquette, écran 39 : 13 px.
+                              style: TextStyle(fontSize: 13),
+                            ),
+                            Icon(Icons.chevron_right, size: 16),
+                          ],
+                        ),
                       ),
                     ),
                   ),

@@ -6,6 +6,7 @@ import '../models/confiance.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import 'settings_screen.dart';
 
 /// T11 — Notifications : boîte d'envoi (push et SMS), création, envoi,
 /// et paramètres du fournisseur. Aucun fournisseur n'est branché :
@@ -127,6 +128,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  // Maquette, écran 16 : phrase d'intro.
+                  Text(
+                    'Envoyer des notifications aux membres, via le '
+                    'fournisseur configuré.',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                   if (_erreur != null)
                     Card(
                       color: AppTheme.rougeErreur.withValues(alpha: 0.08),
@@ -143,44 +153,45 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         child: Text(_message!),
                       ),
                     ),
+                  // Maquette, écran 16 : ligne Fournisseur cliquable
+                  // vers Réglages, où se saisit la clé API. Aucune
+                  // clé ne se saisit ici.
+                  const SectionTitle(title: 'Fournisseur'),
                   Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Fournisseur',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 11.5),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _parametres?.notificationsConfigurees == true
-                                ? 'Fournisseur configuré : ${_parametres!.notificationFournisseur ?? ''}.\n•••••••• — chiffrée, jamais affichée en clair.'
-                                : 'Aucun fournisseur.',
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'La clé du fournisseur se saisit dans Réglages et confidentialité.',
-                          ),
-                        ],
+                    child: ListTile(
+                      leading: const CircleAvatar(
+                        backgroundColor: AppTheme.orClair,
+                        child: Icon(Icons.notifications_outlined,
+                            color: AppTheme.orFonce),
                       ),
+                      title: const Text(
+                        'Fournisseur',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13.5),
+                      ),
+                      subtitle: Text(
+                        _parametres?.notificationsConfigurees == true
+                            ? 'Fournisseur configuré : ${_parametres!.notificationFournisseur ?? ''}.\n•••••••• — chiffrée, jamais affichée en clair.'
+                            : 'Aucun fournisseur configuré — clé API dans Réglages',
+                        style: const TextStyle(fontSize: 11.5),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const SettingsScreen(),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SectionTitle(title: 'Nouvelle notification'),
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Nouvelle notification',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 11.5),
-                          ),
-                          const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
                             initialValue: _destinataires,
                             decoration: const InputDecoration(
@@ -243,12 +254,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Boîte d’envoi',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
-                  ),
-                  const SizedBox(height: 8),
+                  const SectionTitle(title: 'Boîte d’envoi'),
                   if (_notifications.isEmpty)
                     const Card(
                       child: Padding(

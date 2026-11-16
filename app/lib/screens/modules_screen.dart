@@ -145,7 +145,7 @@ class ModulesScreen extends StatelessWidget {
           context,
           Scaffold(
             appBar: AppBar(
-              title: const Text('Bible et école'),
+              title: const Text('Bible et école biblique'),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.school_outlined),
@@ -187,91 +187,114 @@ class ModulesScreen extends StatelessWidget {
       appBar: sansAppBar
           ? null
           : AppBar(title: const Text('Modules de l’église')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            'Tous les modules',
-            // Maquette, écran 21 : 16 px.
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontSize: 16),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Une carte par fonction : touchez un module pour ouvrir '
-            'son écran.',
-            // Maquette, écran 21 : 12,5 px.
-            style: TextStyle(fontSize: 12.5),
-          ),
-          const SizedBox(height: 8),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final crossAxisCount = constraints.maxWidth > 600 ? 3 : 2;
-              return GridView.count(
-                crossAxisCount: crossAxisCount,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 9,
-                crossAxisSpacing: 9,
-                childAspectRatio: 0.82,
-                children: [
-                  for (final (cible, titre, description, icone)
-                      in _modules)
-                    Card(
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () => _ouvrir(context, cible),
-                        child: Padding(
-                          // Maquette, écran 21 (.modcard) : 10 px.
-                          padding: const EdgeInsets.all(10),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(icone,
-                                      color: AppTheme.orFonce, size: 19),
-                                  const Spacer(),
-                                  const Icon(Icons.chevron_right,
-                                      color: AppTheme.orFonce, size: 15),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                titre,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                // Maquette, écran 21 (.modcard .mt) : 13 px.
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13),
-                              ),
-                              const SizedBox(height: 4),
-                              Expanded(
-                                child: Text(
-                                  description,
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  // Maquette, écran 21 (.modcard .md) : 11 px.
-                                  style:
-                                      const TextStyle(fontSize: 11),
+      // Un seul défilement : en-tête et grille dans le même
+      // CustomScrollView (SliverGrid), sans défilement imbriqué. E5.
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final crossAxisCount = constraints.maxWidth > 600 ? 3 : 2;
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Tous les modules',
+                        // Maquette, écran 21 : 16 px.
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(fontSize: 16),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Une carte par fonction : touchez un module pour ouvrir '
+                        'son écran.',
+                        // Maquette, écran 21 : 12,5 px.
+                        style: TextStyle(fontSize: 12.5),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                sliver: SliverGrid.count(
+                  crossAxisCount: crossAxisCount,
+                  mainAxisSpacing: 9,
+                  crossAxisSpacing: 9,
+                  // Cartes compactes, à la hauteur de leur contenu
+                  // (icône, titre, description) : 1,25 en 2 colonnes,
+                  // 2,0 en 3 colonnes. L'ancien 0,82 laissait un grand
+                  // vide blanc sous chaque module.
+                  childAspectRatio:
+                      crossAxisCount == 2 ? 1.25 : 2.0,
+                  children: [
+                    for (final (cible, titre, description, icone)
+                        in _modules)
+                      Card(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => _ouvrir(context, cible),
+                          child: Padding(
+                            // Maquette, écran 21 (.modcard) : 10 px.
+                            padding: const EdgeInsets.all(10),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(icone,
+                                        color: AppTheme.orFonce, size: 19),
+                                    const Spacer(),
+                                    const Icon(Icons.chevron_right,
+                                        color: AppTheme.orFonce, size: 15),
+                                  ],
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 12),
+                                // Zone de titre de hauteur fixe (2 lignes
+                                // de 13 px) : le sous-titre commence à
+                                // la même hauteur d'une carte à l'autre,
+                                // titres et chevrons alignés. E10.
+                                SizedBox(
+                                  height: 32,
+                                  child: Text(
+                                    titre,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    // Maquette, écran 21 (.modcard .mt) : 13 px.
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Expanded(
+                                  child: Text(
+                                    description,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    // Maquette, écran 21 (.modcard .md) : 11 px.
+                                    style:
+                                        const TextStyle(fontSize: 11),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
-              );
-            },
-          ),
-        ],
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
