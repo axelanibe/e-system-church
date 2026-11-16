@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../config/app_config.dart';
 import '../config/app_theme.dart';
@@ -9,21 +8,11 @@ import '../widgets/logo_app.dart';
 /// À propos : ce qu'est e-System Church, son objectif, son utilité,
 /// son créateur et son contact. Textes repris mot pour mot de la
 /// projection validée par Axel le 12 novembre 2026. Aucun numéro de
-/// version inventé.
+/// version inventé, et aucun numéro de téléphone : la maquette
+/// (écran 18) dit « Contact à ajouter une fois un numéro public
+/// confirmé ».
 class AProposScreen extends StatelessWidget {
   const AProposScreen({super.key});
-
-  static const String _telephone = '+1 873 307 5022';
-
-  Future<void> _appeler(BuildContext context) async {
-    final ouvert = await launchUrl(
-      Uri.parse('tel:+18733075022'),
-      mode: LaunchMode.externalApplication,
-    );
-    if (!ouvert && context.mounted) {
-      showApiError(context, 'Impossible d’ouvrir l’appel. $_telephone');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,92 +61,91 @@ class AProposScreen extends StatelessWidget {
                   ),
                 ),
                 const SectionTitle(title: 'C’est quoi'),
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                      'e-System Church est une seule plateforme qui centralise les églises dans le monde entier — l’église sans frontières. Plusieurs églises peuvent l’utiliser en simultané, où qu’elles se trouvent. Chaque membre est rattaché à une seule église, sans mélange entre les églises.',
-                      style: TextStyle(fontSize: 12.5),
-                    ),
-                  ),
-                ),
-                const SectionTitle(title: 'Son objectif'),
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                      'Aider chaque église à gérer ses membres, ses cultes, ses finances, ses campagnes et ses attestations, depuis une seule application. L’application fonctionne sur le web et sur téléphone, avec les mêmes données partout.',
-                      style: TextStyle(fontSize: 12.5),
-                    ),
-                  ),
-                ),
-                const SectionTitle(title: 'Son utilité'),
+                // Maquette, écran 18 : les deux paragraphes (c'est
+                // quoi, puis l'objectif) dans une seule carte, sans
+                // section « Son objectif » séparée.
                 const Card(
                   child: Padding(
                     padding: EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _UtiliteLigne(
-                          qui: 'Pour la Plateforme',
-                          quoi: 'Voir l’ensemble des églises.',
+                        Text(
+                          'e-System Church est une seule plateforme qui centralise les églises dans le monde entier — l’église sans frontières. Plusieurs églises peuvent l’utiliser en simultané, où qu’elles se trouvent. Chaque membre est rattaché à une seule église, sans mélange entre les églises.',
+                          style: TextStyle(fontSize: 12.5),
                         ),
                         SizedBox(height: 12),
-                        _UtiliteLigne(
-                          qui: 'Pour l’église mère',
-                          quoi: 'Gérer son église et ses annexes.',
-                        ),
-                        SizedBox(height: 12),
-                        _UtiliteLigne(
-                          qui: 'Pour les annexes',
-                          quoi: 'Gérer leur propre église.',
-                        ),
-                        SizedBox(height: 12),
-                        _UtiliteLigne(
-                          qui: 'Pour le fidèle',
-                          quoi:
-                              'Retrouver sa carte, sa Bible, ses cotisations, son journal et sa messagerie avec son église.',
+                        Text(
+                          'Aider chaque église à gérer ses membres, ses cultes, ses finances, ses campagnes et ses attestations, depuis une seule application. L’application fonctionne sur le web et sur téléphone, avec les mêmes données partout.',
+                          style: TextStyle(fontSize: 12.5),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SectionTitle(title: 'Son créateur'),
+                const SectionTitle(title: 'Son utilité'),
                 const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                      'Fondateur — Axel Maurice Anibe, créateur du projet',
-                      style: TextStyle(fontSize: 16),
-                    ),
+                  child: Column(
+                    children: [
+                      _UtiliteLigne(
+                        icone: Icons.public_outlined,
+                        qui: 'Plateforme',
+                        quoi: 'Voir l’ensemble des églises.',
+                      ),
+                      Divider(height: 1),
+                      _UtiliteLigne(
+                        icone: Icons.home_work_outlined,
+                        qui: 'Église mère',
+                        quoi: 'Gérer son église et ses annexes.',
+                      ),
+                      Divider(height: 1),
+                      _UtiliteLigne(
+                        icone: Icons.apartment_outlined,
+                        qui: 'Annexes',
+                        quoi: 'Gérer leur propre église.',
+                      ),
+                      Divider(height: 1),
+                      _UtiliteLigne(
+                        icone: Icons.person_outlined,
+                        qui: 'Fidèle',
+                        quoi:
+                            'Retrouver sa carte, sa Bible, ses cotisations, son journal et sa messagerie avec son église.',
+                      ),
+                    ],
                   ),
                 ),
                 const SectionTitle(title: 'Version et contact'),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        const ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Icon(Icons.info_outline),
-                          title: Text(
-                              'Version ${AppConfig.appVersion}',
-                              style: TextStyle(fontSize: 13.5)),
-                        ),
-                        const Divider(),
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.phone_outlined),
-                          title: const Text('Contact', style: TextStyle(fontSize: 13.5)),
-                          subtitle: const Text(
-                              'Axel Maurice Anibe\n$_telephone',
-                              style: TextStyle(fontSize: 11.5)),
-                          trailing: const Icon(Icons.call_outlined),
-                          onTap: () => _appeler(context),
-                        ),
-                      ],
-                    ),
+                // Maquette, écran 18 : Version, Fondateur et contact
+                // dans la même carte, sans section « Son créateur »
+                // séparée.
+                const Card(
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: Icon(Icons.info_outline),
+                        title: Text(
+                            'Version ${AppConfig.appVersion}',
+                            style: TextStyle(fontSize: 13.5)),
+                      ),
+                      Divider(height: 1),
+                      ListTile(
+                        leading: Icon(Icons.auto_awesome_outlined),
+                        title: Text('Fondateur',
+                            style: TextStyle(fontSize: 13.5)),
+                        subtitle: Text(
+                            'Axel Maurice Anibe, créateur du projet',
+                            style: TextStyle(fontSize: 11.5)),
+                      ),
+                      Divider(height: 1),
+                      ListTile(
+                        leading: Icon(Icons.person_outlined),
+                        title: Text('Axel Maurice Anibe',
+                            style: TextStyle(fontSize: 13.5)),
+                        subtitle: Text(
+                            'Contact à ajouter une fois un numéro public confirmé',
+                            style: TextStyle(fontSize: 11.5)),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -170,23 +158,24 @@ class AProposScreen extends StatelessWidget {
 }
 
 class _UtiliteLigne extends StatelessWidget {
+  final IconData icone;
   final String qui;
   final String quoi;
 
-  const _UtiliteLigne({required this.qui, required this.quoi});
+  const _UtiliteLigne(
+      {required this.icone, required this.qui, required this.quoi});
 
   @override
   Widget build(BuildContext context) {
-    return RichText(
-      text: TextSpan(
-        style: DefaultTextStyle.of(context).style.copyWith(fontSize: 13.5),
-        children: [
-          TextSpan(
-            text: '$qui — ',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          TextSpan(text: quoi, style: const TextStyle(fontSize: 11.5)),
-        ],
+    return ListTile(
+      leading: Icon(icone, color: AppTheme.or),
+      title: Text(
+        qui,
+        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+      ),
+      subtitle: Text(
+        quoi,
+        style: const TextStyle(fontSize: 11.5),
       ),
     );
   }

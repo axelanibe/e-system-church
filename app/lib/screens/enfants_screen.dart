@@ -29,6 +29,10 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
   int _tab = 0;
   // Un bool par onglet : le FAB se masque quand l'onglet courant est vide.
   final List<bool> _ongletVide = [false, false, false];
+  // Liste brute vide (avant recherche) par onglet : masque la recherche
+  // de l'onglet quand sa liste est vide (maquette écran 4 : pas de
+  // recherche sur une liste vide).
+  final List<bool> _donneesVides = [false, false, false];
   final _searchController = TextEditingController();
   String _query = '';
 
@@ -248,11 +252,12 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
   Widget _classesTab() {
     return Column(
       children: [
-        searchField(
-          controller: _searchController,
-          onChanged: (v) => setState(() => _query = v.trim()),
-          label: 'Rechercher une classe',
-        ),
+        if (!_donneesVides[0])
+          searchField(
+            controller: _searchController,
+            onChanged: (v) => setState(() => _query = v.trim()),
+            label: 'Rechercher une classe',
+          ),
         Expanded(
           child: FutureBuilder<List<ClasseEnfant>>(
             future: _classesFuture,
@@ -269,6 +274,18 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
               final items = snapshot.data!
                   .where((c) => _matches(c.nom))
                   .toList();
+              // Vide brut (avant recherche) : une recherche sans
+              // résultat ne masque pas la recherche.
+              final donneesVidesClasses = snapshot.data!.isEmpty;
+              if (donneesVidesClasses != _donneesVides[0]) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted &&
+                      _donneesVides[0] != donneesVidesClasses) {
+                    setState(
+                        () => _donneesVides[0] = donneesVidesClasses);
+                  }
+                });
+              }
               if (items.isEmpty != _ongletVide[0]) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (mounted && _ongletVide[0] != items.isEmpty) {
@@ -322,11 +339,12 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
   Widget _autorisationsTab(Map<String, String> noms) {
     return Column(
       children: [
-        searchField(
-          controller: _searchController,
-          onChanged: (v) => setState(() => _query = v.trim()),
-          label: 'Rechercher une autorisation',
-        ),
+        if (!_donneesVides[1])
+          searchField(
+            controller: _searchController,
+            onChanged: (v) => setState(() => _query = v.trim()),
+            label: 'Rechercher une autorisation',
+          ),
         Expanded(
           child: FutureBuilder<List<AutorisationSortie>>(
             future: _autorisationsFuture,
@@ -345,6 +363,18 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
                       _matches(a.activite) ||
                       _matches(noms[a.enfantMemberId] ?? ''))
                   .toList();
+              // Vide brut (avant recherche) : une recherche sans
+              // résultat ne masque pas la recherche.
+              final donneesVidesAutorisations = snapshot.data!.isEmpty;
+              if (donneesVidesAutorisations != _donneesVides[1]) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted &&
+                      _donneesVides[1] != donneesVidesAutorisations) {
+                    setState(() =>
+                        _donneesVides[1] = donneesVidesAutorisations);
+                  }
+                });
+              }
               if (items.isEmpty != _ongletVide[1]) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (mounted && _ongletVide[1] != items.isEmpty) {
@@ -438,11 +468,12 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
   Widget _activitesTab(Map<String, String> noms) {
     return Column(
       children: [
-        searchField(
-          controller: _searchController,
-          onChanged: (v) => setState(() => _query = v.trim()),
-          label: 'Rechercher une activité',
-        ),
+        if (!_donneesVides[2])
+          searchField(
+            controller: _searchController,
+            onChanged: (v) => setState(() => _query = v.trim()),
+            label: 'Rechercher une activité',
+          ),
         Expanded(
           child: FutureBuilder<List<ActiviteJeunesse>>(
             future: _activitesFuture,
@@ -459,6 +490,18 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
               final items = snapshot.data!
                   .where((a) => _matches(a.titre))
                   .toList();
+              // Vide brut (avant recherche) : une recherche sans
+              // résultat ne masque pas la recherche.
+              final donneesVidesActivites = snapshot.data!.isEmpty;
+              if (donneesVidesActivites != _donneesVides[2]) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted &&
+                      _donneesVides[2] != donneesVidesActivites) {
+                    setState(() =>
+                        _donneesVides[2] = donneesVidesActivites);
+                  }
+                });
+              }
               if (items.isEmpty != _ongletVide[2]) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (mounted && _ongletVide[2] != items.isEmpty) {

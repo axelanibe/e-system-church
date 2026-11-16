@@ -582,10 +582,20 @@ Future<void> ouvrirNouveauCulte(BuildContext context,
     title: 'Nouveau culte',
     saveLabel: 'Créer le culte',
     fields: [
+      const Padding(
+        padding: EdgeInsets.only(bottom: 12),
+        child: Text(
+          'Programmer un culte : date, heure, lieu et conducteur.',
+          style: TextStyle(fontSize: 12.5),
+        ),
+      ),
       dialogDateField(
           context: context, controller: dateController, label: 'Date *'),
       _DialogTimeField(controller: heureController, label: 'Heure *'),
-      dialogTextField(controller: lieuController, label: 'Lieu *'),
+      dialogTextField(
+          controller: lieuController,
+          label: 'Lieu *',
+          hintText: 'Lieu du culte'),
       dialogDropdown<String>(
         value: conducteurId,
         label: 'Conducteur *',
@@ -657,6 +667,7 @@ class _DialogTimeFieldState extends State<_DialogTimeField> {
         readOnly: true,
         decoration: InputDecoration(
           labelText: widget.label,
+          hintText: 'Choisir l’heure',
           border: const OutlineInputBorder(),
           isDense: true,
           suffixIcon: const Icon(Icons.access_time_outlined),

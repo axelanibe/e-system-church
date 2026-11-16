@@ -53,29 +53,6 @@ class _AttestationsAnnuellesScreenState
 
   void _refresh() => setState(() => _future = _load());
 
-  /// Génération groupée existante, gardée telle quelle.
-  Future<void> _generer() async {
-    setState(() => _working = true);
-    try {
-      final creees = await context
-          .read<AppState>()
-          .api
-          .genererAttestations(annee: _annee);
-      if (!mounted) return;
-      showSuccess(
-        context,
-        creees.isEmpty
-            ? 'Aucune nouvelle attestation pour $_annee.'
-            : '${pluriel(creees.length, 'attestation créée', 'attestations créées')} pour $_annee.',
-      );
-      _refresh();
-    } catch (e) {
-      if (mounted) showApiError(context, e);
-    } finally {
-      if (mounted) setState(() => _working = false);
-    }
-  }
-
   /// Délivrance individuelle : génération groupée, puis on retrouve
   /// l'attestation du membre choisi pour l'année.
   Future<void> _delivrer() async {
@@ -143,6 +120,12 @@ class _AttestationsAnnuellesScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const Text(
+                  'Le document qui totalise, pour un membre, ses '
+                  'cotisations et ses dons d’une année.',
+                  style: TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 12),
                 if (_membres.isEmpty)
                   const Text(
                     'Aucun membre — créez d’abord un membre',
@@ -191,12 +174,6 @@ class _AttestationsAnnuellesScreenState
                       _working || _memberId == null ? null : _delivrer,
                   icon: const Icon(Icons.description_outlined),
                   label: const Text('Délivrer l’attestation', style: TextStyle(fontSize: 13.5)),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: _working ? null : _generer,
-                  icon: const Icon(Icons.description_outlined),
-                  label: const Text('Générer', style: TextStyle(fontSize: 13.5)),
                 ),
               ],
             ),

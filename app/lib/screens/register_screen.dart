@@ -8,9 +8,11 @@ import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/selecteur_indicatif_pays.dart';
 
 /// Validation du téléphone facultatif : vide accepté, sinon au moins
-/// 8 caractères. Le serveur normalise le numéro (0… → +225…).
+/// 8 caractères. L’indicatif choisi est préfixé à l’envoi, le serveur
+/// normalise ensuite le numéro.
 String? validerTelephoneFacultatif(String? v) {
   if (v == null || v.trim().isEmpty) return null;
   if (v.trim().length < 8) return 'Téléphone invalide (8 caractères minimum).';
@@ -46,6 +48,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _error;
   bool _obscurePassword = true;
   bool _obscurePasswordConfirm = true;
+  // Indicatifs des deux téléphones : Côte d’Ivoire au départ,
+  // l’utilisateur peut choisir un autre pays pour chacun.
+  String _indicatifEgliseIso = 'CI';
+  String _indicatifAdminIso = 'CI';
   // Logo choisi à l'inscription (facultatif) : téléversé après la création
   // de l'église, comme dans Mon église. Sans logo, les initiales de
   // l'église s'affichent sur fond violet profond.
@@ -109,12 +115,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
             city: _cityController.text.trim(),
             churchPhone: _churchPhoneController.text.trim().isEmpty
                 ? null
-                : _churchPhoneController.text.trim(),
+                : composerTelephoneAvecIndicatif(
+                    indicatifParIso(_indicatifEgliseIso).indicatif,
+                    _churchPhoneController.text.trim(),
+                  ),
             adminName: _adminNameController.text.trim(),
             adminEmail: _adminEmailController.text.trim(),
             adminPhone: _adminPhoneController.text.trim().isEmpty
                 ? null
-                : _adminPhoneController.text.trim(),
+                : composerTelephoneAvecIndicatif(
+                    indicatifParIso(_indicatifAdminIso).indicatif,
+                    _adminPhoneController.text.trim(),
+                  ),
             password: _passwordController.text,
             parentCode: _joinMother
                 ? _parentCodeController.text.trim().toUpperCase()
@@ -256,11 +268,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _churchPhoneController,
                     keyboardType: TextInputType.phone,
                     textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
+                    style: const TextStyle(fontSize: 16),
+                    decoration: InputDecoration(
                       labelText: 'Téléphone de l’église',
-                      prefixText: '+225 ',
+                      prefix: SelecteurIndicatifPays(
+                        iso: _indicatifEgliseIso,
+                        onChanged: (iso) =>
+                            setState(() => _indicatifEgliseIso = iso),
+                      ),
                       hintText: 'Ex. 07 00 00 00',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   if (_joinMother) ...[
@@ -352,11 +369,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _adminPhoneController,
                     keyboardType: TextInputType.phone,
                     textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
+                    style: const TextStyle(fontSize: 16),
+                    decoration: InputDecoration(
                       labelText: 'Téléphone de l’administrateur',
-                      prefixText: '+225 ',
+                      prefix: SelecteurIndicatifPays(
+                        iso: _indicatifAdminIso,
+                        onChanged: (iso) =>
+                            setState(() => _indicatifAdminIso = iso),
+                      ),
                       hintText: 'Ex. 07 00 00 00',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                     validator: validerTelephoneFacultatif,
                   ),

@@ -291,23 +291,12 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Créneaux proposés',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontSize: 11.5),
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: _ajouterCreneau,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Proposer un créneau', style: TextStyle(fontSize: 13.5)),
-                  ),
-                ],
+              Text(
+                'Créneaux proposés',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontSize: 11.5),
               ),
               FutureBuilder<List<CreneauPasteur>>(
                 future: _creneauxFuture,
@@ -424,7 +413,13 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
       appBar: AppBar(title: const Text('Rendez-vous')),
       body: Column(
         children: [
-          _sectionCreneaux(),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Text(
+              'Créneaux proposés par l’église et demandes des membres.',
+              style: TextStyle(fontSize: 12.5),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: SingleChildScrollView(
@@ -479,7 +474,7 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
                       if (items.isEmpty) {
                         return const EmptyState(
                           icon: Icons.calendar_month_outlined,
-                          message: 'Aucun rendez-vous',
+                          message: 'Aucune demande de rendez-vous.',
                         );
                       }
                       return RefreshIndicator(
@@ -515,6 +510,27 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+          _sectionCreneaux(),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Text(
+              'Un rendez-vous ne se confirme qu’avec un créneau proposé par l’église : le membre choisit parmi les créneaux, il ne réserve pas librement.',
+              style: TextStyle(
+                  fontSize: 11.5, color: AppTheme.texteSecondaire),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _ajouterCreneau,
+                icon: const Icon(Icons.add),
+                label: const Text('Proposer un créneau',
+                    style: TextStyle(fontSize: 13.5)),
+              ),
             ),
           ),
         ],

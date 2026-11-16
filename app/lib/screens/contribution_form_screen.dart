@@ -346,6 +346,43 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const Text(
+                    'Saisir une contribution : type, montant et moyen.',
+                    style: TextStyle(fontSize: 12.5),
+                  ),
+                  const SizedBox(height: 12),
+                  // Membre obligatoire : sans membre, l'état vide de la
+                  // maquette, pas un sélecteur vide.
+                  if (_members.isEmpty)
+                    const Text(
+                      'Aucun membre — créez d’abord un membre',
+                      style: TextStyle(fontSize: 16),
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      initialValue: _memberId,
+                      decoration: const InputDecoration(
+                        labelText: 'Membre *',
+                        border: OutlineInputBorder(),
+                      ),
+                      hint: const Text('Choisir un membre'),
+                      validator: (v) {
+                        if (v == null) {
+                          return 'Un membre est requis.';
+                        }
+                        return null;
+                      },
+                      items: [
+                        for (final m in _members)
+                          DropdownMenuItem(
+                            value: m.id,
+                            child: Text('${m.fullName} (${m.matricule})'),
+                          ),
+                      ],
+                      onChanged: (v) => setState(() => _memberId = v),
+                    ),
+                  const SizedBox(height: 12),
                   // Type figé quand l'écran l'impose (ex. « cotisation »
                   // depuis Finances) : il s'affiche, il ne se choisit pas.
                   if (widget.initialType != null)
@@ -403,11 +440,6 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                     ),
                   ],
                   const SizedBox(height: 12),
-                  Text(
-                    'Total avant envoi : ${formatFcfa(int.tryParse(_amountController.text.trim()) ?? 0)}',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
                   if (_moyens.isNotEmpty)
                     DropdownButtonFormField<String>(
                       isExpanded: true,
@@ -462,42 +494,17 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                   TextFormField(
                     controller: _refController,
                     decoration: const InputDecoration(
-                      labelText: 'Référence de paiement',
+                      labelText: 'Référence (facultatif)',
+                      hintText: 'Référence du paiement',
                       border: OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // Membre obligatoire : sans membre, l'état vide de la
-                  // maquette, pas un sélecteur vide.
-                  if (_members.isEmpty)
-                    const Text(
-                      'Aucun membre — créez d’abord un membre',
-                      style: TextStyle(fontSize: 16),
-                    )
-                  else
-                    DropdownButtonFormField<String>(
-                      isExpanded: true,
-                      initialValue: _memberId,
-                      decoration: const InputDecoration(
-                        labelText: 'Membre *',
-                        border: OutlineInputBorder(),
-                      ),
-                      hint: const Text('Choisir un membre'),
-                      validator: (v) {
-                        if (v == null) {
-                          return 'Un membre est requis.';
-                        }
-                        return null;
-                      },
-                      items: [
-                        for (final m in _members)
-                          DropdownMenuItem(
-                            value: m.id,
-                            child: Text('${m.fullName} (${m.matricule})'),
-                          ),
-                      ],
-                      onChanged: (v) => setState(() => _memberId = v),
-                    ),
+                  Text(
+                    'Total avant envoi : ${formatFcfa(int.tryParse(_amountController.text.trim()) ?? 0)}',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
                   if (_type != 'depense' &&
                       _type != 'cotisation' &&
                       !_viaMoyenConfigure) ...[
@@ -547,6 +554,12 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                       textAlign: TextAlign.center,
                     ),
                   ],
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Seul le pasteur confirme la contribution.',
+                    style: TextStyle(fontSize: 11.5),
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 24),
                   FilledButton(
                     onPressed: _loading ? null : _submit,
@@ -558,7 +571,7 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Enregistrer', style: TextStyle(fontSize: 13.5)),
+                          : const Text('Enregistrer la contribution', style: TextStyle(fontSize: 13.5)),
                     ),
                   ),
                 ],

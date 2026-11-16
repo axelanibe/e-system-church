@@ -48,7 +48,8 @@ class CarteMembreVedette extends StatelessWidget {
         (context.watch<PreferencesLocales?>()?.modeEconomique ?? false)
             ? null
             : photoUrl;
-    // Carte du modèle : dégradé violet profond, barre or en haut.
+    // Carte du modèle : dégradé violet profond, barre or en bas
+    // (maquette, écrans 37 et 38).
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -62,7 +63,6 @@ class CarteMembreVedette extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(height: 6, color: AppTheme.or),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -100,26 +100,21 @@ class CarteMembreVedette extends StatelessWidget {
                                   .headlineSmall
                                   ?.copyWith(color: Colors.white),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              church.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(color: Colors.white70),
-                            ),
-                            Text(
-                              '${church.code}'
-                              '${church.city != null ? ' · ${church.city}' : ''}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(color: Colors.white70),
-                            ),
+                            // Matricule sous le nom, en or, comme
+                            // sur la carte de la maquette (écrans
+                            // 37 et 38).
+                            if (profil.matricule != null) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                'Matricule : ${profil.matricule}',
+                                style: AppTheme.styleCode.copyWith(
+                                  color: AppTheme.or,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -140,41 +135,29 @@ class CarteMembreVedette extends StatelessWidget {
                         ChurchAvatar(church: church, radius: 20),
                     ],
                   ),
-                  if (profil.matricule != null) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(Icons.badge_outlined,
-                            size: 20, color: AppTheme.or),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: 'Matricule : ',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(color: Colors.white70),
-                                ),
-                                TextSpan(
-                                  text: profil.matricule,
-                                  style: AppTheme.styleCode.copyWith(
-                                    color: AppTheme.or,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (church.isMere) const MereBadge(),
-                      ],
-                    ),
-                  ] else if (church.isMere) ...[
+                  // Lignes d'église sous l'en-tête, comme sur la
+                  // carte de la maquette (écrans 37 et 38).
+                  const SizedBox(height: 10),
+                  Text(
+                    'Église : ${church.name}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: Colors.white70),
+                  ),
+                  Text(
+                    '${church.code}'
+                    '${church.city != null ? ' · ${church.city}' : ''}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: Colors.white70),
+                  ),
+                  if (church.isMere) ...[
                     const SizedBox(height: 12),
                     const Row(children: [MereBadge()]),
                   ],
@@ -205,6 +188,7 @@ class CarteMembreVedette extends StatelessWidget {
                 ],
               ),
             ),
+            Container(height: 6, color: AppTheme.or),
           ],
         ),
       ),

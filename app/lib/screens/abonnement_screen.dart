@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_theme.dart';
 import '../models/abonnement.dart';
 import '../services/api_service.dart';
 import '../state/app_state.dart';
@@ -103,6 +104,10 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
                   const SizedBox(height: 12),
                   FilledButton(
                     onPressed: _refresh,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.or,
+                      foregroundColor: AppTheme.violetProfond,
+                    ),
                     child: const Text('Réessayer', style: TextStyle(fontSize: 13.5)),
                   ),
                 ],
@@ -256,32 +261,79 @@ class _VueMere extends StatelessWidget {
                   'Choisissez la durée. La remise grandit avec la durée.',
                   style: TextStyle(fontSize: 12.5),
                 ),
-                RadioGroup<int>(
-                  groupValue: dureeAnnees,
-                  onChanged: (v) {
-                    if (v != null) onDuree(v);
-                  },
-                  child: Column(
-                    children: [1, 3, 10].map((duree) {
-                      final tarif = tarifsAbonnement[duree]!;
-                      final ancien = ancienTarifAbonnement(duree);
-                      return RadioListTile<int>(
-                        contentPadding: EdgeInsets.zero,
-                        value: duree,
-                        title: Text(
-                          '$duree ${duree == 1 ? 'an' : 'ans'} '
-                          '${formatFcfa(tarif)}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        subtitle: ancien == null
-                            ? null
-                            : Text(
-                                'au lieu de ${formatFcfa(ancien)}',
-                                style: const TextStyle(fontSize: 11.5),
+                // Durées en cartes sélectionnables (maquette,
+                // écran 13) : la carte choisie est violette, prix
+                // en or, les autres sont blanches à bordure.
+                Column(
+                  children: [1, 3, 10].map((duree) {
+                    final tarif = tarifsAbonnement[duree]!;
+                    final ancien = ancienTarifAbonnement(duree);
+                    final selectionnee = duree == dureeAnnees;
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: InkWell(
+                        onTap: () => onDuree(duree),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 13, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: selectionnee
+                                ? AppTheme.violetProfond
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: selectionnee
+                                ? null
+                                : Border.all(color: AppTheme.bordure),
+                          ),
+                          child: Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '$duree ${duree == 1 ? 'an' : 'ans'}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: selectionnee
+                                      ? Colors.white
+                                      : AppTheme.violetProfond,
+                                ),
                               ),
-                      );
-                    }).toList(),
-                  ),
+                              Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    formatFcfa(tarif),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: selectionnee
+                                          ? AppTheme.or
+                                          : AppTheme.violetProfond,
+                                    ),
+                                  ),
+                                  if (ancien != null)
+                                    Text(
+                                      'au lieu de ${formatFcfa(ancien)}',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: selectionnee
+                                            ? const Color(0xFFCFC4EE)
+                                            : AppTheme.texteSecondaire,
+                                        decoration:
+                                            TextDecoration.lineThrough,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
                 const Divider(),
                 Text(
@@ -305,25 +357,43 @@ class _VueMere extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: codePromo,
-                        decoration: const InputDecoration(
-                          labelText: 'Code promo',
-                          hintText: 'Code promo',
-                          border: OutlineInputBorder(),
+                // Champ compact à hauteur fixe : sans elle le champ
+                // s'étirait en une grande boîte blanche vide, sans
+                // libellé visible, et le bouton Appliquer sortait
+                // de l'écran. Le titre de section « Code promo »
+                // sert déjà de libellé, le champ ne garde que
+                // l'exemple en indice.
+                SizedBox(
+                  height: 56,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: codePromo,
+                          maxLines: 1,
+                          decoration: const InputDecoration(
+                            hintText: 'Code promo',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 12),
+                          ),
+                          textCapitalization:
+                              TextCapitalization.characters,
                         ),
-                        textCapitalization: TextCapitalization.characters,
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton(
-                      onPressed: envoiPromo ? null : onAppliquer,
-                      child: const Text('Appliquer', style: TextStyle(fontSize: 12.5)),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      FilledButton(
+                        onPressed: envoiPromo ? null : onAppliquer,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppTheme.or,
+                          foregroundColor: AppTheme.violetProfond,
+                        ),
+                        child: const Text('Appliquer',
+                            style: TextStyle(fontSize: 12.5)),
+                      ),
+                    ],
+                  ),
                 ),
                 if (promoValidee != null) ...[
                   const SizedBox(height: 12),
@@ -348,35 +418,54 @@ class _VueMere extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        Card(
-          color: Theme.of(context).colorScheme.errorContainer,
-          child: const Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'IMPORTANT',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+        // Encadré IMPORTANT violet et or (maquette, écran 13).
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppTheme.violetProfond,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.or, width: 1.5),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'IMPORTANT',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  color: AppTheme.or,
                 ),
-                SizedBox(height: 4),
-                Text(
-                  'À l’expiration, l’application passe en lecture seule, toutes les fonctionnalités s’interrompent automatiquement.',
-                  style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 7),
+              Text(
+                'À l’expiration, l’application passe en lecture seule, toutes les fonctionnalités s’interrompent automatiquement.',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
-                SizedBox(height: 8),
-                Text(
-                  'Rappels avant l’expiration, puis 30 jours de grâce '
-                  'avant la lecture seule.',
-                  style: TextStyle(fontSize: 12.5),
+              ),
+              SizedBox(height: 7),
+              Text(
+                'Rappels avant l’expiration, puis 30 jours de grâce '
+                'avant la lecture seule.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: Color(0xFFCFC4EE),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
         FilledButton(
           onPressed: onRenouveler,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppTheme.or,
+            foregroundColor: AppTheme.violetProfond,
+          ),
           child: const Text('Renouveler mon abonnement', style: TextStyle(fontSize: 13.5)),
         ),
         const SizedBox(height: 16),

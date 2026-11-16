@@ -219,8 +219,7 @@ class _JournalScreenState extends State<JournalScreen> {
                         if (notes.isEmpty && !_editeurOuvert)
                           const EmptyState(
                             icon: Icons.edit_outlined,
-                            message: 'Aucune note pour le moment. Vos notes '
-                                'personnelles apparaîtront ici, pour vous seul.',
+                            message: 'Aucune note pour l’instant.',
                           )
                         else
                           ...notes.map((note) => Card(

@@ -168,11 +168,15 @@ class _DonsNatureScreenState extends State<DonsNatureScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Text(
-              t.noteAttestationAnnuelle,
+              t.introDonsNature,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontSize: 12,
                   ),
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+            child: SectionTitle(title: t.donsRecus),
           ),
           Expanded(
             child: FutureBuilder<List<DonNature>>(
@@ -232,6 +236,15 @@ class _DonsNatureScreenState extends State<DonsNatureScreen> {
                   ),
                 );
               },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Text(
+              t.noteAttestationAnnuelle,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 12,
+                  ),
             ),
           ),
         ],

@@ -88,6 +88,16 @@ class _AuditScreenState extends State<AuditScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  // Maquette, écran 15 : phrase d'intro.
+                  Text(
+                    'Consultations et actions sensibles, tracées et '
+                    'datées.',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   if (_erreur != null)
                     Card(
                       color: AppTheme.rougeErreur.withValues(alpha: 0.08),

@@ -268,11 +268,26 @@ class _CampagneTab extends StatelessWidget {
         }
         final campagnes = snapshot.data!;
         if (campagnes.isEmpty) {
-          return EmptyState(
-            icon: Icons.volunteer_activism_outlined,
-            message: 'Aucune campagne — 0 FCFA collecté.',
-            actionLabel: canManageFinances ? 'Nouvelle campagne' : null,
-            onAction: canManageFinances ? onCreate : null,
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Text(
+                  'Créer une campagne de collecte ou un budget.',
+                  style: TextStyle(fontSize: 12.5),
+                ),
+              ),
+              Expanded(
+                child: EmptyState(
+                  icon: Icons.campaign_outlined,
+                  message: 'Aucune campagne — 0 FCFA collecté.',
+                  actionLabel:
+                      canManageFinances ? 'Nouvelle campagne' : null,
+                  onAction: canManageFinances ? onCreate : null,
+                ),
+              ),
+            ],
           );
         }
         return ListeAvecFab(
@@ -281,6 +296,11 @@ class _CampagneTab extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                const Text(
+                  'Créer une campagne de collecte ou un budget.',
+                  style: TextStyle(fontSize: 12.5),
+                ),
+                const SizedBox(height: 12),
                 for (final c in campagnes)
                   Card(
                     clipBehavior: Clip.antiAlias,
@@ -529,6 +549,11 @@ class _BudgetTabState extends State<_BudgetTab> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              const Text(
+                'Créer une campagne de collecte ou un budget.',
+                style: TextStyle(fontSize: 12.5),
+              ),
+              const SizedBox(height: 12),
               if (depassements.isNotEmpty)
                 Card(
                   color: AppTheme.rougeErreur.withValues(alpha: 0.12),

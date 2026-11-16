@@ -79,6 +79,17 @@ class _DepartementsScreenState extends State<DepartementsScreen>
               ],
             ),
           ),
+          // Maquette, écran 4 : sous-titre 12,5 px.
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Familles, cellules, enfants et jeunesse de l’église.',
+                style: TextStyle(fontSize: 12.5),
+              ),
+            ),
+          ),
           Expanded(
             child: TabBarView(
               controller: _tabController,

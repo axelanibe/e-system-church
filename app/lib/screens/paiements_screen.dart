@@ -67,21 +67,8 @@ class _PaiementsScreenState extends State<PaiementsScreen> {
     }
   }
 
-  /// Aucune échéance n'existe côté serveur : le bouton ne programme
-  /// rien tant que la programmation n'est pas branchée.
-  void _programmer() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'La programmation des prélèvements n’est pas encore disponible.',
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final aCompteActif = _configs.any((c) => c.actif);
     return Scaffold(
       appBar: AppBar(title: const Text('Paiements automatiques')),
       body: _loading
@@ -94,25 +81,10 @@ class _PaiementsScreenState extends State<PaiementsScreen> {
                     padding: const EdgeInsets.all(16),
                     children: [
                       const SectionTitle(title: 'Prélèvements programmés'),
-                      const Card(
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Text('Aucun prélèvement programmé.', style: TextStyle(fontSize: 13)),
-                        ),
+                      const EmptyState(
+                        icon: Icons.credit_card_outlined,
+                        message: 'Aucun prélèvement programmé.',
                       ),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: aCompteActif ? _programmer : null,
-                        child: const Text('Programmer un prélèvement', style: TextStyle(fontSize: 13.5)),
-                      ),
-                      if (!aCompteActif)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 8),
-                          child: Text(
-                            'La programmation d’un prélèvement exige un compte marchand actif.',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
                       const SizedBox(height: 16),
                       const SectionTitle(title: 'Comptes utilisés'),
                       const Card(
@@ -129,15 +101,32 @@ class _PaiementsScreenState extends State<PaiementsScreen> {
                               Text(
                                 'État des comptes : voir Finances. Aucune clé ne se saisit ici.',
                               ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Un prélèvement ne se programme qu’avec un compte marchand actif. Les clés marchandes et API se saisissent uniquement dans Réglages et confidentialité, section « Clés marchandes et API » — cet écran ne gère que les échéances : montant, fréquence, membre concerné.',
-                                style: TextStyle(fontSize: 12),
-                              ),
                             ],
                           ),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Un prélèvement ne se programme qu’avec un compte marchand actif. Les clés marchandes et API se saisissent uniquement dans Réglages et confidentialité, section « Clés marchandes et API » — cet écran ne gère que les échéances : montant, fréquence, membre concerné.',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      const SizedBox(height: 12),
+                      // Maquette, écran 35 : le bouton est en bas et
+                      // désactivé — aucune échéance n'existe côté
+                      // serveur, la programmation n'est pas branchée.
+                      const FilledButton(
+                        onPressed: null,
+                        child: Text('Programmer un prélèvement',
+                            style: TextStyle(fontSize: 13.5)),
+                      ),
+                      if (!_configs.any((c) => c.actif))
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text(
+                            'La programmation d’un prélèvement exige un compte marchand actif.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
                     ],
                   ),
                 ),

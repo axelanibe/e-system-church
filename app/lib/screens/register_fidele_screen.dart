@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/code_input_formatter.dart';
+import '../widgets/selecteur_indicatif_pays.dart';
 
 /// Inscription membre par code fidèle : « Rejoindre mon église »
 /// (maquette, écran 27). Le code fait foi : aucune validation par
@@ -32,6 +33,11 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
   final _codeController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  // Indicatif du champ « Téléphone ou e-mail » : Côte d’Ivoire au
+  // départ. L’envoi est bloqué côté serveur (voir _submit) : quand
+  // il sera possible, l’indicatif sera préfixé au numéro, ignoré
+  // pour un e-mail, comme sur la connexion.
+  String _indicatifIso = 'CI';
 
   @override
   void dispose() {
@@ -145,12 +151,18 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                     keyboardType: TextInputType.text,
                     textInputAction: TextInputAction.next,
                     style: const TextStyle(fontSize: 16),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Téléphone ou e-mail *',
                       helperText: 'Votre contact',
-                      helperStyle: TextStyle(fontSize: 13.5),
-                      prefixIcon: Icon(Icons.contact_mail_outlined),
-                      border: OutlineInputBorder(),
+                      helperStyle: const TextStyle(fontSize: 13.5),
+                      prefixIcon:
+                          const Icon(Icons.contact_mail_outlined),
+                      prefix: SelecteurIndicatifPays(
+                        iso: _indicatifIso,
+                        onChanged: (iso) =>
+                            setState(() => _indicatifIso = iso),
+                      ),
+                      border: const OutlineInputBorder(),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {

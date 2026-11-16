@@ -12,14 +12,12 @@ import '../widgets/logo_app.dart';
 import '../widgets/soft_button.dart';
 import '../widgets/soft_card.dart';
 import 'annonces_screen.dart';
-import 'annexes_screen.dart';
 import 'cultes_screen.dart';
 import 'mon_eglise_screen.dart';
 import 'pastoral_screen.dart';
 import 'prieres_screen.dart';
 import 'rapports_mere_screen.dart';
 import 'rapports_recus_screen.dart';
-import 'serviteurs_screen.dart';
 import 'transferts_screen.dart';
 
 class _DashboardData {
@@ -28,7 +26,6 @@ class _DashboardData {
   final int visiteursJour;
   final int nouveauxMembres;
   final int cotisationsMois;
-  final int contributionsMois;
   final int entreesJour;
   final int sortiesJour;
   final int caisse;
@@ -38,9 +35,6 @@ class _DashboardData {
   final int transfertsRattachements;
   final int absencesASuivre;
   final int anniversairesJour;
-  final int rendezVousJour;
-  final int serviteursJour;
-  final int annexesTotal;
   final String? mereNom;
   final String? mereCode;
   final RapportConsolide? rapport;
@@ -53,7 +47,6 @@ class _DashboardData {
     required this.visiteursJour,
     required this.nouveauxMembres,
     required this.cotisationsMois,
-    required this.contributionsMois,
     required this.entreesJour,
     required this.sortiesJour,
     required this.caisse,
@@ -63,9 +56,6 @@ class _DashboardData {
     required this.transfertsRattachements,
     required this.absencesASuivre,
     required this.anniversairesJour,
-    required this.rendezVousJour,
-    required this.serviteursJour,
-    required this.annexesTotal,
     required this.mereNom,
     required this.mereCode,
     required this.rapport,
@@ -147,12 +137,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       nouveauxMembres = 0;
     }
     // Tableau du jour (maquette, écrans 19 et 36) : visiteurs,
-    // contributions, demandes, membres à suivre, rendez-vous,
-    // serviteurs, annexes, rapports reçus. Chaque compteur vient
-    // d'une vraie lecture serveur ; un échec ne bloque pas le
+    // demandes, membres à suivre, rapports reçus. Chaque compteur
+    // vient d'une vraie lecture serveur ; un échec ne bloque pas le
     // tableau, le compteur reste à 0.
     int visiteursJour = 0;
-    int contributionsMois = 0;
     int entreesJour = 0;
     int sortiesJour = 0;
     int caisse = 0;
@@ -162,32 +150,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     int transfertsRattachements = 0;
     int absencesASuivre = 0;
     int anniversairesJour = 0;
-    int rendezVousJour = 0;
-    int serviteursJour = 0;
-    int annexesTotal = 0;
     if (state.canReadFinances) {
-      try {
-        // Contributions du mois, distinctes des cotisations :
-        // dîmes, offrandes, dons et cotisations confirmés, créés
-        // ce mois-ci (une dépense n'est pas une contribution).
-        final page = await api.getContributions(status: 'confirme');
-        for (final c in page.contributions) {
-          final date = c.createdAt?.toLocal();
-          if (date == null) continue;
-          if (date.year != maintenant.year ||
-              date.month != maintenant.month) {
-            continue;
-          }
-          if (c.type == 'dime' ||
-              c.type == 'offrande' ||
-              c.type == 'don' ||
-              c.type == 'cotisation') {
-            contributionsMois += c.amountFcfa;
-          }
-        }
-      } catch (_) {
-        contributionsMois = 0;
-      }
       try {
         final mouvements = await api.getCaisseMouvements();
         final aujourdHui =
@@ -223,12 +186,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       } catch (_) {
         liaisonsEnAttente = 0;
       }
-      try {
-        final annexes = await api.getAnnexes();
-        annexesTotal = annexes.length;
-      } catch (_) {
-        annexesTotal = 0;
-      }
     }
     if (state.canManageMembers) {
       try {
@@ -258,28 +215,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             anniversaires.where((a) => a.joursRestants == 0).length;
       } catch (_) {
         anniversairesJour = 0;
-      }
-      try {
-        final rendezVous = await api.getRendezVousAdmin();
-        rendezVousJour = rendezVous
-            .where((r) =>
-                r.dateSouhaitee == jour &&
-                (r.statut == 'en_attente' || r.statut == 'confirme'))
-            .length;
-      } catch (_) {
-        rendezVousJour = 0;
-      }
-      try {
-        // Serviteurs du jour : serviteurs affectés au culte du
-        // jour, c'est-à-dire planifiés aujourd'hui (hors absents).
-        final planning = await api.getPlanningServiteurs();
-        serviteursJour = planning
-            .where((p) => p.dateService == jour && p.statut != 'absent')
-            .map((p) => p.serviteurId)
-            .toSet()
-            .length;
-      } catch (_) {
-        serviteursJour = 0;
       }
     }
     if (state.isAdmin && (state.church?.isMere ?? false)) {
@@ -339,7 +274,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       visiteursJour: visiteursJour,
       nouveauxMembres: nouveauxMembres,
       cotisationsMois: cotisationsMois,
-      contributionsMois: contributionsMois,
       entreesJour: entreesJour,
       sortiesJour: sortiesJour,
       caisse: caisse,
@@ -349,9 +283,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       transfertsRattachements: transfertsRattachements,
       absencesASuivre: absencesASuivre,
       anniversairesJour: anniversairesJour,
-      rendezVousJour: rendezVousJour,
-      serviteursJour: serviteursJour,
-      annexesTotal: annexesTotal,
       mereNom: mereNom,
       mereCode: mereCode,
       rapport: rapport,
@@ -415,7 +346,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 // logo e-System Church en grand. Pour une annexe,
                 // l'en-tête montre aussi le rôle, le badge « Annexe »
                 // et l'église mère (maquette, écran 36).
-                EnteteEspace(eglise: church),
+                if (state.isAdmin && !(church?.isMere ?? false))
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFDF8EA),
+                      border: Border.all(
+                        color: const Color(0xFFECD27A),
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: EnteteEspace(eglise: church),
+                  )
+                else
+                  EnteteEspace(eglise: church),
                 const SizedBox(height: 16),
                 FutureBuilder<_DashboardData>(
                   future: _future,
@@ -440,22 +384,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Aujourd'hui (maquette, écran 19) : carte
-                        // violet profond avec le prochain culte dedans,
-                        // puis les chiffres réels du tableau du jour.
+                        // Aujourd'hui (maquette, écrans 19 et 36) :
+                        // carte claire quand aucun culte n'est programmé,
+                        // violet profond quand un culte est programmé.
                         // Aucun chiffre inventé.
                         Container(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                AppTheme.violetProfond,
-                                AppTheme.violetSecondaire,
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                          decoration: prochain == null
+                              ? BoxDecoration(
+                                  color: AppTheme.fondPapier,
+                                  borderRadius: BorderRadius.circular(16),
+                                )
+                              : BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      AppTheme.violetProfond,
+                                      AppTheme.violetSecondaire,
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
                           padding: const EdgeInsets.all(16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,7 +418,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         .textTheme
                                         .titleLarge
                                         ?.copyWith(
-                                            color: Colors.white,
+                                            color: prochain == null
+                                                ? AppTheme.violetProfond
+                                                : Colors.white,
                                             fontSize: 16),
                                   ),
                                   const Spacer(),
@@ -494,48 +445,75 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              Container(
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                      color: Colors.white.withValues(
-                                          alpha: 0.25)),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
+                              if (prochain == null) ...[
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    if (prochain == null) ...[
-                                      const Icon(
-                                        Icons.calendar_today_outlined,
-                                        color: AppTheme.or,
-                                        size: 32,
+                                    const Icon(
+                                      Icons.calendar_today_outlined,
+                                      color: AppTheme.violetProfond,
+                                      size: 22,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Aucun culte programmé aujourd’hui',
+                                            // Maquette, écrans 19 et 36 : 13,5 px.
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(fontSize: 13.5),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            (church?.isMere ?? false)
+                                                ? 'Le culte du jour s’affichera ici dès qu’il sera créé, avec l’heure et le lieu.'
+                                                : 'Le prochain culte de l’annexe s’affichera ici dès qu’il sera créé, avec l’heure et le lieu.',
+                                            // Maquette, écrans 19 et 36 : 11,5 px.
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(fontSize: 11.5),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Aucun culte programmé',
-                                        // Maquette, écrans 19 et 36 : 13,5 px.
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium
-                                            ?.copyWith(
-                                                color: Colors.white,
-                                                fontSize: 13.5),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _MiniStatJour(
+                                        libelle: 'Présences du jour',
+                                        valeur: '${data.presencesJour}',
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Le prochain culte s’affichera '
-                                        'ici dès qu’il sera créé.',
-                                        textAlign: TextAlign.center,
-                                        // Maquette, écrans 19 et 36 : 11,5 px.
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                                color: Colors.white70,
-                                                fontSize: 11.5),
+                                    ),
+                                    const SizedBox(width: 9),
+                                    Expanded(
+                                      child: _MiniStatJour(
+                                        libelle: 'Visiteurs du jour',
+                                        valeur: '${data.visiteursJour}',
                                       ),
-                                    ] else ...[
+                                    ),
+                                  ],
+                                ),
+                              ] else
+                                Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                        color: Colors.white.withValues(
+                                            alpha: 0.25)),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    children: [
                                       Text(
                                         prochain.titre,
                                         maxLines: 2,
@@ -566,9 +544,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                 fontSize: 11.5),
                                       ),
                                     ],
-                                  ],
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                         ),
@@ -580,21 +557,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const SectionTitle(title: 'Chiffres de mon église'),
                         LayoutBuilder(
                           builder: (context, constraints) {
-                            final crossAxisCount =
-                                constraints.maxWidth > 600 ? 4 : 2;
-                            return GridView.count(
-                              crossAxisCount: crossAxisCount,
-                              shrinkWrap: true,
-                              physics:
-                                  const NeverScrollableScrollPhysics(),
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                              // En 2 colonnes les cartes sont étroites :
-                              // 0,85 leur donne la hauteur pour 3 lignes
-                              // d'aide sans troncature (E1).
-                              childAspectRatio:
-                                  crossAxisCount == 2 ? 0.85 : 1.0,
-                              children: [
+                            // Maquette, écran 19 : 4 cartes, Membres,
+                            // Présences du jour, Visiteurs du jour,
+                            // Nouveaux membres. « Contributions du
+                            // mois » est retirée (décision d'Axel) ;
+                            // Visiteurs du jour est la 4e carte,
+                            // choisie par Muse sur délégation d'Axel.
+                            return _GrilleCartes(
+                              colonnes: constraints.maxWidth > 600 ? 4 : 2,
+                              enfants: [
                                 StatCard(
                                   label: 'Membres',
                                   value: '${data.membresTotal}',
@@ -617,21 +588,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   color: AppTheme.violetProfond,
                                 ),
                                 StatCard(
-                                  label: 'Contributions du mois',
-                                  value: formatFcfa(data.contributionsMois),
-                                  icon: Icons.volunteer_activism_outlined,
-                                  tailleValeur: 22,
-                                  color: AppTheme.orFonce,
-                                ),
-                                StatCard(
-                                  label: 'Cotisations du mois',
-                                  value: formatFcfa(data.cotisationsMois),
-                                  icon: Icons.savings_outlined,
-                                  tailleValeur: 22,
-                                  color: AppTheme.orFonce,
-                                ),
-                                StatCard(
-                                  label: 'Nouveaux à accueillir',
+                                  label: 'Nouveaux membres',
                                   value: '${data.nouveauxMembres}',
                                   icon: Icons.person_add_outlined,
                                   tailleValeur: 22,
@@ -641,57 +598,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       : null,
                                   onTap: () => widget.onAller(1),
                                 ),
-                                StatCard(
-                                  label: 'Rendez-vous du jour',
-                                  value: '${data.rendezVousJour}',
-                                  icon: Icons.event_available_outlined,
-                                  tailleValeur: 22,
-                                  color: AppTheme.violetProfond,
-                                  aide: data.rendezVousJour == 0
-                                      ? 'Aucun rendez-vous aujourd’hui'
-                                      : null,
-                                  // Écran 22 : une seule entrée, la carte
-                                  // Modules. La carte n'est pas cliquable.
-                                ),
-                                StatCard(
-                                  label: 'Serviteurs du jour',
-                                  value: '${data.serviteursJour}',
-                                  icon: Icons.handshake_outlined,
-                                  tailleValeur: 22,
-                                  color: AppTheme.violetProfond,
-                                  aide: data.serviteursJour == 0
-                                      ? 'Aucun serviteur affecté au culte du jour'
-                                      : null,
-                                  onTap: () => _ouvrir(
-                                      context, const ServiteursScreen()),
-                                ),
-                                if (state.isAdmin)
-                                  StatCard(
-                                    label: 'Annexes',
-                                    value: '${data.annexesTotal}',
-                                    icon: Icons.account_tree_outlined,
-                                    tailleValeur: 22,
-                                    color: AppTheme.violetProfond,
-                                    onTap: () => _ouvrir(
-                                        context, const AnnexesScreen()),
-                                  ),
-                                if (state.isAdmin &&
-                                    (church?.isMere ?? false))
-                                  StatCard(
-                                    label: 'Rapports d’annexe reçus',
-                                    value: '${data.rapportsRecus}',
-                                    icon: Icons.description_outlined,
-                                    tailleValeur: 22,
-                                    color: AppTheme.violetProfond,
-                                    onTap: () => _ouvrir(context,
-                                        const RapportsRecusScreen()),
-                                  ),
                               ],
                             );
                           },
                         ),
                         // Contributions du jour (maquette, écran 19) :
-                        // entrées, sorties et caisse du jour.
+                        // entrées, sorties, cotisations du mois et
+                        // caisse.
                         if (state.canReadFinances) ...[
                           const SectionTitle(
                               title: 'Contributions du jour'),
@@ -707,6 +620,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 _LigneChiffre(
                                   titre: 'Sorties du jour',
                                   valeur: formatFcfa(data.sortiesJour),
+                                  tailleValeur: 17,
+                                ),
+                                const Divider(),
+                                _LigneChiffre(
+                                  titre: 'Cotisations du mois',
+                                  valeur: formatFcfa(data.cotisationsMois),
                                   tailleValeur: 17,
                                 ),
                                 const Divider(),
@@ -887,76 +806,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ),
                         ],
-                        const SectionTitle(title: 'Annonces récentes'),
-                        if (recentes.isEmpty)
-                          SoftCard(
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                // État vide de la projection, mot pour mot.
-                                Text(
-                                  'Aucune annonce',
-                                  // Maquette, écrans 19 et 36 : 14 px.
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontSize: 14),
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'Les annonces publiées par la structure apparaîtront ici.',
-                                  // Maquette, écrans 19 et 36 : 11,5 px.
-                                  style: TextStyle(fontSize: 11.5),
-                                ),
-                              ],
-                            ),
-                          )
-                        else
-                          SoftCard(
-                            child: Column(
-                              children: [
-                                ...recentes.map(
-                                  (a) => ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    leading: const Icon(
-                                        Icons.campaign_outlined),
-                                    title: Text(
-                                      a.title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 13.5),
+                        // Actions rapides (maquette, écran 19) : Nouveau culte
+                        // et Nouvelle annonce seulement. Ajouter un membre se
+                        // fait depuis l'onglet Membres, les finances depuis
+                        // l'onglet Finances : pas de doublon. Seulement celles
+                        // que le rôle permet ; sans aucune action permise, rien
+                        // ne s'affiche.
+                        if (state.canManageMembers || state.isAdmin) ...[
+                          const SectionTitle(title: 'Actions rapides'),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              return _GrilleCartes(
+                                colonnes: constraints.maxWidth > 600 ? 4 : 2,
+                                enfants: [
+                                  if (state.canManageMembers)
+                                    _ActionRapide(
+                                      icone: Icons.church_outlined,
+                                      titre: 'Nouveau culte',
+                                      sousTitre: (church?.isMere ?? false)
+                                          ? 'Créer le prochain culte de l’église'
+                                          : 'Créer le prochain culte de l’annexe',
+                                      onTap: () => ouvrirNouveauCulte(context),
                                     ),
-                                    subtitle: Text(
-                                      '${a.body}'
-                                      '${a.createdAt == null ? '' : ' · ${formatDate(a.createdAt)}'}',
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 11.5),
+                                  if (state.isAdmin)
+                                    _ActionRapide(
+                                      icone: Icons.campaign_outlined,
+                                      titre: 'Nouvelle annonce',
+                                      sousTitre: (church?.isMere ?? false)
+                                          ? 'Informer les membres de l’église'
+                                          : 'Informer les membres de l’annexe',
+                                      onTap: () => _ouvrir(
+                                          context, const AnnoncesScreen()),
                                     ),
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              const AnnoncesScreen(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: TextButton.icon(
-                                    onPressed: () => _ouvrir(
-                                        context, const AnnoncesScreen()),
-                                    icon: const Icon(
-                                        Icons.campaign_outlined),
-                                    label: const Text('Toutes les annonces', style: TextStyle(fontSize: 13.5)),
-                                  ),
-                                ),
-                              ],
-                            ),
+                                ],
+                              );
+                            },
                           ),
+                        ],
                         // Mon église mère (annexe, maquette, écran 36) :
                         // nom et code de la mère, bouton d'envoi du
                         // rapport. Pour une mère, c'est la section
@@ -1016,55 +902,80 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ),
                         ],
+                        const SectionTitle(title: 'Annonces récentes'),
+                        if (recentes.isEmpty)
+                          SoftCard(
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                // État vide de la projection, mot pour mot.
+                                Text(
+                                  'Aucune annonce',
+                                  // Maquette, écrans 19 et 36 : 14 px.
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontSize: 14),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Les annonces publiées pour l’église s’afficheront ici.',
+                                  // Maquette, écrans 19 et 36 : 11,5 px.
+                                  style: TextStyle(fontSize: 11.5),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          SoftCard(
+                            child: Column(
+                              children: [
+                                ...recentes.map(
+                                  (a) => ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: const Icon(
+                                        Icons.campaign_outlined),
+                                    title: Text(
+                                      a.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 13.5),
+                                    ),
+                                    subtitle: Text(
+                                      '${a.body}'
+                                      '${a.createdAt == null ? '' : ' · ${formatDate(a.createdAt)}'}',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 11.5),
+                                    ),
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const AnnoncesScreen(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: TextButton.icon(
+                                    onPressed: () => _ouvrir(
+                                        context, const AnnoncesScreen()),
+                                    icon: const Icon(
+                                        Icons.campaign_outlined),
+                                    label: const Text('Toutes les annonces', style: TextStyle(fontSize: 13.5)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                     );
-                  },
-                ),
+                  },                ),
                 const SizedBox(height: 16),
-                // Actions rapides (maquette, écran 19) : Nouveau culte
-                // et Nouvelle annonce seulement. Ajouter un membre se
-                // fait depuis l'onglet Membres, les finances depuis
-                // l'onglet Finances : pas de doublon. Seulement celles
-                // que le rôle permet ; sans aucune action permise, rien
-                // ne s'affiche.
-                if (state.canManageMembers || state.isAdmin) ...[
-                  const SectionTitle(title: 'Actions rapides'),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final crossAxisCount =
-                          constraints.maxWidth > 600 ? 4 : 2;
-                      return GridView.count(
-                        crossAxisCount: crossAxisCount,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 1.1,
-                        children: [
-                          if (state.canManageMembers)
-                            _ActionRapide(
-                              icone: Icons.church_outlined,
-                              titre: 'Nouveau culte',
-                              sousTitre: (church?.isMere ?? false)
-                                  ? 'Créer le prochain culte de l’église'
-                                  : 'Créer le prochain culte de l’annexe',
-                              onTap: () => ouvrirNouveauCulte(context),
-                            ),
-                          if (state.isAdmin)
-                            _ActionRapide(
-                              icone: Icons.campaign_outlined,
-                              titre: 'Nouvelle annonce',
-                              sousTitre: (church?.isMere ?? false)
-                                  ? 'Informer les membres de l’église'
-                                  : 'Informer les membres de l’annexe',
-                              onTap: () => _ouvrir(
-                                  context, const AnnoncesScreen()),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
                 // Rapports reçus, pour une mère (la carte « Mon
                 // église mère » de l'annexe est dans le FutureBuilder,
                 // elle a besoin des données chargées).
@@ -1108,6 +1019,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Grille à hauteurs intrinsèques : chaque rangée prend la hauteur
+/// de sa carte la plus haute, sans ratio fixe. Un childAspectRatio
+/// fige la hauteur depuis la largeur : il laisse un vide blanc quand
+/// le contenu est court et tronque quand il grandit (l'ancien 0,85,
+/// puis 1,25, ne faisaient que déplacer le problème). Ici chaque
+/// carte s'adapte à son contenu.
+class _GrilleCartes extends StatelessWidget {
+  final int colonnes;
+  final List<Widget> enfants;
+
+  const _GrilleCartes({required this.colonnes, required this.enfants});
+
+  @override
+  Widget build(BuildContext context) {
+    const espacement = 12.0;
+    final rangees = <Widget>[];
+    for (var debut = 0; debut < enfants.length; debut += colonnes) {
+      final fin = debut + colonnes > enfants.length
+          ? enfants.length
+          : debut + colonnes;
+      final rangee = enfants.sublist(debut, fin);
+      rangees.add(
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < colonnes; i++) ...[
+                if (i > 0) const SizedBox(width: espacement),
+                Expanded(
+                  child: i < rangee.length
+                      ? rangee[i]
+                      : const SizedBox(),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+    return Column(
+      children: [
+        for (var i = 0; i < rangees.length; i++) ...[
+          if (i > 0) const SizedBox(height: espacement),
+          rangees[i],
+        ],
+      ],
     );
   }
 }
@@ -1220,6 +1181,46 @@ class _LigneChiffre extends StatelessWidget {
         ),
       ),
       onTap: onTap,
+    );
+  }
+}
+
+/// Mini-stat dans la carte « Aujourd'hui » (maquette, écrans 19 et
+/// 36) : libellé en capitales, valeur en grand, sur fond blanc.
+class _MiniStatJour extends StatelessWidget {
+  final String libelle;
+  final String valeur;
+
+  const _MiniStatJour({required this.libelle, required this.valeur});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            libelle.toUpperCase(),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            valeur,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+        ],
+      ),
     );
   }
 }

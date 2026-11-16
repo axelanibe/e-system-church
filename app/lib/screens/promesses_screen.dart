@@ -200,51 +200,90 @@ class _PromessesScreenState extends State<PromessesScreen> {
               icon: const Icon(Icons.add),
               label: Text(t.nouvellePromesse, style: const TextStyle(fontSize: 13.5)),
             ),
-      body: FutureBuilder<List<Promesse>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const AppLoading();
-          }
-          if (snapshot.hasError) {
-            return AppError(
-                message: t.erreurChargement, onRetry: _refresh);
-          }
-          final items = snapshot.data ?? const [];
-          if (items.isEmpty != _listeVide) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && _listeVide != items.isEmpty) {
-                setState(() => _listeVide = items.isEmpty);
-              }
-            });
-          }
-          if (items.isEmpty) {
-            return EmptyState(
-              icon: Icons.handshake_outlined,
-              message: t.videPromesses,
-              actionLabel: t.nouvellePromesse,
-              onAction: _creer,
-            );
-          }
-          return ListeAvecFab(
-            child: RefreshIndicator(
-              onRefresh: () async => _refresh(),
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: items.length,
-                itemBuilder: (context, i) {
-                  final p = items[i];
-                  return _PromesseCard(
-                    promesse: p,
-                    peutGer: _peutGer,
-                    onVerser: (e) => _verser(p, e),
-                    onAnnuler: () => _annuler(p),
-                  );
-                },
-              ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Text(
+              t.introPromesses,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 12,
+                  ),
             ),
-          );
-        },
+          ),
+          Expanded(
+            child: FutureBuilder<List<Promesse>>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const AppLoading();
+                }
+                if (snapshot.hasError) {
+                  return AppError(
+                      message: t.erreurChargement, onRetry: _refresh);
+                }
+                final items = snapshot.data ?? const [];
+                if (items.isEmpty != _listeVide) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _listeVide != items.isEmpty) {
+                      setState(() => _listeVide = items.isEmpty);
+                    }
+                  });
+                }
+                if (items.isEmpty) {
+                  return EmptyState(
+                    icon: Icons.handshake_outlined,
+                    message: t.videPromesses,
+                    actionLabel: t.nouvellePromesse,
+                    onAction: _creer,
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SectionTitle(title: t.promessesEnCours),
+                          Text(
+                            t.noteStatutsPromesse,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListeAvecFab(
+                        child: RefreshIndicator(
+                          onRefresh: () async => _refresh(),
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: items.length,
+                            itemBuilder: (context, i) {
+                              final p = items[i];
+                              return _PromesseCard(
+                                promesse: p,
+                                peutGer: _peutGer,
+                                onVerser: (e) => _verser(p, e),
+                                onAnnuler: () => _annuler(p),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

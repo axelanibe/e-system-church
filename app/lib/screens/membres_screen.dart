@@ -5,11 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/anniversaire.dart';
-import '../models/cultes_direct.dart';
 import '../models/member.dart';
-import '../models/presences.dart';
 import '../state/app_state.dart';
-import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/liste_avec_fab.dart';
 import '../widgets/dialog_helpers.dart';
@@ -20,10 +17,11 @@ import 'member_form_screen.dart';
 import 'import_membres_screen.dart';
 import 'visiteurs_screen.dart';
 
-/// Membres de mon église, en 5 onglets (projection) : Liste, Fiche,
-/// Familles, Anniversaires, Fréquentation.
-/// L'onglet Fréquentation est gardé : il fonctionne sans autre entrée
-/// dans la maquette, sa suppression doit être décidée par Axel.
+/// Membres de mon église, en 4 onglets (maquette, écran 1) : Liste,
+/// Fiche, Familles, Anniversaires. L'onglet Fréquentation a été
+/// retiré (décision d'Axel) : les présences restent suivies depuis
+/// l'écran Présences (pointage de culte) et la fiche de chaque
+/// membre garde sa carte Fréquentation.
 /// Le trésorier ne peut pas créer de membre.
 class MembresScreen extends StatefulWidget {
   const MembresScreen({super.key});
@@ -44,29 +42,20 @@ class _MembresScreenState extends State<MembresScreen>
   /// l'API pagine à 50, le filtre local ne remplace donc pas l'appel
   /// serveur, il donne seulement un retour immédiat en attendant.
   String _filtreLocal = '';
-  /// Pastille active : 'tous', 'baptises', 'nouveaux' ou 'en_attente'
-  /// (maquette, correction d'Axel du 15 nov. 2026).
-  /// Seule « Nouveaux » a un filtre serveur ('nouveau_converti') ;
-  /// « Baptisés » et « En attente » filtrent côté client, sur la page
-  /// déjà chargée, avec la même réserve de pagination à 50 que la
-  /// recherche locale.
+  /// Pastille active : 'tous', 'anciens' ou 'nouveaux' (maquette,
+  /// écran 1). Seule « Nouveaux » a un filtre serveur
+  /// ('nouveau_converti') ; « Anciens » filtre côté client, sur la
+  /// page déjà chargée, avec la même réserve de pagination à 50 que
+  /// la recherche locale.
   String _pastille = 'tous';
-  /// Ids des membres baptisés (table `baptemes`, `GET /baptemes`) :
-  /// la liste `GET /membres` ne renvoie pas `bapteme_date` (seul
-  /// `GET /moi/carte` le fait), on ne peut donc pas filtrer sur
-  /// `Member.baptemeDate` seul. Chargé paresseusement, à la première
-  /// sélection de la pastille « Baptisés ».
-  Set<String>? _idsBaptises;
-  bool _baptemesEnCours = false;
   late Future<MemberPage> _future;
   late Future<List<Anniversaire>> _anniversairesFuture;
   late Future<MemberPage> _membresFicheFuture;
-  late Future<PresenceStats> _statsFuture;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
       final i = _tabController.index;
       if (i != _tabIndex) setState(() => _tabIndex = i);
@@ -75,7 +64,6 @@ class _MembresScreenState extends State<MembresScreen>
     _future = _load();
     _anniversairesFuture = api.getAnniversaires(jours: 30);
     _membresFicheFuture = api.getMembers();
-    _statsFuture = _loadStats();
   }
 
   @override
@@ -93,43 +81,6 @@ class _MembresScreenState extends State<MembresScreen>
         );
   }
 
-  /// Statistiques de présence du mois en cours.
-  Future<PresenceStats> _loadStats() {
-    final maintenant = DateTime.now();
-    final mois = maintenant.month.toString().padLeft(2, '0');
-    final dernierJour =
-        DateTime(maintenant.year, maintenant.month + 1, 0).day;
-    return context.read<AppState>().api.getPresenceStats(
-          from: '${maintenant.year}-$mois-01',
-          to: '${maintenant.year}-$mois-${dernierJour.toString().padLeft(2, '0')}',
-        );
-  }
-
-  /// Baptêmes de l'église, une seule fois : les ids servent au filtre
-  /// « Baptisés ». En cas d'erreur, la pastille ne filtre rien et la
-  /// liste reste affichée.
-  Future<void> _chargerBaptemes() async {
-    if (_idsBaptises != null || _baptemesEnCours) return;
-    setState(() => _baptemesEnCours = true);
-    try {
-      final baptemes =
-          await context.read<AppState>().api.getBaptemes();
-      if (mounted) {
-        setState(() {
-          _idsBaptises = {for (final b in baptemes) b.memberId};
-          _baptemesEnCours = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _idsBaptises = {};
-          _baptemesEnCours = false;
-        });
-      }
-    }
-  }
-
   void _refresh() {
     setState(() => _future = _load());
   }
@@ -137,10 +88,6 @@ class _MembresScreenState extends State<MembresScreen>
   void _refreshAnniversaires() {
     setState(() => _anniversairesFuture =
         context.read<AppState>().api.getAnniversaires(jours: 30));
-  }
-
-  void _refreshStats() {
-    setState(() => _statsFuture = _loadStats());
   }
 
   Future<void> _deleteMember(Member member) async {
@@ -181,16 +128,11 @@ class _MembresScreenState extends State<MembresScreen>
 
   bool _correspondPastille(Member m) {
     switch (_pastille) {
-      case 'baptises':
-        // Un baptême enregistré pour ce membre (`baptemes`), ou une
-        // date de baptême déjà renvoyée sur sa fiche.
-        return _idsBaptises?.contains(m.id) == true ||
-            m.baptemeDate != null;
-      case 'en_attente':
-        // « En attente » : la personne ne s'est pas encore décidée
-        // (définition d'Axel). Le statut réel le plus proche est
-        // « sympathisant » : elle vient sans être membre.
-        return m.statutRiche == 'sympathisant';
+      case 'anciens':
+        // « Anciens » (maquette, écran 1) : membres établis, ni
+        // nouveaux convertis ni sympathisants.
+        return m.status != 'nouveau_converti' &&
+            m.statutRiche != 'sympathisant';
       default:
         return true;
     }
@@ -412,9 +354,6 @@ class _MembresScreenState extends State<MembresScreen>
                   onRetry: _refresh,
                 );
               }
-              if (_pastille == 'baptises' && _baptemesEnCours) {
-                return const AppLoading();
-              }
               final page = snapshot.data!;
               final membres = page.membres
                   .where(_correspondRecherche)
@@ -443,9 +382,8 @@ class _MembresScreenState extends State<MembresScreen>
                           children: [
                             for (final entry in <String, String>{
                               'Tous': 'tous',
-                              'Baptisés': 'baptises',
+                              'Anciens': 'anciens',
                               'Nouveaux': 'nouveaux',
-                              'En attente': 'en_attente',
                             }.entries) ...[
                               ChoiceChip(
                                 label: Text(
@@ -458,9 +396,6 @@ class _MembresScreenState extends State<MembresScreen>
                                     _pastille = entry.value;
                                     _future = _load();
                                   });
-                                  if (entry.value == 'baptises') {
-                                    _chargerBaptemes();
-                                  }
                                 },
                               ),
                               const SizedBox(width: 8),
@@ -695,125 +630,6 @@ class _MembresScreenState extends State<MembresScreen>
     );
   }
 
-  /// Onglet Fréquentation : KPIs du mois en cours (projection) +
-  /// historique depuis par_culte.
-  Widget _frequentationTab() {
-    return FutureBuilder<PresenceStats>(
-      future: _statsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const AppLoading();
-        }
-        if (snapshot.hasError) {
-          return AppError(
-            message: snapshot.error.toString(),
-            onRetry: _refreshStats,
-          );
-        }
-        final stats = snapshot.data!;
-        final taux = (stats.tauxPresence * 100).round();
-        return RefreshIndicator(
-          onRefresh: () async => _refreshStats(),
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                        child: _kpi(
-                            'PRÉSENCES, CE MOIS', '${stats.presents}')),
-                    const SizedBox(width: 12),
-                    Expanded(child: _kpi('TAUX MOYEN', '$taux %')),
-                  ],
-                ),
-                const SectionTitle(title: 'Historique de fréquentation'),
-                if (stats.parCulte.isEmpty)
-                  const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            'Aucune présence pointée',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'L’historique se construit à chaque pointage de culte.',
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  Card(
-                    child: Column(
-                      children: [
-                        ...stats.parCulte.map((entree) {
-                          final presents = presentsStat(entree);
-                          final date = entree['date_heure'];
-                          return ListTile(
-                            dense: true,
-                            title: Text(titreStatCulte(entree)),
-                            subtitle: date == null
-                                ? null
-                                : Text(afficherDateTime(date)),
-                            trailing: Text(
-                              '$presents '
-                              '${presents > 1 ? 'présents' : 'présent'}',
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _kpi(String label, String valeur) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.violetProfond.withValues(alpha: 0.7),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              valeur,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.violetProfond,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
@@ -821,7 +637,7 @@ class _MembresScreenState extends State<MembresScreen>
     return Scaffold(
       body: Column(
         children: [
-          // Bandeau violet (même style que FamillesScreen) : 5 onglets,
+          // Bandeau violet (même style que FamillesScreen) : 4 onglets,
           // indicateur or, défilant sur téléphone étroit. Le titre
           // « Membres » est déjà dans l'en-tête clair de la coque
           // (HomeScreen), on ne le duplique pas ici.
@@ -847,7 +663,6 @@ class _MembresScreenState extends State<MembresScreen>
                 Tab(text: 'Fiche'),
                 Tab(text: 'Familles'),
                 Tab(text: 'Anniversaires'),
-                Tab(text: 'Fréquentation'),
               ],
             ),
           ),
@@ -861,7 +676,6 @@ class _MembresScreenState extends State<MembresScreen>
                 // 1) : la création se fait dans l'écran Départements.
                 const FamillesScreen(masquerCreation: true),
                 _anniversairesTab(),
-                _frequentationTab(),
               ],
             ),
           ),

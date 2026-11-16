@@ -473,7 +473,8 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                 if (toutVide)
                   const EmptyState(
                     icon: Icons.swap_horiz_outlined,
-                    message: 'Aucun transfert pour l’instant.',
+                    message:
+                        'Aucun transfert pour l’instant.\nLes transferts demandés s’afficheront ici.',
                   )
                 else ...[
                   _section('À traiter par mon église', result.aTraiter,

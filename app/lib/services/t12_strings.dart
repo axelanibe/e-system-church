@@ -50,6 +50,14 @@ class T12Strings {
 
   // -- Promesses (US4) --------------------------------------------------------
   String get nouvellePromesse => _t('Nouvelle promesse', 'New pledge');
+  String get promessesEnCours =>
+      _t('Promesses en cours', 'Pledges in progress');
+  String get introPromesses => _t(
+      'Les promesses de don des membres, leur échéance et leur suivi.',
+      'Members’ giving pledges, their due dates and follow-up.');
+  String get noteStatutsPromesse => _t(
+      'Chaque promesse porte un statut : en cours, honorée quand la contribution correspondante est enregistrée, en retard après l’échéance.',
+      'Each pledge has a status: in progress, honoured once the matching contribution is recorded, overdue after the due date.');
   String get montantTotal => _t('Montant total (FCFA)', 'Total amount (FCFA)');
   String get nbVersements => _t('Nombre de versements', 'Number of instalments');
   String get dateDebut => _t('Date de début', 'Start date');
@@ -73,6 +81,10 @@ class T12Strings {
 
   // -- Dons en nature (US5) ---------------------------------------------------
   String get nouveauDonNature => _t('Nouveau don en nature', 'New in-kind gift');
+  String get introDonsNature => _t(
+      'Les dons qui ne sont pas de l’argent : objets, matériel, denrées — et leur valeur estimée.',
+      'Gifts that are not money: objects, equipment, food — and their estimated value.');
+  String get donsRecus => _t('Dons reçus', 'Gifts received');
   String get description => _t('Description', 'Description');
   String get quantite => _t('Quantité', 'Quantity');
   String get typeDon => _t('Type de don', 'Gift type');
@@ -105,23 +117,26 @@ class T12Strings {
   String get masquesEnregistres => _t('Choix enregistrés.', 'Choices saved.');
 
   // -- Transparence (US8) -------------------------------------------------------
-  String get recettes => _t('Recettes', 'Income');
-  String get depenses => _t('Dépenses', 'Expenses');
-  String get solde => _t('Solde', 'Balance');
+  String get recettes => _t('Entrées du mois', 'Income for the month');
+  String get depenses => _t('Sorties du mois', 'Expenses for the month');
+  String get solde => _t('Solde de caisse', 'Cash balance');
+  String get introTransparence => _t(
+      'Ce que les membres voient des comptes de l’église, dans leur espace.',
+      'What members see of the church’s accounts, in their space.');
   String get parType => _t('Par type', 'By type');
   String get parPoste => _t('Par poste', 'By budget line');
   String get publication => _t('Publication', 'Publication');
   String resumePublie(String mois) =>
       _t('Résumé publié — $mois', 'Published summary — $mois');
   String get notePublication => _t(
-      'Le résumé se publie à la clôture de la période, depuis Finances.',
-      'The summary is published when the period is closed, from Finances.');
+      'Le résumé se publie à la clôture de la période, depuis Finances. Rien à publier à la main ici : cet écran montre seulement ce qui est visible par les membres.',
+      'The summary is published when the period is closed, from Finances. Nothing to publish by hand here: this screen only shows what members can see.');
   String get nonActivee => _t(
       'La transparence financière n’est pas activée pour les membres de votre église.',
       'Financial transparency is not enabled for members of your church.');
   String get sansLigneNominative => _t(
-      'Totaux seulement, aucune ligne nominative.',
-      'Totals only, no personal lines.');
+      'Lecture seule. Les membres voient des totaux, jamais le détail : aucun nom de donateur, aucun montant par personne.',
+      'Read-only. Members see totals, never detail: no donor name, no amount per person.');
 
   // -- Portefeuille (US9) ---------------------------------------------------------
   String get exporterPass => _t('Exporter le pass', 'Export the pass');

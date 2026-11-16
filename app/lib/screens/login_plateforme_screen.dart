@@ -101,7 +101,8 @@ class _LoginPlateformeScreenState extends State<LoginPlateformeScreen> {
                     TextFormField(
                       controller: _identifiantController,
                       decoration: const InputDecoration(
-                        labelText: 'E-mail',
+                        labelText: 'Identifiant Plateforme *',
+                        hintText: 'Identifiant',
                         prefixIcon: Icon(Icons.mail_outline),
                         border: OutlineInputBorder(),
                       ),
@@ -109,10 +110,7 @@ class _LoginPlateformeScreenState extends State<LoginPlateformeScreen> {
                       textInputAction: TextInputAction.next,
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) {
-                          return 'Saisissez votre e-mail.';
-                        }
-                        if (!v.contains('@') || !v.contains('.')) {
-                          return 'E-mail invalide.';
+                          return 'Saisissez votre identifiant.';
                         }
                         return null;
                       },
@@ -121,7 +119,7 @@ class _LoginPlateformeScreenState extends State<LoginPlateformeScreen> {
                     TextFormField(
                       controller: _passwordController,
                       decoration: InputDecoration(
-                        labelText: 'Mot de passe',
+                        labelText: 'Mot de passe *',
                         prefixIcon: const Icon(Icons.lock_outline),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
@@ -160,8 +158,15 @@ class _LoginPlateformeScreenState extends State<LoginPlateformeScreen> {
                                 height: 20,
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Text('Se connecter à la Plateforme'),
+                            : const Text('Se connecter'),
                       ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Connexion distincte de celle des églises. '
+                      'L’accès d’aide à une église est révocable à tout moment.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 11.5),
                     ),
                     const SizedBox(height: 12),
                     TextButton(

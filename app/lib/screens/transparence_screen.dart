@@ -122,6 +122,15 @@ class _TransparenceScreenState extends State<TransparenceScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 Text(
+                  t.introTransparence,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 12,
+                        color:
+                            Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+                const SizedBox(height: 16),
+                Text(
                   t.resumePublie(_libelleMois(_periode)).toUpperCase(),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 11.5),
                 ),
@@ -135,13 +144,14 @@ class _TransparenceScreenState extends State<TransparenceScreen> {
                       ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  t.sansLigneNominative,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 12,
-                        color:
-                            Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      t.sansLigneNominative,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Row(

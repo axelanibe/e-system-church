@@ -99,8 +99,19 @@ class _FinancesScreenState extends State<FinancesScreen> {
     return Scaffold(
       body: Column(
         children: [
+          // Maquette, écrans 2–3 : sous-titre de l'écran Finances. E8.
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Contributions, caisse et clôtures de l’église.',
+                style: TextStyle(fontSize: 12.5),
+              ),
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
             child: _SousOnglets(
               index: _sousOnglet,
               onChange: (i) => setState(() {
@@ -128,9 +139,9 @@ class _FinancesScreenState extends State<FinancesScreen> {
                 return RefreshIndicator(
                   onRefresh: () async => _refresh(),
                   child: ListView(
-                    // Marge basse pour le bouton flottant « Contribution »,
-                    // qui recouvrait sinon le badge de la dernière ligne.
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+                    // Marge basse pour le bouton flottant « Ajouter »,
+                    // qui recouvrait sinon le contenu en bas d'écran.
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
                     children: [
                       // Les 4 chiffres de la projection (Cotisations du
                       // mois, Caisse, Entrées et Sorties du jour) en
@@ -186,42 +197,11 @@ class _FinancesScreenState extends State<FinancesScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final crossAxisCount =
-                              constraints.maxWidth > 600 ? 4 : 2;
-                          final totaux = page.totaux;
-                          return GridView.count(
-                            crossAxisCount: crossAxisCount,
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            mainAxisSpacing: 12,
-                            crossAxisSpacing: 12,
-                            childAspectRatio: 1.9,
-                            children: [
-                              for (final type in [
-                                'dime',
-                                'offrande',
-                                'don',
-                                'depense'
-                              ])
-                                StatCard(
-                                  label: Contribution.labelForTypePluriel(
-                                      type),
-                                  value: formatFcfa(
-                                      totaux[type]?.totalFcfa ?? 0),
-                                  icon: type == 'depense'
-                                      ? Icons.trending_down
-                                      : Icons.trending_up,
-                                  color: type == 'depense'
-                                      ? AppTheme.rougeErreur
-                                      : AppTheme.violetProfond,
-                                ),
-                            ],
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 16),
+                      // Une seule grille de chiffres : celle du haut
+                      // (_GrilleChiffres, maquette écrans 2–3). La
+                      // seconde grille (totaux par type : dîmes,
+                      // offrandes, dons, dépenses), absente de la
+                      // maquette, est supprimée. E8.
                       Card(
                         child: ListTile(
                           leading: const Icon(Icons.volunteer_activism_outlined),
@@ -242,6 +222,9 @@ class _FinancesScreenState extends State<FinancesScreen> {
                         child: ListTile(
                           leading: const Icon(Icons.handshake_outlined),
                           title: const Text('Promesses de don', style: TextStyle(fontSize: 13.5)),
+                          subtitle:
+                              const Text('Suivi des promesses',
+                                  style: TextStyle(fontSize: 11.5)),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () async {
                             await Navigator.of(context).push(
@@ -258,6 +241,9 @@ class _FinancesScreenState extends State<FinancesScreen> {
                           leading:
                               const Icon(Icons.card_giftcard_outlined),
                           title: const Text('Dons en nature', style: TextStyle(fontSize: 13.5)),
+                          subtitle:
+                              const Text('Enregistrement et suivi',
+                                  style: TextStyle(fontSize: 11.5)),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () async {
                             await Navigator.of(context).push(
@@ -273,6 +259,9 @@ class _FinancesScreenState extends State<FinancesScreen> {
                         child: ListTile(
                           leading: const Icon(Icons.visibility_outlined),
                           title: const Text('Transparence financière', style: TextStyle(fontSize: 13.5)),
+                          subtitle:
+                              const Text('Ce que les membres voient',
+                                  style: TextStyle(fontSize: 11.5)),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
                             Navigator.of(context).push(
@@ -324,7 +313,7 @@ class _FinancesScreenState extends State<FinancesScreen> {
                           leading: const Icon(Icons.store_outlined),
                           title: const Text('État des comptes marchands', style: TextStyle(fontSize: 13.5)),
                           subtitle: const Text(
-                              'Wave, Orange Money, MTN — consultation seulement.',
+                              'Wave, Orange Money, MTN — consultation seulement · Configuration et clés : Réglages uniquement.',
                               style: TextStyle(fontSize: 11.5)),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
@@ -345,6 +334,9 @@ class _FinancesScreenState extends State<FinancesScreen> {
                             title:
                                 const Text('Finances des annexes',
                                     style: TextStyle(fontSize: 13.5)),
+                            subtitle: const Text(
+                                'Totaux par annexe, lecture seule · Gestion des annexes : Mes annexes',
+                                style: TextStyle(fontSize: 11.5)),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.of(context).push(
@@ -356,11 +348,21 @@ class _FinancesScreenState extends State<FinancesScreen> {
                             },
                           ),
                         ),
-                      SizedBox(
-                        height: 48,
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
+                      // Maquette, écrans 2–3 : « Attestations annuelles »
+                      // est une carte de la liste, comme les autres
+                      // fonctions, avec son sous-titre, pas un bouton
+                      // à part. E8.
+                      Card(
+                        child: ListTile(
+                          leading:
+                              const Icon(Icons.description_outlined),
+                          title: const Text('Attestations annuelles',
+                              style: TextStyle(fontSize: 13.5)),
+                          subtitle: const Text(
+                              'Total des cotisations de l’année',
+                              style: TextStyle(fontSize: 11.5)),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) =>
@@ -368,8 +370,6 @@ class _FinancesScreenState extends State<FinancesScreen> {
                               ),
                             );
                           },
-                          icon: const Icon(Icons.description_outlined),
-                          label: const Text('Attestations annuelles', style: TextStyle(fontSize: 13.5)),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -512,6 +512,9 @@ class _FiltresDefilants extends StatelessWidget {
             if (i > 0) const SizedBox(width: 8),
             enfants[i],
           ],
+          // Marge de fin : sans elle la dernière pastille est
+          // tronquée en plein mot au bord droit de l'écran.
+          const SizedBox(width: 16),
         ],
       ),
     );

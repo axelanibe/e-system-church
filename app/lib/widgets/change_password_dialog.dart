@@ -14,11 +14,11 @@ Future<void> showChangePasswordDialog(BuildContext context) async {
   await showCreateDialog(
     context: context,
     title: 'Changer mon mot de passe',
-    saveLabel: 'Changer',
+    saveLabel: 'Modifier',
     fields: [
       dialogTextField(
           controller: ancienController,
-          label: 'Mot de passe actuel',
+          label: 'Ancien mot de passe',
           obscureText: true),
       dialogTextField(
           controller: nouveauController,

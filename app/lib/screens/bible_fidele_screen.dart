@@ -34,7 +34,6 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
   int _chapitreChoisi = 1;
   bool _modeRecherche = false;
 
-  final _rechercheLivreController = TextEditingController();
   final _rechercheTexteController = TextEditingController();
 
   late Future<List<VersionBible>> _versionsFuture;
@@ -65,7 +64,6 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
 
   @override
   void dispose() {
-    _rechercheLivreController.dispose();
     _rechercheTexteController.dispose();
     super.dispose();
   }
@@ -166,22 +164,27 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Lisez, cherchez un passage, puis choisissez un livre '
-                  'et un chapitre. Deux versions : Louis Segond 1910 '
-                  '(français) et King James Version (anglais).',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 16),
+    // Introduction fixe au-dessus de la zone de défilement : sa
+    // première ligne ne peut plus passer sous la barre violette.
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Lisez, cherchez un passage, puis choisissez un livre '
+                'et un chapitre. Deux versions : Louis Segond 1910 '
+                '(français) et King James Version (anglais).',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                children: [
                 FutureBuilder<List<VersionBible>>(
                   future: _versionsFuture,
                   builder: (context, snapshot) {
@@ -227,14 +230,20 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
+                // Un seul champ de recherche (maquette, écran 40) : il
+                // filtre la liste des livres en direct et lance la
+                // recherche de passages avec le bouton Rechercher.
                 TextField(
                   controller: _rechercheTexteController,
                   decoration: const InputDecoration(
-                    labelText: 'Rechercher un livre ou un passage',
+                    labelText: 'Rechercher dans la Bible',
                     prefixIcon: Icon(Icons.search),
                   ),
                   textInputAction: TextInputAction.search,
-                  onChanged: (v) => _rechercheTexte = v,
+                  onChanged: (v) => setState(() {
+                    _rechercheTexte = v;
+                    _rechercheLivre = v;
+                  }),
                   onSubmitted: (_) => _lancerRechercheTexte(),
                 ),
                 const SizedBox(height: 8),
@@ -270,15 +279,6 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
                     }),
                   ),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _rechercheLivreController,
-                    decoration: const InputDecoration(
-                      labelText: 'Rechercher un livre',
-                      prefixIcon: Icon(Icons.menu_book_outlined),
-                    ),
-                    onChanged: (v) => setState(() => _rechercheLivre = v),
-                  ),
-                  const SizedBox(height: 16),
                   const SectionTitle(title: 'Liste des livres'),
                   FutureBuilder<List<LivreBible>>(
                     future: _livresFuture,
@@ -302,17 +302,64 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
                           message: 'Aucun livre avec ce nom.',
                         );
                       }
-                      return Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: livres
-                            .map((livre) => ChoiceChip(
-                                  label: Text(livre.nom, style: const TextStyle(fontSize: 12.5)),
-                                  selected:
-                                      _livreChoisi?.code == livre.code,
-                                  onSelected: (_) => _choisirLivre(livre),
-                                ))
-                            .toList(),
+                      // Grille uniforme : chaque livre a une cellule de
+                      // même largeur, la liste ne paraît plus éparpillée.
+                      return LayoutBuilder(
+                        builder: (context, contraintes) {
+                          final colonnes =
+                              contraintes.maxWidth > 480 ? 3 : 2;
+                          return GridView.count(
+                            crossAxisCount: colonnes,
+                            shrinkWrap: true,
+                            physics:
+                                const NeverScrollableScrollPhysics(),
+                            mainAxisSpacing: 8,
+                            crossAxisSpacing: 8,
+                            childAspectRatio: 2.8,
+                            children: livres.map((livre) {
+                              final selectionne =
+                                  _livreChoisi?.code == livre.code;
+                              return InkWell(
+                                onTap: () => _choisirLivre(livre),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  alignment: Alignment.center,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: selectionne
+                                        ? Theme.of(context)
+                                            .colorScheme
+                                            .primaryContainer
+                                        : null,
+                                    border: Border.all(
+                                      color: selectionne
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .outlineVariant,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    livre.nom,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: selectionne
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          );
+                        },
                       );
                     },
                   ),
@@ -347,9 +394,10 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
               ],
             ),
           ),
-        ),
-      ],
-    );
+        ],
+      ),
+    ),
+  );
   }
 
   Widget _resultatsRecherche() {
