@@ -74,6 +74,7 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
     // l'église : quand des créneaux existent, le membre choisit parmi
     // eux, il ne réserve pas librement.
     final creneaux = await _creneauxFuture;
+    if (!mounted) return;
     if (creneaux.where((c) => c.actif).isNotEmpty &&
         _creneauChoisi == null) {
       showApiError(context, 'Choisissez un créneau proposé par votre église.');

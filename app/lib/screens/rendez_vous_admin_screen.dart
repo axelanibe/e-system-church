@@ -182,6 +182,7 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
         if (mounted) showApiError(context, e);
         return;
       }
+      if (!mounted) return;
       if (actifs.isEmpty) {
         if (mounted) {
           showApiError(context,
