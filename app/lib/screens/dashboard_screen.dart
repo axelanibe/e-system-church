@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/announcement.dart';
 import '../models/cultes.dart';
 import '../models/rapport.dart';
+import '../services/messagerie_lecture_service.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
@@ -13,6 +14,7 @@ import '../widgets/soft_button.dart';
 import '../widgets/soft_card.dart';
 import 'annonces_screen.dart';
 import 'cultes_screen.dart';
+import 'messagerie_liste_screen.dart';
 import 'mon_eglise_screen.dart';
 import 'pastoral_screen.dart';
 import 'prieres_screen.dart';
@@ -35,6 +37,7 @@ class _DashboardData {
   final int transfertsRattachements;
   final int absencesASuivre;
   final int anniversairesJour;
+  final int messagesNonLus;
   final String? mereNom;
   final String? mereCode;
   final RapportConsolide? rapport;
@@ -56,6 +59,7 @@ class _DashboardData {
     required this.transfertsRattachements,
     required this.absencesASuivre,
     required this.anniversairesJour,
+    required this.messagesNonLus,
     required this.mereNom,
     required this.mereCode,
     required this.rapport,
@@ -262,6 +266,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     }
     final annonces = await api.getAnnonces();
+    // Messagerie (T-Msg-1) : conversations avec un message plus récent
+    // que ma dernière lecture. Un échec ne bloque pas l'accueil, le
+    // compteur reste à 0. Les rôles sans accès à la messagerie
+    // (Plateforme) reçoivent un 403, ignoré ici.
+    int messagesNonLus = 0;
+    try {
+      await MessagerieLectureService.instance.charger();
+      final conversations = await api.getConversationsMessagerie();
+      messagesNonLus = MessagerieLectureService.instance
+          .compterConversationsNonLues(conversations);
+    } catch (_) {
+      messagesNonLus = 0;
+    }
     List<Culte> cultes = [];
     try {
       cultes = await api.getCultes();
@@ -283,6 +300,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       transfertsRattachements: transfertsRattachements,
       absencesASuivre: absencesASuivre,
       anniversairesJour: anniversairesJour,
+      messagesNonLus: messagesNonLus,
       mereNom: mereNom,
       mereCode: mereCode,
       rapport: rapport,
@@ -384,6 +402,70 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        // Messagerie (T-Msg-1, spécification §6) : entrée
+                        // sur l'accueil, avec le nombre de conversations
+                        // non lues en pastille or.
+                        SoftCard(
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(
+                              Icons.chat_bubble_outline,
+                              color: AppTheme.violetProfond,
+                            ),
+                            title: const Text(
+                              'Messagerie',
+                              style: TextStyle(fontSize: 14),
+                            ),
+                            subtitle: Text(
+                              data.messagesNonLus > 0
+                                  ? '${data.messagesNonLus} conversation${data.messagesNonLus > 1 ? 's' : ''} non lue${data.messagesNonLus > 1 ? 's' : ''}'
+                                  : 'Aucun message non lu',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (data.messagesNonLus > 0)
+                                  Container(
+                                    constraints: const BoxConstraints(
+                                      minWidth: 20,
+                                      minHeight: 20,
+                                    ),
+                                    padding:
+                                        const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.or,
+                                      borderRadius:
+                                          BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      '${data.messagesNonLus}',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.violetProfond,
+                                      ),
+                                    ),
+                                  ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.chevron_right,
+                                  color: AppTheme.orFonce,
+                                  size: 18,
+                                ),
+                              ],
+                            ),
+                            onTap: () => _ouvrir(
+                              context,
+                              const MessagerieListeScreen(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         // Aujourd'hui (maquette, écrans 19 et 36) :
                         // carte claire quand aucun culte n'est programmé,
                         // violet profond quand un culte est programmé.

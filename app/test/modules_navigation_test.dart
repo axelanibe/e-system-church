@@ -73,7 +73,7 @@ Future<void> _defilerJusqua(WidgetTester tester, Finder cible) async {
 }
 
 void main() {
-  testWidgets('Modules : les 13 cartes s’affichent', (tester) async {
+  testWidgets('Modules : les 14 cartes s’affichent', (tester) async {
     await _pomper(tester);
     for (final titre in [
       'Départements',
@@ -89,9 +89,13 @@ void main() {
       'Rendez-vous',
       'Attestations d’actes',
       'Messages admin',
+      'Messagerie',
     ]) {
       await _defilerJusqua(tester, find.text(titre));
     }
+    // La pastille de non lus de la carte Messagerie charge les
+    // lectures locales (délai de 2 s si le stockage ne répond pas).
+    await tester.pump(const Duration(seconds: 3));
     expect(tester.takeException(), isNull);
   });
 

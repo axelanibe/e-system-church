@@ -1,7 +1,9 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
-import type { Pool, PoolClient } from "pg";
+import type { Pool } from "pg";
 import { z } from "zod";
 import { dbError, requireAuth } from "../middleware.js";
+import { estParticipantActif, ficheMembre } from "../messagerie_commun.js";
+import { diffuserMessageWs } from "../messagerie_ws.js";
 
 /**
  * Tranche T-Msg-0 — Messagerie et Signalement : conversations et
@@ -36,33 +38,34 @@ const envoyerMessageSchema = z.object({
   type: z.literal("text").optional().default("text"),
 });
 
-/** Fiche membre liée au compte de l'appelant, ou null. */
-async function ficheMembre(
-  db: Pool | PoolClient,
-  userId: string,
-): Promise<string | null> {
-  const { rows } = await db.query<{ member_id: string | null }>(
-    `SELECT member_id FROM users WHERE id = $1`,
-    [userId],
+/**
+ * Limite de débit, spécification section 10 : 30 messages par minute
+ * et 300 par heure par membre. Limiteur simple en mémoire (une seule
+ * instance serveur), sans nouvelle dépendance. Les horodatages de plus
+ * d'une heure sont purgés à chaque contrôle, la clé disparaît quand
+ * il n'en reste plus.
+ */
+const LIMITE_MESSAGES_MINUTE = 30;
+const LIMITE_MESSAGES_HEURE = 300;
+const envoisParMembre = new Map<string, number[]>();
+
+function depasseLimiteDebit(memberId: string): boolean {
+  const maintenant = Date.now();
+  const envois = (envoisParMembre.get(memberId) ?? []).filter(
+    (t) => maintenant - t < 3_600_000,
   );
-  return rows[0]?.member_id ?? null;
+  if (envois.length === 0) envoisParMembre.delete(memberId);
+  else envoisParMembre.set(memberId, envois);
+  return (
+    envois.filter((t) => maintenant - t < 60_000).length >= LIMITE_MESSAGES_MINUTE ||
+    envois.length >= LIMITE_MESSAGES_HEURE
+  );
 }
 
-/** Vrai si la fiche membre est participante active de la conversation. */
-async function estParticipantActif(
-  db: Pool | PoolClient,
-  churchId: string,
-  conversationId: string,
-  memberId: string,
-): Promise<boolean> {
-  const { rows } = await db.query(
-    `SELECT 1 FROM conversation_participants cp
-      JOIN conversations c ON c.id = cp.conversation_id
-     WHERE cp.conversation_id = $1 AND c.church_id = $2
-       AND cp.member_id = $3 AND cp.is_active = true`,
-    [conversationId, churchId, memberId],
-  );
-  return rows.length > 0;
+function enregistrerEnvoi(memberId: string): void {
+  const envois = envoisParMembre.get(memberId) ?? [];
+  envois.push(Date.now());
+  envoisParMembre.set(memberId, envois);
 }
 
 export function registerMessagerieRoutes(app: FastifyInstance, db: Pool) {
@@ -265,6 +268,12 @@ export function registerMessagerieRoutes(app: FastifyInstance, db: Pool) {
         if (!(await estParticipantActif(db, req.session.churchId, id, memberId))) {
           return reply.code(404).send({ error: "not_found", message: "Conversation introuvable." });
         }
+        if (depasseLimiteDebit(memberId)) {
+          return reply.code(429).send({
+            error: "rate_limited",
+            message: "Trop de messages : 30 par minute et 300 par heure maximum.",
+          });
+        }
         const client = await db.connect();
         try {
           await client.query("BEGIN");
@@ -279,6 +288,10 @@ export function registerMessagerieRoutes(app: FastifyInstance, db: Pool) {
             [id],
           );
           await client.query("COMMIT");
+          enregistrerEnvoi(memberId);
+          // Diffusion WebSocket (T-Msg-1) : participants connectés de
+          // cette conversation, dans cette église seulement.
+          diffuserMessageWs(id, req.session.churchId, rows[0]);
           return reply.code(201).send(rows[0]);
         } catch (e) {
           await client.query("ROLLBACK").catch(() => undefined);
