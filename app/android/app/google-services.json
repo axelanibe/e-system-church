@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "487372952475",
+    "project_id": "e-system-church",
+    "storage_bucket": "e-system-church.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:487372952475:android:a987510a148746354e873e",
+        "android_client_info": {
+          "package_name": "ci.esystemchurch.esystem_church"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBI_UlHjDAPMwUW4jVll4IwXb9Es30WuKI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

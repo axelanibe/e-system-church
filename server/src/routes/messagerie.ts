@@ -1,9 +1,10 @@
-import type { FastifyInstance, FastifyReply } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
 import { dbError, requireAuth } from "../middleware.js";
 import { estParticipantActif, ficheMembre } from "../messagerie_commun.js";
 import { diffuserMessageWs } from "../messagerie_ws.js";
+import { notifierNouveauMessage } from "../fcm.js";
 
 /**
  * Tranche T-Msg-0 — Messagerie et Signalement : conversations et
@@ -68,43 +69,45 @@ function enregistrerEnvoi(memberId: string): void {
   envoisParMembre.set(memberId, envois);
 }
 
+/**
+ * Garde de rôle propre à la messagerie : le super administrateur n'a
+ * aucun accès au contenu des messages, l'aide Plateforme n'a que les
+ * chiffres. Tous les autres rôles de l'église peuvent utiliser la
+ * messagerie. Partagée avec les jetons push (même périmètre).
+ */
+export async function gardeMessagerie(
+  req: FastifyRequest,
+  reply: FastifyReply,
+): Promise<void> {
+  if (req.session.role === "super_admin") {
+    reply.code(403).send({
+      error: "forbidden",
+      message: "Le super administrateur n'a aucun accès au contenu des messages.",
+    });
+    return;
+  }
+  if (req.session.role === "aide_plateforme") {
+    reply.code(403).send({
+      error: "forbidden",
+      message: "L'aide Plateforme n'a accès qu'aux chiffres, pas au contenu des messages.",
+    });
+    return;
+  }
+  if (!ROLES_MESSAGERIE.includes(req.session.role)) {
+    reply.code(403).send({
+      error: "forbidden",
+      message: `Action non autorisée pour le rôle « ${req.session.role} ».`,
+    });
+  }
+}
+
 export function registerMessagerieRoutes(app: FastifyInstance, db: Pool) {
   const auth = requireAuth(db);
-
-  // Garde de rôle propre à la messagerie : le super administrateur
-  // n'a aucun accès au contenu des messages, l'aide Plateforme n'a
-  // que les chiffres. Tous les autres rôles de l'église peuvent
-  // utiliser la messagerie.
-  const autoriserMessagerie = async (
-    req: Parameters<typeof auth>[0],
-    reply: FastifyReply,
-  ): Promise<void> => {
-    if (req.session.role === "super_admin") {
-      reply.code(403).send({
-        error: "forbidden",
-        message: "Le super administrateur n'a aucun accès au contenu des messages.",
-      });
-      return;
-    }
-    if (req.session.role === "aide_plateforme") {
-      reply.code(403).send({
-        error: "forbidden",
-        message: "L'aide Plateforme n'a accès qu'aux chiffres, pas au contenu des messages.",
-      });
-      return;
-    }
-    if (!ROLES_MESSAGERIE.includes(req.session.role)) {
-      reply.code(403).send({
-        error: "forbidden",
-        message: `Action non autorisée pour le rôle « ${req.session.role} ».`,
-      });
-    }
-  };
 
   // -- POST /messagerie/conversations : créer une conversation.
   app.post(
     "/messagerie/conversations",
-    { preHandler: [auth, autoriserMessagerie] },
+    { preHandler: [auth, gardeMessagerie] },
     async (req, reply) => {
       const parsed = creerConversationSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -191,7 +194,7 @@ export function registerMessagerieRoutes(app: FastifyInstance, db: Pool) {
   // -- GET /messagerie/conversations : conversations de l'appelant.
   app.get(
     "/messagerie/conversations",
-    { preHandler: [auth, autoriserMessagerie] },
+    { preHandler: [auth, gardeMessagerie] },
     async (req, reply) => {
       try {
         const memberId = await ficheMembre(db, req.session.userId);
@@ -214,7 +217,7 @@ export function registerMessagerieRoutes(app: FastifyInstance, db: Pool) {
   // -- GET /messagerie/conversations/:id : une conversation.
   app.get(
     "/messagerie/conversations/:id",
-    { preHandler: [auth, autoriserMessagerie] },
+    { preHandler: [auth, gardeMessagerie] },
     async (req, reply) => {
       const id = (req.params as { id: string }).id;
       if (!uuid.safeParse(id).success) {
@@ -246,7 +249,7 @@ export function registerMessagerieRoutes(app: FastifyInstance, db: Pool) {
   // -- POST /messagerie/conversations/:id/messages : envoyer un message texte.
   app.post(
     "/messagerie/conversations/:id/messages",
-    { preHandler: [auth, autoriserMessagerie] },
+    { preHandler: [auth, gardeMessagerie] },
     async (req, reply) => {
       const id = (req.params as { id: string }).id;
       if (!uuid.safeParse(id).success) {
@@ -292,6 +295,25 @@ export function registerMessagerieRoutes(app: FastifyInstance, db: Pool) {
           // Diffusion WebSocket (T-Msg-1) : participants connectés de
           // cette conversation, dans cette église seulement.
           diffuserMessageWs(id, req.session.churchId, rows[0]);
+          // Notification push FCM aux autres participants : envoi
+          // déclenché après le COMMIT, jamais bloquant. Une panne FCM
+          // (compte de service absent, jeton invalide) ne doit jamais
+          // faire échouer la création du message, déjà validée ici.
+          try {
+            const { rows: convRows } = await db.query<{ title: string | null }>(
+              `SELECT title FROM conversations WHERE id = $1`,
+              [id],
+            );
+            void notifierNouveauMessage(db, {
+              churchId: req.session.churchId,
+              conversationId: id,
+              expediteurMemberId: memberId,
+              titre: convRows[0]?.title ?? "Nouveau message",
+              contenu: parsed.data.content,
+            }).catch(() => undefined);
+          } catch {
+            // Notification seule : le message est créé, on continue.
+          }
           return reply.code(201).send(rows[0]);
         } catch (e) {
           await client.query("ROLLBACK").catch(() => undefined);
@@ -308,7 +330,7 @@ export function registerMessagerieRoutes(app: FastifyInstance, db: Pool) {
   // -- GET /messagerie/conversations/:id/messages : messages d'une conversation.
   app.get(
     "/messagerie/conversations/:id/messages",
-    { preHandler: [auth, autoriserMessagerie] },
+    { preHandler: [auth, gardeMessagerie] },
     async (req, reply) => {
       const id = (req.params as { id: string }).id;
       if (!uuid.safeParse(id).success) {

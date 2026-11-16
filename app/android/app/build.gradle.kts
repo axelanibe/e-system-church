@@ -2,6 +2,10 @@ plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    // Notifications push FCM : applique `google-services.json`
+    // (projet Firebase `e-system-church`, paquet
+    // `ci.esystemchurch.esystem_church`).
+    id("com.google.gms.google-services")
 }
 
 android {

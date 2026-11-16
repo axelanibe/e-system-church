@@ -187,6 +187,17 @@ abstract class ApiService {
   /// Écrire un message à mon église mère ou à ma tutelle (migration 020).
   Future<MessageFidele> envoyerMessageFidele({required String corps});
 
+  /// Enregistrer le jeton FCM de cet appareil pour les notifications push
+  /// (`POST /messagerie/jetons`, tranche push FCM) : le serveur envoie
+  /// ensuite les nouveaux messages en push. `plateforme` vaut `android`,
+  /// `ios` ou `web`.
+  Future<void> enregistrerJetonPush(
+      {required String jeton, required String plateforme});
+
+  /// Retirer le jeton FCM de cet appareil (`DELETE /messagerie/jetons`,
+  /// à la déconnexion) : plus aucune notification push sur cet appareil.
+  Future<void> retirerJetonPush({required String jeton});
+
   /// « Je serai présent » au prochain culte (migration 020) : annonce
   /// de présence, sans pointage.
   Future<void> confirmerPresenceCulte(String culteId);
