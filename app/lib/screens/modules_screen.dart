@@ -19,7 +19,7 @@ import 'serviteurs_screen.dart';
 /// de 13 cartes EXACTEMENT, dans l'ordre de la maquette. Chaque carte
 /// ouvre sa vraie fonctionnalité, une seule entrée par fonction, jamais
 /// de doublon avec la barre du bas (Accueil, Membres, Finances,
-/// Départements) ni avec la connexion, qui est l'entrée de
+/// Modules) ni avec la connexion, qui est l'entrée de
 /// l'application, ni avec l'espace fidèle, périmètre étanche.
 /// La carte « Bible et école » ouvre les vrais écrans Bible de la T9 :
 /// la lecture d'abord, l'école biblique par le bouton de la barre.
@@ -28,11 +28,15 @@ import 'serviteurs_screen.dart';
 /// de messages dédié dans l'application.
 class ModulesScreen extends StatelessWidget {
   /// Aller à un onglet de la barre du bas (0 Accueil, 1 Membres,
-  /// 2 Finances). Sans [onAller], une carte d'onglet revient
+  /// 2 Finances, 3 Modules). Sans [onAller], une carte d'onglet revient
   /// simplement à l'écran précédent.
   final void Function(int index)? onAller;
 
-  const ModulesScreen({super.key, this.onAller});
+  /// [sansAppBar] : intégré comme onglet (barre du bas), sans sa propre
+  /// barre, l'en-tête clair de HomeScreen donne déjà le titre.
+  final bool sansAppBar;
+
+  const ModulesScreen({super.key, this.onAller, this.sansAppBar = false});
 
   static const _modules = [
     (
@@ -179,7 +183,9 @@ class ModulesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Modules de l’église')),
+      appBar: sansAppBar
+          ? null
+          : AppBar(title: const Text('Modules de l’église')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

@@ -248,24 +248,33 @@ class _DepartementsScreenState extends State<DepartementsScreen>
       body: Column(
         children: [
           // Bandeau violet (même style que MembresScreen) : 3 onglets,
-          // indicateur or, défilant sur téléphone étroit.
+          // indicateur or, défilant sur téléphone étroit. Le retour
+          // est ici : l'écran n'a pas d'AppBar propre, il est poussé
+          // depuis la grille Modules.
           Container(
             color: AppTheme.violetProfond,
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              indicatorColor: AppTheme.or,
-              indicatorWeight: 3,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white60,
-              labelStyle: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-              tabs: const [
-                Tab(text: 'Départements'),
-                Tab(text: 'Budgets'),
-                Tab(text: 'Enfants & jeunesse'),
+            child: Row(
+              children: [
+                const BackButton(color: Colors.white),
+                Expanded(
+                  child: TabBar(
+                    controller: _tabController,
+                    isScrollable: true,
+                    indicatorColor: AppTheme.or,
+                    indicatorWeight: 3,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.white60,
+                    labelStyle: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                    tabs: const [
+                      Tab(text: 'Départements'),
+                      Tab(text: 'Budgets'),
+                      Tab(text: 'Enfants & jeunesse'),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),

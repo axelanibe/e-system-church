@@ -27,7 +27,7 @@ import '../screens/settings_screen.dart';
 /// sous-titre atténué, petit chevron discret. Le fond est clair
 /// (thème du tiroir, blanc), jamais sombre : un texte sombre y est
 /// illisible. Une seule entrée par fonction, jamais de doublon avec
-/// la barre du bas (Accueil, Membres, Finances, Départements). « Mes
+/// la barre du bas (Accueil, Membres, Finances, Modules). « Mes
 /// annexes » est la seule entrée du réseau : l'ancien écran Réseau a
 /// fusionné dedans. « Paiements automatiques » (écran 35) est la ligne
 /// Outils du tiroir. Les autres fonctions restent accessibles depuis
@@ -41,7 +41,7 @@ import '../screens/settings_screen.dart';
 /// (même espace seulement, règle de bascule).
 class TiroirCourt extends StatelessWidget {
   /// Aller à un onglet de la barre du bas (0 Accueil, 1 Membres,
-  /// 2 Finances, 3 Départements).
+  /// 2 Finances, 3 Modules).
   final void Function(int index) onAller;
 
   const TiroirCourt({super.key, required this.onAller});
