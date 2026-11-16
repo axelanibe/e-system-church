@@ -222,16 +222,26 @@ IndicatifPays indicatifParIso(String iso) {
   return indicatifsPays.first;
 }
 
+/// Vrai quand la saisie ressemble à un numéro de téléphone : que
+/// des chiffres et la ponctuation d'un numéro (espaces, +, -, ()).
+/// Un texte avec des lettres ou un @ est un e-mail, pas un numéro.
+bool estNumeroTelephone(String saisie) {
+  final texte = saisie.trim();
+  if (texte.isEmpty) return true;
+  return RegExp(r'^[0-9\s+\-()]+$').hasMatch(texte);
+}
+
 /// Préfixe l’indicatif choisi à un numéro saisi. Un e-mail (il
-/// contient @) est renvoyé tel quel : l’indicatif est ignoré. Un
-/// numéro déjà international (il commence par +) est renvoyé tel
-/// quel aussi, pour ne pas le préfixer deux fois. Le serveur
-/// normalise ensuite le numéro (espaces retirés, 0 après +225
-/// retiré, autre +… gardé tel quel) : la logique d’envoi ne change
-/// pas, seul l’indicatif s’ajoute devant le numéro.
+/// contient @ ou des lettres) est renvoyé tel quel : l’indicatif
+/// est ignoré. Un numéro déjà international (il commence par +)
+/// est renvoyé tel quel aussi, pour ne pas le préfixer deux fois.
+/// Le serveur normalise ensuite le numéro (espaces retirés, 0
+/// après +225 retiré, autre +… gardé tel quel) : la logique
+/// d’envoi ne change pas, seul l’indicatif s’ajoute devant le
+/// numéro.
 String composerTelephoneAvecIndicatif(String indicatif, String saisie) {
   final texte = saisie.trim();
-  if (texte.isEmpty || texte.contains('@') || texte.startsWith('+')) {
+  if (texte.isEmpty || texte.startsWith('+') || !estNumeroTelephone(texte)) {
     return texte;
   }
   return '$indicatif $texte';

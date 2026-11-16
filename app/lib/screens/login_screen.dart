@@ -62,6 +62,21 @@ class _LoginScreenState extends State<LoginScreen> {
   // Indicatif du champ « E-mail ou téléphone » : Côte d’Ivoire au
   // départ, l’utilisateur peut choisir un autre pays.
   String _indicatifIso = 'CI';
+  // L’indicatif ne s’affiche que pour un numéro de téléphone. Dès
+  // que la saisie ressemble à un e-mail (lettres ou @), il se
+  // cache : un e-mail n’a pas d’indicatif pays.
+  bool _estTelephone = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _identifiantController.addListener(() {
+      final estTel = estNumeroTelephone(_identifiantController.text);
+      if (estTel != _estTelephone) {
+        setState(() => _estTelephone = estTel);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -196,11 +211,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           label: 'E-mail ou téléphone *',
                           hint: 'E-mail ou numéro de téléphone',
                           icon: Icons.person_outline,
-                          prefix: SelecteurIndicatifPays(
-                            iso: _indicatifIso,
-                            onChanged: (iso) =>
-                                setState(() => _indicatifIso = iso),
-                          ),
+                          prefix: _estTelephone
+                              ? SelecteurIndicatifPays(
+                                  iso: _indicatifIso,
+                                  onChanged: (iso) =>
+                                      setState(() => _indicatifIso = iso),
+                                )
+                              : null,
                           keyboardType: TextInputType.text,
                           textInputAction: TextInputAction.next,
                           validator: validerIdentifiant,
