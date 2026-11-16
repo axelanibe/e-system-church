@@ -47,4 +47,12 @@ class DefaultFirebaseOptions {
     messagingSenderId: '487372952475',
     appId: '1:487372952475:web:3ddcf8fe363362dc4e873e',
   );
+
+  /// Clé publique VAPID de la push web, générée le 16 nov. 2026 dans
+  /// la console Firebase (Paramètres, Cloud Messaging, Certificats
+  /// Web push). Clé PUBLIQUE, elle sert au navigateur à s'abonner à
+  /// la push, elle n'est pas un secret et ne donne aucun droit côté
+  /// serveur. Sans elle, la push web reste inactive.
+  static const String clePubliqueVapidWeb =
+      'BHmLf4KnEUgv-WQ1hkEDcY-qtzbhRRMoukZQIU59soB4HhJHlvDnEGRthlLWZ49kIh6M8U-5PZUZBLSeg_aOdcU';
 }

@@ -191,8 +191,14 @@ class NotificationsPushService {
         debugPrint('[Push] Autorisation notifications refusée.');
         return;
       }
+      // Sur le web, le jeton exige la clé publique VAPID, sinon
+      // `getToken` ne renvoie rien et la push web reste inactive.
+      // Sur Android, la clé vient de google-services.json.
       // ignore: deprecated_member_use
-      _jeton = await messaging.getToken();
+      _jeton = await messaging.getToken(
+        vapidKey:
+            kIsWeb ? DefaultFirebaseOptions.clePubliqueVapidWeb : null,
+      );
       if (_jeton != null) {
         await _enregistrerJeton(_jeton!);
       }
