@@ -8,11 +8,14 @@ import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
 
-/// Module 14 — « Mon église → Paiements » : l'admin choisit son pays,
-/// active ses moyens de paiement et saisit ses identifiants.
+/// Module 14 — « Paiements automatiques » (écran 35) et état des
+/// comptes marchands (écran 29) : prélèvements programmés (aucun
+/// pour l'instant, aucune date ni montant inventé), état de chaque
+/// compte marchand (Wave, Orange Money, MTN…), sans aucun champ de
+/// clé. Les clés se saisissent uniquement dans Réglages et
+/// confidentialité.
 ///
-/// Les identifiants ne sont jamais affichés : les champs secrets sont
-/// masqués à la saisie, jamais pré-remplis, et l'API ne renvoie que
+/// Les identifiants ne sont jamais affichés : l'API ne renvoie que
 /// l'aperçu masqué (`••••1234`) et l'état « configuré ».
 class PaiementsScreen extends StatefulWidget {
   const PaiementsScreen({super.key});
@@ -71,12 +74,24 @@ class _PaiementsScreenState extends State<PaiementsScreen> {
   EglisePaiement? _configPour(String code) =>
       _configs.where((c) => c.fournisseurCode == code).firstOrNull;
 
+  /// Aucune échéance n'existe côté serveur : le bouton ne programme
+  /// rien tant que la programmation n'est pas branchée.
+  void _programmer() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'La programmation des prélèvements n’est pas encore disponible.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final isAdmin = state.isAdmin;
     return Scaffold(
-      appBar: AppBar(title: const Text('Paiements')),
+      appBar: AppBar(title: const Text('Paiements automatiques')),
       body: Column(
         children: [
           Padding(
@@ -114,6 +129,35 @@ class _PaiementsScreenState extends State<PaiementsScreen> {
                             : ListView(
                                 padding: const EdgeInsets.all(16),
                                 children: [
+                                  const SectionTitle(
+                                      title: 'Prélèvements programmés'),
+                                  const Card(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: Text(
+                                          'Aucun prélèvement programmé.'),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  FilledButton(
+                                    onPressed: _configs
+                                            .any((c) => c.actif)
+                                        ? _programmer
+                                        : null,
+                                    child: const Text(
+                                        'Programmer un prélèvement'),
+                                  ),
+                                  if (!_configs.any((c) => c.actif))
+                                    const Padding(
+                                      padding: EdgeInsets.only(top: 8),
+                                      child: Text(
+                                        'La programmation d’un prélèvement exige un compte marchand actif.',
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  const SizedBox(height: 16),
+                                  const SectionTitle(
+                                      title: 'Comptes marchands'),
                                   if (_configs.isEmpty)
                                     const Padding(
                                       padding:
@@ -167,7 +211,6 @@ class _FournisseurCard extends StatefulWidget {
 
 class _FournisseurCardState extends State<_FournisseurCard> {
   late final TextEditingController _libelleController;
-  late final Map<String, TextEditingController> _champControllers;
   late bool _actif;
   bool _saving = false;
   bool _testing = false;
@@ -179,19 +222,12 @@ class _FournisseurCardState extends State<_FournisseurCard> {
     super.initState();
     _libelleController =
         TextEditingController(text: widget.config?.libelle ?? '');
-    _champControllers = {
-      for (final c in widget.fournisseur.champsRequis)
-        c.nom: TextEditingController(),
-    };
     _actif = widget.config?.actif ?? true;
   }
 
   @override
   void dispose() {
     _libelleController.dispose();
-    for (final c in _champControllers.values) {
-      c.dispose();
-    }
     super.dispose();
   }
 
@@ -207,25 +243,13 @@ class _FournisseurCardState extends State<_FournisseurCard> {
     return e.toString();
   }
 
+  /// Enregistre seulement le libellé et l'état actif d'un compte déjà
+  /// configuré (aucune clé ne transite ici : elles se saisissent dans
+  /// Réglages et confidentialité). Le serveur accepte la mise à jour
+  /// sans secret quand la configuration existe déjà.
   Future<void> _save() async {
     final api = context.read<AppState>().api;
-    final isCreation = widget.config == null;
-    final secrets = <Map<String, String>>[];
-    for (final champ in widget.fournisseur.champsRequis) {
-      final valeur = _champControllers[champ.nom]!.text.trim();
-      if (valeur.isEmpty) {
-        // Un champ facultatif (optionnel, tranche T8 — ex. le secret de
-        // signature du webhook Wave) ne bloque pas l'enregistrement.
-        if (isCreation && !champ.optionnel) {
-          _showMessage(
-              'Champ obligatoire manquant : ${champ.label}.',
-              isError: true);
-          return;
-        }
-        continue;
-      }
-      secrets.add({'nom_champ': champ.nom, 'valeur': valeur});
-    }
+    if (widget.config == null) return;
     setState(() => _saving = true);
     try {
       await api.configurerPaiement(
@@ -236,11 +260,8 @@ class _FournisseurCardState extends State<_FournisseurCard> {
             ? null
             : _libelleController.text.trim(),
         actif: _actif,
-        secrets: secrets,
+        secrets: const [],
       );
-      for (final c in _champControllers.values) {
-        c.clear();
-      }
       _showMessage('Moyen de paiement enregistré.');
       widget.onChanged();
     } catch (e) {
@@ -384,7 +405,14 @@ class _FournisseurCardState extends State<_FournisseurCard> {
                 ),
               ],
             ],
-            if (!widget.readOnly) ...[
+            if (config == null)
+              const Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: Text(
+                  'Clés à saisir dans Réglages et confidentialité.',
+                ),
+              ),
+            if (config != null && !widget.readOnly) ...[
               const SizedBox(height: 12),
               TextField(
                 controller: _libelleController,
@@ -395,22 +423,6 @@ class _FournisseurCardState extends State<_FournisseurCard> {
                 ),
               ),
               const SizedBox(height: 12),
-              for (final champ in f.champsRequis) ...[
-                TextField(
-                  controller: _champControllers[champ.nom]!,
-                  obscureText: champ.secret,
-                  enableSuggestions: !champ.secret,
-                  autocorrect: !champ.secret,
-                  decoration: InputDecoration(
-                    labelText: champ.optionnel
-                        ? '${champ.label} (facultatif)'
-                        : champ.label,
-                    border: const OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
               SwitchListTile(
                 title: const Text('Moyen actif'),
                 value: _actif,
@@ -444,38 +456,35 @@ class _FournisseurCardState extends State<_FournisseurCard> {
                           : const Text('Enregistrer'),
                     ),
                   ),
-                  if (config != null) ...[
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _testing ? null : _test,
-                        child: _testing
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text('Tester'),
-                      ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _testing ? null : _test,
+                      child: _testing
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Tester'),
                     ),
-                  ],
+                  ),
                 ],
               ),
-              if (config != null) ...[
-                const SizedBox(height: 8),
-                TextButton.icon(
-                  onPressed: _delete,
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Supprimer ce moyen'),
-                  style: TextButton.styleFrom(
-                      foregroundColor: scheme.error),
-                ),
-              ],
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: _delete,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Supprimer ce moyen'),
+                style: TextButton.styleFrom(
+                    foregroundColor: scheme.error),
+              ),
               const SizedBox(height: 4),
               const Text(
                 'Les identifiants sont chiffrés sur le serveur et ne sont '
-                'jamais affichés.',
+                'jamais affichés. Les clés se saisissent dans Réglages '
+                'et confidentialité.',
                 style: TextStyle(fontSize: 14),
                 textAlign: TextAlign.center,
               ),

@@ -4,7 +4,7 @@ import 'package:esystem_church/models/member.dart';
 import 'package:esystem_church/screens/cartes_membres_screen.dart';
 import 'package:esystem_church/screens/impression_cartes_screen.dart';
 import 'package:esystem_church/screens/member_detail_screen.dart';
-import 'package:esystem_church/screens/modules_screen.dart';
+import 'package:esystem_church/screens/membres_screen.dart';
 import 'package:esystem_church/services/api_service.dart';
 import 'package:esystem_church/services/preferences_locales.dart';
 import 'package:esystem_church/state/app_state.dart';
@@ -130,9 +130,18 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Modules : entrée Cartes de membre', (tester) async {
-      await _ouvrir(tester, const ModulesScreen());
-      expect(find.text('Cartes de membre'), findsOneWidget);
+    testWidgets('Membres ⋯ : entrée Cartes', (tester) async {
+      // Maquette (écran 1) : Importer, Cartes et Visiteurs sont
+      // groupés dans le menu « ⋯ » de Membres, plus de carte
+      // « Cartes de membre » dans les Modules (E-MO1).
+      await _ouvrir(tester, const MembresScreen());
+      await tester.tap(find.byTooltip('Plus'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Cartes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('Cartes des membres'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

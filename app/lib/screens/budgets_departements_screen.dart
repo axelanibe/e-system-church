@@ -13,8 +13,13 @@ import '../widgets/common_widgets.dart';
 /// crée par département, avec son enveloppe en FCFA. Le réalisé vient
 /// des dépenses portées par le département (hors refusées). Saisie
 /// admin et trésorier.
+///
+/// [sansAppBar] : intégré comme onglet (Départements), sans sa propre
+/// barre de titre.
 class BudgetsDepartementsScreen extends StatefulWidget {
-  const BudgetsDepartementsScreen({super.key});
+  final bool sansAppBar;
+
+  const BudgetsDepartementsScreen({super.key, this.sansAppBar = false});
 
   @override
   State<BudgetsDepartementsScreen> createState() =>
@@ -149,17 +154,17 @@ class _BudgetsDepartementsScreenState
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     if (!state.canReadFinances) {
+      const verrou = EmptyState(
+        icon: Icons.lock_outline,
+        message: 'Votre rôle ne donne pas accès aux finances de l’église.',
+      );
+      if (widget.sansAppBar) return verrou;
       return Scaffold(
         appBar: AppBar(title: const Text('Budgets par département')),
-        body: const EmptyState(
-          icon: Icons.lock_outline,
-          message: 'Votre rôle ne donne pas accès aux finances de l’église.',
-        ),
+        body: verrou,
       );
     }
-    return Scaffold(
-      appBar: AppBar(title: const Text('Budgets par département')),
-      body: FutureBuilder<SuiviDepartements>(
+    final contenu = FutureBuilder<SuiviDepartements>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -279,7 +284,11 @@ class _BudgetsDepartementsScreenState
             ),
           );
         },
-      ),
+      );
+    if (widget.sansAppBar) return contenu;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Budgets par département')),
+      body: contenu,
     );
   }
 }

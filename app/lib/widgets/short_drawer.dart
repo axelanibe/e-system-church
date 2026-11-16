@@ -11,6 +11,7 @@ import '../screens/cultes_direct_screen.dart';
 import '../screens/mes_eglises_screen.dart';
 import '../screens/modules_screen.dart';
 import '../screens/pastoral_screen.dart';
+import '../screens/paiements_screen.dart';
 import '../screens/prieres_screen.dart';
 import '../screens/rapports_recus_screen.dart';
 import '../screens/rendez_vous_admin_screen.dart';
@@ -19,18 +20,21 @@ import '../screens/gouvernance_screen.dart';
 import '../screens/serviteurs_screen.dart';
 import '../screens/settings_screen.dart';
 
-/// Tiroir désengorgé (simulation tiroir désengorgé, modèle projection) :
-/// 11 entrées essentielles, une par ligne avec un titre et un sous-titre,
+/// Tiroir désengorgé (maquette Membres Finances, écran 20) :
+/// 13 entrées essentielles, une par ligne avec un titre et un sous-titre,
 /// dans le style clair de la maquette d'Axel (14 novembre 2026) :
 /// icône violet profond sur fond teinté 6 %, titre semi-bold sombre,
 /// sous-titre atténué, petit chevron discret. Le fond est clair
 /// (thème du tiroir, blanc), jamais sombre : un texte sombre y est
 /// illisible. Une seule entrée par fonction, jamais de doublon avec
-/// la barre du bas (Accueil, Membres, Finances, Départements). Les autres fonctions restent accessibles depuis leur
-/// écran parent : Annonces depuis l'accueil, Présences depuis Cultes,
+/// la barre du bas (Accueil, Membres, Finances, Départements). « Mes
+/// annexes » est la seule entrée du réseau : l'ancien écran Réseau a
+/// fusionné dedans. « Paiements automatiques » (écran 35) est la ligne
+/// Outils du tiroir. Les autres fonctions restent accessibles depuis
+/// leur écran parent : Annonces depuis l'accueil, Présences depuis Cultes,
 /// Budget & caisse depuis Finances, Enfants & jeunesse depuis
 /// Départements, Médias depuis Cultes, Biens et Mon église depuis
-/// Réglages, Transferts et Demandes depuis Mes annexes et Réseau,
+/// Réglages, Transferts et Demandes depuis Mes annexes,
 /// Statistiques et exports depuis Rapports d'annexe. La Plateforme a
 /// sa propre connexion, elle ne se rejoint pas depuis une église.
 /// L'en-tête montre l'église courante ; le toucher change d'église
@@ -252,7 +256,7 @@ class TiroirCourt extends StatelessWidget {
           ),
           _entree(
             icone: Icons.account_tree_outlined,
-            titre: 'Mes annexes et Réseau',
+            titre: 'Mes annexes',
             sousTitre: 'Branches, tutelle et transferts',
             onTap: () => _ouvrir(context, const AnnexesScreen()),
           ),
@@ -263,6 +267,12 @@ class TiroirCourt extends StatelessWidget {
               sousTitre: 'État et renouvellement de l’abonnement',
               onTap: () => _ouvrir(context, const AbonnementScreen()),
             ),
+          _entree(
+            icone: Icons.credit_card_outlined,
+            titre: 'Paiements automatiques',
+            sousTitre: 'Échéances programmées',
+            onTap: () => _ouvrir(context, const PaiementsScreen()),
+          ),
           _entree(
             icone: Icons.grid_view_outlined,
             titre: 'Modules de l’église',

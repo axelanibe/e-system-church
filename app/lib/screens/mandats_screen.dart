@@ -60,7 +60,9 @@ class _MandatsScreenState extends State<MandatsScreen> {
     final finController = TextEditingController();
     await showCreateDialog(
       context: context,
-      title: 'Nouveau mandat',
+      // Une nomination est un mandat : même dialogue, le titre suit
+      // l'onglet (R2-25 : le contenu suit l'onglet).
+      title: _tab == 0 ? 'Nouveau mandat' : 'Nouvelle nomination',
       saveLabel: 'Créer',
       fields: [
         dialogDropdown<String?>(
@@ -158,7 +160,8 @@ class _MandatsScreenState extends State<MandatsScreen> {
             message: _tab == 0
                 ? 'Aucun mandat en cours.'
                 : 'Aucune nomination.',
-            actionLabel: 'Créer un mandat',
+            actionLabel:
+                _tab == 0 ? 'Créer un mandat' : 'Créer une nomination',
             onAction: () async {
               try {
                 final membres = (await _membresFuture).membres;

@@ -1,9 +1,11 @@
-// Écran Cultes en direct (tranche T5).
+// Écran Cultes en direct (tranche T5, maquette écran 21, E-C1 à C4).
 // Quatre sections reprises de la projection, mot pour mot, application
 // vierge : conducteur chronométré, transposition, compteur de portes,
 // pointage QR. Aucune donnée inventée. Le conducteur et le pointage
-// lisent les vraies données du serveur, la transposition et le compteur
-// de portes sont des réglages de séance, gardés en mémoire de l'écran.
+// lisent les vraies données du serveur ; le compteur de portes totalise
+// les présences pointées par QR et les entrées comptées à la porte, la
+// transposition et la capacité sont des réglages de séance, gardés en
+// mémoire de l'écran.
 
 import 'dart:async';
 
@@ -378,6 +380,10 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                   const Text(
                       'Comptage des entrées pendant le culte, porte par porte.'),
                   const SizedBox(height: 12),
+                  // Le total compte les présences réelles : celles
+                  // pointées par QR, plus celles comptées à la porte
+                  // pour les personnes sans carte. Aucun chiffre
+                  // inventé, le compteur manuel part de zéro.
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -385,12 +391,12 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                         onPressed: () => setState(
                             () => _entrees = compteurSuivant(_entrees, -1)),
                         icon: const Icon(Icons.remove),
-                        tooltip: 'Retirer une entrée',
+                        tooltip: 'Retirer une entrée comptée à la porte',
                       ),
                       SizedBox(
                         width: 72,
                         child: Text(
-                          '$_entrees',
+                          '${_presents + _entrees}',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.headlineMedium,
                         ),
@@ -399,14 +405,24 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                         onPressed: () => setState(
                             () => _entrees = compteurSuivant(_entrees, 1)),
                         icon: const Icon(Icons.add),
-                        tooltip: 'Ajouter une entrée',
+                        tooltip: 'Ajouter une entrée comptée à la porte',
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 4),
+                  Center(
+                    child: Text(
+                      'dont $_presents pointées par QR, '
+                      '$_entrees comptées à la porte',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _capaciteController,
                     keyboardType: TextInputType.number,
+                    style: const TextStyle(fontSize: 16),
                     decoration: const InputDecoration(
                       labelText: 'Capacité',
                       hintText: 'Nombre de places pour ce culte',
@@ -428,15 +444,15 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                       Text(
                         _capacite == null
                             ? 'Aucune capacité saisie.'
-                            : '$_entrees / $_capacite '
-                                '(${pourcentageJauge(_entrees, _capacite)} %)',
+                            : '${_presents + _entrees} / $_capacite '
+                                '(${pourcentageJauge(_presents + _entrees, _capacite)} %)',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
-                    value: progressionJauge(_entrees, _capacite),
+                    value: progressionJauge(_presents + _entrees, _capacite),
                     color: AppTheme.orFonce,
                     backgroundColor: AppTheme.violetProfond.withValues(alpha: 0.15),
                     minHeight: 8,
@@ -526,6 +542,7 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                   TextField(
                     controller: _retourRegieController,
                     maxLines: 4,
+                    style: const TextStyle(fontSize: 16),
                     decoration: const InputDecoration(
                       labelText: 'Retour régie',
                       hintText: 'Saisissez une courte note…',

@@ -8,7 +8,6 @@ import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/liste_avec_fab.dart';
 import '../widgets/dialog_helpers.dart';
-import 'enfants_screen.dart';
 
 /// Module 1 — Familles et cellules de l'église.
 /// La fiche complète d'un membre (statuts, baptême, liens) s'ouvre depuis
@@ -204,15 +203,14 @@ class _FamillesScreenState extends State<FamillesScreen> {
 
   /// État vide élégant (maquette d'Axel) : cercle teinté, icône,
   /// titre et piste vers le bouton + du bas. La création se fait par
-  /// le bouton flottant, toujours visible.
+  /// le bouton flottant, toujours visible. Il est défilant : sur un
+  /// petit écran, les textes ne se chevauchent pas.
   Widget _etatVide({
     required IconData icon,
     required String message,
     String? hint,
   }) {
-    // L'état vide est au-dessus de la section fixe (Enfants &
-    // jeunesse) : sur un petit écran il déborde sur elle.
-    // On le rend défilant au lieu de laisser les textes se chevaucher.
+    // Défilant : sur un petit écran, les textes ne se chevauchent pas.
     return Center(
       child: SingleChildScrollView(
         child: Padding(
@@ -316,33 +314,6 @@ class _FamillesScreenState extends State<FamillesScreen> {
                 ),
               );
             },
-          ),
-        ),
-        const Divider(height: 1),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SectionTitle(title: 'Enfants & jeunesse'),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.child_care_outlined),
-                  title: const Text('Enfants & jeunesse'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const EnfantsScreen(),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              // Marge basse pour le bouton flottant : la section fixe
-              // est hors de la liste, ListeAvecFab ne la protège pas.
-              const SizedBox(height: 88),
-            ],
           ),
         ),
       ],
@@ -465,7 +436,7 @@ class _FamillesScreenState extends State<FamillesScreen> {
                         onChanged: (v) =>
                             setState(() => _query = v.trim()),
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 16,
                           color: AppTheme.violetProfond,
                         ),
                         decoration: InputDecoration(
@@ -475,7 +446,7 @@ class _FamillesScreenState extends State<FamillesScreen> {
                           hintStyle: TextStyle(
                             color: AppTheme.violetProfond
                                 .withValues(alpha: 0.7),
-                            fontSize: 14,
+                            fontSize: 16,
                           ),
                           prefixIcon: Icon(
                             Icons.search,

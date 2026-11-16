@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 
 import '../models/anniversaire.dart';
 import '../models/cultes_direct.dart';
-import '../models/membres_complement.dart';
 import '../models/member.dart';
 import '../models/presences.dart';
 import '../state/app_state.dart';
@@ -43,21 +42,24 @@ class _MembresScreenState extends State<MembresScreen>
   /// l'API pagine à 50, le filtre local ne remplace donc pas l'appel
   /// serveur, il donne seulement un retour immédiat en attendant.
   String _filtreLocal = '';
-  /// Pastille active : 'tous', 'anciens', 'nouveaux' ou 'familles'.
+  /// Pastille active : 'tous', 'baptises', 'nouveaux' ou 'en_attente'
+  /// (maquette, correction d'Axel du 15 nov. 2026).
   /// Seule « Nouveaux » a un filtre serveur ('nouveau_converti') ;
-  /// « Anciens » et « Familles » filtrent côté client, sur la page
+  /// « Baptisés » et « En attente » filtrent côté client, sur la page
   /// déjà chargée, avec la même réserve de pagination à 50 que la
   /// recherche locale.
   String _pastille = 'tous';
+  /// Ids des membres baptisés (table `baptemes`, `GET /baptemes`) :
+  /// la liste `GET /membres` ne renvoie pas `bapteme_date` (seul
+  /// `GET /moi/carte` le fait), on ne peut donc pas filtrer sur
+  /// `Member.baptemeDate` seul. Chargé paresseusement, à la première
+  /// sélection de la pastille « Baptisés ».
+  Set<String>? _idsBaptises;
+  bool _baptemesEnCours = false;
   late Future<MemberPage> _future;
   late Future<List<Anniversaire>> _anniversairesFuture;
   late Future<MemberPage> _membresFicheFuture;
   late Future<PresenceStats> _statsFuture;
-  late Future<List<Famille>> _famillesFuture;
-  late Future<List<LienParentEnfant>> _liensFuture;
-  /// Ids des membres « en famille » : chef d'une famille, ou partie
-  /// d'un lien parent/enfant validé.
-  Set<String> _idsEnFamille = {};
 
   @override
   void initState() {
@@ -72,9 +74,6 @@ class _MembresScreenState extends State<MembresScreen>
     _anniversairesFuture = api.getAnniversaires(jours: 30);
     _membresFicheFuture = api.getMembers();
     _statsFuture = _loadStats();
-    _famillesFuture = api.getFamilles();
-    _liensFuture = api.getLiensParentEnfant();
-    _chargerIdsEnFamille();
   }
 
   @override
@@ -104,21 +103,28 @@ class _MembresScreenState extends State<MembresScreen>
         );
   }
 
-  Future<void> _chargerIdsEnFamille() async {
+  /// Baptêmes de l'église, une seule fois : les ids servent au filtre
+  /// « Baptisés ». En cas d'erreur, la pastille ne filtre rien et la
+  /// liste reste affichée.
+  Future<void> _chargerBaptemes() async {
+    if (_idsBaptises != null || _baptemesEnCours) return;
+    setState(() => _baptemesEnCours = true);
     try {
-      final results = await Future.wait([_famillesFuture, _liensFuture]);
-      final familles = results[0] as List<Famille>;
-      final liens = results[1] as List<LienParentEnfant>;
-      final ids = <String>{
-        for (final f in familles)
-          if (f.chefFamilleId != null) f.chefFamilleId!,
-        for (final l in liens)
-          if (l.statut == 'valide') ...[l.parentMemberId, l.enfantMemberId],
-      };
-      if (mounted) setState(() => _idsEnFamille = ids);
+      final baptemes =
+          await context.read<AppState>().api.getBaptemes();
+      if (mounted) {
+        setState(() {
+          _idsBaptises = {for (final b in baptemes) b.memberId};
+          _baptemesEnCours = false;
+        });
+      }
     } catch (_) {
-      // Familles ou liens indisponibles : la pastille Familles ne
-      // filtre rien, la liste reste affichée.
+      if (mounted) {
+        setState(() {
+          _idsBaptises = {};
+          _baptemesEnCours = false;
+        });
+      }
     }
   }
 
@@ -173,10 +179,16 @@ class _MembresScreenState extends State<MembresScreen>
 
   bool _correspondPastille(Member m) {
     switch (_pastille) {
-      case 'anciens':
-        return m.estAncien;
-      case 'familles':
-        return _idsEnFamille.contains(m.id);
+      case 'baptises':
+        // Un baptême enregistré pour ce membre (`baptemes`), ou une
+        // date de baptême déjà renvoyée sur sa fiche.
+        return _idsBaptises?.contains(m.id) == true ||
+            m.baptemeDate != null;
+      case 'en_attente':
+        // « En attente » : la personne ne s'est pas encore décidée
+        // (définition d'Axel). Le statut réel le plus proche est
+        // « sympathisant » : elle vient sans être membre.
+        return m.statutRiche == 'sympathisant';
       default:
         return true;
     }
@@ -251,108 +263,66 @@ class _MembresScreenState extends State<MembresScreen>
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          // En largeur étroite, champ seul sur une ligne, boutons
-          // sur la suivante : la rangée rigide écrasait le champ
-          // entre « Importer », « Cartes » et « Visiteurs ».
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final field = TextField(
-                controller: _searchController,
-                onChanged: _onSearchChanged,
-                decoration: const InputDecoration(
-                  labelText: 'Rechercher (nom ou matricule)',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
-                ),
-              );
-              final actions = <Widget>[
-                if (state.isAdmin) ...[
-                  OutlinedButton.icon(
-                    onPressed: _openImport,
-                    icon: const Icon(Icons.upload_outlined),
-                    label: const Text('Importer'),
+          // Recherche + menu « ⋯ » (maquette) : Importer, Cartes et
+          // Visiteurs sont groupés dans le menu, un seul bouton
+          // icône à côté du champ. Le bouton ESC est déjà dans
+          // l'en-tête clair de la coque.
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  style: const TextStyle(fontSize: 16),
+                  decoration: const InputDecoration(
+                    labelText: 'Rechercher (nom ou matricule)',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
                   ),
-                  OutlinedButton.icon(
-                    onPressed: () {
+                ),
+              ),
+              if (state.isAdmin || state.canManageMembers) ...[
+                const SizedBox(width: 8),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  tooltip: 'Plus',
+                  onSelected: (choix) {
+                    if (choix == 'importer') {
+                      _openImport();
+                    } else if (choix == 'cartes') {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const CartesMembresScreen(),
                         ),
                       );
-                    },
-                    icon: const Icon(Icons.print_outlined),
-                    label: const Text('Cartes'),
-                  ),
-                ],
-                if (state.canManageMembers)
-                  OutlinedButton.icon(
-                    onPressed: () {
+                    } else if (choix == 'visiteurs') {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const VisiteursScreen(),
                         ),
                       );
-                    },
-                    icon: const Icon(Icons.person_add_alt_1_outlined),
-                    label: const Text('Visiteurs'),
-                  ),
-              ];
-              if (constraints.maxWidth < 480) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    field,
-                    if (actions.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: actions,
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    if (state.isAdmin) ...[
+                      const PopupMenuItem(
+                        value: 'importer',
+                        child: Text('Importer'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'cartes',
+                        child: Text('Cartes'),
                       ),
                     ],
+                    if (state.canManageMembers)
+                      const PopupMenuItem(
+                        value: 'visiteurs',
+                        child: Text('Visiteurs'),
+                      ),
                   ],
-                );
-              }
-              return Row(
-                children: [
-                  Expanded(child: field),
-                  for (final action in actions) ...[
-                    const SizedBox(width: 8),
-                    action,
-                  ],
-                ],
-              );
-            },
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          // Pastilles en défilement horizontal (maquette de refonte) :
-          // fini l'empilement de boutons, les pastilles défilent.
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final entry in <String, String>{
-                  'Tous': 'tous',
-                  'Anciens': 'anciens',
-                  'Nouveaux': 'nouveaux',
-                  'Familles': 'familles',
-                }.entries) ...[
-                  ChoiceChip(
-                    label: Text(entry.key),
-                    selected: _pastille == entry.value,
-                    onSelected: (_) {
-                      setState(() {
-                        _pastille = entry.value;
-                        _future = _load();
-                      });
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                ],
+                ),
               ],
-            ),
+            ],
           ),
         ),
         Expanded(
@@ -368,69 +338,128 @@ class _MembresScreenState extends State<MembresScreen>
                   onRetry: _refresh,
                 );
               }
+              if (_pastille == 'baptises' && _baptemesEnCours) {
+                return const AppLoading();
+              }
               final page = snapshot.data!;
               final membres = page.membres
                   .where(_correspondRecherche)
                   .where(_correspondPastille)
                   .toList();
-              if (membres.isEmpty) {
-                // E-M6 : un seul bouton de création quand la liste
-                // est vide, le FAB ; l'état vide n'a pas d'action.
-                return EmptyState(
-                  icon: Icons.people_outline,
-                  message: _filtreLocal.isNotEmpty || _query.isNotEmpty
-                      ? 'Aucun membre ne correspond à « ${_filtreLocal.isNotEmpty ? _filtreLocal : _query} ».'
-                      : 'Aucun membre enregistré',
-                );
-              }
-              return ListeAvecFab(
-                child: RefreshIndicator(
-                  onRefresh: () async => _refresh(),
-                  child: ListView.builder(
-                    itemCount: membres.length,
-                    itemBuilder: (context, index) {
-                      final member = membres[index];
-                      final fonction = _fonctionTexte(member);
-                      return ListTile(
-                        leading: CircleAvatar(
-                          child: Text(_initiales(member.fullName)),
-                        ),
-                        title: Text(member.fullName),
-                        subtitle: Text(
-                            '${member.matricule}'
-                            '${fonction != null ? ' · $fonction' : ''}'
-                            ' · ${member.department ?? '—'}'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
+              // Pastilles masquées tant que la liste est vide
+              // (maquette) : aucun membre enregistré, aucune
+              // recherche, aucune pastille active. Dès qu'un filtre
+              // ou une recherche est actif, elles restent visibles
+              // pour revenir en arrière.
+              final montrerPastilles = page.total > 0 ||
+                  _query.isNotEmpty ||
+                  _filtreLocal.isNotEmpty ||
+                  _pastille != 'tous';
+              return Column(
+                children: [
+                  if (montrerPastilles)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      // Pastilles en défilement horizontal (maquette
+                      // de refonte) : fini l'empilement de boutons,
+                      // les pastilles défilent.
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
                           children: [
-                            StatusChip(
-                              label: member.statutAffiche,
-                              color: _statusColor(member.estAncien
-                                  ? 'ancien'
-                                  : member.status),
-                            ),
-                            if (state.canManageMembers)
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                tooltip: 'Supprimer',
-                                onPressed: () => _deleteMember(member),
+                            for (final entry in <String, String>{
+                              'Tous': 'tous',
+                              'Baptisés': 'baptises',
+                              'Nouveaux': 'nouveaux',
+                              'En attente': 'en_attente',
+                            }.entries) ...[
+                              ChoiceChip(
+                                label: Text(entry.key),
+                                selected: _pastille == entry.value,
+                                onSelected: (_) {
+                                  setState(() {
+                                    _pastille = entry.value;
+                                    _future = _load();
+                                  });
+                                  if (entry.value == 'baptises') {
+                                    _chargerBaptemes();
+                                  }
+                                },
                               ),
+                              const SizedBox(width: 8),
+                            ],
                           ],
                         ),
-                        onTap: () async {
-                          final changed =
-                              await Navigator.of(context).push<bool>(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  MemberDetailScreen(member: member),
+                      ),
+                    ),
+                  Expanded(
+                    child: membres.isEmpty
+                        ? EmptyState(
+                            icon: Icons.people_outline,
+                            message: _filtreLocal.isNotEmpty ||
+                                    _query.isNotEmpty
+                                ? 'Aucun membre ne correspond à « ${_filtreLocal.isNotEmpty ? _filtreLocal : _query} ».'
+                                : 'Aucun membre enregistré',
+                          )
+                        : ListeAvecFab(
+                            child: RefreshIndicator(
+                              onRefresh: () async => _refresh(),
+                              child: ListView.builder(
+                                itemCount: membres.length,
+                                itemBuilder: (context, index) {
+                                  final member = membres[index];
+                                  final fonction =
+                                      _fonctionTexte(member);
+                                  return ListTile(
+                                    leading: CircleAvatar(
+                                      child:
+                                          Text(_initiales(member.fullName)),
+                                    ),
+                                    title: Text(member.fullName),
+                                    subtitle: Text(
+                                        '${member.matricule}'
+                                        '${fonction != null ? ' · $fonction' : ''}'
+                                        ' · ${member.department ?? '—'}'),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        StatusChip(
+                                          label: member.statutAffiche,
+                                          color: _statusColor(member.estAncien
+                                              ? 'ancien'
+                                              : member.status),
+                                        ),
+                                        if (state.canManageMembers)
+                                          IconButton(
+                                            icon: const Icon(
+                                                Icons.delete_outline),
+                                            tooltip: 'Supprimer',
+                                            onPressed: () =>
+                                                _deleteMember(member),
+                                          ),
+                                      ],
+                                    ),
+                                    onTap: () async {
+                                      final changed = await Navigator.of(
+                                              context)
+                                          .push<bool>(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              MemberDetailScreen(
+                                                  member: member),
+                                        ),
+                                      );
+                                      if (changed == true && mounted) {
+                                        _refresh();
+                                      }
+                                    },
+                                  );
+                                },
+                              ),
                             ),
-                          );
-                          if (changed == true && mounted) _refresh();
-                        },
-                      );
-                    },
+                          ),
                   ),
-                ),
+                ],
               );
             },
           ),

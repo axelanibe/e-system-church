@@ -13,8 +13,13 @@ import '../widgets/liste_avec_fab.dart';
 
 /// Module 8 — Enfants et jeunesse : classes d'enfants, autorisations de
 /// sortie et activités jeunesse.
+///
+/// [sansAppBar] : intégré comme onglet (Départements), sans sa propre
+/// barre de titre ; ses onglets passent alors dans un bandeau violet.
 class EnfantsScreen extends StatefulWidget {
-  const EnfantsScreen({super.key});
+  final bool sansAppBar;
+
+  const EnfantsScreen({super.key, this.sansAppBar = false});
 
   @override
   State<EnfantsScreen> createState() => _EnfantsScreenState();
@@ -510,90 +515,125 @@ class _EnfantsScreenState extends State<EnfantsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final onglets = TabBar(
+      isScrollable: true,
+      onTap: (i) => setState(() {
+        _tab = i;
+        _query = '';
+        _searchController.clear();
+      }),
+      indicatorColor: AppTheme.or,
+      indicatorWeight: 3,
+      labelColor: Colors.white,
+      unselectedLabelColor: Colors.white60,
+      labelStyle: const TextStyle(
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+      ),
+      tabs: const [
+        Tab(text: 'Classes'),
+        Tab(text: 'Autorisations'),
+        Tab(text: 'Jeunesse'),
+      ],
+    );
+    final checkin = IconButton(
+      onPressed: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const CheckinEnfantsScreen(),
+        ),
+      ),
+      icon: const Icon(Icons.qr_code_scanner),
+      tooltip: 'Check-in enfants',
+    );
+    final corps = FutureBuilder<MemberPage>(
+      future: _membresFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AppLoading();
+        }
+        if (snapshot.hasError) {
+          return AppError(
+            message: snapshot.error.toString(),
+            onRetry: () => setState(() {
+              _membresFuture =
+                  context.read<AppState>().api.getMembers();
+            }),
+          );
+        }
+        final noms = {
+          for (final m in snapshot.data!.membres) m.id: m.fullName
+        };
+        return TabBarView(
+          children: [
+            _classesTab(),
+            _autorisationsTab(noms),
+            _activitesTab(noms),
+          ],
+        );
+      },
+    );
+    final fab = _ongletVide[_tab]
+        ? null
+        : FloatingActionButton.extended(
+            onPressed: () async {
+              try {
+                if (_tab == 0) {
+                  await _createClasse();
+                } else {
+                  final membres = await _membres();
+                  if (!mounted) return;
+                  if (_tab == 1) {
+                    await _createAutorisation(membres);
+                  } else {
+                    await _createActivite(membres);
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) showApiError(context, e);
+              }
+            },
+            icon: const Icon(Icons.add),
+            label: Text(_tab == 0
+                ? 'Nouvelle classe'
+                : _tab == 1
+                    ? 'Nouvelle autorisation'
+                    : 'Nouvelle activité'),
+          );
+    if (widget.sansAppBar) {
+      return DefaultTabController(
+        length: 3,
+        child: Scaffold(
+          body: Column(
+            children: [
+              Container(
+                color: AppTheme.violetProfond,
+                child: Row(
+                  children: [
+                    Expanded(child: onglets),
+                    IconTheme(
+                      data: const IconThemeData(color: Colors.white),
+                      child: checkin,
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(child: corps),
+            ],
+          ),
+          floatingActionButton: fab,
+        ),
+      );
+    }
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Enfants & jeunesse'),
-          actions: [
-            IconButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const CheckinEnfantsScreen(),
-                ),
-              ),
-              icon: const Icon(Icons.qr_code_scanner),
-              tooltip: 'Check-in enfants',
-            ),
-          ],
-          bottom: TabBar(
-            isScrollable: true,
-            onTap: (i) => setState(() {
-              _tab = i;
-              _query = '';
-              _searchController.clear();
-            }),
-            tabs: const [
-              Tab(text: 'Classes'),
-              Tab(text: 'Autorisations'),
-              Tab(text: 'Jeunesse'),
-            ],
-          ),
+          actions: [checkin],
+          bottom: onglets,
         ),
-        body: FutureBuilder<MemberPage>(
-          future: _membresFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const AppLoading();
-            }
-            if (snapshot.hasError) {
-              return AppError(
-                message: snapshot.error.toString(),
-                onRetry: () => setState(() {
-                  _membresFuture =
-                      context.read<AppState>().api.getMembers();
-                }),
-              );
-            }
-            final noms = {
-              for (final m in snapshot.data!.membres) m.id: m.fullName
-            };
-            return TabBarView(
-              children: [
-                _classesTab(),
-                _autorisationsTab(noms),
-                _activitesTab(noms),
-              ],
-            );
-          },
-        ),
-        floatingActionButton: _ongletVide[_tab]
-            ? null
-            : FloatingActionButton.extended(
-                onPressed: () async {
-                  try {
-                    if (_tab == 0) {
-                      await _createClasse();
-                    } else {
-                      final membres = await _membres();
-                      if (!mounted) return;
-                      if (_tab == 1) {
-                        await _createAutorisation(membres);
-                      } else {
-                        await _createActivite(membres);
-                      }
-                    }
-                  } catch (e) {
-                    if (context.mounted) showApiError(context, e);
-                  }
-                },
-                icon: const Icon(Icons.add),
-                label: Text(_tab == 0
-                    ? 'Nouvelle classe'
-                    : _tab == 1
-                        ? 'Nouvelle autorisation'
-                        : 'Nouvelle activité'),
-              ),
+        body: corps,
+        floatingActionButton: fab,
       ),
     );
   }

@@ -72,23 +72,40 @@ Future<void> _defilerJusqua(WidgetTester tester, Finder cible) async {
 }
 
 void main() {
-  testWidgets('Modules : les 12 cartes s’affichent', (tester) async {
+  testWidgets('Modules : les 13 cartes s’affichent', (tester) async {
+    await _pomper(tester);
+    for (final titre in [
+      'Départements',
+      'Cultes en direct',
+      'Radar pastoral',
+      'Serviteurs',
+      'Bible et école',
+      'Gouvernance',
+      'Patrimoine',
+      'Prières',
+      'Mes annexes',
+      'Rapports d’annexe',
+      'Rendez-vous',
+      'Attestations d’actes',
+      'Messages admin',
+    ]) {
+      await _defilerJusqua(tester, find.text(titre));
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Modules : les anciennes cartes sont retirées',
+      (tester) async {
     await _pomper(tester);
     for (final titre in [
       'Accueil admin',
       'Espace membre',
       'Membres et familles',
-      'Cultes en direct',
-      'Radar pastoral',
-      'Finances',
-      'Bible et école',
-      'Gouvernance',
-      'Réglages et confiance',
-      'Paiements automatiques',
+      'Cartes de membre',
       'Qualité et bascule',
       'Connexion',
     ]) {
-      await _defilerJusqua(tester, find.text(titre));
+      expect(find.text(titre), findsNothing);
     }
     expect(tester.takeException(), isNull);
   });
@@ -111,64 +128,45 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Accueil admin : la carte appelle onAller(0)',
+  testWidgets('Bible et école : la carte ouvre la vraie lecture',
       (tester) async {
-    final res = await _pomper(tester);
-    await tester.tap(find.text('Accueil admin'));
-    await tester.pump();
-    expect(res.onglets, [0]);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('Membres et familles : la carte appelle onAller(1)',
-      (tester) async {
-    final res = await _pomper(tester);
-    await _defilerJusqua(tester, find.text('Membres et familles'));
-    await tester.ensureVisible(find.text('Membres et familles'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Membres et familles'));
-    await tester.pump();
-    expect(res.onglets, [1]);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('Bible et école : message sans navigation', (tester) async {
     await _pomper(tester);
     await _defilerJusqua(tester, find.text('Bible et école'));
     await tester.ensureVisible(find.text('Bible et école'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Bible et école'));
     await tester.pump();
-    expect(
-      find.text(
-        'Bible et école biblique : tranche T9 en cours, '
-        'pas encore en ligne.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Modules de l’église'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets(
-      'Espace membre : la carte ouvre l’écran membre, sans aperçu',
-      (tester) async {
-    final res = await _pomper(tester);
-    expect(res.etat.apercuFidele, isFalse);
-    await tester.tap(find.text('Espace membre'));
-    await tester.pump();
-    await tester.pumpAndSettle();
-    // Tranche 3, E-FI1 : l'écran « membre » s'ouvre directement,
-    // sans entrer dans l'aperçu fidèle (celui du tableau de bord
-    // reste inchangé).
-    expect(res.etat.apercuFidele, isFalse);
-    expect(find.text('ACTIONS RAPIDES'), findsOneWidget);
-    expect(find.text('Prendre rendez-vous'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 500));
+    // La carte pousse la lecture habillée d'une barre « Bible et
+    // école », avec le bouton vers l'école biblique et un retour.
+    expect(find.byTooltip('École biblique'), findsOneWidget);
     expect(find.byType(BackButton), findsOneWidget);
+    expect(find.text('Modules de l’église'), findsNothing);
     await tester.tap(find.byType(BackButton));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Modules de l’église'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Bible et école : le bouton ouvre l’école biblique',
+      (tester) async {
+    await _pomper(tester);
+    await _defilerJusqua(tester, find.text('Bible et école'));
+    await tester.ensureVisible(find.text('Bible et école'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bible et école'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.byTooltip('École biblique'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('École biblique'), findsWidgets);
+    expect(find.byType(BackButton), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byTooltip('École biblique'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

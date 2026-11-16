@@ -8,7 +8,6 @@ import '../models/annexe.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
-import '../widgets/liste_avec_fab.dart';
 import 'rattachements_screen.dart';
 import 'transferts_screen.dart';
 import 'tree_screen.dart';
@@ -84,11 +83,12 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
       appBar: AppBar(
         title: const Text('Mes annexes'),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: TextField(
+      body: RefreshIndicator(
+        onRefresh: () async => _load(q: _recherche.text.trim()),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+          children: [
+            TextField(
               controller: _recherche,
               decoration: const InputDecoration(
                 labelText: 'Rechercher une annexe',
@@ -102,10 +102,10 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                 _load(q: value.trim());
               },
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Card(
+            const SectionTitle(title: 'Mon réseau'),
+            const ArbreReseau(),
+            const SectionTitle(title: 'Gérer les annexes'),
+            Card(
               child: Column(
                 children: [
                   ListTile(
@@ -116,19 +116,6 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const TransfertsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.account_tree_outlined),
-                    title: const Text('Arbre du réseau'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const TreeScreen(),
                         ),
                       );
                     },
@@ -165,104 +152,97 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                 ],
               ),
             ),
-          ),
-          Expanded(
-            child: _loading
-                ? const AppLoading()
-                : _error != null
-                    ? AppError(
-                        message: _error!,
-                        onRetry: () => _load(q: _recherche.text.trim()),
-                      )
-                    : _annexes.isEmpty
-                        ? EmptyState(
-                            icon: Icons.account_tree_outlined,
-                            message: _recherche.text.trim().isNotEmpty
-                                ? 'Aucune annexe ne correspond à « ${_recherche.text.trim()} ».'
-                                : 'Aucune annexe.',
-                            actionLabel:
-                                _recherche.text.trim().isNotEmpty
-                                    ? null
-                                    : 'Voir les demandes de rattachement',
-                            onAction: _recherche.text.trim().isNotEmpty
-                                ? null
-                                : () => Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const RattachementsScreen(),
-                                      ),
-                                    ),
-                          )
-                        : ListeAvecFab(
-                          child: RefreshIndicator(
-                              onRefresh: () =>
-                                  _load(q: _recherche.text.trim()),
-                              child: ListView.builder(
-                                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                                itemCount: _annexes.length,
-                                itemBuilder: (context, i) {
-                                  final a = _annexes[i];
-                                  return Card(
-                                    child: ListTile(
-                                      leading: const Icon(
-                                          Icons.account_tree_outlined),
-                                      title: Text(
-                                        a.egliseNom,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      subtitle: Text(
-                                        '${a.egliseCode} · ${a.egliseVille ?? ''}'
-                                        '${a.niveau == 1 ? '' : ' · niveau ${a.niveau}'}',
-                                        maxLines: 2,
-                                      ),
-                                      trailing: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            '${a.membresActifs} membres',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.copyWith(
-                                                    fontWeight:
-                                                        FontWeight.bold),
-                                          ),
-                                          Text(
-                                            formatFcfa(a.totalFcfa),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall,
-                                          ),
-                                        ],
-                                      ),
-                                      onTap: () async {
-                                        final supprimee =
-                                            await Navigator.of(context).push(
-                                          MaterialPageRoute<bool>(
-                                            builder: (_) =>
-                                                AnnexeDetailScreen(
-                                                    annexeId: a.egliseId),
-                                          ),
-                                        );
-                                        if (supprimee == true && context.mounted) {
-                                          showSuccess(
-                                              context, 'Annexe supprimée.');
-                                          _load(
-                                              q: _recherche.text.trim());
-                                        }
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
+            const SectionTitle(title: 'Annexes'),
+            if (_loading)
+              const AppLoading()
+            else if (_error != null)
+              AppError(
+                message: _error!,
+                onRetry: () => _load(q: _recherche.text.trim()),
+              )
+            else if (_annexes.isEmpty)
+              EmptyState(
+                icon: Icons.account_tree_outlined,
+                message: _recherche.text.trim().isNotEmpty
+                    ? 'Aucune annexe ne correspond à « ${_recherche.text.trim()} ».'
+                    : 'Aucune annexe rattachée.',
+                actionLabel: _recherche.text.trim().isNotEmpty
+                    ? null
+                    : 'Voir les demandes de rattachement',
+                onAction: _recherche.text.trim().isNotEmpty
+                    ? null
+                    : () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const RattachementsScreen(),
                           ),
-          ),
-        ],
+                        ),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _annexes.length,
+                itemBuilder: (context, i) {
+                  final a = _annexes[i];
+                  return Card(
+                    child: ListTile(
+                      leading: const Icon(
+                          Icons.account_tree_outlined),
+                      title: Text(
+                        a.egliseNom,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        '${a.egliseCode} · ${a.egliseVille ?? ''}'
+                        '${a.niveau == 1 ? '' : ' · niveau ${a.niveau}'}',
+                        maxLines: 2,
+                      ),
+                      trailing: Column(
+                        mainAxisAlignment:
+                            MainAxisAlignment.center,
+                        crossAxisAlignment:
+                            CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${a.membresActifs} membres',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                    fontWeight:
+                                        FontWeight.bold),
+                          ),
+                          Text(
+                            formatFcfa(a.totalFcfa),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall,
+                          ),
+                        ],
+                      ),
+                      onTap: () async {
+                        final supprimee =
+                            await Navigator.of(context).push(
+                          MaterialPageRoute<bool>(
+                            builder: (_) =>
+                                AnnexeDetailScreen(
+                                    annexeId: a.egliseId),
+                          ),
+                        );
+                        if (supprimee == true && context.mounted) {
+                          showSuccess(
+                              context, 'Annexe supprimée.');
+                          _load(
+                              q: _recherche.text.trim());
+                        }
+                      },
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
