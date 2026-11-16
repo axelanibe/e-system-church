@@ -57,48 +57,57 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
   }
 
   Future<void> _demander() async {
-    final apercu = context.read<AppState>().apercuFidele;
+    final appState = context.read<AppState>();
+    final apercu = appState.apercuFidele;
+
     if (apercu) {
+      if (!mounted) return;
       showApiError(
         context,
-        'Connectez-vous avec un compte fidèle pour demander '
-        'un rendez-vous.',
+        'Connectez-vous avec un compte fidèle pour demander un rendez-vous.',
       );
       return;
     }
+
     if (_date == null) {
+      if (!mounted) return;
       showApiError(context, 'Choisissez une date souhaitée.');
       return;
     }
-    // Un rendez-vous ne se confirme qu'avec un créneau proposé par
-    // l'église : quand des créneaux existent, le membre choisit parmi
-    // eux, il ne réserve pas librement.
+
     final creneaux = await _creneauxFuture;
-    if (!mounted) return;
-    if (creneaux.where((c) => c.actif).isNotEmpty &&
-        _creneauChoisi == null) {
+
+    if (creneaux.where((c) => c.actif).isNotEmpty && _creneauChoisi == null) {
+      if (!mounted) return;
       showApiError(context, 'Choisissez un créneau proposé par votre église.');
       return;
     }
+
     final motif = _motifController.text.trim();
     if (motif.length < 2) {
+      if (!mounted) return;
       showApiError(context, 'Écrivez le motif de votre rendez-vous.');
       return;
     }
+
     setState(() => _envoi = true);
+
     try {
       final date = _date!;
       final iso =
           '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-      await context.read<AppState>().api.demanderRendezVous(
-            dateSouhaitee: iso,
-            creneau: _creneauChoisi,
-            motif: motif,
-          );
+
+      await appState.api.demanderRendezVous(
+        dateSouhaitee: iso,
+        creneau: _creneauChoisi,
+        motif: motif,
+      );
+
       if (!mounted) return;
       setState(() => _envoye = true);
     } catch (e) {
-      if (mounted) showApiError(context, e);
+      if (!mounted) return;
+      showApiError(context, e);
     } finally {
       if (mounted) setState(() => _envoi = false);
     }
