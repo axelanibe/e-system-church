@@ -70,9 +70,18 @@ class HttpApiService implements ApiService {
   /// pour que l'appelant persiste les deux. Jamais appelée sur un échec.
   void Function(String token, String? refreshToken)? onTokensRefreshed;
 
-  HttpApiService({required this.baseUrl, String? token, String? refreshToken})
+  HttpApiService(
+      {required this.baseUrl,
+      String? token,
+      String? refreshToken,
+      http.Client? client})
       : _token = token,
-        _refreshToken = refreshToken;
+        _refreshToken = refreshToken,
+        _client = client ?? http.Client();
+
+  /// Client HTTP : injectable pour les tests (client simulé), un vrai
+  /// client sinon.
+  final http.Client _client;
 
   void setToken(String? token) => _token = token;
 
@@ -109,24 +118,26 @@ class HttpApiService implements ApiService {
     try {
       switch (method) {
         case 'GET':
-          res = await http
+          res = await _client
               .get(uri, headers: headers)
               .timeout(const Duration(seconds: 20));
         case 'POST':
-          res = await http
+          res = await _client
               .post(uri,
                   headers: headers,
                   body: body == null ? null : jsonEncode(body))
               .timeout(const Duration(seconds: 20));
         case 'PATCH':
-          res = await http
+          res = await _client
               .patch(uri,
                   headers: headers,
                   body: body == null ? null : jsonEncode(body))
               .timeout(const Duration(seconds: 20));
         case 'DELETE':
-          res = await http
-              .delete(uri, headers: headers)
+          res = await _client
+              .delete(uri,
+                  headers: headers,
+                  body: body == null ? null : jsonEncode(body))
               .timeout(const Duration(seconds: 20));
         default:
           throw const ApiException('Méthode HTTP inconnue.');
@@ -510,6 +521,22 @@ class HttpApiService implements ApiService {
     final data = await _call('POST', '/moi/messages', body: {'corps': corps});
     return MessageFidele.fromJson(
         data['message'] as Map<String, dynamic>);
+  }
+
+  /// Notifications push (tranche push FCM) : enregistrement du jeton
+  /// FCM de cet appareil, pour recevoir les nouveaux messages en push.
+  @override
+  Future<void> enregistrerJetonPush(
+      {required String jeton, required String plateforme}) async {
+    await _call('POST', '/messagerie/jetons',
+        body: {'jeton': jeton, 'plateforme': plateforme});
+  }
+
+  /// Notifications push (tranche push FCM) : retrait du jeton FCM à la
+  /// déconnexion, pour ne plus recevoir de push sur cet appareil.
+  @override
+  Future<void> retirerJetonPush({required String jeton}) async {
+    await _call('DELETE', '/messagerie/jetons', body: {'jeton': jeton});
   }
 
   @override

@@ -126,6 +126,12 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Appelé au début de [logout] (et de [setApiBaseUrl]), avant la
+  /// révocation de session côté serveur : le service de notifications
+  /// push y retire son jeton FCM tant que l'appel reste authentifié.
+  /// Un échec du crochet n'empêche jamais la déconnexion.
+  Future<void> Function()? onAvantDeconnexion;
+
   ApiService _buildApi() {
     final api = HttpApiService(
       baseUrl: _apiBaseUrl,
@@ -346,6 +352,11 @@ class AppState extends ChangeNotifier {
 
   Future<void> logout() async {
     try {
+      await onAvantDeconnexion?.call();
+    } catch (_) {
+      // Le retrait du jeton push ne bloque jamais la déconnexion.
+    }
+    try {
       await _api.logout();
     } catch (_) {
       // Hors ligne : la déconnexion locale a lieu quand même.
@@ -367,6 +378,11 @@ class AppState extends ChangeNotifier {
   Future<void> setApiBaseUrl(String url) async {
     final cleaned = url.trim().replaceAll(RegExp(r'/+$'), '');
     if (cleaned.isEmpty) return;
+    try {
+      await onAvantDeconnexion?.call();
+    } catch (_) {
+      // Le retrait du jeton push ne bloque jamais le changement d'URL.
+    }
     _apiBaseUrl = cleaned;
     await _store.saveApiUrl(cleaned);
     _token = null;

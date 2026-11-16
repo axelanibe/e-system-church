@@ -871,6 +871,26 @@ class FauxApiService implements ApiService {
     );
   }
 
+  /// Jetons FCM enregistrés / retirés pendant la session (tranche push
+  /// FCM) : le faux service ne fait qu'enregistrer l'appel, sans réseau.
+  final List<String> jetonsPushEnregistres = [];
+  final List<String> jetonsPushRetires = [];
+
+  @override
+  Future<void> enregistrerJetonPush(
+      {required String jeton, required String plateforme}) async {
+    await _latence();
+    _requireAuth();
+    jetonsPushEnregistres.add(jeton);
+  }
+
+  @override
+  Future<void> retirerJetonPush({required String jeton}) async {
+    await _latence();
+    _requireAuth();
+    jetonsPushRetires.add(jeton);
+  }
+
   @override
   Future<void> confirmerPresenceCulte(String culteId) async {
     await _latence();

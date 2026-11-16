@@ -18,14 +18,24 @@ import 'plus_fidele_screen.dart';
 /// (« Voir l'espace fidèle »), les écrans montrent leurs états vides
 /// pour les lectures réservées au rôle `membre`.
 class FideleShell extends StatefulWidget {
-  const FideleShell({super.key});
+  const FideleShell({super.key, this.ongletInitial = 0});
+
+  /// Onglet affiché à l'ouverture (0 Accueil, 1 Bible, 2 Carte,
+  /// 3 Messages, 4 Plus). Sert l'ouverture depuis une notification push.
+  final int ongletInitial;
 
   @override
   State<FideleShell> createState() => _FideleShellState();
 }
 
 class _FideleShellState extends State<FideleShell> {
-  int _index = 0;
+  late int _index;
+
+  @override
+  void initState() {
+    super.initState();
+    _index = widget.ongletInitial;
+  }
 
   static const _titles = [
     'Accueil',
