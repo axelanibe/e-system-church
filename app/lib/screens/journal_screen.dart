@@ -233,11 +233,13 @@ class _JournalScreenState extends State<JournalScreen> {
                                         : note.titre,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 13.5),
                                   ),
                                   subtitle: Text(
                                     note.texte,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 11.5),
                                   ),
                                   trailing: IconButton(
                                     icon:

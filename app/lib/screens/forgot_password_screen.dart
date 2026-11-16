@@ -79,7 +79,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       const SizedBox(height: 24),
                       FilledButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Retour à la connexion'),
+                        child: const Text('← Retour à la connexion', style: TextStyle(fontSize: 13)),
                       ),
                     ],
                   )
@@ -88,15 +88,36 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        const Text(
+                          'Entrez l’e-mail de votre compte : vous recevrez '
+                          'un lien pour choisir un nouveau mot de passe.',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'E-mail *',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
                         TextFormField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.done,
                           onFieldSubmitted: (_) => _submit(),
-                          decoration: const InputDecoration(
-                            labelText: 'E-mail',
-                            prefixIcon: Icon(Icons.email_outlined),
-                            border: OutlineInputBorder(),
+                          style: const TextStyle(fontSize: 16),
+                          decoration: InputDecoration(
+                            helperText: 'L’e-mail du compte',
+                            helperStyle: TextStyle(
+                              color: scheme.onSurfaceVariant,
+                              fontSize: 13.5,
+                            ),
+                            prefixIcon:
+                                const Icon(Icons.email_outlined),
+                            border: const OutlineInputBorder(),
                           ),
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
@@ -126,8 +147,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                     child: CircularProgressIndicator(
                                         strokeWidth: 2),
                                   )
-                                : const Text('Envoyer le lien'),
+                                : const Text('Envoyer le lien', style: TextStyle(fontSize: 13.5)),
                           ),
+                        ),
+                        const SizedBox(height: 12),
+                        // La confirmation ne révèle aucun compte : elle
+                        // s'affiche de la même façon, que l'e-mail
+                        // existe ou non (maquette, écran 27).
+                        Text(
+                          'La confirmation s’affiche de la même façon, que '
+                          'l’e-mail existe ou non : elle ne révèle aucun '
+                          'compte.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('← Retour à la connexion',
+                              style: TextStyle(fontSize: 13)),
                         ),
                       ],
                     ),

@@ -118,7 +118,7 @@ class AppTheme {
         titleTextStyle: TextStyle(
           fontFamily: 'PlusJakartaSans',
           color: Colors.white,
-          fontSize: 20,
+          fontSize: 19,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -139,10 +139,10 @@ class AppTheme {
         selectedColor: violetProfond,
         checkmarkColor: or,
         labelStyle: TextStyle(
-            fontFamily: 'Inter', fontSize: 14, color: violetProfond),
+            fontFamily: 'Inter', fontSize: 12.5, color: violetProfond),
         secondaryLabelStyle: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 14,
+            fontSize: 12.5,
             color: Colors.white,
             fontWeight: FontWeight.bold),
         side: BorderSide(color: bordure),
@@ -155,12 +155,12 @@ class AppTheme {
         unselectedLabelColor: Colors.white,
         labelStyle: TextStyle(
           fontFamily: 'Inter',
-          fontSize: 14,
+          fontSize: 13.5,
           fontWeight: FontWeight.bold,
         ),
         unselectedLabelStyle: TextStyle(
           fontFamily: 'Inter',
-          fontSize: 14,
+          fontSize: 13.5,
           fontWeight: FontWeight.w500,
         ),
         indicator: UnderlineTabIndicator(
@@ -190,7 +190,7 @@ class AppTheme {
           final selected = states.contains(WidgetState.selected);
           return TextStyle(
             fontFamily: 'Inter',
-            fontSize: 11,
+            fontSize: 10.5,
             fontWeight:
                 selected ? FontWeight.bold : FontWeight.normal,
             color: selected
@@ -211,7 +211,9 @@ class AppTheme {
         foregroundColor: violetProfond,
       ),
       // Titres 24 gras, sous-titres 18, corps 16, aide 14, jamais
-      // moins de 14. Un nouveau membre doit tout lire sans effort.
+      // moins de 14 pour le corps. Les pastilles (12,5), onglets
+      // (13,5), barre du bas (10,5) et boutons (13,5) suivent la
+      // maquette, tailles par taille (2e tour, précision d'Axel).
       textTheme: TextTheme(
         headlineSmall: titres.copyWith(fontSize: 24),
         titleLarge: titres.copyWith(fontSize: 18),
@@ -221,7 +223,7 @@ class AppTheme {
         bodySmall: const TextStyle(
             fontFamily: 'Inter', fontSize: 14, color: violetProfond),
         labelLarge: const TextStyle(
-            fontFamily: 'Inter', fontSize: 14, color: violetProfond),
+            fontFamily: 'Inter', fontSize: 13.5, color: violetProfond),
         labelSmall: const TextStyle(
             fontFamily: 'JetBrainsMono', fontSize: 12, color: violetProfond),
       ),

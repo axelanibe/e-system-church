@@ -9,11 +9,13 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 
-/// US3 + tranche B + T10 — Attestations, côté trésorier / admin : choix de
-/// l'année et du type, génération des attestations de dons, émission
-/// individuelle d'une attestation de mariage, de naissance, de baptême ou
-/// d'un certificat de membre, liste, PDF, correction avec motif (nouvelle
-/// attestation, ancienne annulée). PDF exclusivement, jamais d'autre format.
+/// US3 + tranche B + T10 — Attestations d'actes (maquette, écran 30),
+/// côté trésorier / admin : baptême, mariage, naissance seulement.
+/// Le type « membre » est retiré, et les attestations annuelles de dons
+/// vivent dans leur propre écran (« Attestations annuelles »). Formulaire
+/// Type / Membre / Date, « Délivrer l'attestation ». PDF exclusivement,
+/// jamais d'autre format. Une attestation émise est figée ; une
+/// correction en crée une nouvelle et annule l'ancienne (remplace_id).
 class AttestationsScreen extends StatefulWidget {
   const AttestationsScreen({super.key});
 
@@ -21,7 +23,7 @@ class AttestationsScreen extends StatefulWidget {
   State<AttestationsScreen> createState() => _AttestationsScreenState();
 }
 
-const _typesEvenement = ['mariage', 'naissance', 'bapteme', 'membre'];
+const _typesEvenement = ['bapteme', 'mariage', 'naissance'];
 
 class _AttestationsScreenState extends State<AttestationsScreen> {
   late int _annee;
@@ -47,28 +49,6 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
 
   void _refresh() => setState(() => _future = _load());
 
-  Future<void> _generer() async {
-    setState(() => _working = true);
-    try {
-      final creees = await context
-          .read<AppState>()
-          .api
-          .genererAttestations(annee: _annee);
-      if (!mounted) return;
-      showSuccess(
-        context,
-        creees.isEmpty
-            ? 'Aucune nouvelle attestation pour $_annee.'
-            : '${pluriel(creees.length, 'attestation créée', 'attestations créées')} pour $_annee.',
-      );
-      _refresh();
-    } catch (e) {
-      if (mounted) showApiError(context, e);
-    } finally {
-      if (mounted) setState(() => _working = false);
-    }
-  }
-
   Future<void> _telecharger(Attestation a) async {
     try {
       final bytes =
@@ -92,7 +72,7 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
   /// Formulaire d'émission d'une attestation d'événement. Membre et date
   /// obligatoires ; lieu, officiant et champs propres au type facultatifs.
   Future<void> _emettre() async {
-    var type = 'mariage';
+    var type = 'bapteme';
     String? memberId;
     DateTime? dateEvenement;
     final lieuCtrl = TextEditingController();
@@ -124,7 +104,7 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
           }
 
           return AlertDialog(
-            title: const Text('Émettre une attestation'),
+            title: const Text('Délivrer une attestation'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -274,7 +254,7 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                     if (mounted) setState(() => _working = false);
                   }
                 },
-                child: const Text('Émettre'),
+                child: const Text('Délivrer l’attestation', style: TextStyle(fontSize: 13.5)),
               ),
             ],
           );
@@ -414,7 +394,7 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
               ),
               FilledButton(
                 onPressed: () => Navigator.of(ctx).pop(motifCtrl.text.trim()),
-                child: const Text('Corriger'),
+                child: const Text('Corriger', style: TextStyle(fontSize: 13.5)),
               ),
             ],
           );
@@ -454,7 +434,7 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
   Widget build(BuildContext context) {
     final annees = [for (var i = 0; i < 3; i++) DateTime.now().year - i];
     return Scaffold(
-      appBar: AppBar(title: const Text('Attestations')),
+      appBar: AppBar(title: const Text('Attestations d’actes')),
       body: Column(
         children: [
           Padding(
@@ -481,11 +461,9 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                     isExpanded: true,
                     items: const [
                       DropdownMenuItem(value: null, child: Text('Tous types')),
-                      DropdownMenuItem(value: 'don', child: Text('Dons')),
+                      DropdownMenuItem(value: 'bapteme', child: Text('Baptême')),
                       DropdownMenuItem(value: 'mariage', child: Text('Mariage')),
                       DropdownMenuItem(value: 'naissance', child: Text('Naissance')),
-                      DropdownMenuItem(value: 'bapteme', child: Text('Baptême')),
-                      DropdownMenuItem(value: 'membre', child: Text('Membre')),
                     ],
                     onChanged: (t) => setState(() {
                       _typeFiltre = t;
@@ -498,37 +476,14 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 48,
-                    child: FilledButton.icon(
-                      onPressed: _working ? null : _generer,
-                      icon: const Icon(Icons.description_outlined),
-                      label: const Text('Générer'),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: SizedBox(
-                    height: 48,
-                    child: OutlinedButton.icon(
-                      onPressed: _working ? null : _emettre,
-                      icon: const Icon(Icons.add_outlined),
-                      label: const Text('Émettre'),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Text(
-              'Reçu justificatif seulement, sans valeur fiscale en Côte d’Ivoire (dons).',
-              style: TextStyle(fontSize: 12),
+            child: SizedBox(
+              height: 48,
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _working ? null : _emettre,
+                icon: const Icon(Icons.add_outlined),
+                label: const Text('Délivrer l’attestation', style: TextStyle(fontSize: 13.5)),
+              ),
             ),
           ),
           Expanded(
@@ -544,11 +499,15 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                     onRetry: _refresh,
                   );
                 }
-                final items = snapshot.data!;
+                // Actes seulement : les attestations annuelles de dons
+                // et les certificats de membre ne s'affichent pas ici.
+                final items = snapshot.data!
+                    .where((a) => !a.estDon && a.type != 'membre')
+                    .toList();
                 if (items.isEmpty) {
                   return const EmptyState(
                     icon: Icons.description_outlined,
-                    message: 'Aucune attestation pour cette année.',
+                    message: 'Aucune attestation d’acte délivrée.',
                   );
                 }
                 return RefreshIndicator(
@@ -561,9 +520,11 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                                 leading: const Icon(Icons.description_outlined),
                                 title: Text(a.estDon && a.totalFcfa != null
                                     ? '${a.membreNom ?? 'Donateur'} — ${formatFcfa(a.totalFcfa!)}'
-                                    : '${a.membreNom ?? 'Membre'} — ${a.libelle}'),
+                                    : '${a.membreNom ?? 'Membre'} — ${a.libelle}',
+                                style: const TextStyle(fontSize: 13.5)),
                                 subtitle: Text(
-                                    '${a.numero}${a.estDon && a.nbDons != null ? ' · ${pluriel(a.nbDons!, 'don')}' : ''} · ${formatDate(a.dateEmission)}${a.estEmise ? '' : ' · annulée'}'),
+                                    '${a.numero}${a.estDon && a.nbDons != null ? ' · ${pluriel(a.nbDons!, 'don')}' : ''} · ${formatDate(a.dateEmission)}${a.estEmise ? '' : ' · annulée'}',
+                                    style: const TextStyle(fontSize: 11.5)),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [

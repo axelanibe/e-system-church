@@ -134,6 +134,13 @@ class ConsultationSensible {
 
   String get ressourceLabel => switch (ressource) {
         'membre' => 'Fiche membre',
+        'demande_priere' => 'Demande de prière consultée',
+        'rendez_vous' => 'Rendez-vous consulté',
+        'session' => 'Session rafraîchie',
+        'visite_pastorale' => 'Visite pastorale consultée',
+        'parcours' => 'Parcours consulté',
+        'accompagnement' => 'Accompagnement consulté',
+        'radar_absences' => 'Radar des absences consulté',
         _ => ressource,
       };
 

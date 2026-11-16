@@ -15,7 +15,6 @@ import '../widgets/church_avatar.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
 import '../widgets/mere_badge.dart';
-import 'paiements_screen.dart';
 
 /// Module 13 — « Mon église » : identité publique de l'église active
 /// (logo, nom, code, description, horaires, contacts, pasteur principal,
@@ -138,7 +137,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Annuler'),
+              child: const Text('Annuler', style: TextStyle(fontSize: 13.5)),
             ),
             FilledButton(
               onPressed: () {
@@ -157,7 +156,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                       : nomController.text.trim(),
                 ));
               },
-              child: const Text('Créer l’invitation'),
+              child: const Text('Créer l’invitation', style: TextStyle(fontSize: 13.5)),
             ),
           ],
         ),
@@ -198,7 +197,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Annuler'),
+            child: const Text('Annuler', style: TextStyle(fontSize: 13.5)),
           ),
           FilledButton(
             onPressed: () {
@@ -206,7 +205,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
               if (email.isEmpty || !email.contains('@')) return;
               Navigator.of(dialogContext).pop(email);
             },
-            child: const Text('Générer le lien'),
+            child: const Text('Générer le lien', style: TextStyle(fontSize: 13.5)),
           ),
         ],
       ),
@@ -254,11 +253,11 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
               Navigator.of(dialogContext).pop();
               showSuccess(context, 'Lien copié.');
             },
-            child: const Text('Copier le lien'),
+            child: const Text('Copier le lien', style: TextStyle(fontSize: 13.5)),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Fermer'),
+            child: const Text('Fermer', style: TextStyle(fontSize: 13.5)),
           ),
         ],
       ),
@@ -290,11 +289,11 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
               Navigator.of(dialogContext).pop();
               showSuccess(context, 'Lien copié.');
             },
-            child: const Text('Copier le lien'),
+            child: const Text('Copier le lien', style: TextStyle(fontSize: 13.5)),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Fermer'),
+            child: const Text('Fermer', style: TextStyle(fontSize: 13.5)),
           ),
         ],
       ),
@@ -329,11 +328,11 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Annuler'),
+            child: const Text('Annuler', style: TextStyle(fontSize: 13.5)),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Régénérer'),
+            child: const Text('Régénérer', style: TextStyle(fontSize: 13.5)),
           ),
         ],
       ),
@@ -443,7 +442,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
           child: FilledButton.tonalIcon(
             onPressed: () => _choisirLogo(logoUrlController, eglise.id),
             icon: const Icon(Icons.image_outlined),
-            label: const Text('Choisir un logo (PNG/JPG, max 2 Mo)'),
+            label: const Text('Choisir un logo (PNG/JPG, max 2 Mo)', style: TextStyle(fontSize: 13)),
           ),
         ),
         // Couleurs prédéfinies avec aperçu, au lieu d'un champ hex libre
@@ -617,25 +616,10 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                                   ? null
                                   : () => _editProfil(profil, parametres),
                               icon: const Icon(Icons.edit_outlined),
-                              label: const Text('Modifier le profil'),
+                              label: const Text('Modifier le profil', style: TextStyle(fontSize: 13.5)),
                             ),
                           ],
                         ),
-                      ),
-                    ),
-                    const SectionTitle(title: 'Paiements'),
-                    Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.payments_outlined),
-                        title: const Text('Moyens de paiement'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const PaiementsScreen(),
-                            ),
-                          );
-                        },
                       ),
                     ),
                     const SectionTitle(title: 'Horaires des cultes'),
@@ -653,8 +637,8 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                                   leading:
                                       const Icon(Icons.schedule_outlined),
                                   title: Text(
-                                      h.titre.isEmpty ? 'Culte' : h.titre),
-                                  subtitle: Text('${h.jour} à ${h.heure}'),
+                                      h.titre.isEmpty ? 'Culte' : h.titre, style: const TextStyle(fontSize: 13.5)),
+                                  subtitle: Text('${h.jour} à ${h.heure}', style: const TextStyle(fontSize: 11.5)),
                                 )),
                         ],
                       ),
@@ -666,28 +650,28 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                           ListTile(
                             leading: const Icon(Icons.phone_outlined),
                             title: Text(parametres?.telephone ??
-                                'Aucun téléphone renseigné'),
+                                'Aucun téléphone renseigné', style: const TextStyle(fontSize: 13.5)),
                           ),
                           ListTile(
                             leading: const Icon(Icons.email_outlined),
                             title: Text(parametres?.email ??
-                                'Aucun e-mail renseigné'),
+                                'Aucun e-mail renseigné', style: const TextStyle(fontSize: 13.5)),
                           ),
                           ListTile(
                             leading:
                                 const Icon(Icons.location_on_outlined),
                             title: Text(parametres?.adresse ??
-                                'Aucune adresse renseignée'),
+                                'Aucune adresse renseignée', style: const TextStyle(fontSize: 13.5)),
                           ),
                           if (eglise.devise != null)
                             ListTile(
                               leading:
                                   const Icon(Icons.attach_money_outlined),
-                              title: Text('Devise : ${eglise.devise}'),
+                              title: Text('Devise : ${eglise.devise}', style: const TextStyle(fontSize: 13.5)),
                               subtitle: eglise.fuseauHoraire == null
                                   ? null
                                   : Text(
-                                      'Fuseau horaire : ${eglise.fuseauHoraire}'),
+                                      'Fuseau horaire : ${eglise.fuseauHoraire}', style: const TextStyle(fontSize: 11.5)),
                             ),
                         ],
                       ),
@@ -707,7 +691,7 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                               leading: const CircleAvatar(
                                 child: Icon(Icons.person_outline),
                               ),
-                              title: Text(profil.pasteurPrincipal!),
+                              title: Text(profil.pasteurPrincipal!, style: const TextStyle(fontSize: 13.5)),
                             ),
                         ],
                       ),
@@ -726,9 +710,9 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                             ...profil.antennes.map((a) => ListTile(
                                   leading:
                                       ChurchAvatar(church: a, radius: 20),
-                                  title: Text(a.name),
+                                  title: Text(a.name, style: const TextStyle(fontSize: 13.5)),
                                   subtitle: Text(
-                                      '${a.code}${a.city != null ? ' · ${a.city}' : ''}'),
+                                      '${a.code}${a.city != null ? ' · ${a.city}' : ''}', style: const TextStyle(fontSize: 11.5)),
                                 )),
                         ],
                       ),
@@ -744,10 +728,11 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                           children: [
                             ListTile(
                               leading: const Icon(Icons.key_outlined),
-                              title: const Text('Code fidèle'),
+                              title: const Text('Code fidèle', style: TextStyle(fontSize: 13.5)),
                               subtitle: Text(
                                 state.church?.codeFidele ??
                                     'Disponible après la prochaine connexion.',
+                                style: const TextStyle(fontSize: 11.5),
                               ),
                               trailing: state.church?.codeFidele == null
                                   ? null
@@ -763,8 +748,8 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                             ListTile(
                               leading:
                                   const Icon(Icons.key_outlined),
-                              title: const Text('Code de tutelle'),
-                              subtitle: Text(state.church?.code ?? ''),
+                              title: const Text('Code de tutelle', style: TextStyle(fontSize: 13.5)),
+                              subtitle: Text(state.church?.code ?? '', style: const TextStyle(fontSize: 11.5)),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -792,13 +777,13 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                       FilledButton.icon(
                         onPressed: _inviter,
                         icon: const Icon(Icons.person_add_outlined),
-                        label: const Text('Inviter une personne'),
+                        label: const Text('Inviter une personne', style: TextStyle(fontSize: 13.5)),
                       ),
                       const SizedBox(height: 12),
                       OutlinedButton.icon(
                         onPressed: _lienReinitialisation,
                         icon: const Icon(Icons.link_outlined),
-                        label: const Text('Lien de réinitialisation'),
+                        label: const Text('Lien de réinitialisation', style: TextStyle(fontSize: 13.5)),
                       ),
                       const SizedBox(height: 12),
                       FutureBuilder<List<DemandeLiaison>>(
@@ -831,9 +816,9 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                                           child:
                                               Icon(Icons.person_outline),
                                         ),
-                                        title: Text(d.membreNom),
+                                        title: Text(d.membreNom, style: const TextStyle(fontSize: 13.5)),
                                         subtitle: Text(
-                                            '${d.matricule} · ${d.userEmail}'),
+                                            '${d.matricule} · ${d.userEmail}', style: const TextStyle(fontSize: 11.5)),
                                         trailing: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
@@ -942,7 +927,7 @@ class _ChoixCouleurState extends State<_ChoixCouleur> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Couleur principale'),
+          const Text('Couleur principale', style: TextStyle(fontSize: 10.5)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -965,7 +950,7 @@ class _ChoixCouleurState extends State<_ChoixCouleur> {
             children: [
               for (final entree in entrees.entries)
                 ChoiceChip(
-                  label: Text(entree.key),
+                  label: Text(entree.key, style: const TextStyle(fontSize: 12.5)),
                   selected: _choisie == entree.value,
                   avatar: CircleAvatar(
                     backgroundColor: _couleur(entree.value),

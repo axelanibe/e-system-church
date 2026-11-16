@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../config/app_config.dart';
 import '../config/app_theme.dart';
 import '../services/api_service.dart';
 import '../state/app_state.dart';
@@ -36,11 +35,12 @@ const _rembourrage = EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0);
 
 /// Écran de connexion : e-mail ou téléphone + mot de passe, JWT stocké
 /// en sécurité. La connexion exige un compte réel créé sur le serveur.
-/// Mise en page d'après la maquette envoyée par Axel (14 novembre
-/// 2026) : logo 76x76, mot de passe oublié à droite, séparateur
-/// « NOUVEAU SUR LA PLATEFORME ? », deux cartes d'action, accès
-/// Plateforme discret en pied de page. Le logo est la vraie image
-/// (LogoApp), jamais le texte « ESC » de la maquette.
+/// Mise en page d'après la maquette (écran 27) : logo 76x76, « Bienvenue »
+/// et son sous-titre, libellés au-dessus des champs avec l'aide en
+/// dessous, note de verrouillage après 5 mots de passe incorrects,
+/// « Mot de passe oublié » sous la note, deux cartes d'action, accès
+/// administrateur de la plateforme discret en pied de page. Le logo est
+/// la vraie image (LogoApp), jamais le texte « ESC » de la maquette.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -150,35 +150,40 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          AppConfig.appName,
+                          'Bienvenue',
                           textAlign: TextAlign.center,
                           style: Theme.of(context)
                               .textTheme
                               .headlineMedium
                               ?.copyWith(
+                                fontSize: 22,
                                 fontWeight: FontWeight.w800,
                                 color: scheme.primary,
                               ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          AppConfig.appSlogan,
+                          'Connectez-vous pour retrouver votre église, '
+                          'vos cultes et votre parcours.',
                           textAlign: TextAlign.center,
                           style: Theme.of(context)
                               .textTheme
                               .titleMedium
                               ?.copyWith(
-                                fontStyle: FontStyle.italic,
+                                fontSize: 13,
                                 color: scheme.onSurfaceVariant,
                               ),
                         ),
                         const SizedBox(height: 32),
 
-                        // 2. Formulaire de connexion.
+                        // 2. Formulaire de connexion : libellé au-dessus
+                        // du champ, aide en dessous (maquette, écran 27),
+                        // pas de libellé flottant.
                         _buildTextField(
                           context: context,
                           controller: _identifiantController,
-                          labelText: 'E-mail ou téléphone',
+                          label: 'E-mail ou téléphone *',
+                          helper: 'E-mail ou numéro de téléphone',
                           icon: Icons.person_outline,
                           keyboardType: TextInputType.text,
                           textInputAction: TextInputAction.next,
@@ -188,7 +193,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         _buildTextField(
                           context: context,
                           controller: _passwordController,
-                          labelText: 'Mot de passe',
+                          label: 'Mot de passe *',
+                          helper: '••••••••',
                           icon: Icons.lock_outline,
                           obscureText: _obscurePassword,
                           textInputAction: TextInputAction.done,
@@ -216,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           _buildTextField(
                             context: context,
                             controller: _code2faController,
-                            labelText: 'Code à 6 chiffres',
+                            label: 'Code à 6 chiffres',
                             icon: Icons.phonelink_lock_outlined,
                             keyboardType: TextInputType.number,
                             textInputAction: TextInputAction.done,
@@ -237,36 +243,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             textAlign: TextAlign.center,
                           ),
                         ],
-
-                        // Mot de passe oublié aligné à droite.
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: _loading
-                                ? null
-                                : () => Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const ForgotPasswordScreen(),
-                                      ),
-                                    ),
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 8, horizontal: 4),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              'Mot de passe oublié ?',
-                              style: TextStyle(
-                                color: scheme.primary,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
 
                         // Bouton principal.
                         FilledButton(
@@ -293,37 +269,91 @@ class _LoginScreenState extends State<LoginScreen> {
                               : const Text(
                                   'Se connecter',
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 13.5,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Verrouillage après 5 mots de passe incorrects
+                        // (maquette, écran 27) : la note ne dit jamais
+                        // quel champ est faux.
+                        Text(
+                          'Après 5 mots de passe incorrects, la connexion '
+                          'se verrouille temporairement — sans indiquer '
+                          'quel champ est faux.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        // Mot de passe oublié, sous la note.
+                        Center(
+                          child: TextButton(
+                            onPressed: _loading
+                                ? null
+                                : () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const ForgotPasswordScreen(),
+                                      ),
+                                    ),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 8, horizontal: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              'Mot de passe oublié',
+                              style: TextStyle(
+                                color: scheme.primary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
                         ),
 
                         // 3. Séparateur visuel.
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 26),
-                          child: Row(
+                          child: Column(
                             children: [
-                              const Expanded(
-                                  child: Divider(
-                                      color: AppTheme.bordure, thickness: 1)),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 14),
-                                child: Text(
-                                  'NOUVEAU SUR LA PLATEFORME ?',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: scheme.onSurfaceVariant
-                                        .withValues(alpha: 0.8),
-                                    letterSpacing: 0.8,
+                              Row(
+                                children: [
+                                  const Expanded(
+                                      child: Divider(
+                                          color: AppTheme.bordure,
+                                          thickness: 1)),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14),
+                                    child: Text(
+                                      'Nouveau sur e-System Church',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        color: scheme.onSurface,
+                                      ),
+                                    ),
                                   ),
+                                  const Expanded(
+                                      child: Divider(
+                                          color: AppTheme.bordure,
+                                          thickness: 1)),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Choisissez votre situation pour commencer.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: scheme.onSurfaceVariant,
                                 ),
                               ),
-                              const Expanded(
-                                  child: Divider(
-                                      color: AppTheme.bordure, thickness: 1)),
                             ],
                           ),
                         ),
@@ -383,9 +413,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                       color: scheme.onSurfaceVariant),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Connexion Plateforme (Admin)',
+                                    'Accès administrateur de la plateforme',
                                     style: TextStyle(
-                                      fontSize: 13,
+                                      fontSize: 12,
                                       color: scheme.onSurfaceVariant,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -410,7 +440,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildTextField({
     required BuildContext context,
     required TextEditingController controller,
-    required String labelText,
+    required String label,
+    String? helper,
     required IconData icon,
     bool obscureText = false,
     Widget? suffixIcon,
@@ -420,49 +451,65 @@ class _LoginScreenState extends State<LoginScreen> {
     String? Function(String?)? validator,
   }) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: TextFormField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        textInputAction: textInputAction,
-        onFieldSubmitted: onFieldSubmitted,
-        validator: validator,
-        // 16 px minimum : en dessous, Safari sur iPhone zoome sur le
-        // champ, le zoom reste après la connexion et l'accueil est
-        // coupé à droite (page penchée d'un côté).
-        style: TextStyle(fontSize: 16, color: scheme.onSurface),
-        decoration: InputDecoration(
-          labelText: labelText,
-          labelStyle:
-              TextStyle(color: scheme.onSurfaceVariant, fontSize: 14.5),
-          prefixIcon:
-              Icon(icon, color: scheme.onSurfaceVariant, size: 20),
-          suffixIcon: suffixIcon,
-          contentPadding:
-              const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide:
-                const BorderSide(color: AppTheme.bordure, width: 1.2),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: scheme.primary, width: 1.6),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
           ),
         ),
-      ),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            textInputAction: textInputAction,
+            onFieldSubmitted: onFieldSubmitted,
+            validator: validator,
+            // 16 px minimum : en dessous, Safari sur iPhone zoome sur le
+            // champ, le zoom reste après la connexion et l'accueil est
+            // coupé à droite (page penchée d'un côté).
+            style: TextStyle(fontSize: 16, color: scheme.onSurface),
+            decoration: InputDecoration(
+              helperText: helper,
+              helperStyle: TextStyle(
+                color: scheme.onSurfaceVariant,
+                fontSize: 13.5,
+              ),
+              prefixIcon:
+                  Icon(icon, color: scheme.onSurfaceVariant, size: 20),
+              suffixIcon: suffixIcon,
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide:
+                    const BorderSide(color: AppTheme.bordure, width: 1.2),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: scheme.primary, width: 1.6),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -504,7 +551,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w700,
                         color: scheme.onSurface,
                       ),

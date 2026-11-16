@@ -89,11 +89,6 @@ class AppState extends ChangeNotifier {
   bool _apercuFidele = false;
   bool get apercuFidele => _apercuFidele;
 
-  void entrerApercuFidele() {
-    _apercuFidele = true;
-    notifyListeners();
-  }
-
   void sortirApercuFidele() {
     _apercuFidele = false;
     notifyListeners();

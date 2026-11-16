@@ -22,6 +22,8 @@ import 'visiteurs_screen.dart';
 
 /// Membres de mon église, en 5 onglets (projection) : Liste, Fiche,
 /// Familles, Anniversaires, Fréquentation.
+/// L'onglet Fréquentation est gardé : il fonctionne sans autre entrée
+/// dans la maquette, sa suppression doit être décidée par Axel.
 /// Le trésorier ne peut pas créer de membre.
 class MembresScreen extends StatefulWidget {
   const MembresScreen({super.key});
@@ -255,6 +257,78 @@ class _MembresScreenState extends State<MembresScreen>
     return f;
   }
 
+  /// État vide de l'onglet Liste (maquette écran 1) : quand aucun
+  /// membre n'est enregistré du tout, titre, sous-texte et bouton
+  /// « Créer un membre » (même formulaire que le FAB). Avec un
+  /// filtre ou une recherche actifs, simple message d'absence de
+  /// résultat.
+  Widget _etatVideListe({
+    required AppState state,
+    required bool vraimentVide,
+  }) {
+    if (!vraimentVide) {
+      return EmptyState(
+        icon: Icons.people_outline,
+        message: _filtreLocal.isNotEmpty || _query.isNotEmpty
+            ? 'Aucun membre ne correspond à « ${_filtreLocal.isNotEmpty ? _filtreLocal : _query} ».'
+            : 'Aucun membre enregistré',
+      );
+    }
+    return Center(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.people_outline,
+                size: 26,
+                color: AppTheme.violetProfond,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Aucun membre enregistré',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.violetProfond,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'La liste se remplira dès la première inscription.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.violetProfond.withValues(alpha: 0.7),
+                ),
+              ),
+              if (state.canManageMembers) ...[
+                const SizedBox(height: 12),
+                FilledButton(
+                  onPressed: _openForm,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.or,
+                    foregroundColor: AppTheme.violetProfond,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    'Créer un membre',
+                    style: TextStyle(fontSize: 13.5),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Onglet Liste : le contenu actuel (recherche, boutons, pastilles,
   /// liste, FAB). La carte anniversaires a déménagé dans l'onglet
   /// Anniversaires.
@@ -275,7 +349,7 @@ class _MembresScreenState extends State<MembresScreen>
                   onChanged: _onSearchChanged,
                   style: const TextStyle(fontSize: 16),
                   decoration: const InputDecoration(
-                    labelText: 'Rechercher (nom ou matricule)',
+                    labelText: 'Rechercher un membre par nom ou matricule',
                     prefixIcon: Icon(Icons.search),
                     border: OutlineInputBorder(),
                   ),
@@ -374,7 +448,10 @@ class _MembresScreenState extends State<MembresScreen>
                               'En attente': 'en_attente',
                             }.entries) ...[
                               ChoiceChip(
-                                label: Text(entry.key),
+                                label: Text(
+                                  entry.key,
+                                  style: const TextStyle(fontSize: 12.5),
+                                ),
                                 selected: _pastille == entry.value,
                                 onSelected: (_) {
                                   setState(() {
@@ -394,12 +471,12 @@ class _MembresScreenState extends State<MembresScreen>
                     ),
                   Expanded(
                     child: membres.isEmpty
-                        ? EmptyState(
-                            icon: Icons.people_outline,
-                            message: _filtreLocal.isNotEmpty ||
-                                    _query.isNotEmpty
-                                ? 'Aucun membre ne correspond à « ${_filtreLocal.isNotEmpty ? _filtreLocal : _query} ».'
-                                : 'Aucun membre enregistré',
+                        ? _etatVideListe(
+                            state: state,
+                            vraimentVide: page.total == 0 &&
+                                _query.isEmpty &&
+                                _filtreLocal.isEmpty &&
+                                _pastille == 'tous',
                           )
                         : ListeAvecFab(
                             child: RefreshIndicator(
@@ -759,7 +836,11 @@ class _MembresScreenState extends State<MembresScreen>
               unselectedLabelColor: Colors.white60,
               labelStyle: const TextStyle(
                 fontWeight: FontWeight.w600,
-                fontSize: 14,
+                fontSize: 12.5,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 12.5,
               ),
               tabs: const [
                 Tab(text: 'Liste'),
@@ -776,7 +857,9 @@ class _MembresScreenState extends State<MembresScreen>
               children: [
                 _listeTab(state),
                 _ficheTab(),
-                const FamillesScreen(),
+                // Familles sans boutons de création (maquette écran
+                // 1) : la création se fait dans l'écran Départements.
+                const FamillesScreen(masquerCreation: true),
                 _anniversairesTab(),
                 _frequentationTab(),
               ],
@@ -785,12 +868,16 @@ class _MembresScreenState extends State<MembresScreen>
         ],
       ),
       // Le FAB « Nouveau membre » ne s'affiche que sur l'onglet Liste :
-      // l'onglet Familles apporte son propre FAB via FamillesScreen.
+      // l'onglet Familles n'a plus de bouton de création (maquette
+      // écran 1, création dans l'écran Départements).
       floatingActionButton: _tabIndex == 0 && state.canManageMembers
           ? FloatingActionButton.extended(
               onPressed: _openForm,
               icon: const Icon(Icons.person_add_outlined),
-              label: const Text('Nouveau membre'),
+              label: const Text(
+                'Nouveau membre',
+                style: TextStyle(fontSize: 13.5),
+              ),
             )
           : null,
     );

@@ -50,6 +50,28 @@ class _TransparenceScreenState extends State<TransparenceScreen> {
     });
   }
 
+  String _libelleMois(String periode) {
+    const mois = [
+      'janvier',
+      'février',
+      'mars',
+      'avril',
+      'mai',
+      'juin',
+      'juillet',
+      'août',
+      'septembre',
+      'octobre',
+      'novembre',
+      'décembre',
+    ];
+    final parties = periode.split('-');
+    if (parties.length != 2) return periode;
+    final m = int.tryParse(parties[1]);
+    if (m == null || m < 1 || m > 12) return periode;
+    return '${mois[m - 1]} ${parties[0]}';
+  }
+
   String _libelleType(String type) => switch (type) {
         'dime' => 'Dîme',
         'offrande' => 'Offrande',
@@ -100,13 +122,23 @@ class _TransparenceScreenState extends State<TransparenceScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 Text(
+                  t.resumePublie(_libelleMois(_periode)).toUpperCase(),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 11.5),
+                ),
+                const SizedBox(height: 4),
+                Text(
                   '${d.eglise} · $_periode',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 11.5,
+                        color:
+                            Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   t.sansLigneNominative,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 12,
                         color:
                             Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -143,6 +175,17 @@ class _TransparenceScreenState extends State<TransparenceScreen> {
                       : AppTheme.violetProfond,
                 ),
                 const SizedBox(height: 20),
+                SectionTitle(title: t.publication),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      t.notePublication,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 SectionTitle(title: t.parType),
                 Card(
                   child: Column(
@@ -155,7 +198,7 @@ class _TransparenceScreenState extends State<TransparenceScreen> {
                           ]
                         : d.totauxParType
                             .map((l) => ListTile(
-                              title: Text(_libelleType(l.type)),
+                              title: Text(_libelleType(l.type), style: const TextStyle(fontSize: 13.5)),
                               trailing: Text(
                                 formatMontant(l.totalFcfa, devise),
                                 style: const TextStyle(
@@ -180,7 +223,8 @@ class _TransparenceScreenState extends State<TransparenceScreen> {
                             .map((l) => ListTile(
                               title: Text(l.poste,
                                   maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 13.5)),
                               trailing: Text(
                                 formatMontant(l.totalFcfa, devise),
                                 style: const TextStyle(

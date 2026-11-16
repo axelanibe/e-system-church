@@ -5,16 +5,16 @@ import 'action_sociale_screen.dart';
 import 'documents_screen.dart';
 import 'mandats_screen.dart';
 import 'patrimoine_screen.dart';
-import 'reunions_conseil_screen.dart';
 
 /// T10 — Gouvernance (modèle projection, écran « Gouvernance ») :
 /// Mandats, Nominations, Procès-verbaux et Documents, comme dans la
 /// projection, plus Action sociale et Patrimoine, gardés comme acquis
 /// par décision d'Axel (divergence volontaire sur E-G1). Chaque carte
-/// ouvre son écran, avec retour partout (AppBar). Les écrans Réunions
-/// et décisions et Certificats restent joignables ailleurs
-/// (Procès-verbaux, Attestations annuelles) ; leurs fichiers sont
-/// conservés.
+/// ouvre son écran, avec retour partout (AppBar). Les 4 premières
+/// cartes ouvrent le hub Mandats et nominations (maquette, écran 7),
+/// à l'onglet correspondant. Les écrans Réunions et décisions et
+/// Certificats restent joignables ailleurs (Procès-verbaux,
+/// Attestations annuelles) ; leurs fichiers sont conservés.
 class GouvernanceScreen extends StatelessWidget {
   const GouvernanceScreen({super.key});
 
@@ -41,7 +41,7 @@ class GouvernanceScreen extends StatelessWidget {
           titre,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
         ),
         subtitle: sousTitre == null
             ? null
@@ -49,6 +49,7 @@ class GouvernanceScreen extends StatelessWidget {
                 sousTitre,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11.5),
               ),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => _ouvrir(context, ecran),
@@ -79,7 +80,7 @@ class GouvernanceScreen extends StatelessWidget {
             context: context,
             icone: Icons.description_outlined,
             titre: 'Procès-verbaux',
-            ecran: const ReunionsConseilScreen(ongletInitial: 2),
+            ecran: const MandatsScreen(ongletInitial: 2),
           ),
           _carte(
             context: context,

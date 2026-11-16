@@ -54,12 +54,11 @@ class _AnnoncesScreenState extends State<AnnoncesScreen> {
     final titleController = TextEditingController();
     final bodyController = TextEditingController();
     final formKey = GlobalKey<FormState>();
-    var broadcast = false;
-    final created = await showDialog<bool>(
+    var broadcast = false;    final created = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Nouvelle annonce'),
+          title: const Text('Nouvelle annonce', style: TextStyle(fontSize: 17)),
           content: Form(
             key: formKey,
             child: SingleChildScrollView(
@@ -91,10 +90,25 @@ class _AnnoncesScreenState extends State<AnnoncesScreen> {
                             : null,
                   ),
                   const SizedBox(height: 12),
-                  SwitchListTile(
-                    title: const Text('Diffuser à tout le réseau'),
-                    value: broadcast,
-                    onChanged: (v) => setDialogState(() => broadcast = v),
+                  DropdownButtonFormField<bool>(
+                    initialValue: broadcast,
+                    decoration: const InputDecoration(
+                      labelText: 'Destinataires',
+                      border: OutlineInputBorder(),
+                    ),
+                    isExpanded: true,
+                    items: const [
+                      DropdownMenuItem(
+                        value: false,
+                        child: Text('Mon église seulement', style: TextStyle(fontSize: 12.5)),
+                      ),
+                      DropdownMenuItem(
+                        value: true,
+                        child: Text('Publiée pour toute la structure', style: TextStyle(fontSize: 12.5)),
+                      ),
+                    ],
+                    onChanged: (v) =>
+                        setDialogState(() => broadcast = v ?? false),
                   ),
                 ],
               ),
@@ -103,14 +117,14 @@ class _AnnoncesScreenState extends State<AnnoncesScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Annuler'),
+              child: const Text('Annuler', style: TextStyle(fontSize: 13.5)),
             ),
             FilledButton(
               onPressed: () {
                 if (!formKey.currentState!.validate()) return;
                 Navigator.of(context).pop(true);
               },
-              child: const Text('Publier'),
+              child: const Text('Publier l’annonce', style: TextStyle(fontSize: 13.5)),
             ),
           ],
         ),
@@ -182,15 +196,18 @@ class _AnnoncesScreenState extends State<AnnoncesScreen> {
                             : Icons.campaign_outlined,
                         color: Theme.of(context).colorScheme.primary,
                       ),
-                      title: Text(a.title),
+                      title: Text(a.title, style: const TextStyle(fontSize: 13.5)),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(a.body),
+                          Text(a.body, style: const TextStyle(fontSize: 11.5)),
                           const SizedBox(height: 4),
                           Text(
                             '${a.egliseNom ?? ''} · ${formatDateTime(a.createdAt)}',
-                            style: Theme.of(context).textTheme.bodySmall,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(fontSize: 11.5),
                           ),
                         ],
                       ),
@@ -199,12 +216,14 @@ class _AnnoncesScreenState extends State<AnnoncesScreen> {
                         children: [
                           if (a.broadcast)
                             const Chip(
-                              label: Text('Réseau'),
+                              label: Text('Réseau',
+                                  style: TextStyle(fontSize: 11.5)),
                               visualDensity: VisualDensity.compact,
                             )
                           else if (isMine)
                             const Chip(
-                              label: Text('Mon église'),
+                              label: Text('Mon église',
+                                  style: TextStyle(fontSize: 11.5)),
                               visualDensity: VisualDensity.compact,
                             ),
                           if (isMine)
@@ -228,7 +247,7 @@ class _AnnoncesScreenState extends State<AnnoncesScreen> {
           ? FloatingActionButton.extended(
               onPressed: _create,
               icon: const Icon(Icons.add),
-              label: const Text('Annonce'),
+              label: const Text('Annonce', style: TextStyle(fontSize: 13.5)),
             )
           : null,
     );

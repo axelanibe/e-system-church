@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../models/membres_complement.dart';
-import '../state/app_state.dart';
-import '../utils/format.dart';
 import '../widgets/code_input_formatter.dart';
-import '../widgets/common_widgets.dart';
 
-/// Inscription membre par code fidèle : « Je suis membre d'une église »
-/// (nom et prénom, e-mail, téléphone, mot de passe, code fidèle de
-/// l'église). Le code fait foi : aucune validation par l'administrateur,
-/// le matricule est attribué automatiquement, la fiche membre et la carte
-/// sont créées tout de suite, le compte est lié immédiatement et la
-/// session démarre. Le code fidèle (ESC-F-…) désigne une seule église,
-/// sans ambiguïté — le code de tutelle (ESC-…) ne sert qu'aux églises
-/// qui se rattachent à une mère. L'ancien parcours par matricule n'est
-/// plus proposé ici (il reste disponible côté serveur pour les membres
-/// déjà fichés).
+/// Inscription membre par code fidèle : « Rejoindre mon église »
+/// (maquette, écran 27). Le code fait foi : aucune validation par
+/// l'administrateur, le matricule est attribué automatiquement, la
+/// fiche membre et la carte sont créées tout de suite. Le code fidèle
+/// (ESC-F-…) désigne une seule église, sans ambiguïté — le code de
+/// tutelle (ESC-…) ne sert qu'aux églises qui se rattachent à une mère.
+/// Champs hors maquette retirés (date de naissance, sexe, département,
+/// fonction) : tous facultatifs côté serveur (`inscriptionMembreSchema`
+/// dans server/src/auth.ts), ils n'entrent que dans le matricule ou
+/// la fiche, jamais dans l'obligation d'inscription.
+/// Blocage signalé : la maquette ne montre qu'un seul champ
+/// « Téléphone ou e-mail * », mais l'API exige aujourd'hui les deux
+/// (`email` valide ET `telephone` min 8 caractères). L'envoi attend
+/// donc une évolution du serveur (rendre l'un des deux optionnel) ;
+/// le bouton l'explique au lieu d'envoyer une inscription incomplète.
 class RegisterFideleScreen extends StatefulWidget {
   const RegisterFideleScreen({super.key});
 
@@ -26,96 +26,42 @@ class RegisterFideleScreen extends StatefulWidget {
 
 class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nomPrenomController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _telephoneController = TextEditingController();
+  final _nomController = TextEditingController();
+  final _prenomController = TextEditingController();
+  final _contactController = TextEditingController();
   final _codeController = TextEditingController();
-  final _departementController = TextEditingController();
   final _passwordController = TextEditingController();
-  String _fonction = 'Aucun';
-  /// Date de naissance et sexe (optionnels) : ils entrent dans le
-  /// matricule québécois (initiales + JJMMAA + séquence, règle +50 au
-  /// mois pour les femmes). Sans eux, le matricule est quand même
-  /// attribué (segment 000000, mois tel quel).
-  DateTime? _birthDate;
-  String? _sexe;
-  bool _loading = false;
-  String? _error;
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _nomPrenomController.dispose();
-    _emailController.dispose();
-    _telephoneController.dispose();
+    _nomController.dispose();
+    _prenomController.dispose();
+    _contactController.dispose();
     _codeController.dispose();
-    _departementController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _choisirDateNaissance() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _birthDate ?? DateTime(now.year - 30, now.month, now.day),
-      firstDate: DateTime(1900),
-      lastDate: now,
-      helpText: 'Date de naissance',
-      cancelText: 'Annuler',
-      confirmText: 'Choisir',
-    );
-    if (picked != null) setState(() => _birthDate = picked);
-  }
-
-  /// Date au format « AAAA-MM-JJ » attendu par l'API (`birth_date`).
-  String? get _birthDateIso {
-    final d = _birthDate;
-    if (d == null) return null;
-    final month = d.month.toString().padLeft(2, '0');
-    final day = d.day.toString().padLeft(2, '0');
-    return '${d.year}-$month-$day';
-  }
-
-  Future<void> _submit() async {
+  void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final result = await context.read<AppState>().registerMembreParCode(
-            nomPrenom: _nomPrenomController.text.trim(),
-            email: _emailController.text.trim(),
-            telephone: _telephoneController.text.trim(),
-            password: _passwordController.text,
-            codeEglise: _codeController.text.trim().toUpperCase(),
-            birthDate: _birthDateIso,
-            sexe: _sexe,
-            department: _departementController.text.trim().isEmpty
-                ? null
-                : _departementController.text.trim(),
-            fonction: _fonction == 'Aucun' ? null : _fonction,
-          );
-      if (!mounted) return;
-      if (result.lie) {
-        // Session appliquée par AppState : MaterialApp bascule sur
-        // l'accueil fidèle. Rien à faire ici.
-        return;
-      }
-      setState(() => _error = messageErreurSimple(result.message));
-    } catch (e) {
-      if (mounted) setState(() => _error = messageErreurSimple(e));
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
+    // Un seul contact saisi, l'API en exige deux : impossible
+    // d'appeler l'inscription sans inventer l'autre. On l'explique.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Création impossible pour l’instant : l’inscription exige '
+          'aujourd’hui un e-mail et un téléphone, la maquette n’en '
+          'montre qu’un seul. Aucun compte n’a été créé.',
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Je suis membre d’une église')),
+      appBar: AppBar(title: const Text('Rejoindre mon église')),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -126,91 +72,10 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextFormField(
-                    controller: _nomPrenomController,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Nom et prénom',
-                      prefixIcon: Icon(Icons.person_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.trim().length < 2) {
-                        return 'Saisissez votre nom et prénom.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'E-mail',
-                      prefixIcon: Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Saisissez votre e-mail.';
-                      }
-                      if (!v.contains('@')) return 'E-mail invalide.';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _telephoneController,
-                    keyboardType: TextInputType.phone,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Téléphone',
-                      prefixIcon: Icon(Icons.phone_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.trim().length < 8) {
-                        return 'Saisissez votre téléphone.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.cake_outlined),
-                    title: const Text('Date de naissance (optionnel)'),
-                    subtitle: _birthDate == null
-                        ? null
-                        : Text(formatDate(_birthDate)),
-                    trailing: _birthDate == null
-                        ? const Icon(Icons.calendar_today_outlined)
-                        : IconButton(
-                            tooltip: 'Effacer',
-                            icon: const Icon(Icons.clear),
-                            onPressed: () =>
-                                setState(() => _birthDate = null),
-                          ),
-                    onTap: _choisirDateNaissance,
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: _sexe,
-                    decoration: const InputDecoration(
-                      labelText: 'Sexe (optionnel)',
-                      hintText: 'Non précisé',
-                      helperMaxLines: 2,
-                      prefixIcon: Icon(Icons.person_outline),
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                          value: null, child: Text('Non précisé')),
-                      DropdownMenuItem(value: 'F', child: Text('Femme')),
-                      DropdownMenuItem(value: 'M', child: Text('Homme')),
-                    ],
-                    onChanged: (v) => setState(() => _sexe = v),
+                  const Text(
+                    'Avec le code reçu de votre église, créez votre '
+                    'compte membre.',
+                    style: TextStyle(fontSize: 13),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -220,46 +85,88 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                       CodeInputFormatter(expectedPrefix: 'ESC-F-'),
                     ],
                     textInputAction: TextInputAction.next,
+                    style: const TextStyle(fontSize: 16),
                     decoration: const InputDecoration(
-                      labelText: 'Code fidèle de l’église',
-                      helperText:
-                          'Demandez le code fidèle à votre pasteur ou à un '
-                          'responsable.',
+                      labelText: 'Code de l’église *',
+                      helperText: 'Code reçu de votre église',
+                      helperStyle: TextStyle(fontSize: 13.5),
                       helperMaxLines: 2,
                       prefixIcon: Icon(Icons.key_outlined),
                       border: OutlineInputBorder(),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().length < 4) {
-                        return 'Saisissez le code fidèle de votre église.';
+                        return 'Saisissez le code de votre église.';
                       }
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
-                    controller: _departementController,
+                    controller: _nomController,
                     textInputAction: TextInputAction.next,
+                    style: const TextStyle(fontSize: 16),
                     decoration: const InputDecoration(
-                      labelText: 'Département (optionnel)',
-                      prefixIcon: Icon(Icons.group_work_outlined),
+                      labelText: 'Nom *',
+                      helperText: 'Nom de famille',
+                      helperStyle: TextStyle(fontSize: 13.5),
+                      prefixIcon: Icon(Icons.person_outlined),
                       border: OutlineInputBorder(),
                     ),
+                    validator: (v) {
+                      if (v == null || v.trim().length < 2) {
+                        return 'Saisissez votre nom.';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: _fonction,
+                  TextFormField(
+                    controller: _prenomController,
+                    textInputAction: TextInputAction.next,
+                    style: const TextStyle(fontSize: 16),
                     decoration: const InputDecoration(
-                      labelText: 'Fonction',
-                      prefixIcon: Icon(Icons.work_outline),
+                      labelText: 'Prénom *',
+                      helperText: 'Prénom',
+                      helperStyle: TextStyle(fontSize: 13.5),
+                      prefixIcon: Icon(Icons.person_outlined),
                       border: OutlineInputBorder(),
                     ),
-                    items: fonctionsParDefaut
-                        .map((f) => DropdownMenuItem(
-                            value: f, child: Text(f)))
-                        .toList(),
-                    onChanged: (v) =>
-                        setState(() => _fonction = v ?? 'Aucun'),
+                    validator: (v) {
+                      if (v == null || v.trim().length < 2) {
+                        return 'Saisissez votre prénom.';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _contactController,
+                    keyboardType: TextInputType.text,
+                    textInputAction: TextInputAction.next,
+                    style: const TextStyle(fontSize: 16),
+                    decoration: const InputDecoration(
+                      labelText: 'Téléphone ou e-mail *',
+                      helperText: 'Votre contact',
+                      helperStyle: TextStyle(fontSize: 13.5),
+                      prefixIcon: Icon(Icons.contact_mail_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Saisissez votre téléphone ou votre e-mail.';
+                      }
+                      if (v.contains('@')) {
+                        if (!v.contains('.')) return 'E-mail invalide.';
+                      } else {
+                        final chiffres =
+                            v.replaceAll(RegExp(r'[^0-9]'), '');
+                        if (chiffres.length < 8) {
+                          return 'Téléphone ou e-mail invalide.';
+                        }
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -267,8 +174,11 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                     obscureText: _obscurePassword,
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _submit(),
+                    style: const TextStyle(fontSize: 16),
                     decoration: InputDecoration(
-                      labelText: 'Mot de passe',
+                      labelText: 'Mot de passe *',
+                      helperText: '••••••••',
+                      helperStyle: const TextStyle(fontSize: 13.5),
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
@@ -286,28 +196,25 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                       return null;
                     },
                   ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      _error!,
-                      style: TextStyle(color: scheme.error),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Le code est vérifié avant la création ; le matricule '
+                    'et la carte de membre sont délivrés immédiatement.',
+                    style: TextStyle(fontSize: 11.5),
+                  ),
                   const SizedBox(height: 24),
                   FilledButton(
-                    onPressed: _loading ? null : _submit,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: _loading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2),
-                            )
-                          : const Text('Créer mon compte fidèle'),
+                    onPressed: _submit,
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 4),
+                      child: Text('Créer mon compte', style: TextStyle(fontSize: 13.5)),
                     ),
+                  ),
+                  const SizedBox(height: 4),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('← Retour à la connexion',
+                        style: TextStyle(fontSize: 13)),
                   ),
                 ],
               ),

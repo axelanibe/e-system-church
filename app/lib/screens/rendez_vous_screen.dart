@@ -57,38 +57,57 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
   }
 
   Future<void> _demander() async {
-    final apercu = context.read<AppState>().apercuFidele;
+    final appState = context.read<AppState>();
+    final apercu = appState.apercuFidele;
+
     if (apercu) {
+      if (!mounted) return;
       showApiError(
         context,
-        'Connectez-vous avec un compte fidèle pour demander '
-        'un rendez-vous.',
+        'Connectez-vous avec un compte fidèle pour demander un rendez-vous.',
       );
       return;
     }
+
     if (_date == null) {
+      if (!mounted) return;
       showApiError(context, 'Choisissez une date souhaitée.');
       return;
     }
+
+    final creneaux = await _creneauxFuture;
+
+    if (creneaux.where((c) => c.actif).isNotEmpty && _creneauChoisi == null) {
+      if (!mounted) return;
+      showApiError(context, 'Choisissez un créneau proposé par votre église.');
+      return;
+    }
+
     final motif = _motifController.text.trim();
     if (motif.length < 2) {
+      if (!mounted) return;
       showApiError(context, 'Écrivez le motif de votre rendez-vous.');
       return;
     }
+
     setState(() => _envoi = true);
+
     try {
       final date = _date!;
       final iso =
           '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-      await context.read<AppState>().api.demanderRendezVous(
-            dateSouhaitee: iso,
-            creneau: _creneauChoisi,
-            motif: motif,
-          );
+
+      await appState.api.demanderRendezVous(
+        dateSouhaitee: iso,
+        creneau: _creneauChoisi,
+        motif: motif,
+      );
+
       if (!mounted) return;
       setState(() => _envoye = true);
     } catch (e) {
-      if (mounted) showApiError(context, e);
+      if (!mounted) return;
+      showApiError(context, e);
     } finally {
       if (mounted) setState(() => _envoi = false);
     }
@@ -118,9 +137,9 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
           return const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('À compléter'),
+              Text('À compléter', style: TextStyle(fontSize: 15)),
               SizedBox(height: 4),
-              Text('Les créneaux de votre pasteur s’afficheront ici.'),
+              Text('Les créneaux de votre pasteur s’afficheront ici.', style: TextStyle(fontSize: 11.5)),
             ],
           );
         }
@@ -141,12 +160,17 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Text(
+              'Un rendez-vous ne se confirme qu’avec un créneau proposé par l’église : le membre choisit parmi les créneaux, il ne réserve pas librement.',
+              style: TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: [
                 for (final p in presentes)
                   ChoiceChip(
-                    label: Text(periodes[p]!),
+                    label: Text(periodes[p]!, style: const TextStyle(fontSize: 12.5)),
                     selected: periode == p,
                     onSelected: (_) => setState(() {
                       _periodeChoisie = p;
@@ -161,7 +185,7 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
               children: [
                 for (final libelle in libelles)
                   ChoiceChip(
-                    label: Text(libelle),
+                    label: Text(libelle, style: const TextStyle(fontSize: 12.5)),
                     selected: _creneauChoisi == libelle,
                     onSelected: (_) => setState(() {
                       _creneauChoisi =
@@ -224,7 +248,7 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
                           const SizedBox(height: 12),
                           TextButton(
                             onPressed: _nouvelleDemande,
-                            child: const Text('Faire une autre demande'),
+                            child: const Text('Faire une autre demande', style: TextStyle(fontSize: 13.5)),
                           ),
                         ],
                       ),
@@ -254,15 +278,15 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Date souhaitée'),
+                        const Text('Date souhaitée', style: TextStyle(fontSize: 10.5)),
                         const SizedBox(height: 8),
                         OutlinedButton.icon(
                           onPressed: _choisirDate,
                           icon: const Icon(Icons.calendar_month_outlined),
-                          label: Text(_dateTexte),
+                          label: Text(_dateTexte, style: const TextStyle(fontSize: 13.5)),
                         ),
                         const SizedBox(height: 12),
-                        const Text('Créneau'),
+                        const Text('Créneau', style: TextStyle(fontSize: 10.5)),
                         const SizedBox(height: 8),
                         _creneaux(),
                       ],
@@ -285,6 +309,7 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
                       onPressed: _envoi ? null : _demander,
                       child: Text(
                         _envoi ? 'Envoi…' : 'Demander ce rendez-vous',
+                        style: const TextStyle(fontSize: 13.5),
                       ),
                     ),
                   ),
@@ -294,6 +319,7 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
                     'Tu es un don de Dieu',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppTheme.orFonce,
+                          fontSize: 12.5,
                         ),
                   ),
                 ),

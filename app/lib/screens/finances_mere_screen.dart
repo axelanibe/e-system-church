@@ -9,7 +9,7 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 
-/// Finances de l'église mère en détail : total consolidé + détail par
+/// Finances des annexes en détail : total consolidé + détail par
 /// branche, par période (mois, trimestre, année) et par type, avec chaque
 /// transaction confirmée. Admin de l'église seulement.
 /// La vue agrégée du tableau de bord reste, celle-ci s'ajoute à côté.
@@ -129,7 +129,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
 
     if (!state.isAdmin) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Finances de la mère')),
+        appBar: AppBar(title: const Text('Finances des annexes')),
         body: const Center(
           child: Icon(Icons.lock_outline, size: 48),
         ),
@@ -137,7 +137,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Finances de la mère')),
+      appBar: AppBar(title: const Text('Finances des annexes')),
       body: Column(
         children: [
           Padding(
@@ -164,7 +164,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                             padding:
                                 const EdgeInsets.symmetric(horizontal: 4),
                             child: ChoiceChip(
-                              label: Text(entry.key),
+                              label: Text(entry.key, style: const TextStyle(fontSize: 12.5)),
                               selected: _periode == entry.value,
                               onSelected: (_) {
                                 setState(() {
@@ -274,6 +274,16 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
+                Chip(
+                  label: Text(
+                      'Cotisations du mois : ${formatFcfa(rapport.totaux['cotisation']?.totalFcfa ?? 0)}',
+                      style: const TextStyle(fontSize: 12.5)),
+                ),
+                Chip(
+                  label: Text(
+                      'Annexes rattachées : ${rapport.branches.length}',
+                      style: const TextStyle(fontSize: 12.5)),
+                ),
                 for (final type in [
                   'dime',
                   'offrande',
@@ -282,7 +292,8 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                 ])
                   Chip(
                     label: Text(
-                        '${Contribution.labelForType(type)} : ${formatFcfa(rapport.totaux[type]?.totalFcfa ?? 0)}'),
+                        '${Contribution.labelForType(type)} : ${formatFcfa(rapport.totaux[type]?.totalFcfa ?? 0)}',
+                        style: const TextStyle(fontSize: 12.5)),
                   ),
               ],
             ),
@@ -292,7 +303,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
               child: FilledButton.icon(
                 onPressed: () => _exporter(rapport),
                 icon: const Icon(Icons.download_outlined),
-                label: const Text('Exporter le rapport'),
+                label: const Text('Exporter le rapport', style: TextStyle(fontSize: 13.5)),
               ),
             ),
           ],
@@ -312,17 +323,19 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
           children: [
             Text(
               b.egliseNom,
-              style: Theme.of(context).textTheme.titleMedium,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 13.5),
             ),
             Text(
-                '${niveauLabel(b.niveau)} · ${b.egliseCode} · ${b.egliseVille ?? ''} · ${pluriel(b.membresActifs, 'membre actif', 'membres actifs')}'),
+                '${niveauLabel(b.niveau)} · ${b.egliseCode} · ${b.egliseVille ?? ''} · ${pluriel(b.membresActifs, 'membre actif', 'membres actifs')}',
+                style: const TextStyle(fontSize: 11.5)),
             const SizedBox(height: 8),
             LinearProgressIndicator(
               value: maxEntrees == 0 ? 0 : b.entreesFcfa / maxEntrees,
             ),
             const SizedBox(height: 4),
             Text(
-                'Entrées ${formatFcfa(b.entreesFcfa)} · Dépenses ${formatFcfa(b.depensesFcfa)} · Solde ${formatFcfa(b.soldeFcfa)}'),
+                'Entrées ${formatFcfa(b.entreesFcfa)} · Dépenses ${formatFcfa(b.depensesFcfa)} · Solde ${formatFcfa(b.soldeFcfa)}',
+                style: const TextStyle(fontSize: 11.5)),
           ],
         ),
       ),
@@ -344,10 +357,11 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
               style: Theme.of(context)
                   .textTheme
                   .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.bold),
+                  ?.copyWith(fontSize: 13.5, fontWeight: FontWeight.bold),
             ),
             Text(
-                '${niveauLabel(b.niveau)} · ${b.egliseCode} · ${b.egliseVille ?? ''} · ${pluriel(b.membresActifs, 'membre actif', 'membres actifs')}'),
+                '${niveauLabel(b.niveau)} · ${b.egliseCode} · ${b.egliseVille ?? ''} · ${pluriel(b.membresActifs, 'membre actif', 'membres actifs')}',
+                style: const TextStyle(fontSize: 11.5)),
             const SizedBox(height: 8),
             Text('Solde ${formatFcfa(b.soldeFcfa)}'),
             const SizedBox(height: 12),
@@ -358,7 +372,8 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                 for (final type in ['dime', 'offrande', 'don', 'depense'])
                   Chip(
                     label: Text(
-                        '${Contribution.labelForType(type)} : ${formatFcfa(b.totaux[type]?.totalFcfa ?? 0)} (${b.totaux[type]?.nombre ?? 0})'),
+                        '${Contribution.labelForType(type)} : ${formatFcfa(b.totaux[type]?.totalFcfa ?? 0)} (${b.totaux[type]?.nombre ?? 0})',
+                                        style: const TextStyle(fontSize: 12.5)),
                   ),
               ],
             ),
@@ -383,43 +398,52 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
               children: [
                 _carteTotaux(context, rapport),
                 const SizedBox(height: 16),
-                const SectionTitle(title: 'Comparer les branches'),
-                ...rapport.branches.map(
-                  (b) => _carteComparaison(context, b, maxEntrees),
-                ),
-                const SizedBox(height: 16),
-                const SectionTitle(title: 'Détail par branche'),
-                ...rapport.branches.map(
-                  (b) => Card(
-                    child: ExpansionTile(
-                      title: Text(b.egliseNom),
-                      subtitle: Text(
-                          '${niveauLabel(b.niveau)} · Solde ${formatFcfa(b.soldeFcfa)}'),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (final type in [
-                                'dime',
-                                'offrande',
-                                'don',
-                                'depense'
-                              ])
-                                Chip(
-                                  label: Text(
-                                      '${Contribution.labelForType(type)} : ${formatFcfa(b.totaux[type]?.totalFcfa ?? 0)} (${b.totaux[type]?.nombre ?? 0})'),
-                                ),
-                            ],
+                if (rapport.branches.isEmpty)
+                  const EmptyState(
+                    icon: Icons.account_tree_outlined,
+                    message: 'Aucune annexe rattachée pour l’instant.',
+                  )
+                else ...[
+                  const SectionTitle(title: 'Comparer les branches'),
+                  ...rapport.branches.map(
+                    (b) => _carteComparaison(context, b, maxEntrees),
+                  ),
+                  const SizedBox(height: 16),
+                  const SectionTitle(title: 'Détail par branche'),
+                  ...rapport.branches.map(
+                    (b) => Card(
+                      child: ExpansionTile(
+                        title: Text(b.egliseNom, style: const TextStyle(fontSize: 13.5)),
+                        subtitle: Text(
+                            '${niveauLabel(b.niveau)} · Solde ${formatFcfa(b.soldeFcfa)}',
+                            style: const TextStyle(fontSize: 11.5)),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                for (final type in [
+                                  'dime',
+                                  'offrande',
+                                  'don',
+                                  'depense'
+                                ])
+                                  Chip(
+                                    label: Text(
+                                        '${Contribution.labelForType(type)} : ${formatFcfa(b.totaux[type]?.totalFcfa ?? 0)} (${b.totaux[type]?.nombre ?? 0})',
+                                        style: const TextStyle(fontSize: 12.5)),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -436,7 +460,7 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
     if (rapport.branches.isEmpty) {
       return const EmptyState(
         icon: Icons.account_tree_outlined,
-        message: 'Aucune église annexe.',
+        message: 'Aucune annexe rattachée pour l’instant.',
       );
     }
     final selection = rapport.branches.firstWhere(
@@ -462,9 +486,10 @@ class _FinancesMereScreenState extends State<FinancesMereScreen> {
                           .secondaryContainer
                       : null,
                   child: ListTile(
-                    title: Text(b.egliseNom),
+                    title: Text(b.egliseNom, style: const TextStyle(fontSize: 13.5)),
                     subtitle: Text(
-                        '${niveauLabel(b.niveau)} · Solde ${formatFcfa(b.soldeFcfa)}'),
+                        '${niveauLabel(b.niveau)} · Solde ${formatFcfa(b.soldeFcfa)}',
+                        style: const TextStyle(fontSize: 11.5)),
                     selected: b.egliseId == selection.egliseId,
                     onTap: () => setState(
                         () => _selectionEgliseId = b.egliseId),
@@ -521,13 +546,19 @@ class _Total extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 10,
+              ),
+        ),
         FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
           child: Text(
             value,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontSize: 17,
                   fontWeight: FontWeight.bold,
                   color: color,
                 ),

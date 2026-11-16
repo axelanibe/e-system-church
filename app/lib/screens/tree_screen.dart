@@ -39,11 +39,12 @@ class _ArbreReseauState extends State<ArbreReseau> {
     final nameController = TextEditingController();
     final cityController = TextEditingController();
     final phoneController = TextEditingController();
+    final emailController = TextEditingController();
     final formKey = GlobalKey<FormState>();
     final created = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Nouvelle sous-église'),
+        title: const Text('Créer une sous-église', style: TextStyle(fontSize: 17)),
         content: Form(
           key: formKey,
           child: SingleChildScrollView(
@@ -53,7 +54,7 @@ class _ArbreReseauState extends State<ArbreReseau> {
                 TextFormField(
                   controller: nameController,
                   decoration: const InputDecoration(
-                    labelText: 'Nom de la sous-église *',
+                    labelText: 'Nom de l’église *',
                     border: OutlineInputBorder(),
                   ),
                   validator: (v) =>
@@ -74,9 +75,25 @@ class _ArbreReseauState extends State<ArbreReseau> {
                   controller: phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(
-                    labelText: 'Téléphone',
+                    labelText: 'Téléphone *',
                     border: OutlineInputBorder(),
                   ),
+                  validator: (v) => (v == null || v.trim().length < 8)
+                      ? 'Téléphone requis.'
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'E-mail (facultatif)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Code de l’église — Généré automatiquement à la création',
                 ),
               ],
             ),
@@ -85,14 +102,14 @@ class _ArbreReseauState extends State<ArbreReseau> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
+            child: const Text('Annuler', style: TextStyle(fontSize: 13.5)),
           ),
           FilledButton(
             onPressed: () {
               if (!formKey.currentState!.validate()) return;
               Navigator.of(context).pop(true);
             },
-            child: const Text('Créer'),
+            child: const Text('Créer', style: TextStyle(fontSize: 13.5)),
           ),
         ],
       ),
@@ -102,9 +119,10 @@ class _ArbreReseauState extends State<ArbreReseau> {
       await context.read<AppState>().api.createSubChurch(
             name: nameController.text.trim(),
             city: cityController.text.trim(),
-            phone: phoneController.text.trim().isEmpty
+            phone: phoneController.text.trim(),
+            email: emailController.text.trim().isEmpty
                 ? null
-                : phoneController.text.trim(),
+                : emailController.text.trim(),
           );
       if (!mounted) return;
       showSuccess(context, 'Sous-église créée.');
@@ -171,7 +189,7 @@ class _ArbreReseauState extends State<ArbreReseau> {
                         FilledButton.icon(
                           onPressed: _addSubChurch,
                           icon: const Icon(Icons.add),
-                          label: const Text('Créer une sous-église'),
+                          label: const Text('Créer une sous-église', style: TextStyle(fontSize: 13.5)),
                         ),
                       ],
                     ],
@@ -263,8 +281,9 @@ class _TreeNodeTileState extends State<_TreeNodeTile> {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: widget.isRoot
-            ? const TextStyle(fontWeight: FontWeight.bold)
-            : null,
+            ? const TextStyle(
+                fontWeight: FontWeight.bold, fontSize: 13.5)
+            : const TextStyle(fontSize: 13.5),
       );
     }
     return TextField(
@@ -311,7 +330,7 @@ class _TreeNodeTileState extends State<_TreeNodeTile> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(pluriel(widget.node.membresActifs, 'membre')),
+        Text(pluriel(widget.node.membresActifs, 'membre'), style: const TextStyle(fontSize: 11.5)),
         // Flèche de dépliage : le trailing remplace celle par défaut
         // de l'ExpansionTile, il faut la remettre à côté du compteur.
         if (widget.node.children.isNotEmpty)
@@ -336,9 +355,11 @@ class _TreeNodeTileState extends State<_TreeNodeTile> {
       color: Theme.of(context).colorScheme.primary,
     );
     final subtitle = Text(
-      '${node.code} · ${node.city ?? ''}',
+      '${node.code} · ${node.city ?? ''}'
+      '${widget.isRoot && node.isMere ? ' · église mère' : ''}',
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
+      style: const TextStyle(fontSize: 11.5),
     );
     if (node.children.isEmpty) {
       return ListTile(

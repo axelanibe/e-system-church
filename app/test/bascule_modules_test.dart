@@ -59,6 +59,10 @@ Future<void> _pomper(WidgetTester tester) async {
   );
   await tester.pump(const Duration(milliseconds: 500));
   await tester.pump(const Duration(milliseconds: 500));
+  // L'accueil charge ses compteurs par une chaîne d'appels au faux
+  // service (120 ms chacun) : on laisse la chaîne se terminer, sinon
+  // un minuteur reste en attente en fin de test.
+  await tester.pumpAndSettle();
   // L'accueil (onglet par défaut) déborde dans l'environnement de
   // test : police de test plus large que la vraie (héros « Aujourd'hui »
   // 140 px, carte 2,7 px). Sur un vrai téléphone 390 px ça tient

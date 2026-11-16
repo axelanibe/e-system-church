@@ -11,7 +11,6 @@ import '../widgets/common_widgets.dart';
 import 'cloture_caisse_screen.dart';
 import 'comptes_bancaires_screen.dart';
 import 'cotisations_admin_screen.dart';
-import 'paiements_screen.dart';
 import 'rapprochement_screen.dart';
 import 'recus_screen.dart';
 import 'sycebnl_screen.dart';
@@ -221,12 +220,6 @@ class _ContenuFinancesCompletesState
                       _ouvrir(const ComptesBancairesScreen()),
                 ),
                 _CarteFonction(
-                  icone: Icons.store_outlined,
-                  titre: 'Comptes marchands',
-                  texte: 'Wave, Orange Money, MTN.',
-                  onTap: () => _ouvrir(const PaiementsScreen()),
-                ),
-                _CarteFonction(
                   icone: Icons.swap_horiz,
                   titre: 'Rapprochement',
                   texte: 'Écart entre la caisse et la banque.',
@@ -266,18 +259,19 @@ class _ContenuFinancesCompletesState
                       children: [
                         const Text(
                           'États financiers SYCEBNL',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
                         const Text(
                           'Bilan, compte de résultat, tableau des flux de trésorerie et notes annexes, à produire depuis votre comptabilité. L’export reste disponible pour toutes les églises, même quand le dépôt n’est pas imposé.',
+                          style: TextStyle(fontSize: 11.5),
                         ),
                         const SizedBox(height: 12),
                         FilledButton.icon(
                           onPressed: () =>
                               _ouvrir(const SycebnlScreen()),
                           icon: const Icon(Icons.description_outlined),
-                          label: const Text('Ouvrir l’export SYCEBNL'),
+                          label: const Text('Ouvrir l’export SYCEBNL', style: TextStyle(fontSize: 13.5)),
                         ),
                       ],
                     ),
@@ -347,15 +341,15 @@ class _CarteFonction extends StatelessWidget {
                       children: [
                         Text(
                           titre,
-                          style: Theme.of(context).textTheme.titleMedium,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 13.5),
                         ),
                         const SizedBox(height: 2),
-                        Text(texte),
+                        Text(texte, style: const TextStyle(fontSize: 11.5)),
                         if (sousTexte != null) ...[
                           const SizedBox(height: 2),
                           Text(
                             sousTexte!,
-                            style: Theme.of(context).textTheme.bodySmall,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11.5),
                           ),
                         ],
                       ],
@@ -396,10 +390,16 @@ class _CarteFonction extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(infoLabel!),
+                      Text(
+                        infoLabel!,
+                        style: const TextStyle(fontSize: 13),
+                      ),
                       Text(
                         infoValeur!,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -411,7 +411,7 @@ class _CarteFonction extends StatelessWidget {
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: onTap,
-                    child: Text(actionLabel!),
+                    child: Text(actionLabel!, style: const TextStyle(fontSize: 13.5)),
                   ),
                 ),
               ],

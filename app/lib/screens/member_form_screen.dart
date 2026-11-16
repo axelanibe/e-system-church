@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -20,7 +23,10 @@ class MemberFormScreen extends StatefulWidget {
 
 class _MemberFormScreenState extends State<MemberFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  // Nom et prénom séparés (maquette écran 25) : le serveur ne stocke
+  // qu'un seul `full_name`, recomposé « Prénom Nom » à l'envoi.
+  final _nomController = TextEditingController();
+  final _prenomController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _departmentController = TextEditingController();
@@ -34,6 +40,13 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
   /// Sexe du membre ('M', 'F' ou null = non précisé) : il entre dans le
   /// matricule québécois (règle +50 au mois pour les femmes).
   String? _sexe;
+  /// Photo choisie (maquette écran 25) : octets lus sur le web
+  /// (FilePicker, `withData`), aperçu local. L'API de création ne
+  /// prend pas de photo et le serveur n'a pas d'envoi binaire pour
+  /// les membres : la photo n'est pas envoyée, elle attend une
+  /// tranche serveur (voir rapport).
+  Uint8List? _photoBytes;
+  String? _photoName;
   // Catalogues de l'église (départements, fonctions, postes) : listes
   // déroulantes quand ils sont chargés, champ libre sinon (département).
   List<String>? _departements;
@@ -43,7 +56,8 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
   String? _poste;
   bool _loading = false;
   String? _error;
-  /// Création guidée : 1 Identité, 2 Coordonnées, 3 Église et parcours.
+  /// Création guidée : 1 Identité, 2 Contacts, 3 Rattachement
+  /// (maquette écran 25).
   int _etape = 0;
 
   bool get _isEditing => widget.member != null;
@@ -53,7 +67,19 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
     super.initState();
     final member = widget.member;
     if (member != null) {
-      _nameController.text = member.fullName;
+      // Prénom = premier mot, nom = le reste (« Prénom Nom »).
+      // Un seul mot va dans le nom, le prénom reste à compléter.
+      final parties = member.fullName
+          .trim()
+          .split(RegExp(r'\s+'))
+          .where((e) => e.isNotEmpty)
+          .toList();
+      if (parties.length >= 2) {
+        _prenomController.text = parties.first;
+        _nomController.text = parties.sublist(1).join(' ');
+      } else if (parties.length == 1) {
+        _nomController.text = parties.first;
+      }
       _phoneController.text = member.phone ?? '';
       _emailController.text = member.email ?? '';
       _departmentController.text = member.department ?? '';
@@ -96,6 +122,48 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
       confirmText: 'Choisir',
     );
     if (picked != null) setState(() => _birthDate = picked);
+  }
+
+  /// Photo à afficher dans l'aperçu : la photo choisie, sinon la
+  /// photo existante du membre en modification, sinon rien.
+  ImageProvider? get _photoAffichee {
+    if (_photoBytes != null) return MemoryImage(_photoBytes!);
+    final url = widget.member?.photoUrl;
+    if (url != null) return NetworkImage(url);
+    return null;
+  }
+
+  /// Choix de la photo (PNG/JPG, max 2 Mo), avec aperçu. Même motif
+  /// que le logo à l'inscription : FilePicker, lecture des octets
+  /// sur le web (`withData: true`).
+  Future<void> _choisirPhoto() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+      final file = result?.files.single;
+      if (file == null) return;
+      if (file.size > 2 * 1024 * 1024) {
+        if (mounted) {
+          setState(() => _error = 'La photo doit peser 2 Mo au maximum.');
+        }
+        return;
+      }
+      if (file.bytes == null) {
+        if (mounted) {
+          setState(() => _error = 'Impossible de lire ce fichier.');
+        }
+        return;
+      }
+      setState(() {
+        _photoBytes = file.bytes;
+        _photoName = file.name;
+        _error = null;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    }
   }
 
   /// Choix d'une date d'événement de vie (conversion ou mariage) : dans
@@ -152,7 +220,8 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _nomController.dispose();
+    _prenomController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _departmentController.dispose();
@@ -181,11 +250,15 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
       _loading = true;
       _error = null;
     });
+    // Nom complet recomposé « Prénom Nom » pour le serveur.
+    final fullName =
+        '${_prenomController.text.trim()} ${_nomController.text.trim()}'
+            .trim();
     try {
       if (_isEditing) {
         await context.read<AppState>().api.updateMember(
               widget.member!.id,
-              fullName: _nameController.text.trim(),
+              fullName: fullName,
               phone: _phoneController.text.trim().isEmpty
                   ? null
                   : _phoneController.text.trim(),
@@ -208,7 +281,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
             );
       } else {
         await context.read<AppState>().api.createMember(
-              fullName: _nameController.text.trim(),
+              fullName: fullName,
               phone: _phoneController.text.trim().isEmpty
                   ? null
                   : _phoneController.text.trim(),
@@ -253,14 +326,25 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Maquette écran 25 : création guidée en trois
+                  // étapes, identité, contacts, rattachement.
+                  if (!_isEditing) ...[
+                    const Text(
+                      'Création guidée en trois étapes : identité, contacts, rattachement.',
+                      style: TextStyle(fontSize: 12.5),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   Stepper(
                     currentStep: _etape,
                     onStepTapped: (i) => setState(() => _etape = i),
                     onStepContinue: () {
                       if (_etape == 0) {
-                        // Seule l'étape Identité bloque : le nom est requis.
-                        if (_nameController.text.trim().length < 2) {
-                          setState(() => _error = 'Nom requis.');
+                        // Étape Identité : nom et prénom requis.
+                        if (_nomController.text.trim().length < 2 ||
+                            _prenomController.text.trim().length < 2) {
+                          setState(
+                              () => _error = 'Nom et prénom requis.');
                           return;
                         }
                         setState(() {
@@ -268,7 +352,16 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                           _etape = 1;
                         });
                       } else if (_etape == 1) {
-                        setState(() => _etape = 2);
+                        // Étape Contacts : téléphone obligatoire.
+                        if (_phoneController.text.trim().isEmpty) {
+                          setState(
+                              () => _error = 'Téléphone requis.');
+                          return;
+                        }
+                        setState(() {
+                          _error = null;
+                          _etape = 2;
+                        });
                       } else {
                         _submit();
                       }
@@ -294,11 +387,15 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                                         child: CircularProgressIndicator(
                                             strokeWidth: 2),
                                       )
-                                    : Text(_etape == 2
-                                        ? (_isEditing
-                                            ? 'Enregistrer les modifications'
-                                            : 'Ajouter le membre')
-                                        : 'Suivant'),
+                                      : Text(
+                                          _etape == 2
+                                              ? (_isEditing
+                                                  ? 'Enregistrer les modifications'
+                                                  : 'Créer le membre')
+                                              : 'Suivant',
+                                          style: const TextStyle(
+                                              fontSize: 13.5),
+                                        ),
                               ),
                             ),
                             if (_etape > 0) ...[
@@ -306,7 +403,10 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                               OutlinedButton(
                                 onPressed:
                                     _loading ? null : details.onStepCancel,
-                                child: const Text('Précédent'),
+                                child: const Text(
+                                  'Précédent',
+                                  style: TextStyle(fontSize: 13.5),
+                                ),
                               ),
                             ],
                           ],
@@ -315,7 +415,10 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                     },
                     steps: [
                       Step(
-                        title: const Text('Identité'),
+                        title: const Text(
+                          'Identité',
+                          style: TextStyle(fontSize: 12.5),
+                        ),
                         isActive: _etape >= 0,
                         state: _etape > 0
                             ? StepState.complete
@@ -323,16 +426,95 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                         content: Column(
                           children: [
                             TextFormField(
-                              controller: _nameController,
+                              controller: _nomController,
                               textInputAction: TextInputAction.next,
+                              style: const TextStyle(fontSize: 16),
                               decoration: const InputDecoration(
-                                labelText: 'Nom complet *',
+                                labelText: 'Nom *',
+                                hintText: 'Nom de famille',
                                 border: OutlineInputBorder(),
                               ),
                               validator: (v) =>
                                   (v == null || v.trim().length < 2)
                                       ? 'Nom requis.'
                                       : null,
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _prenomController,
+                              textInputAction: TextInputAction.next,
+                              style: const TextStyle(fontSize: 16),
+                              decoration: const InputDecoration(
+                                labelText: 'Prénom *',
+                                hintText: 'Prénom',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (v) =>
+                                  (v == null || v.trim().length < 2)
+                                      ? 'Prénom requis.'
+                                      : null,
+                            ),
+                            const SizedBox(height: 12),
+                            // Ajouter une photo (maquette écran 25) :
+                            // aperçu rond, photo existante en
+                            // modification, photo choisie sinon.
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 28,
+                                  backgroundImage: _photoAffichee,
+                                  child: _photoAffichee == null
+                                      ? const Icon(
+                                          Icons.person_outline,
+                                          size: 28,
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      OutlinedButton.icon(
+                                        onPressed: _choisirPhoto,
+                                        icon: const Icon(
+                                            Icons.photo_camera_outlined),
+                                        label: const Text(
+                                          'Ajouter une photo',
+                                          style: TextStyle(fontSize: 13),
+                                        ),
+                                      ),
+                                      if (_photoBytes != null) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _photoName ??
+                                              'Photo sélectionnée',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                              fontSize: 16),
+                                        ),
+                                        const Text(
+                                          'Photo sélectionnée : l’envoi au serveur n’est pas encore branché.',
+                                          style: TextStyle(fontSize: 14),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => setState(() {
+                                            _photoBytes = null;
+                                            _photoName = null;
+                                          }),
+                                          child: const Text('Retirer'),
+                                        ),
+                                      ] else
+                                        const Text(
+                                          'Appareil photo ou galerie',
+                                          style: TextStyle(fontSize: 11),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 12),
                             _ligneDate(
@@ -366,7 +548,10 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                         ),
                       ),
                       Step(
-                        title: const Text('Coordonnées'),
+                        title: const Text(
+                          'Contacts',
+                          style: TextStyle(fontSize: 12.5),
+                        ),
                         isActive: _etape >= 1,
                         state: _etape > 1
                             ? StepState.complete
@@ -376,18 +561,25 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                             TextFormField(
                               controller: _phoneController,
                               keyboardType: TextInputType.phone,
+                              style: const TextStyle(fontSize: 16),
                               decoration: const InputDecoration(
-                                labelText: 'Téléphone',
-                                hintText: 'Ex. +225 07 00 00 00',
+                                labelText: 'Téléphone *',
+                                hintText: 'Numéro de téléphone',
                                 border: OutlineInputBorder(),
                               ),
+                              validator: (v) =>
+                                  (v == null || v.trim().isEmpty)
+                                      ? 'Téléphone requis.'
+                                      : null,
                             ),
                             const SizedBox(height: 12),
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
+                              style: const TextStyle(fontSize: 16),
                               decoration: const InputDecoration(
-                                labelText: 'E-mail',
+                                labelText: 'E-mail (facultatif)',
+                                hintText: 'Adresse e-mail',
                                 border: OutlineInputBorder(),
                               ),
                               validator: (v) {
@@ -403,7 +595,10 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                         ),
                       ),
                       Step(
-                        title: const Text('Église et parcours'),
+                        title: const Text(
+                          'Rattachement',
+                          style: TextStyle(fontSize: 12.5),
+                        ),
                         isActive: _etape >= 2,
                         state: StepState.indexed,
                         content: Column(
@@ -412,6 +607,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                                     _departements!.isEmpty)
                               TextFormField(
                                 controller: _departmentController,
+                                style: const TextStyle(fontSize: 16),
                                 decoration: const InputDecoration(
                                   labelText: 'Département',
                                   hintText:
@@ -467,6 +663,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                             const SizedBox(height: 12),
                             TextFormField(
                               controller: _cellController,
+                              style: const TextStyle(fontSize: 16),
                               decoration: const InputDecoration(
                                 labelText: 'Cellule / groupe',
                                 border: OutlineInputBorder(),

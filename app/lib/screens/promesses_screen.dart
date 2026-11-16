@@ -178,7 +178,7 @@ class _PromessesScreenState extends State<PromessesScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(t.confirmer),
+            child: Text(t.confirmer, style: const TextStyle(fontSize: 13.5)),
           ),
         ],
       ),
@@ -198,7 +198,7 @@ class _PromessesScreenState extends State<PromessesScreen> {
           : FloatingActionButton.extended(
               onPressed: _creer,
               icon: const Icon(Icons.add),
-              label: Text(t.nouvellePromesse),
+              label: Text(t.nouvellePromesse, style: const TextStyle(fontSize: 13.5)),
             ),
       body: FutureBuilder<List<Promesse>>(
         future: _future,
@@ -271,11 +271,28 @@ class _PromesseCard extends StatefulWidget {
 
 class _PromesseCardState extends State<_PromesseCard> {
   Future<Promesse>? _detail;
+  // Détail chargé à l'ouverture : ses échéances servent à la pastille
+  // « En retard » quand la liste ne les porte pas.
+  Promesse? _detailChargee;
+
+  /// En retard, calculé côté application : une échéance passée et non
+  /// reçue, sur une promesse encore en cours.
+  bool _estEnRetard(Promesse p) {
+    if (!p.estEnCours) return false;
+    final maintenant = DateTime.now();
+    final aujourdHui =
+        DateTime(maintenant.year, maintenant.month, maintenant.day);
+    return p.echeances.any((e) {
+      final date = DateTime.tryParse(e.dateEcheance);
+      return date != null && e.estEnAttente && date.isBefore(aujourdHui);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = T12Strings(context.watch<PreferencesLocales>().estAnglais);
     final p = widget.promesse;
+    final enRetard = _estEnRetard(_detailChargee ?? p);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ExpansionTile(
@@ -285,15 +302,25 @@ class _PromesseCardState extends State<_PromesseCard> {
           p.membreNom ?? formatMontant(p.montantTotalFcfa, 'FCFA'),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 13.5),
         ),
         subtitle: Text(
           '${formatMontant(p.montantTotalFcfa, 'FCFA')} · ${t.recu} ${formatMontant(p.recuFcfa, 'FCFA')} · ${t.reste} ${formatMontant(p.resteFcfa, 'FCFA')}',
+          style: const TextStyle(fontSize: 11.5),
         ),
         trailing: StatusChip(
-          label: p.estEnCours
-              ? t.promesseEnCours
-              : (p.statut == 'terminee' ? t.promesseTerminee : t.annuler),
-          color: p.estEnCours ? AppTheme.orAttention : AppTheme.violetProfond,
+          label: enRetard
+              ? t.promesseEnRetard
+              : p.estEnCours
+                  ? t.promesseEnCours
+                  : (p.statut == 'terminee'
+                      ? t.promesseTerminee
+                      : t.promesseStatutAnnulee),
+          color: enRetard
+              ? AppTheme.rougeErreur
+              : p.estEnCours
+                  ? AppTheme.orAttention
+                  : AppTheme.violetProfond,
         ),
         onExpansionChanged: (ouvert) {
           if (ouvert && _detail == null) {
@@ -319,6 +346,13 @@ class _PromesseCardState extends State<_PromesseCard> {
                   child: Center(child: CircularProgressIndicator()),
                 );
               }
+              if (snapshot.hasData && _detailChargee == null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() => _detailChargee = snapshot.data);
+                  }
+                });
+              }
               final echeances = snapshot.data?.echeances ?? const [];
               if (echeances.isEmpty) {
                 return Padding(
@@ -338,9 +372,9 @@ class _PromesseCardState extends State<_PromesseCard> {
                               ? Colors.green
                               : AppTheme.orAttention,
                         ),
-                        title: Text(formatMontant(e.montantFcfa, 'FCFA')),
+                        title: Text(formatMontant(e.montantFcfa, 'FCFA'), style: const TextStyle(fontSize: 13.5)),
                         subtitle: Text(formatDateSeule(
-                            DateTime.tryParse(e.dateEcheance))),
+                            DateTime.tryParse(e.dateEcheance)), style: const TextStyle(fontSize: 11.5)),
                         trailing: e.estEnAttente &&
                                 p.estEnCours &&
                                 widget.peutGer
@@ -358,7 +392,7 @@ class _PromesseCardState extends State<_PromesseCard> {
                         child: OutlinedButton.icon(
                           onPressed: widget.onAnnuler,
                           icon: const Icon(Icons.cancel_outlined),
-                          label: Text(t.annuler),
+                          label: Text(t.annuler, style: const TextStyle(fontSize: 13.5)),
                         ),
                       ),
                     ),

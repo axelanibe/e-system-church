@@ -95,9 +95,10 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
     return Card(
       child: ListTile(
         leading: const Icon(Icons.group_add_outlined),
-        title: Text(r.egliseNom),
+        title: Text(r.egliseNom, style: const TextStyle(fontSize: 13.5)),
         subtitle: Text(
-            '${r.egliseCode} · ${r.egliseVille ?? ''} · ${formatDate(r.createdAt)}'),
+            '${r.egliseCode} · ${r.egliseVille ?? ''} · ${formatDate(r.createdAt)}',
+            style: const TextStyle(fontSize: 11.5)),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -152,7 +153,10 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text('Rejoindre une église mère',
-                              style: Theme.of(context).textTheme.titleMedium),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontSize: 15)),
                           const SizedBox(height: 8),
                           Row(
                             children: [
@@ -166,8 +170,8 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
                                         expectedPrefix: 'ESC-'),
                                   ],
                                   decoration: const InputDecoration(
-                                    labelText: 'Code d’invitation',
-                                    hintText: 'Ex. ESC-0411',
+                                    labelText: 'Code de l’église mère',
+                                    hintText: 'Saisir le code',
                                     border: OutlineInputBorder(),
                                   ),
                                 ),
@@ -175,7 +179,7 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
                               const SizedBox(width: 12),
                               FilledButton(
                                 onPressed: _sending ? null : _request,
-                                child: const Text('Envoyer'),
+                                child: const Text('Envoyer la demande', style: TextStyle(fontSize: 13.5)),
                               ),
                             ],
                           ),

@@ -36,7 +36,6 @@ class _CarteFideleScreenState extends State<CarteFideleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final apercu = context.watch<AppState>().apercuFidele;
     return FutureBuilder<void>(
       future: _future,
       builder: (context, snapshot) {
@@ -44,11 +43,6 @@ class _CarteFideleScreenState extends State<CarteFideleScreen> {
           return const AppLoading();
         }
         if (snapshot.hasError) {
-          // En aperçu admin, pas de membre lié : la carte s'affiche
-          // avec les espaces réservés, sans erreur.
-          if (apercu) {
-            return const _CarteApercu();
-          }
           return AppError(
             message: snapshot.error.toString(),
             onRetry: () => setState(() => _future = _charger()),
@@ -101,20 +95,6 @@ class _CarteMembreSeuleState extends State<_CarteMembreSeule> {
           carteSeule: true,
         );
       },
-    );
-  }
-}
-
-/// Carte en aperçu admin : pas de fausse carte avec des données
-/// inventées, un état vide qui explique.
-class _CarteApercu extends StatelessWidget {
-  const _CarteApercu();
-
-  @override
-  Widget build(BuildContext context) {
-    return const EmptyState(
-      icon: Icons.badge_outlined,
-      message: 'Carte non visible en aperçu.',
     );
   }
 }

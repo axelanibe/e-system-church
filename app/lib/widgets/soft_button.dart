@@ -92,7 +92,11 @@ class BoutonAvecAide extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           aide,
-          style: Theme.of(context).textTheme.bodySmall,
+          // Maquette : aide 11,5 px.
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(fontSize: 11.5),
         ),
       ],
     );

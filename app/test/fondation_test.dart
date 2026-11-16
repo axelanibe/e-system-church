@@ -220,7 +220,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Tiroir désengorgé : 13 entrées, une par fonction',
+    testWidgets('Tiroir : les entrées de la maquette, une par fonction',
         (tester) async {
       // Fenêtre haute pour que tout le tiroir soit construit.
       tester.view.devicePixelRatio = 1.0;
@@ -247,33 +247,27 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Ouvrir'));
       await tester.pump();
-      // Les 13 entrées de la simulation (celles sans condition de
-      // rôle sont visibles ici ; Suivi pastoral, Rendez-vous,
-      // Gouvernance et Mon abonnement demandent un rôle).
+      // Les entrées de la maquette, écran 20 (celles sans condition de
+      // rôle sont visibles ici ; Mon abonnement demande un rôle admin).
+      for (final label in [
+        'Notifications',
+        'Paiements automatiques',
+        'File hors ligne',
+        'Qualité et bascule',
+        'Réglages',
+        'À propos de e-System Church',
+        'Se déconnecter',
+      ]) {
+        expect(find.text(label), findsOneWidget);
+      }
+      // Les anciennes entrées ont déménagé dans leur écran parent.
       for (final label in [
         'Cultes et Présences',
         'Prières',
         'Serviteurs',
         'Rapports d’annexe',
         'Mes annexes',
-        'Paiements automatiques',
         'Modules de l’église',
-        'Réglages',
-        'À propos de e-System Church',
-      ]) {
-        expect(find.text(label), findsOneWidget);
-      }
-      // Les anciennes entrées ont déménagé dans leur écran parent.
-      for (final label in [
-        'Cultes en direct',
-        'Présences',
-        'Budget & caisse',
-        'Prières & messages',
-        'Enfants & jeunesse',
-        'Médias & bibliothèque',
-        'Biens de l’église',
-        'Rapports',
-        'Mes annexes et Réseau',
       ]) {
         expect(find.text(label), findsNothing);
       }

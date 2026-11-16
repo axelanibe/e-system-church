@@ -160,10 +160,20 @@ class _DonsNatureScreenState extends State<DonsNatureScreen> {
           : FloatingActionButton.extended(
               onPressed: _creer,
               icon: const Icon(Icons.add),
-              label: Text(t.nouveauDonNature),
+              label: Text(t.nouveauDonNature, style: const TextStyle(fontSize: 13.5)),
             ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Text(
+              t.noteAttestationAnnuelle,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 12,
+                  ),
+            ),
+          ),
           Expanded(
             child: FutureBuilder<List<DonNature>>(
               future: _future,
@@ -209,9 +219,11 @@ class _DonsNatureScreenState extends State<DonsNatureScreen> {
                                 color: AppTheme.or),
                             title: Text(d.description,
                                 maxLines: 1,
-                                overflow: TextOverflow.ellipsis),
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 13.5)),
                             subtitle: Text(
                               '$nom · ${_libelleType(d, t)} · ${d.quantite}${d.unite == null ? '' : ' ${d.unite}'}${d.heures == null ? '' : ' · ${d.heures} ${t.heures.toLowerCase()}'} · ${formatDateSeule(DateTime.tryParse(d.dateDon))}',
+                              style: const TextStyle(fontSize: 11.5),
                             ),
                           ),
                         );

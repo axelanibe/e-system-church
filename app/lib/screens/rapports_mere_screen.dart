@@ -119,13 +119,16 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
   }
 
   Future<void> _envoyer(_DonneesRapport donnees) async {
+    if (_message.text.trim().isEmpty) {
+      showApiError(context, 'Écrivez le message de votre rapport.');
+      return;
+    }
     setState(() => _envoi = true);
     try {
       final rapport =
           await context.read<AppState>().api.envoyerRapportAnnexe(
                 type: _type,
-                message:
-                    _message.text.trim().isEmpty ? null : _message.text.trim(),
+                message: _message.text.trim(),
                 membres: donnees.membres,
                 recettesFcfa: donnees.recettesFcfa,
                 depensesFcfa: donnees.depensesFcfa,
@@ -172,7 +175,7 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                         const SizedBox(height: 12),
                         FilledButton(
                           onPressed: _refresh,
-                          child: const Text('Réessayer'),
+                          child: const Text('Réessayer', style: TextStyle(fontSize: 13.5)),
                         ),
                       ],
                     ),
@@ -203,14 +206,14 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                                   Text(
                                     donnees.mere.nom,
                                     style: const TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     'Adresse e-mail : ${donnees.mere.email ?? 'À compléter'}',
-                                    style: const TextStyle(fontSize: 16),
+                                    style: const TextStyle(fontSize: 13),
                                   ),
                                   const SizedBox(height: 12),
                                   OutlinedButton.icon(
@@ -218,6 +221,7 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                                     icon: const Icon(Icons.email_outlined),
                                     label: const Text(
                                       'Contacter mon église mère',
+                                      style: TextStyle(fontSize: 13.5),
                                     ),
                                   ),
                                 ],
@@ -249,7 +253,7 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                           const Text(
                             'Type de rapport',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 10.5,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -272,7 +276,7 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                                       value: e.key,
                                       title: Text(
                                         e.value,
-                                        style: const TextStyle(fontSize: 16),
+                                        style: const TextStyle(fontSize: 13.5),
                                       ),
                                     ),
                                   )
@@ -284,8 +288,8 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                             controller: _message,
                             maxLines: 4,
                             decoration: const InputDecoration(
-                              labelText: 'Message',
-                              hintText: 'Votre message à votre église mère',
+                              labelText: 'Message *',
+                              hintText: 'Le rapport, en entier, sans troncature',
                               border: OutlineInputBorder(),
                             ),
                           ),
@@ -293,7 +297,7 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                           FilledButton(
                             onPressed: () =>
                                 setState(() => _apercuGenere = true),
-                            child: const Text('Générer mon rapport'),
+                            child: const Text('Générer mon rapport', style: TextStyle(fontSize: 13.5)),
                           ),
                           if (_apercuGenere) ...[
                             const SectionTitle(title: 'Aperçu du rapport'),
@@ -339,7 +343,8 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                                   : () => _envoyer(donnees),
                               icon: const Icon(Icons.email_outlined),
                               label: const Text(
-                                'Envoyer à mon église mère',
+                                'Envoyer le rapport',
+                                style: TextStyle(fontSize: 13.5),
                               ),
                             ),
                           ],
@@ -436,14 +441,14 @@ class _Ligne extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(libelle, style: const TextStyle(fontSize: 16)),
+          Text(libelle, style: const TextStyle(fontSize: 10.5)),
           const SizedBox(width: 12),
           Flexible(
             child: Text(
               valeur,
               textAlign: TextAlign.right,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 13.5,
                 fontWeight: FontWeight.bold,
               ),
             ),

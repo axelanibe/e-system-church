@@ -4,16 +4,19 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/campagne.dart';
+import '../models/contribution.dart';
 import '../models/member.dart';
 import '../models/paiements.dart';
 import '../services/api_service.dart';
 import '../services/file_hors_ligne_service.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
-import 'paiements_screen.dart';
 
-/// Formulaire d'enregistrement d'une contribution (dîme, offrande, don,
-/// dépense ou cotisation).
+/// Formulaire d'enregistrement d'une contribution (dîme, offrande, don
+/// ou cotisation). Les dépenses passent uniquement par l'écran
+/// « Nouvelle dépense » : le type « Dépense » n'est plus proposé ici.
+/// Ouvert depuis Finances, le type est « cotisation » et figé ; le
+/// montant d'une cotisation est verrouillé selon le tarif serveur.
 ///
 /// Quand l'église a configuré des moyens de paiement actifs (« Mon église
 /// → Paiements »), le don est exécuté par le serveur via ce moyen :
@@ -37,7 +40,7 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
   final _refController = TextEditingController();
   final _noteController = TextEditingController();
   String _type = 'dime';
-  String _paymentMethod = 'wave';
+  String _paymentMethod = 'especes';
   String? _moyenCode;
   List<EglisePaiement> _moyens = [];
   String? _memberId;
@@ -47,18 +50,39 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
   bool _loading = false;
   String? _error;
   String? _message;
+  /// Tarif de cotisation du serveur, quand il est configuré : le
+  /// montant est alors affiché et verrouillé, jamais saisi librement.
+  int? _tarifCotisation;
 
   @override
   void initState() {
     super.initState();
     if (widget.initialType != null &&
-        ['dime', 'offrande', 'don', 'depense', 'cotisation']
+        ['dime', 'offrande', 'don', 'cotisation']
             .contains(widget.initialType)) {
       _type = widget.initialType!;
     }
     _loadMembers();
     _loadMoyens();
     _loadCampagnes();
+    if (_type == 'cotisation') _loadTarif();
+  }
+
+  /// Tarif de cotisation configuré côté serveur : il verrouille le
+  /// montant du champ. Sans tarif configuré, le montant reste libre.
+  Future<void> _loadTarif() async {
+    try {
+      final config =
+          await context.read<AppState>().api.getCotisationsConfig();
+      if (mounted && config != null) {
+        setState(() {
+          _tarifCotisation = config.montantFcfa;
+          _amountController.text = '${config.montantFcfa}';
+        });
+      }
+    } catch (_) {
+      // Sans tarif, le montant reste saisissable.
+    }
   }
 
   /// Campagnes actives de l'église, pour affecter ce don (US2). Une
@@ -129,6 +153,10 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_memberId == null) {
+      setState(() => _error = 'Un membre est requis.');
+      return;
+    }
     final amount = int.tryParse(_amountController.text.trim());
     if (amount == null || amount <= 0) {
       setState(() => _error = 'Montant invalide.');
@@ -285,7 +313,7 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                   }
                 },
                 icon: const Icon(Icons.copy_outlined),
-                label: const Text('Copier le lien'),
+                label: const Text('Copier le lien', style: TextStyle(fontSize: 13.5)),
               ),
             ],
           ],
@@ -293,7 +321,7 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
         actions: [
           FilledButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: const Text('OK', style: TextStyle(fontSize: 13.5)),
           ),
         ],
       ),
@@ -318,33 +346,46 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: _type,
-                    decoration: const InputDecoration(
-                      labelText: 'Type *',
-                      border: OutlineInputBorder(),
+                  // Type figé quand l'écran l'impose (ex. « cotisation »
+                  // depuis Finances) : il s'affiche, il ne se choisit pas.
+                  if (widget.initialType != null)
+                    TextFormField(
+                      initialValue: Contribution.labelForType(_type),
+                      enabled: false,
+                      decoration: const InputDecoration(
+                        labelText: 'Type *',
+                        border: OutlineInputBorder(),
+                      ),
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      initialValue: _type,
+                      decoration: const InputDecoration(
+                        labelText: 'Type *',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'dime', child: Text('Dîme')),
+                        DropdownMenuItem(
+                            value: 'offrande', child: Text('Offrande')),
+                        DropdownMenuItem(value: 'don', child: Text('Don')),
+                        DropdownMenuItem(
+                            value: 'cotisation',
+                            child: Text('Cotisation')),
+                      ],
+                      onChanged: (v) => setState(() => _type = v ?? 'dime'),
                     ),
-                    items: const [
-                      DropdownMenuItem(value: 'dime', child: Text('Dîme')),
-                      DropdownMenuItem(
-                          value: 'offrande', child: Text('Offrande')),
-                      DropdownMenuItem(value: 'don', child: Text('Don')),
-                      DropdownMenuItem(
-                          value: 'depense', child: Text('Dépense')),
-                      DropdownMenuItem(
-                          value: 'cotisation',
-                          child: Text('Cotisation')),
-                    ],
-                    onChanged: (v) => setState(() => _type = v ?? 'dime'),
-                  ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _amountController,
+                    enabled: _type != 'cotisation' ||
+                        _tarifCotisation == null,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       labelText: 'Montant ($devise) *',
                       border: const OutlineInputBorder(),
                     ),
+                    onChanged: (_) => setState(() {}),
                     validator: (v) {
                       final amount = int.tryParse(v?.trim() ?? '');
                       if (amount == null || amount <= 0) {
@@ -352,6 +393,19 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                       }
                       return null;
                     },
+                  ),
+                  if (_type == 'cotisation' &&
+                      _tarifCotisation != null) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Pour une cotisation, le montant est verrouillé selon le tarif : il s’affiche, il ne se tape pas librement.',
+                      style: TextStyle(fontSize: 11.5),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Text(
+                    'Total avant envoi : ${formatFcfa(int.tryParse(_amountController.text.trim()) ?? 0)}',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   if (_moyens.isNotEmpty)
@@ -396,20 +450,12 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                             value: 'virement', child: Text('Virement')),
                       ],
                       onChanged: (v) =>
-                          setState(() => _paymentMethod = v ?? 'wave'),
+                          setState(() => _paymentMethod = v ?? 'especes'),
                     ),
                     const SizedBox(height: 8),
                     const Text(
                       'Aucun moyen de paiement configuré.',
                       textAlign: TextAlign.center,
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const PaiementsScreen(),
-                        ),
-                      ),
-                      child: const Text('Configurer un moyen de paiement'),
                     ),
                   ],
                   const SizedBox(height: 12),
@@ -421,34 +467,37 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String?>(
-                    isExpanded: true,
-                    initialValue: _memberId,
-                    decoration: InputDecoration(
-                      labelText: _type == 'cotisation'
-                          ? 'Membre *'
-                          : 'Membre (facultatif)',
-                      border: const OutlineInputBorder(),
+                  // Membre obligatoire : sans membre, l'état vide de la
+                  // maquette, pas un sélecteur vide.
+                  if (_members.isEmpty)
+                    const Text(
+                      'Aucun membre — créez d’abord un membre',
+                      style: TextStyle(fontSize: 16),
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      initialValue: _memberId,
+                      decoration: const InputDecoration(
+                        labelText: 'Membre *',
+                        border: OutlineInputBorder(),
+                      ),
+                      hint: const Text('Choisir un membre'),
+                      validator: (v) {
+                        if (v == null) {
+                          return 'Un membre est requis.';
+                        }
+                        return null;
+                      },
+                      items: [
+                        for (final m in _members)
+                          DropdownMenuItem(
+                            value: m.id,
+                            child: Text('${m.fullName} (${m.matricule})'),
+                          ),
+                      ],
+                      onChanged: (v) => setState(() => _memberId = v),
                     ),
-                    validator: (v) {
-                      // Une cotisation est le paiement d'un membre :
-                      // le serveur refuse une cotisation sans membre.
-                      if (_type == 'cotisation' && v == null) {
-                        return 'Un membre est requis pour une cotisation.';
-                      }
-                      return null;
-                    },
-                    items: [
-                      const DropdownMenuItem(
-                          value: null, child: Text('— Aucun —')),
-                      for (final m in _members)
-                        DropdownMenuItem(
-                          value: m.id,
-                          child: Text('${m.fullName} (${m.matricule})'),
-                        ),
-                    ],
-                    onChanged: (v) => setState(() => _memberId = v),
-                  ),
                   if (_type != 'depense' &&
                       _type != 'cotisation' &&
                       !_viaMoyenConfigure) ...[
@@ -509,7 +558,7 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Enregistrer'),
+                          : const Text('Enregistrer', style: TextStyle(fontSize: 13.5)),
                     ),
                   ),
                 ],

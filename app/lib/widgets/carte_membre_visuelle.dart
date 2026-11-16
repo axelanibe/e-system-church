@@ -33,7 +33,11 @@ class CarteMembreVisuelle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final nomEglise = context.read<AppState>().church?.name;
+    final eglise = context.read<AppState>().church;
+    final nomEglise = eglise?.name;
+    // Le membre appartient à une annexe quand son église a une mère :
+    // la ligne « Annexe » s'affiche alors, sans migration.
+    final estAnnexe = eglise?.parentChurchId != null;
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -95,7 +99,7 @@ class CarteMembreVisuelle extends StatelessWidget {
                         ?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: 20),
+                            fontSize: 17),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 4),
@@ -104,27 +108,39 @@ class CarteMembreVisuelle extends StatelessWidget {
                     style: AppTheme.styleCode.copyWith(
                       color: AppTheme.or,
                       fontWeight: FontWeight.bold,
+                      fontSize: 13,
                     ),
                     textAlign: TextAlign.center,
                   ),
                   if (nomEglise != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      nomEglise,
+                      'Église : $nomEglise',
                       style: Theme.of(context)
                           .textTheme
                           .bodyMedium
-                          ?.copyWith(color: Colors.white70),
+                          ?.copyWith(color: Colors.white70, fontSize: 12.5),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  if (estAnnexe) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Annexe : $nomEglise · ${eglise!.code}',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: Colors.white70, fontSize: 12.5),
                       textAlign: TextAlign.center,
                     ),
                   ],
                   if (member.createdAt != null)
                     Text(
-                      'Membre depuis ${formatDate(member.createdAt)}',
+                      'Membre depuis : ${formatDate(member.createdAt)}',
                       style: Theme.of(context)
                           .textTheme
                           .bodyMedium
-                          ?.copyWith(color: Colors.white70),
+                          ?.copyWith(color: Colors.white70, fontSize: 12.5),
                       textAlign: TextAlign.center,
                     ),
                   if (avecStatut) ...[
@@ -146,6 +162,29 @@ class CarteMembreVisuelle extends StatelessWidget {
                       version: QrVersions.auto,
                       size: 180,
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'Code de vérification : ',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: Colors.white70, fontSize: 11.5),
+                        ),
+                        TextSpan(
+                          text: qrData,
+                          style: AppTheme.styleCode.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),

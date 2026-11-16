@@ -169,10 +169,16 @@ class EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon,
-                size: 48,
+                size: 26,
                 color: Theme.of(context).colorScheme.onSurfaceVariant),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              // Maquette : titre d'état vide 14 px (15 pour .empty .et,
+              // 13 pour .emptyline) ; 14 est la valeur la plus courante.
+              style: const TextStyle(fontSize: 14),
+            ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 16),
               FilledButton(onPressed: onAction, child: Text(actionLabel!)),
@@ -185,10 +191,13 @@ class EmptyState extends StatelessWidget {
 }
 
 /// Titre de section (majuscules légères, espacement).
+/// Maquette : 11,5 px (.sect) par défaut ; les titres mis en avant
+/// (15 px) passent [taille].
 class SectionTitle extends StatelessWidget {
   final String title;
+  final double taille;
 
-  const SectionTitle({super.key, required this.title});
+  const SectionTitle({super.key, required this.title, this.taille = 11.5});
 
   @override
   Widget build(BuildContext context) {
@@ -197,6 +206,7 @@ class SectionTitle extends StatelessWidget {
       child: Text(
         title.toUpperCase(),
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontSize: taille,
               color: Theme.of(context).colorScheme.primary,
               letterSpacing: 1.2,
             ),
@@ -215,7 +225,8 @@ class StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Chip(
-      label: Text(label, style: const TextStyle(fontSize: 14)),
+      label: Text(label,
+          style: const TextStyle(fontSize: 11.5)), // Maquette : .badge 11,5.
       backgroundColor: color.withValues(alpha: 0.15),
       side: BorderSide(color: color.withValues(alpha: 0.4)),
       visualDensity: VisualDensity.compact,
@@ -229,6 +240,8 @@ class StatusChip extends StatelessWidget {
 /// se rétrécissent au lieu d'être coupés au bord de la carte.
 /// L'icône est gardée au constructeur pour compatibilité, mais
 /// l'artefact n'en montre pas, elle n'est plus affichée.
+/// Maquette : libellé 10 px (.stat .sl), valeur 17 px (.stat .sv),
+/// sauf les chiffres du tableau de bord (22 px, [tailleValeur]).
 class StatCard extends StatelessWidget {
   final String label;
   final String value;
@@ -236,6 +249,8 @@ class StatCard extends StatelessWidget {
   final Color? color;
   final String? aide;
   final VoidCallback? onTap;
+  final double tailleValeur;
+  final double tailleLibelle;
 
   const StatCard({
     super.key,
@@ -245,6 +260,8 @@ class StatCard extends StatelessWidget {
     this.color,
     this.aide,
     this.onTap,
+    this.tailleValeur = 17,
+    this.tailleLibelle = 10,
   });
 
   @override
@@ -263,6 +280,7 @@ class StatCard extends StatelessWidget {
                 label.toUpperCase(),
                 maxLines: 1,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontSize: tailleLibelle,
                       color: AppTheme.violetProfond.withValues(alpha: 0.7),
                       fontWeight: FontWeight.bold,
                     ),
@@ -276,7 +294,7 @@ class StatCard extends StatelessWidget {
                 value,
                 maxLines: 1,
                 style: AppTheme.styleCode.copyWith(
-                  fontSize: 18,
+                  fontSize: tailleValeur,
                   fontWeight: FontWeight.bold,
                   color: color ?? AppTheme.violetProfond,
                 ),
@@ -291,7 +309,10 @@ class StatCard extends StatelessWidget {
                 // 0,85) ; à 1 ligne les aides étaient tronquées.
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(fontSize: 11.5),
               ),
             ],
           ],

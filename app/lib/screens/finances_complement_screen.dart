@@ -10,7 +10,6 @@ import '../utils/format.dart';
 import '../utils/plan_comptable_excel.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
-import 'sycebnl_screen.dart';
 
 /// Noms des mois en français, pour le suivi mensuel.
 const _nomsMois = [
@@ -27,16 +26,6 @@ const _nomsMois = [
   'Novembre',
   'Décembre',
 ];
-
-/// Modes de paiement d'une dépense (codes serveur → libellés).
-const _modesPaiement = {
-  'especes': 'Espèces',
-  'wave': 'Wave',
-  'orange_money': 'Orange Money',
-  'mtn_money': 'MTN Mobile Money',
-  'virement': 'Virement',
-  'cheque': 'Chèque',
-};
 
 /// Module 4 (complément) — Budget, dépenses, caisse et rapport financier.
 /// Les contributions (dîmes, offrandes, dons) restent dans FinancesScreen.
@@ -310,101 +299,6 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                 montantPrevu: int.tryParse(montantController.text.trim()) ?? 0,
               );
           if (mounted) showSuccess(context, 'Budget créé.');
-          _refresh();
-        } catch (e) {
-          if (mounted) showApiError(context, e);
-        }
-      },
-    );
-  }
-
-  Future<void> _createDepense(List<PosteBudgetaire> postes) async {
-    final montantController = TextEditingController();
-    final motifController = TextEditingController();
-    final justificatifController = TextEditingController();
-    final dateController = TextEditingController();
-    final fournisseurController = TextEditingController();
-    final responsableDepenseController = TextEditingController();
-    final responsableAutorisationController = TextEditingController();
-    final deviseController = TextEditingController(text: 'FCFA');
-    String? posteId = postes.isEmpty ? null : postes.first.id;
-    String? departementId;
-    String? modePaiement;
-    await showCreateDialog(
-      context: context,
-      title: 'Nouvelle dépense',
-      saveLabel: 'Créer',
-      fields: [
-        dialogDropdown<String?>(
-          value: posteId,
-          label: 'Poste budgétaire',
-          options: {for (final p in postes) p.id: p.nom},
-          onChanged: (v) => posteId = v,
-        ),
-        dialogTextField(
-          controller: montantController,
-          label: 'Montant',
-          keyboardType: TextInputType.number,
-        ),
-        dialogTextField(controller: motifController, label: 'Motif'),
-        dialogDropdown<String?>(
-          value: departementId,
-          label: 'Département bénéficiaire',
-          options: {
-            null: 'Sans département',
-            for (final d in _departements) d.id: d.nom,
-          },
-          onChanged: (v) => departementId = v,
-        ),
-        dialogDropdown<String?>(
-          value: modePaiement,
-          label: 'Mode de paiement',
-          options: {
-            null: 'Non précisé',
-            for (final e in _modesPaiement.entries) e.key: e.value,
-          },
-          onChanged: (v) => modePaiement = v,
-        ),
-        dialogTextField(
-            controller: fournisseurController,
-            label: 'Fournisseur ou bénéficiaire'),
-        dialogTextField(
-            controller: responsableDepenseController,
-            label: 'Responsable ayant effectué la dépense'),
-        dialogTextField(
-            controller: responsableAutorisationController,
-            label: 'Responsable ayant autorisé la dépense'),
-        dialogTextField(controller: deviseController, label: 'Devise'),
-        dialogTextField(
-            controller: justificatifController, label: 'Référence du justificatif'),
-        dialogDateField(
-            context: context, controller: dateController, label: 'Date de la dépense'),
-      ],
-      isValid: () =>
-          posteId != null && montantController.text.trim().isNotEmpty,
-      onSave: () async {
-        try {
-          final creee = await context
-              .read<AppState>()
-              .api
-              .creerDepenseComplete(
-                posteId: posteId!,
-                montantFcfa: int.tryParse(montantController.text.trim()) ?? 0,
-                motif: motifController.text.trim(),
-                justificatifRef: _opt(justificatifController),
-                dateDepense: _opt(dateController),
-                departementId: departementId,
-                modePaiement: modePaiement,
-                fournisseurBeneficiaire: _opt(fournisseurController),
-                responsableDepense: _opt(responsableDepenseController),
-                responsableAutorisation:
-                    _opt(responsableAutorisationController),
-                devise: _opt(deviseController) ?? 'FCFA',
-              );
-          if (mounted) {
-            showSuccess(context,
-                'Dépense enregistrée (${creee.reference ?? 'sans référence'}).');
-          }
           _refresh();
         } catch (e) {
           if (mounted) showApiError(context, e);
@@ -751,7 +645,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                                         ? Icons.trending_up
                                         : Icons.trending_down),
                                   ),
-                                  title: Text(p.nom),
+                                  title: Text(p.nom, style: const TextStyle(fontSize: 13.5)),
                                   subtitle: Text([
                                     p.categorie == 'recette'
                                         ? 'Recette'
@@ -764,7 +658,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                                           : 'Ponctuelle',
                                     if (p.description != null)
                                       p.description!,
-                                  ].join(' · ')),
+                                  ].join(' · '), style: const TextStyle(fontSize: 11.5)),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
@@ -813,8 +707,8 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                                 .firstOrNull;
                             return ListTile(
                               leading: const Icon(Icons.pie_chart_outline),
-                              title: Text(poste?.nom ?? 'Poste inconnu'),
-                              subtitle: Text('Année ${b.annee}'),
+                              title: Text(poste?.nom ?? 'Poste inconnu', style: const TextStyle(fontSize: 13.5)),
+                              subtitle: Text('Année ${b.annee}', style: const TextStyle(fontSize: 11.5)),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -874,7 +768,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: ChoiceChip(
-                      label: Text(entry.key),
+                      label: Text(entry.key, style: const TextStyle(fontSize: 12.5)),
                       selected: _statutDepenseFilter == entry.value,
                       onSelected: (_) {
                         setState(() {
@@ -913,15 +807,6 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                   message: snapshot.data!.isEmpty
                       ? 'Aucune dépense enregistrée.'
                       : 'Aucune dépense ne correspond à la recherche.',
-                  actionLabel: 'Enregistrer une dépense',
-                  onAction: () async {
-                    try {
-                      final postes = await _postesFuture;
-                      if (mounted) await _createDepense(postes);
-                    } catch (e) {
-                      if (context.mounted) showApiError(context, e);
-                    }
-                  },
                 );
               }
               return RefreshIndicator(
@@ -937,10 +822,12 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                           child: Icon(Icons.receipt_long_outlined),
                         ),
                         title: Text(
-                            '${d.motif} — ${formatMontant(d.montantFcfa, state.devise)}'),
+                            '${d.motif} — ${formatMontant(d.montantFcfa, state.devise)}',
+                            style: const TextStyle(fontSize: 13.5)),
                         subtitle: Text(
                           '${d.reference ?? 'Sans référence'} · ${afficherDate(d.dateDepense)}'
                           '${d.justificatifRef != null ? ' · Justificatif ${d.justificatifRef}' : ''}',
+                          style: const TextStyle(fontSize: 11.5),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -1147,9 +1034,11 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                             : Icons.remove),
                       ),
                       title: Text(
-                          '${m.type == 'entree' ? 'Entrée' : 'Sortie'} — ${formatMontant(m.montantFcfa, state.devise)}'),
+                          '${m.type == 'entree' ? 'Entrée' : 'Sortie'} — ${formatMontant(m.montantFcfa, state.devise)}',
+                          style: const TextStyle(fontSize: 13.5)),
                       subtitle: Text(
                         '${m.motif}${m.reference != null ? ' · ${m.reference}' : ''} · ${m.sourceLabel}${m.canal != null ? ' · ${m.canalLabel}' : ''} · ${afficherDateTime(m.createdAt)}',
+                        style: const TextStyle(fontSize: 11.5),
                       ),
                     );
                   },
@@ -1229,7 +1118,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                         );
                   });
                 },
-                child: const Text('Afficher'),
+                child: const Text('Afficher', style: TextStyle(fontSize: 13.5)),
               ),
             ],
           ),
@@ -1243,7 +1132,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () => _exporterFinancesPdf(detail: true),
                     icon: const Icon(Icons.download_outlined),
-                    label: const Text('Détail (PDF)'),
+                    label: const Text('Détail (PDF)', style: TextStyle(fontSize: 13.5)),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1251,7 +1140,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () => _exporterFinancesPdf(detail: false),
                     icon: const Icon(Icons.download_outlined),
-                    label: const Text('Résumé (PDF)'),
+                    label: const Text('Résumé (PDF)', style: TextStyle(fontSize: 13.5)),
                   ),
                 ),
               ],
@@ -1312,14 +1201,16 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                                 leading: const Icon(
                                     Icons.calendar_month_outlined),
                                 title: Text(
-                                    '${l['mois'] ?? '—'} — ${l['type'] ?? ''}'),
+                                    '${l['mois'] ?? '—'} — ${l['type'] ?? ''}',
+                                    style: const TextStyle(fontSize: 13.5)),
                                 trailing: Text(
                                   formatMontant(total, state.devise),
                                   style: const TextStyle(
                                       fontWeight: FontWeight.bold),
                                 ),
                                 subtitle:
-                                    Text(pluriel(nombre, 'contribution')),
+                                    Text(pluriel(nombre, 'contribution'),
+                                    style: const TextStyle(fontSize: 11.5)),
                               );
                             }),
                           const SectionTitle(title: 'Par poste'),
@@ -1337,9 +1228,10 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                               return ListTile(
                                 leading: const Icon(
                                     Icons.account_balance_outlined),
-                                title: Text('${l['poste'] ?? '—'}'),
+                                title: Text('${l['poste'] ?? '—'}', style: const TextStyle(fontSize: 13.5)),
                                 subtitle: Text(
-                                    'Budget : ${formatMontant(budget, state.devise)}'),
+                                    'Budget : ${formatMontant(budget, state.devise)}',
+                                    style: const TextStyle(fontSize: 11.5)),
                                 trailing: Text(
                                   'Réalisé : ${formatMontant(realise, state.devise)}',
                                   style: const TextStyle(
@@ -1367,9 +1259,10 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                               return ListTile(
                                 leading: const Icon(
                                     Icons.account_tree_outlined),
-                                title: Text('${b['eglise_nom'] ?? '—'}'),
+                                title: Text('${b['eglise_nom'] ?? '—'}', style: const TextStyle(fontSize: 13.5)),
                                 subtitle: Text(
-                                    '${pluriel(membres, 'membre actif', 'membres actifs')} · ${pluriel(contributions, 'contribution')}'),
+                                    '${pluriel(membres, 'membre actif', 'membres actifs')} · ${pluriel(contributions, 'contribution')}',
+                                    style: const TextStyle(fontSize: 11.5)),
                                 trailing: Text(
                                   formatMontant(total, state.devise),
                                   style: const TextStyle(
@@ -1383,44 +1276,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                   },
                 ),
         ),
-        const SectionTitle(title: 'Déclarations et exports'),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'États financiers SYCEBNL',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Bilan, compte de résultat, tableau des flux de trésorerie et notes annexes, à produire depuis votre comptabilité. L\'export reste disponible pour toutes les églises, même quand le dépôt n\'est pas imposé.',
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const SycebnlScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text('Ouvrir l\'export SYCEBNL'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        // Marge basse pour le bouton flottant : la carte SYCEBNL est
-        // une section fixe hors de la liste défilante.
+        // Marge basse pour le bouton flottant.
         const SizedBox(height: 88),
       ],
     );
@@ -1474,7 +1330,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                     });
                     _refresh();
                   },
-                  child: const Text('Afficher'),
+                  child: const Text('Afficher', style: TextStyle(fontSize: 13.5)),
                 ),
               ),
             ],
@@ -1492,7 +1348,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                         onPressed: () => _exporterRapportDepenses(
                             mensuel: true, excel: false),
                         icon: const Icon(Icons.download_outlined),
-                        label: const Text('Mensuel (PDF)'),
+                        label: const Text('Mensuel (PDF)', style: TextStyle(fontSize: 13.5)),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1501,7 +1357,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                         onPressed: () => _exporterRapportDepenses(
                             mensuel: true, excel: true),
                         icon: const Icon(Icons.download_outlined),
-                        label: const Text('Mensuel (Excel)'),
+                        label: const Text('Mensuel (Excel)', style: TextStyle(fontSize: 13.5)),
                       ),
                     ),
                   ],
@@ -1514,7 +1370,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                         onPressed: () => _exporterRapportDepenses(
                             mensuel: false, excel: false),
                         icon: const Icon(Icons.download_outlined),
-                        label: const Text('Annuel (PDF)'),
+                        label: const Text('Annuel (PDF)', style: TextStyle(fontSize: 13.5)),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1523,7 +1379,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                         onPressed: () => _exporterRapportDepenses(
                             mensuel: false, excel: true),
                         icon: const Icon(Icons.download_outlined),
-                        label: const Text('Annuel (Excel)'),
+                        label: const Text('Annuel (Excel)', style: TextStyle(fontSize: 13.5)),
                       ),
                     ),
                   ],
@@ -1550,11 +1406,12 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                   leading: Icon(poste
                       ? Icons.account_balance_outlined
                       : Icons.category_outlined),
-                  title: Text(ligne.libelle),
+                  title: Text(ligne.libelle, style: const TextStyle(fontSize: 13.5)),
                   subtitle: Text(
                     'Prévu : ${formatMontant(ligne.prevuFcfa, state.devise)}'
                     '${poste && ligne.recurrente != null ? ' · ${ligne.recurrente! ? 'Récurrente' : 'Ponctuelle'}' : ''}'
                     '${!ligne.budgetDefini ? ' · Sans budget mensuel' : ''}',
+                    style: const TextStyle(fontSize: 11.5),
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1584,10 +1441,12 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                       child: ListTile(
                         leading: const Icon(Icons.assessment_outlined),
                         title: Text(
-                            '${_nomsMois[suivi.mois - 1]} ${suivi.annee}'),
+                            '${_nomsMois[suivi.mois - 1]} ${suivi.annee}',
+                            style: const TextStyle(fontSize: 13.5)),
                         subtitle: Text(
                           'Prévu : ${formatMontant(suivi.totalPrevuFcfa, state.devise)}'
                           ' · Réel : ${formatMontant(suivi.totalReelFcfa, state.devise)}',
+                          style: const TextStyle(fontSize: 11.5),
                         ),
                       ),
                     ),
@@ -1644,9 +1503,10 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
                                   .map((b) => ListTile(
                                         leading: const Icon(
                                             Icons.calendar_month_outlined),
-                                        title: Text(nomPoste(b.posteId)),
+                                        title: Text(nomPoste(b.posteId), style: const TextStyle(fontSize: 13.5)),
                                         subtitle: Text(
-                                            '${_nomsMois[b.mois - 1]} ${b.annee}'),
+                                            '${_nomsMois[b.mois - 1]} ${b.annee}',
+                                            style: const TextStyle(fontSize: 11.5)),
                                         trailing: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
@@ -1705,7 +1565,7 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
               Tab(text: 'Budget'),
               Tab(text: 'Dépenses'),
               Tab(text: 'Caisse'),
-              Tab(text: 'Rapport'),
+              Tab(text: 'Rapport financier'),
               Tab(text: 'Suivi mensuel'),
             ],
           ),
@@ -1719,14 +1579,16 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
             _suiviTab(),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
+        // Pas de création sur l'onglet Dépenses : la saisie d'une
+        // dépense passe uniquement par l'écran « Nouvelle dépense »,
+        // depuis la ligne « Dépenses » de Finances (maquette, écran 24).
+        floatingActionButton: _tab == 1
+            ? null
+            : FloatingActionButton.extended(
           onPressed: () async {
             try {
               if (_tab == 0) {
                 await _createPoste();
-              } else if (_tab == 1) {
-                final postes = await _postesFuture;
-                if (mounted) await _createDepense(postes);
               } else if (_tab == 2) {
                 await _createMouvement();
               } else if (_tab == 3) {
@@ -1743,13 +1605,11 @@ class _FinancesComplementScreenState extends State<FinancesComplementScreen> {
           icon: const Icon(Icons.add),
           label: Text(_tab == 0
               ? 'Poste'
-              : _tab == 1
-                  ? 'Dépense'
-                  : _tab == 2
-                      ? 'Mouvement'
-                      : _tab == 3
-                          ? 'Budget'
-                          : 'Budget mensuel'),
+              : _tab == 2
+                  ? 'Mouvement'
+                  : _tab == 3
+                      ? 'Budget'
+                      : 'Budget mensuel', style: const TextStyle(fontSize: 13.5)),
         ),
       ),
     );

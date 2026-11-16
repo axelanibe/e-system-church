@@ -11,8 +11,8 @@ import '../widgets/dialog_helpers.dart';
 /// Rendez-vous côté admin (extrait du Suivi pastoral, tranche T6) :
 /// les demandes des membres et les créneaux pastoraux, avec
 /// confirmation, refus ou annulation. Une seule entrée par fonction :
-/// le tiroir ouvre cet écran, le Suivi pastoral garde le radar, les
-/// parcours, les visites et les accompagnements.
+/// la carte Rendez-vous des Modules ouvre cet écran, le Suivi pastoral
+/// garde le radar, les parcours, les visites et les accompagnements.
 class RendezVousAdminScreen extends StatefulWidget {
   const RendezVousAdminScreen({super.key});
 
@@ -68,8 +68,8 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
     final libelleController = TextEditingController();
     await showCreateDialog(
       context: context,
-      title: 'Ajouter un créneau',
-      saveLabel: 'Ajouter',
+      title: 'Proposer un créneau',
+      saveLabel: 'Proposer',
       fields: [
         dialogDropdown<String>(
           value: periode,
@@ -92,7 +92,7 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
                 periode: periode!,
                 libelle: libelleController.text.trim(),
               );
-          if (mounted) showSuccess(context, 'Créneau ajouté.');
+          if (mounted) showSuccess(context, 'Créneau proposé.');
           _refreshCreneaux();
         } catch (e) {
           if (mounted) showApiError(context, e);
@@ -172,21 +172,46 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
     final api = context.read<AppState>().api;
     String? creneau;
     if (statut == 'confirme') {
-      final creneauController =
-          TextEditingController(text: rdv.creneau ?? '');
+      // La confirmation se fait en choisissant parmi les créneaux
+      // actifs proposés par l'église, jamais en texte libre.
+      List<CreneauPasteur> actifs;
+      try {
+        final creneaux = await api.getCreneauxPasteur();
+        actifs = creneaux.where((c) => c.actif).toList();
+      } catch (e) {
+        if (mounted) showApiError(context, e);
+        return;
+      }
+      if (!mounted) return;
+      if (actifs.isEmpty) {
+        if (mounted) {
+          showApiError(context,
+              'Aucun créneau proposé pour l’instant : proposez d’abord un créneau.');
+        }
+        return;
+      }
+      var choix = actifs.any((c) => c.libelle == rdv.creneau)
+          ? rdv.creneau
+          : actifs.first.libelle;
       await showCreateDialog(
         context: context,
         title: 'Confirmer le rendez-vous',
         saveLabel: 'Confirmer',
         fields: [
-          dialogTextField(
-            controller: creneauController,
-            label: 'Créneau confirmé',
+          dialogDropdown<String>(
+            value: choix,
+            label: 'Créneau proposé',
+            options: {
+              for (final c in actifs)
+                c.libelle:
+                    '${_periodesCreneau[c.periode] ?? c.periode} — ${c.libelle}',
+            },
+            onChanged: (v) => choix = v,
           ),
         ],
-        isValid: () => creneauController.text.trim().isNotEmpty,
+        isValid: () => choix != null && choix!.isNotEmpty,
         onSave: () async {
-          creneau = creneauController.text.trim();
+          creneau = choix;
         },
       );
       if (creneau == null) return;
@@ -212,7 +237,7 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(nom),
+        title: Text(nom, style: const TextStyle(fontSize: 17)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,14 +255,14 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
                 Navigator.of(dialogContext).pop();
                 _changerStatut(rdv, 'confirme');
               },
-              child: const Text('Confirmer'),
+              child: const Text('Confirmer', style: TextStyle(fontSize: 13.5)),
             ),
             TextButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop();
                 _changerStatut(rdv, 'refuse');
               },
-              child: const Text('Refuser'),
+              child: const Text('Refuser', style: TextStyle(fontSize: 13.5)),
             ),
           ],
           if (rdv.statut == 'confirme')
@@ -246,11 +271,11 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
                 Navigator.of(dialogContext).pop();
                 _changerStatut(rdv, 'annule');
               },
-              child: const Text('Annuler'),
+              child: const Text('Annuler', style: TextStyle(fontSize: 13.5)),
             ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Fermer'),
+            child: const Text('Fermer', style: TextStyle(fontSize: 13.5)),
           ),
         ],
       ),
@@ -270,14 +295,17 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Mes créneaux',
-                      style: Theme.of(context).textTheme.titleMedium,
+                      'Créneaux proposés',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontSize: 11.5),
                     ),
                   ),
                   TextButton.icon(
                     onPressed: _ajouterCreneau,
                     icon: const Icon(Icons.add),
-                    label: const Text('Ajouter un créneau'),
+                    label: const Text('Proposer un créneau', style: TextStyle(fontSize: 13.5)),
                   ),
                 ],
               ),
@@ -306,7 +334,7 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
                   if (creneaux.isEmpty) {
                     return const Padding(
                       padding: EdgeInsets.only(top: 8),
-                      child: Text('Aucun créneau défini.'),
+                      child: Text('Aucun créneau proposé pour l’instant.', style: TextStyle(fontSize: 13)),
                     );
                   }
                   return ConstrainedBox(
@@ -336,12 +364,13 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
                                   title: Text(
                                     c.libelle,
                                     style: c.actif
-                                        ? null
+                                        ? const TextStyle(fontSize: 13.5)
                                         : TextStyle(
                                             color: Theme.of(context)
                                                 .colorScheme
                                                 .onSurface
                                                 .withValues(alpha: 0.5),
+                                            fontSize: 13.5,
                                           ),
                                   ),
                                   trailing: Row(
@@ -409,7 +438,7 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: ChoiceChip(
-                        label: Text(entry.$2),
+                        label: Text(entry.$2, style: const TextStyle(fontSize: 12.5)),
                         selected: _statut == entry.$1,
                         onSelected: (_) {
                           setState(() => _statut = entry.$1);
@@ -422,54 +451,70 @@ class _RendezVousAdminScreenState extends State<RendezVousAdminScreen> {
             ),
           ),
           Expanded(
-            child: FutureBuilder<List<RendezVous>>(
-              future: _future,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const AppLoading();
-                }
-                if (snapshot.hasError) {
-                  return AppError(
-                    message: snapshot.error.toString(),
-                    onRetry: _refresh,
-                  );
-                }
-                final items = snapshot.data!;
-                if (items.isEmpty) {
-                  return const EmptyState(
-                    icon: Icons.calendar_month_outlined,
-                    message: 'Aucun rendez-vous',
-                  );
-                }
-                return RefreshIndicator(
-                  onRefresh: () async => _refresh(),
-                  child: ListView.builder(
-                    itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      final r = items[index];
-                      return ListTile(
-                        leading: const CircleAvatar(
-                          child: Icon(Icons.calendar_month_outlined),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Text(
+                    'Demandes reçues',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 11.5),
+                  ),
+                ),
+                Expanded(
+                  child: FutureBuilder<List<RendezVous>>(
+                    future: _future,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const AppLoading();
+                      }
+                      if (snapshot.hasError) {
+                        return AppError(
+                          message: snapshot.error.toString(),
+                          onRetry: _refresh,
+                        );
+                      }
+                      final items = snapshot.data!;
+                      if (items.isEmpty) {
+                        return const EmptyState(
+                          icon: Icons.calendar_month_outlined,
+                          message: 'Aucun rendez-vous',
+                        );
+                      }
+                      return RefreshIndicator(
+                        onRefresh: () async => _refresh(),
+                        child: ListView.builder(
+                          itemCount: items.length,
+                          itemBuilder: (context, index) {
+                            final r = items[index];
+                            return ListTile(
+                              leading: const CircleAvatar(
+                                child: Icon(Icons.calendar_month_outlined),
+                              ),
+                              title: Text(r.membreNom ?? r.memberId ?? '—', style: const TextStyle(fontSize: 13.5)),
+                              subtitle: Text(
+                                '${afficherDate(r.dateSouhaitee)}'
+                                '${r.creneau != null ? ' · ${r.creneau}' : ''} · ${r.motif}',
+                                style: const TextStyle(fontSize: 11.5),
+                              ),
+                              trailing: StatusChip(
+                                label: _rdvStatuts[r.statut] ?? r.statut,
+                                color: r.statut == 'confirme'
+                                    ? AppTheme.violetProfond
+                                    : r.statut == 'en_attente'
+                                        ? Colors.orange
+                                        : AppTheme.rougeErreur,
+                              ),
+                              onTap: () => _showRendezVous(r),
+                            );
+                          },
                         ),
-                        title: Text(r.membreNom ?? r.memberId ?? '—'),
-                        subtitle: Text(
-                          '${afficherDate(r.dateSouhaitee)}'
-                          '${r.creneau != null ? ' · ${r.creneau}' : ''} · ${r.motif}',
-                        ),
-                        trailing: StatusChip(
-                          label: _rdvStatuts[r.statut] ?? r.statut,
-                          color: r.statut == 'confirme'
-                              ? AppTheme.violetProfond
-                              : r.statut == 'en_attente'
-                                  ? Colors.orange
-                                  : AppTheme.rougeErreur,
-                        ),
-                        onTap: () => _showRendezVous(r),
                       );
                     },
                   ),
-                );
-              },
+                ),
+              ],
             ),
           ),
         ],

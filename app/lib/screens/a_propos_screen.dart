@@ -55,17 +55,17 @@ class AProposScreen extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 24,
+                          fontSize: 19,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       SizedBox(height: 6),
                       Text(
-                        '« L’église sans frontière »',
+                        'L’église sans frontières',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppTheme.or,
-                          fontSize: 15,
+                          fontSize: 13,
                         ),
                       ),
                     ],
@@ -76,8 +76,8 @@ class AProposScreen extends StatelessWidget {
                   child: Padding(
                     padding: EdgeInsets.all(16),
                     child: Text(
-                      'e-System Church est une seule plateforme qui centralise les églises dans le monde entier. Plusieurs églises peuvent l’utiliser en simultané. Chaque membre est rattaché à une seule église, sans mélange entre les églises.',
-                      style: TextStyle(fontSize: 16),
+                      'e-System Church est une seule plateforme qui centralise les églises dans le monde entier — l’église sans frontières. Plusieurs églises peuvent l’utiliser en simultané, où qu’elles se trouvent. Chaque membre est rattaché à une seule église, sans mélange entre les églises.',
+                      style: TextStyle(fontSize: 12.5),
                     ),
                   ),
                 ),
@@ -87,7 +87,7 @@ class AProposScreen extends StatelessWidget {
                     padding: EdgeInsets.all(16),
                     child: Text(
                       'Aider chaque église à gérer ses membres, ses cultes, ses finances, ses campagnes et ses attestations, depuis une seule application. L’application fonctionne sur le web et sur téléphone, avec les mêmes données partout.',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 12.5),
                     ),
                   ),
                 ),
@@ -127,7 +127,7 @@ class AProposScreen extends StatelessWidget {
                   child: Padding(
                     padding: EdgeInsets.all(16),
                     child: Text(
-                      'Axel Maurice Anibe, fondateur du projet e-System Church.',
+                      'Fondateur — Axel Maurice Anibe, créateur du projet',
                       style: TextStyle(fontSize: 16),
                     ),
                   ),
@@ -142,15 +142,17 @@ class AProposScreen extends StatelessWidget {
                           contentPadding: EdgeInsets.zero,
                           leading: Icon(Icons.info_outline),
                           title: Text(
-                              'Version ${AppConfig.appVersion}'),
+                              'Version ${AppConfig.appVersion}',
+                              style: TextStyle(fontSize: 13.5)),
                         ),
                         const Divider(),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: const Icon(Icons.phone_outlined),
-                          title: const Text('Contact'),
+                          title: const Text('Contact', style: TextStyle(fontSize: 13.5)),
                           subtitle: const Text(
-                              'Axel Maurice Anibe\n$_telephone'),
+                              'Axel Maurice Anibe\n$_telephone',
+                              style: TextStyle(fontSize: 11.5)),
                           trailing: const Icon(Icons.call_outlined),
                           onTap: () => _appeler(context),
                         ),
@@ -177,13 +179,13 @@ class _UtiliteLigne extends StatelessWidget {
   Widget build(BuildContext context) {
     return RichText(
       text: TextSpan(
-        style: DefaultTextStyle.of(context).style.copyWith(fontSize: 16),
+        style: DefaultTextStyle.of(context).style.copyWith(fontSize: 13.5),
         children: [
           TextSpan(
             text: '$qui — ',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-          TextSpan(text: quoi),
+          TextSpan(text: quoi, style: const TextStyle(fontSize: 11.5)),
         ],
       ),
     );

@@ -109,10 +109,11 @@ class _FileHorsLigneScreenState extends State<FileHorsLigneScreen> {
                 : AppTheme.orFonce,
           ),
         ),
-        title: Text(action.typeLabel),
+        title: Text(action.typeLabel, style: const TextStyle(fontSize: 13.5)),
         subtitle: Text(
           '${action.statutLabel} · ${formatDateTime(action.createdAt)}'
           '${action.erreur == null ? '' : '\n${action.erreur}'}',
+          style: const TextStyle(fontSize: 11.5),
         ),
         isThreeLine: action.erreur != null,
       ),
@@ -127,10 +128,12 @@ class _FileHorsLigneScreenState extends State<FileHorsLigneScreen> {
           child: Icon(Icons.smartphone_outlined, color: AppTheme.orFonce),
         ),
         title: Text(
-            action.typeAction == 'presence.pointer' ? 'Pointage' : 'Saisie'),
+            action.typeAction == 'presence.pointer' ? 'Pointage' : 'Saisie',
+            style: const TextStyle(fontSize: 13.5)),
         subtitle: Text(
           '${formatDateTime(action.createdAt)}'
           '${action.erreur == null ? '' : '\n${action.erreur}'}',
+          style: const TextStyle(fontSize: 11.5),
         ),
         isThreeLine: action.erreur != null,
       ),
@@ -170,7 +173,7 @@ class _FileHorsLigneScreenState extends State<FileHorsLigneScreen> {
                         child: FilledButton.icon(
                           onPressed: _rejouerServeur,
                           icon: const Icon(Icons.replay_outlined),
-                          label: const Text('Rejouer la file'),
+                          label: const Text('Rejouer la file', style: TextStyle(fontSize: 13.5)),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -178,29 +181,42 @@ class _FileHorsLigneScreenState extends State<FileHorsLigneScreen> {
                         child: OutlinedButton.icon(
                           onPressed: _rejouerLocale,
                           icon: const Icon(Icons.smartphone_outlined),
-                          label: const Text('Rejouer le téléphone'),
+                          label: const Text('Rejouer le téléphone', style: TextStyle(fontSize: 13.5)),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'File du serveur',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  if (_actionsServeur.isEmpty && _actionsLocales.isEmpty)
+                    const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          'Tout est synchronisé.',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      ),
+                    ),
+                  if (_actionsServeur.isEmpty && _actionsLocales.isEmpty)
+                    const SizedBox(height: 16),
+                  Text(
+                    'File du serveur · ${_actionsServeur.length} en attente',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   if (_actionsServeur.isEmpty)
                     const Card(
                       child: Padding(
                         padding: EdgeInsets.all(16),
-                        child: Text('Aucune action en attente.'),
+                        child: Text('Aucune action en attente.', style: TextStyle(fontSize: 13)),
                       ),
                     ),
                   for (final action in _actionsServeur) _carteAction(action),
                   const SizedBox(height: 16),
-                  const Text(
-                    'File de cet appareil',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Text(
+                    'File de cet appareil · ${_actionsLocales.length} en attente',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   if (_actionsLocales.isEmpty)
@@ -208,7 +224,8 @@ class _FileHorsLigneScreenState extends State<FileHorsLigneScreen> {
                       child: Padding(
                         padding: EdgeInsets.all(16),
                         child: Text(
-                            'Aucune action en attente.'),
+                            'Aucune action en attente.',
+                            style: TextStyle(fontSize: 13)),
                       ),
                     ),
                   for (final action in _actionsLocales) _carteLocale(action),
