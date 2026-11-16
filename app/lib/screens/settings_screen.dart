@@ -669,35 +669,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                   ],
-                  const SectionTitle(title: 'API réelle'),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          TextField(
-                            controller: _urlController,
-                            keyboardType: TextInputType.url,
-                            decoration: const InputDecoration(
-                              labelText: 'URL de l’API',
-                              border: OutlineInputBorder(),
+                  if (state.isSuperAdmin) ...[
+                    const SectionTitle(title: 'API réelle'),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            TextField(
+                              controller: _urlController,
+                              keyboardType: TextInputType.url,
+                              decoration: const InputDecoration(
+                                labelText: 'URL de l’API',
+                                border: OutlineInputBorder(),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          FilledButton(
-                            onPressed: _savingUrl ? null : _saveUrl,
-                            child: const Text('Enregistrer l’URL', style: TextStyle(fontSize: 13.5)),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Changer l’URL déconnecte la session en cours : reconnectez-vous ensuite avec votre compte réel.',
-                            style: TextStyle(fontSize: 14),
-                          ),
-                        ],
+                            const SizedBox(height: 12),
+                            FilledButton(
+                              onPressed: _savingUrl ? null : _saveUrl,
+                              child: const Text('Enregistrer l’URL', style: TextStyle(fontSize: 13.5)),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Changer l’URL déconnecte la session en cours : reconnectez-vous ensuite avec votre compte réel.',
+                              style: TextStyle(fontSize: 14),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                   const SectionTitle(title: 'Application'),
                   Card(
                     child: Padding(
