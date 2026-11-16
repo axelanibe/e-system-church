@@ -156,7 +156,8 @@ async function main() {
     );
     verifier('migration 029 : colonnes hash sur audit_logs', colonnes.rowCount === 3, `reçu ${colonnes.rowCount}`);
     const politiques = await direct.query(
-      `SELECT tablename FROM pg_policies WHERE policyname = 'isolement_eglise'`,
+      `SELECT tablename FROM pg_policies WHERE policyname = 'isolement_eglise'
+        AND tablename IN ('audit_logs', 'consultations_sensibles', 'auth_2fa', 'sauvegardes', 'notifications', 'actions_hors_ligne')`,
     );
     verifier('migration 029 : 6 politiques RLS', politiques.rowCount === 6, `reçu ${politiques.rowCount}`);
     const declencheur = await direct.query(
