@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_theme.dart';
+import '../models/announcement.dart';
 import '../models/attestation.dart';
 import '../models/contribution.dart';
 import '../models/cultes.dart';
@@ -36,8 +37,7 @@ import '../screens/rendez_vous_screen.dart';
 ///   rendez-vous, Prière du jour et Sujet de prière privé avant
 ///   camps et attestations.
 /// Contenu seul, sans Scaffold ni barre : la coquille fidèle
-/// fournit l'écran et la barre du bas, EspaceMembreScreen fournit
-/// son Scaffold et son AppBar. En-tête, carte membre premium,
+/// fournit l'écran et la barre du bas. En-tête, carte membre premium,
 /// prochain culte avec compte à rebours et « Je serai présent »,
 /// Mon Parcours, chiffres réels, Mes camps, Mes attestations,
 /// Prière du jour, Sujet de prière privé, devise. Rien d'inventé :
@@ -54,8 +54,9 @@ class FideleHomeContenu extends StatefulWidget {
   /// carte pleine largeur « Prendre rendez-vous ».
   final bool avecRendezVous;
 
-  /// Vrai pour « membre » : Prière du jour et Sujet de prière
-  /// privé passent avant Mes camps et Mes attestations.
+  /// Conservé pour l'appelant : l'ordre des blocs est désormais fixé
+  /// par la maquette (écran 37), Prière du jour et Sujet de prière
+  /// privé avant Mes camps et Mes attestations, pour les deux écrans.
   final bool priereAvantCamps;
 
   const FideleHomeContenu({
@@ -76,6 +77,7 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
   late Future<List<Presence>> _presencesFuture;
   late Future<List<Contribution>> _contributionsFuture;
   late Future<List<Attestation>> _attestationsFuture;
+  late Future<List<Announcement>> _annoncesFuture;
 
   /// Confirmation de présence par culte, gardée en mémoire locale
   /// (le serveur est la source, on met à jour après chaque appel).
@@ -98,6 +100,7 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
       _presencesFuture = Future.value(const []);
       _contributionsFuture = Future.value(const []);
       _attestationsFuture = Future.value(const []);
+      _annoncesFuture = Future.value(const []);
       return;
     }
     _carteFuture = api.getMaCarte();
@@ -116,6 +119,7 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
     _presencesFuture = api.getMesPresences();
     _contributionsFuture = api.getMesContributions();
     _attestationsFuture = api.getMesAttestations();
+    _annoncesFuture = api.getMesAnnonces();
   }
 
   Future<void> _refresh() async {
@@ -227,7 +231,7 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                                 .read<AppState>()
                                 .sortirApercuFidele(),
                             icon: const Icon(Icons.chevron_left, size: 18),
-                            label: const Text('Retour Admin'),
+                            label: const Text('Retour Admin', style: TextStyle(fontSize: 13.5)),
                           ),
                         ],
                       ),
@@ -272,6 +276,7 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                                       .bodySmall
                                       ?.copyWith(
                                         color: AppTheme.orFonce,
+                                        fontSize: 10.5,
                                       ),
                                 ),
                                 const SizedBox(height: 4),
@@ -279,14 +284,16 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                                   'Bonjour${prenom.isEmpty ? '' : ', $prenom'}',
                                   style: Theme.of(context)
                                       .textTheme
-                                      .headlineSmall,
+                                      .headlineSmall
+                                      ?.copyWith(fontSize: 20),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   'Bienvenue dans votre église',
                                   style: Theme.of(context)
                                       .textTheme
-                                      .titleMedium,
+                                      .titleMedium
+                                      ?.copyWith(fontSize: 13.5),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -306,7 +313,8 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                                   'parcours et vos prochains rendez-vous.',
                                   style: Theme.of(context)
                                       .textTheme
-                                      .bodyMedium,
+                                      .bodyMedium
+                                      ?.copyWith(fontSize: 12),
                                 ),
                               ],
                             ),
@@ -334,13 +342,33 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                     },
                   ),
                   const SizedBox(height: 8),
-                  const SectionTitle(title: 'Prochain culte'),
+                  const SectionTitle(title: 'Prochain culte', taille: 15),
                   _ProchainCulte(
                     future: _cultesFuture,
                     rsvpParCulte: _rsvpParCulte,
                     onBasculerPresence: _basculerPresence,
                   ),
                   const SizedBox(height: 8),
+                  const SectionTitle(title: 'Mon Parcours', taille: 15),
+                  _ParcoursSection(future: _carteFuture),
+                  const SizedBox(height: 8),
+                  const SectionTitle(title: 'Vos chiffres'),
+                  _ChiffresSection(
+                    presencesFuture: _presencesFuture,
+                    contributionsFuture: _contributionsFuture,
+                    attestationsFuture: _attestationsFuture,
+                  ),
+                  const SizedBox(height: 8),
+                  const SectionTitle(title: 'Verset du jour'),
+                  const _VersetDuJour(),
+                  const SizedBox(height: 8),
+                  // Ordre maquette, écran 37 : Prochain culte, Mon
+                  // Parcours, chiffres, Verset du jour, Actions
+                  // rapides, Prière du jour, Sujet de prière privé,
+                  // Mes camps, Mes attestations, Annonces, devise.
+                  // Le Sujet de prière privé reste sur l'accueil : c'est
+                  // la seule entrée vers le formulaire de prière, la
+                  // coquille fidèle n'a pas d'onglet Prière.
                   SectionTitle(title: widget.titreOutils),
                   _GrilleOutils(
                     avecRendezVous: widget.avecRendezVous,
@@ -386,57 +414,30 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const SectionTitle(title: 'Mon Parcours'),
-                  _ParcoursSection(future: _carteFuture),
+                  const SectionTitle(title: 'Prière du jour'),
+                  const _PriereDuJourBloc(),
                   const SizedBox(height: 8),
-                  const SectionTitle(title: 'Vos chiffres'),
-                  _ChiffresSection(
-                    presencesFuture: _presencesFuture,
-                    contributionsFuture: _contributionsFuture,
-                    attestationsFuture: _attestationsFuture,
+                  const SectionTitle(title: 'Sujet de prière privé'),
+                  _SujetPriereSection(profilFuture: _profilFuture),
+                  const SizedBox(height: 8),
+                  const SectionTitle(title: 'Mes camps', taille: 15),
+                  const _CampsVide(),
+                  const SizedBox(height: 8),
+                  const SectionTitle(title: 'Mes attestations', taille: 15),
+                  _AttestationsResume(
+                    future: _attestationsFuture,
+                    onVoir: _voirMesAttestations,
                   ),
                   const SizedBox(height: 8),
-                  // Ordre des blocs selon la projection : l'écran
-                  // « membre » met Prière du jour et Sujet de prière
-                  // privé avant Mes camps et Mes attestations,
-                  // « fidele-accueil » fait l'inverse.
-                  if (widget.priereAvantCamps) ...[
-                    const SectionTitle(title: 'Prière du jour'),
-                    const _PriereDuJourBloc(),
-                    const SizedBox(height: 8),
-                    const SectionTitle(title: 'Sujet de prière privé'),
-                    _SujetPriereSection(profilFuture: _profilFuture),
-                    const SizedBox(height: 8),
-                    const SectionTitle(title: 'Mes camps'),
-                    const _CampsVide(),
-                    const SizedBox(height: 8),
-                    const SectionTitle(title: 'Mes attestations'),
-                    _AttestationsResume(
-                      future: _attestationsFuture,
-                      onVoir: _voirMesAttestations,
-                    ),
-                  ] else ...[
-                    const SectionTitle(title: 'Mes camps'),
-                    const _CampsVide(),
-                    const SizedBox(height: 8),
-                    const SectionTitle(title: 'Mes attestations'),
-                    _AttestationsResume(
-                      future: _attestationsFuture,
-                      onVoir: _voirMesAttestations,
-                    ),
-                    const SizedBox(height: 8),
-                    const SectionTitle(title: 'Prière du jour'),
-                    const _PriereDuJourBloc(),
-                    const SizedBox(height: 8),
-                    const SectionTitle(title: 'Sujet de prière privé'),
-                    _SujetPriereSection(profilFuture: _profilFuture),
-                  ],
+                  const SectionTitle(title: 'Annonces de mon église'),
+                  _AnnoncesEgliseSection(future: _annoncesFuture),
                   const SizedBox(height: 24),
                   Center(
                     child: Text(
                       'Tu es un don de Dieu',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppTheme.orFonce,
+                            fontSize: 12.5,
                           ),
                     ),
                   ),
@@ -579,13 +580,17 @@ class _TuileAcces extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 titre,
-                style: Theme.of(context).textTheme.titleMedium,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontSize: 13.5,
+                    ),
                 maxLines: 2,
               ),
               const SizedBox(height: 4),
               Text(
                 sousTitre,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontSize: 11.5,
+                    ),
                 maxLines: 4,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -595,6 +600,7 @@ class _TuileAcces extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.orAttention,
                       fontWeight: FontWeight.bold,
+                      fontSize: 12,
                     ),
               ),
             ],
@@ -644,7 +650,9 @@ class _TuileLarge extends StatelessWidget {
                   children: [
                     Text(
                       titre,
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontSize: 13.5,
+                          ),
                       maxLines: 2,
                     ),
                   ],
@@ -656,6 +664,7 @@ class _TuileLarge extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.orAttention,
                       fontWeight: FontWeight.bold,
+                      fontSize: 12,
                     ),
               ),
             ],
@@ -726,6 +735,7 @@ class _ProchainCulte extends StatelessWidget {
                     style: theme.textTheme.labelLarge?.copyWith(
                       color: Colors.white70,
                       letterSpacing: 1.2,
+                      fontSize: 15,
                     ),
                   ),
                   const Spacer(),
@@ -745,6 +755,7 @@ class _ProchainCulte extends StatelessWidget {
                         // Bleu nuit sur or : 7,36:1.
                         color: AppTheme.violetProfond,
                         fontWeight: FontWeight.bold,
+                        fontSize: 11.5,
                       ),
                     ),
                   ),
@@ -776,17 +787,33 @@ class _ProchainCulte extends StatelessWidget {
               _CompteRebours(date: culte.date),
               const SizedBox(height: 12),
               Text(
-                'Lieu : ${culte.lieu ?? 'Lieu à confirmer'}',
+                'Lieu',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: Colors.white70,
+                  fontSize: 10,
+                ),
+              ),
+              Text(
+                culte.lieu ?? 'Lieu à confirmer',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: Colors.white,
+                  fontSize: 13,
+                ),
+              ),
+              Text(
+                'Heure',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: Colors.white70,
+                  fontSize: 10,
                 ),
               ),
               Text(
                 culte.date != null
-                    ? 'Heure : ${formatDateTime(culte.date)}'
-                    : 'Heure : Heure à confirmer',
+                    ? formatDateTime(culte.date)
+                    : 'Heure à confirmer',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: Colors.white,
+                  fontSize: 13,
                 ),
               ),
               if (culte.orateur != null)
@@ -809,6 +836,7 @@ class _ProchainCulte extends StatelessWidget {
                   ),
                   label: Text(
                     confirme ? 'Présence confirmée' : 'Je serai présent',
+                    style: const TextStyle(fontSize: 13.5),
                   ),
                 ),
               ),
@@ -900,12 +928,14 @@ class _CaseCompte extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
+                    fontSize: 19,
                   ),
             ),
             Text(
               unite,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Colors.white70,
+                fontSize: 9.5,
               ),
             ),
           ],
@@ -952,7 +982,10 @@ class _ParcoursSection extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'Mon Parcours — $pourcentage %',
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontSize: 15),
                     ),
                   ),
                 ],
@@ -960,6 +993,7 @@ class _ParcoursSection extends StatelessWidget {
               const SizedBox(height: 4),
               const Text(
                 'Vos étapes, une par une, au rythme de votre croissance.',
+                style: TextStyle(fontSize: 12),
               ),
               const SizedBox(height: 12),
               LinearProgressIndicator(
@@ -1026,19 +1060,28 @@ class _EtapeParcours extends StatelessWidget {
                 ? const Icon(Icons.check, size: 16, color: AppTheme.violetProfond)
                 : Text(
                     '$numero',
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(fontSize: 12.5),
                   ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               titre,
-              style: Theme.of(context).textTheme.titleSmall,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(fontSize: 13.5),
             ),
           ),
           Text(
             faite ? 'Étape faite.' : 'Étape à venir.',
-            style: Theme.of(context).textTheme.bodySmall,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(fontSize: 12),
           ),
         ],
       ),
@@ -1118,12 +1161,16 @@ class _ChiffreCarte extends StatelessWidget {
               valeur,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
+                    fontSize: 20,
                   ),
             ),
             const SizedBox(height: 4),
             Text(
               libelle,
-              style: Theme.of(context).textTheme.bodySmall,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(fontSize: 10),
               textAlign: TextAlign.center,
             ),
           ],
@@ -1169,10 +1216,13 @@ class _AttestationsResume extends StatelessWidget {
           children: [
             Text(
               'Certificats et attestations reçus.',
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(fontSize: 12),
             ),
             const SizedBox(height: 8),
-            Chip(label: Text('$n document${n > 1 ? 's' : ''}')),
+            Chip(label: Text('$n document${n > 1 ? 's' : ''}', style: const TextStyle(fontSize: 11.5))),
             const SizedBox(height: 8),
             if (n == 0)
               const EmptyState(
@@ -1185,7 +1235,85 @@ class _AttestationsResume extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onVoir,
                 icon: const Icon(Icons.receipt_long_outlined),
-                label: const Text('Voir mes attestations'),
+                label: const Text('Voir mes attestations', style: TextStyle(fontSize: 13.5)),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Verset du jour (maquette, écran 37) : texte exact de la maquette,
+/// Psaume 118, 24.
+class _VersetDuJour extends StatelessWidget {
+  const _VersetDuJour();
+
+  @override
+  Widget build(BuildContext context) {
+    return SoftCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '« Voici le jour que l’Éternel a fait : qu’il soit pour nous un sujet d’allégresse et de joie ! »',
+            style: Theme.of(context)
+                .textTheme
+                .bodyLarge
+                ?.copyWith(fontSize: 13.5),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Psaume 118, 24',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.orFonce,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11.5,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Annonces de mon église (maquette, écran 37) : les 3 dernières
+/// annonces de l'église du fidèle, même source que l'accueil fidèle
+/// (`GET /moi/annonces`).
+class _AnnoncesEgliseSection extends StatelessWidget {
+  final Future<List<Announcement>> future;
+
+  const _AnnoncesEgliseSection({required this.future});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Announcement>>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AppLoading();
+        }
+        final annonces = (snapshot.data ?? const <Announcement>[]).take(3).toList();
+        if (annonces.isEmpty) {
+          return const EmptyState(
+            icon: Icons.campaign_outlined,
+            message: 'Aucune annonce de mon église',
+          );
+        }
+        return Column(
+          children: [
+            for (final a in annonces)
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.campaign_outlined),
+                  title: Text(a.title, style: const TextStyle(fontSize: 13.5)),
+                  subtitle: Text(
+                    a.body,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11.5),
+                  ),
+                ),
               ),
           ],
         );
@@ -1208,7 +1336,10 @@ class _PriereDuJourBloc extends StatelessWidget {
         children: [
           Text(
             'Un moment calme pour commencer la journée.',
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(fontSize: 12),
           ),
           const SizedBox(height: 12),
           Container(
@@ -1220,7 +1351,8 @@ class _PriereDuJourBloc extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Text('Le texte s’affichera ici.'),
+            child: const Text('Le texte s’affichera ici.',
+                style: TextStyle(fontSize: 13)),
           ),
         ],
       ),
@@ -1316,10 +1448,18 @@ class _SujetPrierePriveState extends State<_SujetPrierePrive> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Text(
+            'Ma demande de prière',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontSize: 10.5),
+          ),
+          const SizedBox(height: 8),
           TextField(
             controller: _sujetController,
             decoration: const InputDecoration(
-              labelText: 'Écrivez votre sujet de prière',
+              labelText: 'Écrire ma demande',
             ),
             maxLength: 300,
           ),
@@ -1332,16 +1472,21 @@ class _SujetPrierePriveState extends State<_SujetPrierePrive> {
             maxLines: 3,
           ),
           SwitchListTile(
-            title: const Text('Sujet confidentiel'),
-            subtitle: const Text('Visible seulement par votre pasteur.'),
+            title: const Text('Sujet confidentiel', style: TextStyle(fontSize: 13.5)),
+            subtitle: const Text('Visible seulement par votre pasteur.', style: TextStyle(fontSize: 11.5)),
             value: _confidentiel,
             onChanged: (v) => setState(() => _confidentiel = v),
+          ),
+          const Text(
+            'Pour soi-même seulement — jamais au nom d’un autre. '
+            'Confidentielle : seuls les responsables de prière la lisent.',
+            style: TextStyle(fontSize: 11.5),
           ),
           const SizedBox(height: 8),
           FilledButton.icon(
             onPressed: _envoi ? null : _deposer,
             icon: const Icon(Icons.favorite_outline),
-            label: Text(_envoi ? 'Envoi…' : 'Écrire un sujet de prière'),
+            label: Text(_envoi ? 'Envoi…' : 'Envoyer ma demande', style: const TextStyle(fontSize: 13.5)),
           ),
         ],
       ),

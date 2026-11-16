@@ -120,7 +120,9 @@ Future<bool> confirmDelete(BuildContext context, String message) async {
   final result = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Supprimer ?'),
+      // Maquette : titre de dialogue 17 px (.dialog h4).
+      title: const Text('Supprimer ?',
+          style: TextStyle(fontSize: 17)),
       content: Text(message),
       actions: [
         TextButton(
@@ -164,6 +166,8 @@ Widget dialogDropdown<T>({
                   e.value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  // Maquette : valeur de champ 13,5 px (.fld .val).
+                  style: const TextStyle(fontSize: 13.5),
                 ),
               ))
           .toList(),
@@ -211,7 +215,8 @@ Future<void> showCreateDialog({
   await showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: Text(title),
+      // Maquette : titre de dialogue 17 px (.dialog h4).
+      title: Text(title, style: const TextStyle(fontSize: 17)),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
         child: SingleChildScrollView(

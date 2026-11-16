@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -18,11 +22,27 @@ class PatrimoineScreen extends StatefulWidget {
   State<PatrimoineScreen> createState() => _PatrimoineScreenState();
 }
 
+/// Types de maintenance (maquette, écran 8). L'API n'a pas de champ
+/// type : le type choisi est envoyé comme description.
+const _typesMaintenance = {
+  'entretien': 'Entretien',
+  'reparation': 'Réparation',
+  'controle': 'Contrôle',
+  'renovation': 'Rénovation',
+  'autre': 'Autre',
+};
+
 class _PatrimoineScreenState extends State<PatrimoineScreen> {
   int _tab = 0;
   late Future<List<BienPatrimoine>> _biensFuture;
   late Future<List<MaintenancePatrimoine>> _maintenanceFuture;
   late Future<List<Depense>> _depensesFuture;
+
+  // L'onglet actif est-il vide ? Sert à masquer le FAB quand l'état
+  // vide affiche déjà le bouton de création (motif Serviteurs : un
+  // seul bouton, pas deux).
+  bool _biensVides = false;
+  bool _maintenanceVides = false;
 
   @override
   void initState() {
@@ -50,9 +70,16 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
     final nomController = TextEditingController();
     final valeurController = TextEditingController();
     final assuranceController = TextEditingController();
-    final photoController = TextEditingController();
     final codeController = TextEditingController();
     String categorie = 'batiment';
+    // Photo du bien (maquette, écran 8) : sélecteur appareil photo
+    // ou galerie, motif FilePicker avec lecture des octets sur le
+    // web. Il n'existe pas de route serveur de téléversement pour
+    // les photos de biens : la photo choisie est enregistrée en
+    // data URI dans `photo_url`, en attendant une route dédiée.
+    Uint8List? photoBytes;
+    String? photoNom;
+    String? photoMime;
     await showCreateDialog(
       context: context,
       title: 'Nouveau bien',
@@ -77,7 +104,61 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
           keyboardType: TextInputType.number,
         ),
         dialogTextField(controller: assuranceController, label: 'Assurance'),
-        dialogTextField(controller: photoController, label: 'URL de la photo'),
+        StatefulBuilder(
+          builder: (dialogContext, setDialogState) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    try {
+                      final result =
+                          await FilePicker.platform.pickFiles(
+                        type: FileType.image,
+                        withData: true,
+                      );
+                      final file = result?.files.single;
+                      if (file == null) return;
+                      if (file.size > 2 * 1024 * 1024) {
+                        if (mounted) {
+                          showApiError(context,
+                              'La photo doit peser 2 Mo au maximum.');
+                        }
+                        return;
+                      }
+                      final bytes = file.bytes;
+                      if (bytes == null) {
+                        if (mounted) {
+                          showApiError(
+                              context, 'Impossible de lire cette photo.');
+                        }
+                        return;
+                      }
+                      final ext =
+                          (file.extension ?? 'jpg').toLowerCase();
+                      setDialogState(() {
+                        photoBytes = bytes;
+                        photoNom = file.name;
+                        photoMime =
+                            ext == 'png' ? 'image/png' : 'image/jpeg';
+                      });
+                    } catch (e) {
+                      if (mounted) showApiError(context, e);
+                    }
+                  },
+                  icon: const Icon(Icons.add_a_photo_outlined),
+                  label: Text(photoNom ?? 'Ajouter une photo', style: const TextStyle(fontSize: 13)),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Appareil photo ou galerie',
+                  style: TextStyle(fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        ),
         dialogTextField(
             controller: codeController, label: 'Code d’inventaire'),
       ],
@@ -89,7 +170,9 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
                 categorie: categorie,
                 valeurFcfa: int.tryParse(valeurController.text.trim()),
                 assurance: _opt(assuranceController),
-                photoUrl: _opt(photoController),
+                photoUrl: photoBytes == null
+                    ? null
+                    : 'data:${photoMime ?? 'image/jpeg'};base64,${base64Encode(photoBytes!)}',
                 codeInventaire: _opt(codeController),
               );
           if (mounted) showSuccess(context, 'Bien créé.');
@@ -107,30 +190,39 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
   ) async {
     String? bienId = biens.isEmpty ? null : biens.first.id;
     String? depenseId;
-    final descriptionController = TextEditingController();
+    String type = 'entretien';
     final dateController = TextEditingController();
     final coutController = TextEditingController();
-    final realiseParController = TextEditingController();
+    final prestataireController = TextEditingController();
+    // Maquette, écran 8 : quand aucun bien n'existe, le champ Bien
+    // affiche « Aucun bien — ajoutez d'abord un bien ».
+    final champBien = biens.isEmpty
+        ? const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Text('Aucun bien — ajoutez d’abord un bien', style: TextStyle(fontSize: 12.5)),
+          )
+        : dialogDropdown<String?>(
+            value: bienId,
+            label: 'Bien *',
+            options: {for (final b in biens) b.id: b.nom},
+            onChanged: (v) => bienId = v,
+          );
     await showCreateDialog(
       context: context,
-      title: 'Nouvelle maintenance',
+      title: 'Enregistrer une maintenance',
       saveLabel: 'Créer',
       fields: [
-        dialogDropdown<String?>(
-          value: bienId,
-          label: 'Bien',
-          options: {for (final b in biens) b.id: b.nom},
-          onChanged: (v) => bienId = v,
-        ),
-        dialogTextField(
-          controller: descriptionController,
-          label: 'Description',
-          maxLines: 3,
-        ),
+        champBien,
         dialogDateField(
           context: context,
           controller: dateController,
           label: 'Date de la maintenance',
+        ),
+        dialogDropdown<String>(
+          value: type,
+          label: 'Type *',
+          options: _typesMaintenance,
+          onChanged: (v) => type = v ?? 'entretien',
         ),
         dialogTextField(
           controller: coutController,
@@ -138,7 +230,8 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
           keyboardType: TextInputType.number,
         ),
         dialogTextField(
-            controller: realiseParController, label: 'Réalisé par'),
+            controller: prestataireController,
+            label: 'Prestataire (facultatif)'),
         dialogDropdown<String?>(
           value: depenseId,
           label: 'Dépense liée',
@@ -151,16 +244,18 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
           onChanged: (v) => depenseId = v,
         ),
       ],
-      isValid: () =>
-          bienId != null && descriptionController.text.trim().isNotEmpty,
+      isValid: () => bienId != null,
       onSave: () async {
         try {
           await context.read<AppState>().api.createMaintenancePatrimoine(
                 bienId: bienId!,
-                description: descriptionController.text.trim(),
+                // L'API n'a pas de champ type ni prestataire : le
+                // type part comme description, le prestataire comme
+                // « réalisé par ».
+                description: _typesMaintenance[type] ?? 'Entretien',
                 dateMaintenance: _opt(dateController),
                 coutFcfa: int.tryParse(coutController.text.trim()),
-                realisePar: _opt(realiseParController),
+                realisePar: _opt(prestataireController),
                 depenseId: depenseId,
               );
           if (mounted) showSuccess(context, 'Maintenance enregistrée.');
@@ -202,10 +297,18 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
           );
         }
         final items = snapshot.data!;
+        if (items.isEmpty != _biensVides) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _biensVides != items.isEmpty) {
+              setState(() => _biensVides = items.isEmpty);
+            }
+          });
+        }
         if (items.isEmpty) {
           return EmptyState(
             icon: Icons.domain_outlined,
-            message: 'Aucun bien.',
+            // État vide de la maquette, écran 8.
+            message: 'Aucun bien\nLes biens de l’église s’enregistreront ici.',
             actionLabel: 'Ajouter un bien',
             onAction: _createBien,
           );
@@ -222,12 +325,13 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
                 leading: const CircleAvatar(
                   child: Icon(Icons.domain_outlined),
                 ),
-                title: Text(b.nom),
+                title: Text(b.nom, style: const TextStyle(fontSize: 13.5)),
                 subtitle: Text(
                   '${b.categorieLabel}'
                   '${b.valeurFcfa != null ? ' · ${formatMontant(b.valeurFcfa!, state.devise)}' : ''}'
                   '${b.codeInventaire != null ? ' · ${b.codeInventaire}' : ''}'
                   '${b.assurance != null ? ' · ${b.assurance}' : ''}',
+                  style: const TextStyle(fontSize: 11.5),
                 ),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline),
@@ -258,10 +362,18 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
           );
         }
         final items = snapshot.data!;
+        if (items.isEmpty != _maintenanceVides) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _maintenanceVides != items.isEmpty) {
+              setState(() => _maintenanceVides = items.isEmpty);
+            }
+          });
+        }
         if (items.isEmpty) {
           return EmptyState(
             icon: Icons.build_outlined,
-            message: 'Aucune maintenance.',
+            // État vide de la maquette, écran 8.
+            message: 'Aucune maintenance\nLes maintenances enregistrées s’afficheront ici.',
             actionLabel: 'Enregistrer une maintenance',
             onAction: () async {
               try {
@@ -286,12 +398,13 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
                 leading: const CircleAvatar(
                   child: Icon(Icons.build_outlined),
                 ),
-                title: Text(biensNoms[m.bienId] ?? 'Bien'),
+                title: Text(biensNoms[m.bienId] ?? 'Bien', style: const TextStyle(fontSize: 13.5)),
                 subtitle: Text(
                   '${m.dateMaintenance != null ? '${afficherDate(m.dateMaintenance)} · ' : ''}'
                   '${m.description}'
                   '${m.coutFcfa != null ? ' · ${formatMontant(m.coutFcfa!, state.devise)}' : ''}'
                   '${m.realisePar != null ? ' · ${m.realisePar}' : ''}',
+                  style: const TextStyle(fontSize: 11.5),
                 ),
               );
             },
@@ -310,6 +423,8 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
         appBar: AppBar(
           title: const Text('Patrimoine'),
           bottom: TabBar(
+            labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+            unselectedLabelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
             onTap: (i) => setState(() => _tab = i),
             tabs: const [
               Tab(text: 'Biens'),
@@ -317,7 +432,21 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
             ],
           ),
         ),
-        body: FutureBuilder<List<BienPatrimoine>>(
+        body: Column(
+          children: [
+            // Maquette, écran 8 : sous-titre 12,5 px.
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Biens de l’église et maintenance.',
+                  style: TextStyle(fontSize: 12.5),
+                ),
+              ),
+            ),
+            Expanded(
+              child: FutureBuilder<List<BienPatrimoine>>(
           future: _biensFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -337,24 +466,35 @@ class _PatrimoineScreenState extends State<PatrimoineScreen> {
               ],
             );
           },
+              ),
+            ),
+          ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            try {
-              if (_tab == 0) {
-                await _createBien();
-              } else {
-                final biens = await _biensFuture;
-                final depenses = await _depensesFuture;
-                if (mounted) await _createMaintenance(biens, depenses);
-              }
-            } catch (e) {
-              if (context.mounted) showApiError(context, e);
-            }
-          },
-          icon: const Icon(Icons.add),
-          label: const Text('Ajouter'),
-        ),
+        floatingActionButton: ((_tab == 0 && _biensVides) ||
+                (_tab == 1 && _maintenanceVides))
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () async {
+                  try {
+                    if (_tab == 0) {
+                      await _createBien();
+                    } else {
+                      final biens = await _biensFuture;
+                      final depenses = await _depensesFuture;
+                      if (mounted) {
+                        await _createMaintenance(biens, depenses);
+                      }
+                    }
+                  } catch (e) {
+                    if (context.mounted) showApiError(context, e);
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: Text(_tab == 0
+                    ? 'Ajouter un bien'
+                    : 'Enregistrer une maintenance',
+                    style: const TextStyle(fontSize: 13.5)),
+              ),
       ),
     );
   }

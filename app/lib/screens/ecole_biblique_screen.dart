@@ -127,7 +127,7 @@ class _EcoleBibliqueScreenState extends State<EcoleBibliqueScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SectionTitle(title: 'Ma progression'),
+                const SectionTitle(title: 'Ma progression', taille: 15),
                 const SizedBox(height: 8),
                 _MaProgression(future: _progressionsFuture),
               ],

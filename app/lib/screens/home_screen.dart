@@ -14,15 +14,15 @@ import 'membres_screen.dart';
 /// Coquille principale après connexion : 4 destinations.
 /// Écrans larges (≥ 900 px) : rail latéral ; écrans étroits : barre
 /// inférieure de 4 libellés courts. Réseau et Annonces ne sont plus
-/// des onglets : ils restent accessibles par le tiroir court et par
-/// le tableau de bord (« Mon réseau », « Annonces récentes »),
-/// qui les montrent directement, sans déplacement inutile.
-/// L'en-tête clair est au-dessus de l'écran. Le tiroir court ne montre que l'église
-/// courante, « Changer
-/// d'église » ouvre l'écran dédié « Mes églises » (paginé et
-/// cherchable), et il garde les entrées « Réseau », « Annonces »,
-/// « Mon église », « Demandes de rattachement », « Mes annexes »,
-/// « Plateforme », « Transferts de membres » et « Finances de la mère ».
+/// des onglets : ils restent accessibles par le tableau de bord
+/// (« Mes annexes », « Annonces récentes »), qui les montre
+/// directement, sans déplacement inutile. L'en-tête clair est
+/// au-dessus de l'écran. Le tiroir court ne montre que l'église
+/// courante, « Changer d'église » ouvre l'écran dédié « Mes églises »
+/// (paginé et cherchable), et il ne garde que deux sections
+/// (maquette, écran 20) : Outils (Notifications, Paiements
+/// automatiques, File hors ligne, Qualité et bascule) et Compte
+/// (Mon abonnement, Réglages, À propos de e-System Church).
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -35,10 +35,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const _titles = [
     'Accueil administrateur',
-    'Membres',
+    'Membres et familles',
     'Finances',
-    'Modules',
+    'Modules de l’église',
   ];
+
+  // Tailles de titre par onglet (maquette, écrans 19, 1, 2, 21).
+  static const _taillesTitre = [19.0, 23.0, 21.0, 19.0];
 
   /// Chaque écran reçoit une clé liée à l'église active : après une
   /// bascule d'église, HomeScreen reste monté et les écrans garderaient
@@ -120,6 +123,16 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 EnTeteClair(
                   titre: _titles[courant],
+                  tailleTitre: _taillesTitre[courant],
+                  // Maquette : sous-titre 12,5 px EXPL sur Membres
+                  // (« Registre des membres et des familles. ») et
+                  // sur Finances (« Contributions, caisse et clôtures
+                  // de l'église. ») ; les autres onglets n'en ont pas.
+                  sousTitre: courant == 1
+                      ? 'Registre des membres et des familles.'
+                      : courant == 2
+                          ? 'Contributions, caisse et clôtures de l’église.'
+                          : null,
                   leading: Builder(
                     builder: (context) => IconButton(
                       icon: const Icon(Icons.menu),

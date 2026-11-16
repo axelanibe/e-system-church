@@ -38,9 +38,9 @@ class T12Strings {
   String get chargement => _t('Chargement…', 'Loading…');
   String get vide => _t('Rien.', 'Nothing yet.');
   String get videPromesses =>
-      _t('Aucune promesse.', 'No pledges yet.');
+      _t('Aucune promesse de don en cours.', 'No giving pledges in progress.');
   String get videDonsNature =>
-      _t('Aucun don en nature.', 'No in-kind gifts yet.');
+      _t('Aucun don en nature enregistré.', 'No in-kind gifts recorded.');
   String get aucuneDonneePeriode =>
       _t('Aucune donnée.', 'No data for this period.');
   String get erreurChargement => _t('Chargement impossible.', 'Could not load.');
@@ -61,8 +61,10 @@ class T12Strings {
       'Le versement doit égaler le montant de l’échéance.',
       'The payment must equal the instalment amount.');
   String get promesseAnnulee => _t('Promesse annulée.', 'Pledge cancelled.');
-  String get promesseTerminee => _t('Terminée', 'Completed');
+  String get promesseTerminee => _t('Honorée', 'Honoured');
+  String get promesseStatutAnnulee => _t('Annulée', 'Cancelled');
   String get promesseEnCours => _t('En cours', 'In progress');
+  String get promesseEnRetard => _t('En retard', 'Overdue');
   String get versementEnAttente => _t(
       'Versement enregistré, en attente de confirmation.',
       'Payment recorded, awaiting confirmation.');
@@ -79,6 +81,9 @@ class T12Strings {
   String get temps => _t('Temps', 'Time');
   String get heures => _t('Heures', 'Hours');
   String get anonyme => _t('Don anonyme', 'Anonymous gift');
+  String get noteAttestationAnnuelle => _t(
+      'La valeur estimée sert au suivi et entre dans l’attestation annuelle du donateur — le don lui-même n’entre pas dans la caisse.',
+      'The estimated value is used for tracking and counts towards the donor’s annual certificate — the gift itself never enters the cash box.');
 
   // -- Visiteurs (US6) ---------------------------------------------------------
   String get nouveauVisiteur => _t('Nouveau visiteur', 'New visitor');
@@ -105,6 +110,12 @@ class T12Strings {
   String get solde => _t('Solde', 'Balance');
   String get parType => _t('Par type', 'By type');
   String get parPoste => _t('Par poste', 'By budget line');
+  String get publication => _t('Publication', 'Publication');
+  String resumePublie(String mois) =>
+      _t('Résumé publié — $mois', 'Published summary — $mois');
+  String get notePublication => _t(
+      'Le résumé se publie à la clôture de la période, depuis Finances.',
+      'The summary is published when the period is closed, from Finances.');
   String get nonActivee => _t(
       'La transparence financière n’est pas activée pour les membres de votre église.',
       'Financial transparency is not enabled for members of your church.');

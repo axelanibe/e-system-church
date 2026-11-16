@@ -77,7 +77,7 @@ void main() {
     for (final titre in [
       'Départements',
       'Cultes en direct',
-      'Radar pastoral',
+      'Suivi pastoral',
       'Serviteurs',
       'Bible et école',
       'Gouvernance',

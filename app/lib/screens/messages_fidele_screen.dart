@@ -125,7 +125,7 @@ class _MessagesFideleScreenState extends State<MessagesFideleScreen> {
                       ],
                     ),
                   ),
-                  const Chip(label: Text('Privé')),
+                  const Chip(label: Text('Privé', style: TextStyle(fontSize: 11.5))),
                 ],
               ),
             ),

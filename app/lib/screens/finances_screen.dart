@@ -9,11 +9,12 @@ import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import 'campagnes_screen.dart';
 import 'contribution_form_screen.dart';
-import 'attestations_screen.dart';
+import 'attestations_annuelles_screen.dart';
 import 'dons_nature_screen.dart';
+import 'etat_comptes_marchands_screen.dart';
 import 'finances_completes_screen.dart';
-import 'finances_complement_screen.dart';
 import 'finances_mere_screen.dart';
+import 'nouvelle_depense_screen.dart';
 import 'promesses_screen.dart';
 import 'receipt_screen.dart';
 import 'transparence_screen.dart';
@@ -55,7 +56,9 @@ class _FinancesScreenState extends State<FinancesScreen> {
 
   Future<void> _openForm() async {
     final created = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const ContributionFormScreen()),
+      MaterialPageRoute(
+          builder: (_) =>
+              const ContributionFormScreen(initialType: 'cotisation')),
     );
     if (created != null && mounted) {
       showSuccess(
@@ -150,7 +153,7 @@ class _FinancesScreenState extends State<FinancesScreen> {
                             'Cotisations': 'cotisation',
                           }.entries)
                             ChoiceChip(
-                              label: Text(entry.key),
+                              label: Text(entry.key, style: const TextStyle(fontSize: 12.5)),
                               selected: _typeFilter == entry.value,
                               onSelected: (_) {
                                 setState(() {
@@ -171,7 +174,7 @@ class _FinancesScreenState extends State<FinancesScreen> {
                             'Annulées': 'annule',
                           }.entries)
                             ChoiceChip(
-                              label: Text(entry.key),
+                              label: Text(entry.key, style: const TextStyle(fontSize: 12.5)),
                               selected: _statusFilter == entry.value,
                               onSelected: (_) {
                                 setState(() {
@@ -222,12 +225,13 @@ class _FinancesScreenState extends State<FinancesScreen> {
                       Card(
                         child: ListTile(
                           leading: const Icon(Icons.volunteer_activism_outlined),
-                          title: const Text('Campagnes de collecte'),
+                          title: const Text('Campagnes de collecte', style: TextStyle(fontSize: 13.5)),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () async {
                             await Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => const CampagnesScreen(),
+                                builder: (_) => const CampagnesScreen(
+                                    initialTab: 0),
                               ),
                             );
                             _refresh();
@@ -237,7 +241,7 @@ class _FinancesScreenState extends State<FinancesScreen> {
                       Card(
                         child: ListTile(
                           leading: const Icon(Icons.handshake_outlined),
-                          title: const Text('Promesses de don'),
+                          title: const Text('Promesses de don', style: TextStyle(fontSize: 13.5)),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () async {
                             await Navigator.of(context).push(
@@ -253,7 +257,7 @@ class _FinancesScreenState extends State<FinancesScreen> {
                         child: ListTile(
                           leading:
                               const Icon(Icons.card_giftcard_outlined),
-                          title: const Text('Dons en nature'),
+                          title: const Text('Dons en nature', style: TextStyle(fontSize: 13.5)),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () async {
                             await Navigator.of(context).push(
@@ -268,7 +272,7 @@ class _FinancesScreenState extends State<FinancesScreen> {
                       Card(
                         child: ListTile(
                           leading: const Icon(Icons.visibility_outlined),
-                          title: const Text('Transparence financière'),
+                          title: const Text('Transparence financière', style: TextStyle(fontSize: 13.5)),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
                             Navigator.of(context).push(
@@ -283,13 +287,51 @@ class _FinancesScreenState extends State<FinancesScreen> {
                         child: ListTile(
                           leading:
                               const Icon(Icons.account_balance_outlined),
-                          title: const Text('Budget & caisse'),
+                          title: const Text('Budget & caisse', style: TextStyle(fontSize: 13.5)),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const CampagnesScreen(
+                                    initialTab: 1),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      Card(
+                        child: ListTile(
+                          leading:
+                              const Icon(Icons.receipt_long_outlined),
+                          title: const Text('Dépenses', style: TextStyle(fontSize: 13.5)),
+                          subtitle:
+                              const Text('Saisie d’une dépense',
+                                  style: TextStyle(fontSize: 11.5)),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const NouvelleDepenseScreen(),
+                              ),
+                            );
+                            _refresh();
+                          },
+                        ),
+                      ),
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.store_outlined),
+                          title: const Text('État des comptes marchands', style: TextStyle(fontSize: 13.5)),
+                          subtitle: const Text(
+                              'Wave, Orange Money, MTN — consultation seulement.',
+                              style: TextStyle(fontSize: 11.5)),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) =>
-                                    const FinancesComplementScreen(),
+                                    const EtatComptesMarchandsScreen(),
                               ),
                             );
                           },
@@ -301,7 +343,8 @@ class _FinancesScreenState extends State<FinancesScreen> {
                             leading:
                                 const Icon(Icons.account_tree_outlined),
                             title:
-                                const Text('Finances de mon réseau'),
+                                const Text('Finances des annexes',
+                                    style: TextStyle(fontSize: 13.5)),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.of(context).push(
@@ -320,12 +363,13 @@ class _FinancesScreenState extends State<FinancesScreen> {
                           onPressed: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => const AttestationsScreen(),
+                                builder: (_) =>
+                                    const AttestationsAnnuellesScreen(),
                               ),
                             );
                           },
                           icon: const Icon(Icons.description_outlined),
-                          label: const Text('Attestations annuelles'),
+                          label: const Text('Attestations annuelles', style: TextStyle(fontSize: 13.5)),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -337,7 +381,7 @@ class _FinancesScreenState extends State<FinancesScreen> {
                             'dime' => 'Aucune dîme trouvée.',
                             'offrande' => 'Aucune offrande trouvée.',
                             'don' => 'Aucun don trouvé.',
-                            _ => 'Aucune contribution trouvée.',
+                            _ => 'Aucune contribution pour l’instant.',
                           },
                         )
                       else
@@ -352,9 +396,11 @@ class _FinancesScreenState extends State<FinancesScreen> {
                                 ),
                               ),
                               title: Text(
-                                  '${c.typeLabel} — ${formatFcfa(c.amountFcfa)}'),
+                                  '${c.typeLabel} — ${formatFcfa(c.amountFcfa)}',
+                                  style: const TextStyle(fontSize: 13.5)),
                               subtitle: Text(
-                                  '${c.paymentLabel}${c.membreNom != null ? ' · ${c.membreNom}' : ''} · ${formatDate(c.createdAt)}'),
+                                  '${c.paymentLabel}${c.membreNom != null ? ' · ${c.membreNom}' : ''} · ${formatDate(c.createdAt)}',
+                                  style: const TextStyle(fontSize: 11.5)),
                               trailing: StatusChip(
                                 label: c.statusLabel,
                                 color: _statusColor(c.status),
@@ -383,7 +429,7 @@ class _FinancesScreenState extends State<FinancesScreen> {
           ? FloatingActionButton.extended(
               onPressed: _openForm,
               icon: const Icon(Icons.add),
-              label: const Text('Ajouter'),
+              label: const Text('Ajouter', style: TextStyle(fontSize: 13.5)),
             )
           : null,
     );
@@ -432,7 +478,7 @@ class _SousOnglets extends StatelessWidget {
                     i == 0 ? 'Contributions' : 'Finances complètes',
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 13,
+                      fontSize: 12.5,
                       fontWeight:
                           index == i ? FontWeight.bold : FontWeight.normal,
                       color: index == i

@@ -21,6 +21,8 @@ class MereBadge extends StatelessWidget {
         style: TextStyle(
           color: AppTheme.violetProfond,
           fontWeight: FontWeight.bold,
+          // Maquette : pastille 11,5 px (.badge).
+          fontSize: 11.5,
         ),
       ),
       backgroundColor: AppTheme.orClair,

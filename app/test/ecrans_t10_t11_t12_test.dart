@@ -95,6 +95,10 @@ Future<void> _ouvrir(WidgetTester tester, Widget ecran) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 500));
   await tester.pump(const Duration(milliseconds: 500));
+  // Certains écrans chargent en chaîne (Mandats : membres, réunions,
+  // paramètres puis onglets) : on laisse la chaîne se terminer, sinon
+  // l'état vide n'est pas encore construit quand on le cherche.
+  await tester.pumpAndSettle();
   expect(tester.takeException(), isNull);
 }
 
@@ -154,26 +158,31 @@ void main() {
       );
     });
 
-    testWidgets('Mandats et nominations : état vide, deux onglets',
+    testWidgets('Mandats et nominations : état vide, quatre onglets',
         (tester) async {
       await _testerEcran(
         tester,
         const MandatsScreen(),
         titre: 'Mandats et nominations',
-        attendus: ['Mandats en cours', 'Nominations', 'Aucun mandat en cours.'],
+        attendus: [
+          'Mandats en cours',
+          'Nominations',
+          'Procès-verbaux',
+          'Documents',
+        ],
+        contenus: ['Aucun mandat en cours'],
       );
     });
 
-    testWidgets('Conseil et procès-verbaux : état vide, trois onglets',
+    testWidgets('Conseil et décisions : état vide, deux onglets',
         (tester) async {
       await _testerEcran(
         tester,
         const ReunionsConseilScreen(),
-        titre: 'Conseil et procès-verbaux',
+        titre: 'Conseil et décisions',
         attendus: [
           'Réunions',
           'Décisions',
-          'Procès-verbaux',
           'Aucune réunion.',
         ],
       );
@@ -184,7 +193,7 @@ void main() {
         tester,
         const DocumentsScreen(),
         titre: 'Documents',
-        attendus: ['Aucun document classé.'],
+        contenus: ['Aucun document classé'],
       );
     });
 
@@ -202,24 +211,23 @@ void main() {
         tester,
         const PatrimoineScreen(),
         titre: 'Patrimoine',
-        attendus: ['Biens', 'Maintenance', 'Aucun bien.'],
+        attendus: ['Biens', 'Maintenance'],
+        contenus: ['Aucun bien'],
       );
     });
   });
 
   group('T11 confiance', () {
-    testWidgets('Réglages et confiance : les 5 entrées Confiance',
+    testWidgets('Réglages et confidentialité : les 3 cartes Confiance',
         (tester) async {
       await _testerEcran(
         tester,
         const SettingsScreen(),
-        titre: 'Réglages et confiance',
+        titre: 'Réglages et confidentialité',
         attendus: [
-          'Sauvegardes',
-          'File hors ligne',
           'Double authentification',
           'Journal d’audit',
-          'Notifications',
+          'Mot de passe',
         ],
       );
     });
@@ -278,7 +286,7 @@ void main() {
         tester,
         const PromessesScreen(),
         titre: 'Promesses de don',
-        attendus: ['Aucune promesse.', 'Nouvelle promesse'],
+        attendus: ['Aucune promesse de don en cours.', 'Nouvelle promesse'],
       );
     });
 
@@ -288,7 +296,7 @@ void main() {
         const DonsNatureScreen(),
         titre: 'Dons en nature',
         attendus: [
-          'Aucun don en nature.',
+          'Aucun don en nature enregistré.',
           'Nouveau don en nature'
         ],
       );

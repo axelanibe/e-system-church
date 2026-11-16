@@ -103,7 +103,7 @@ class _AbonnementScreenState extends State<AbonnementScreen> {
                   const SizedBox(height: 12),
                   FilledButton(
                     onPressed: _refresh,
-                    child: const Text('Réessayer'),
+                    child: const Text('Réessayer', style: TextStyle(fontSize: 13.5)),
                   ),
                 ],
               ),
@@ -188,7 +188,7 @@ class _VueMere extends StatelessWidget {
             ),
           ),
         ],
-        const SectionTitle(title: 'Mon plan'),
+        const SectionTitle(title: 'Mon plan', taille: 15),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -197,40 +197,55 @@ class _VueMere extends StatelessWidget {
               children: [
                 const Text(
                   'Abonnement annuel',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${formatFcfa(abonnement.montantFcfa)} par an. '
                   'Il couvre l’église mère et toutes ses annexes.',
-                  style: const TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: 13),
                 ),
                 const SizedBox(height: 12),
                 const Text(
                   'Essai gratuit',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${abonnement.essaiJours} jours',
-                  style: const TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: 13.5),
+                ),
+                const Text(
+                  'Pour essayer l’application avant de payer.',
+                  style: TextStyle(fontSize: 12.5),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   'Statut : ${abonnement.statutLibelle}',
-                  style: const TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: 13),
                 ),
-                Text(
-                  abonnement.dateExpiration == null
-                      ? 'Date d’expiration : À compléter'
-                      : 'Date d’expiration : ${formatDate(abonnement.dateExpiration)}',
-                  style: const TextStyle(fontSize: 16),
-                ),
+                if (abonnement.dateExpiration == null)
+                  // État vide atténué, pas une valeur : aucune date
+                  // d'expiration n'est connue.
+                  Text(
+                    'Date d’expiration : À compléter',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant,
+                    ),
+                  )
+                else
+                  Text(
+                    'Date d’expiration : ${formatDate(abonnement.dateExpiration)}',
+                    style: const TextStyle(fontSize: 13),
+                  ),
               ],
             ),
           ),
         ),
-        const SectionTitle(title: 'Durée'),
+        const SectionTitle(title: 'Durée', taille: 15),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -239,7 +254,7 @@ class _VueMere extends StatelessWidget {
               children: [
                 const Text(
                   'Choisissez la durée. La remise grandit avec la durée.',
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 12.5),
                 ),
                 RadioGroup<int>(
                   groupValue: dureeAnnees,
@@ -256,13 +271,13 @@ class _VueMere extends StatelessWidget {
                         title: Text(
                           '$duree ${duree == 1 ? 'an' : 'ans'} '
                           '${formatFcfa(tarif)}',
-                          style: const TextStyle(fontSize: 16),
+                          style: const TextStyle(fontSize: 14),
                         ),
                         subtitle: ancien == null
                             ? null
                             : Text(
                                 'au lieu de ${formatFcfa(ancien)}',
-                                style: const TextStyle(fontSize: 16),
+                                style: const TextStyle(fontSize: 11.5),
                               ),
                       );
                     }).toList(),
@@ -272,18 +287,18 @@ class _VueMere extends StatelessWidget {
                 Text(
                   'Total pour $dureeAnnees ${dureeAnnees == 1 ? 'an' : 'ans'} : ${formatFcfa(totalAffiche)}',
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
+                      fontSize: 13, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 const Text(
                   'La remise de durée est déjà incluse dans le total affiché.',
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 12),
                 ),
               ],
             ),
           ),
         ),
-        const SectionTitle(title: 'Code promo'),
+        const SectionTitle(title: 'Code promo', taille: 15),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -306,7 +321,7 @@ class _VueMere extends StatelessWidget {
                     const SizedBox(width: 12),
                     FilledButton(
                       onPressed: envoiPromo ? null : onAppliquer,
-                      child: const Text('Appliquer'),
+                      child: const Text('Appliquer', style: TextStyle(fontSize: 12.5)),
                     ),
                   ],
                 ),
@@ -322,11 +337,11 @@ class _VueMere extends StatelessWidget {
                 const SizedBox(height: 8),
                 const Text(
                   'La réduction dépend du code.',
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 12.5),
                 ),
                 const Text(
                   'Codes promo réservés au lancement, avec une date de fin.',
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 12.5),
                 ),
               ],
             ),
@@ -341,19 +356,19 @@ class _VueMere extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Important',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  'IMPORTANT',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'À l’expiration, l’application passe en lecture seule.',
-                  style: TextStyle(fontSize: 16),
+                  'À l’expiration, l’application passe en lecture seule, toutes les fonctionnalités s’interrompent automatiquement.',
+                  style: TextStyle(fontSize: 14),
                 ),
                 SizedBox(height: 8),
                 Text(
                   'Rappels avant l’expiration, puis 30 jours de grâce '
                   'avant la lecture seule.',
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 12.5),
                 ),
               ],
             ),
@@ -362,20 +377,14 @@ class _VueMere extends StatelessWidget {
         const SizedBox(height: 16),
         FilledButton(
           onPressed: onRenouveler,
-          child: const Text('Renouveler mon abonnement'),
+          child: const Text('Renouveler mon abonnement', style: TextStyle(fontSize: 13.5)),
         ),
         const SizedBox(height: 16),
         if (estMere) ...[
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const AbonnementScreen(vueAnnexe: true),
-                ),
-              );
-            },
-            child: const Text('Voir la vue d’une annexe'),
-          ),
+          // Lien « Voir la vue d'une annexe » retiré (maquette, écran
+          // 13 ; audit : Axel l'a supprimé). L'annexe voit sa propre
+          // vue automatiquement (abonnement.estAnnexe), sans passer
+          // par un lien depuis l'écran mère.
           const Text(
             'Une annexe voit un écran différent, sans paiement.',
             textAlign: TextAlign.center,

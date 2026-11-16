@@ -3,16 +3,17 @@ import 'package:provider/provider.dart';
 
 import '../config/app_theme.dart';
 import '../models/gouvernance.dart';
-import '../models/parametres.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
 import '../widgets/liste_avec_fab.dart';
 
-/// T10 — Réunions du conseil, décisions et procès-verbaux. Le
-/// signataire d'un procès-verbal est prérempli depuis les paramètres
-/// de l'église quand il est renseigné, sinon il reste à compléter.
+/// T10 — Réunions du conseil et décisions. Les procès-verbaux ont
+/// déménagé dans le hub Mandats et nominations (maquette, écran 7) :
+/// cet écran ne garde que ses 2 premiers onglets. Plus aucune carte
+/// de Gouvernance n'y pointe : il reste joignable par son nom, à
+/// retirer si personne ne le rouvre.
 class ReunionsConseilScreen extends StatefulWidget {
   final int ongletInitial;
 
@@ -29,21 +30,16 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
   // vide affiche déjà le bouton de création (un seul bouton).
   bool _reunionsVides = false;
   bool _decisionsVides = false;
-  bool _pvVides = false;
   late Future<List<ReunionConseil>> _reunionsFuture;
   late Future<List<Decision>> _decisionsFuture;
-  late Future<List<ProcesVerbal>> _pvFuture;
-  late Future<EgliseParametres> _parametresFuture;
 
   @override
   void initState() {
     super.initState();
-    _tab = widget.ongletInitial;
+    _tab = widget.ongletInitial.clamp(0, 1);
     final api = context.read<AppState>().api;
     _reunionsFuture = api.getReunionsConseil();
     _decisionsFuture = api.getDecisions();
-    _pvFuture = api.getProcesVerbaux();
-    _parametresFuture = api.getParametres();
   }
 
   void _refresh() {
@@ -51,7 +47,6 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
     setState(() {
       if (_tab == 0) _reunionsFuture = api.getReunionsConseil();
       if (_tab == 1) _decisionsFuture = api.getDecisions();
-      if (_tab == 2) _pvFuture = api.getProcesVerbaux();
     });
   }
 
@@ -148,94 +143,7 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
     );
   }
 
-  Future<void> _createPv(
-    List<ReunionConseil> reunions,
-    String? signataireDefaut,
-  ) async {
-    String? reunionId = reunions.isEmpty ? null : reunions.first.id;
-    final numeroController = TextEditingController();
-    final contenuController = TextEditingController();
-    final dateController = TextEditingController();
-    final signataireController =
-        TextEditingController(text: signataireDefaut ?? '');
-    await showCreateDialog(
-      context: context,
-      title: 'Nouveau procès-verbal',
-      saveLabel: 'Créer',
-      fields: [
-        dialogDropdown<String?>(
-          value: reunionId,
-          label: 'Réunion',
-          options: {
-            null: 'Aucune',
-            for (final r in reunions) r.id: r.titre,
-          },
-          onChanged: (v) => reunionId = v,
-        ),
-        dialogTextField(controller: numeroController, label: 'Numéro'),
-        dialogTextField(
-          controller: contenuController,
-          label: 'Contenu',
-          maxLines: 5,
-        ),
-        dialogDateField(
-          context: context,
-          controller: dateController,
-          label: 'Date du procès-verbal',
-        ),
-        dialogTextField(
-          controller: signataireController,
-          label: 'Signataire',
-        ),
-      ],
-      isValid: () => contenuController.text.trim().isNotEmpty,
-      onSave: () async {
-        try {
-          await context.read<AppState>().api.createProcesVerbal(
-                reunionId: reunionId,
-                numero: _opt(numeroController),
-                contenu: contenuController.text.trim(),
-                datePv: _opt(dateController),
-                signataire: _opt(signataireController),
-              );
-          if (mounted) showSuccess(context, 'Procès-verbal créé.');
-          _refresh();
-        } catch (e) {
-          if (mounted) showApiError(context, e);
-        }
-      },
-    );
-  }
 
-  Future<void> _signer(ProcesVerbal pv, String? signataireDefaut) async {
-    final signataireController = TextEditingController(
-      text: pv.signataire ?? signataireDefaut ?? '',
-    );
-    await showCreateDialog(
-      context: context,
-      title: 'Signer le procès-verbal',
-      saveLabel: 'Signer',
-      fields: [
-        dialogTextField(
-          controller: signataireController,
-          label: 'Signataire',
-        ),
-      ],
-      isValid: () => signataireController.text.trim().isNotEmpty,
-      onSave: () async {
-        try {
-          await context.read<AppState>().api.signerProcesVerbal(
-                pv.id,
-                signataire: signataireController.text.trim(),
-              );
-          if (mounted) showSuccess(context, 'Procès-verbal signé.');
-          _refresh();
-        } catch (e) {
-          if (mounted) showApiError(context, e);
-        }
-      },
-    );
-  }
 
   Future<void> _supprimerReunion(ReunionConseil reunion) async {
     final confirmed = await confirmDelete(
@@ -267,20 +175,6 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
     }
   }
 
-  Future<void> _supprimerPv(ProcesVerbal pv) async {
-    final confirmed = await confirmDelete(
-      context,
-      'Supprimer définitivement le procès-verbal « ${pv.numero ?? 'sans numéro'} » ?',
-    );
-    if (!confirmed || !mounted) return;
-    try {
-      await context.read<AppState>().api.deleteProcesVerbal(pv.id);
-      if (mounted) showSuccess(context, 'Procès-verbal supprimé.');
-      _refresh();
-    } catch (e) {
-      if (mounted) showApiError(context, e);
-    }
-  }
 
   Widget _reunionsTab() {
     return FutureBuilder<List<ReunionConseil>>(
@@ -322,10 +216,11 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
                 leading: const CircleAvatar(
                   child: Icon(Icons.event_available_outlined),
                 ),
-                title: Text(r.titre),
+                title: Text(r.titre, style: const TextStyle(fontSize: 13.5)),
                 subtitle: Text(
                   '${afficherDateTime(r.dateReunion)}'
                   '${r.lieu != null ? ' · ${r.lieu}' : ''}',
+                  style: const TextStyle(fontSize: 11.5),
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -399,10 +294,11 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
                 leading: const CircleAvatar(
                   child: Icon(Icons.gavel_outlined),
                 ),
-                title: Text(d.titre),
+                title: Text(d.titre, style: const TextStyle(fontSize: 13.5)),
                 subtitle: Text(
                   '${d.reunionId != null ? '${reunionsNoms[d.reunionId] ?? '—'} · ' : ''}'
                   '${d.dateDecision != null ? afficherDate(d.dateDecision) : 'Date à compléter'}',
+                  style: const TextStyle(fontSize: 11.5),
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -429,105 +325,23 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
     );
   }
 
-  Widget _pvTab(Map<String, String> reunionsNoms, String? signataireDefaut) {
-    return FutureBuilder<List<ProcesVerbal>>(
-      future: _pvFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const AppLoading();
-        }
-        if (snapshot.hasError) {
-          return AppError(
-            message: snapshot.error.toString(),
-            onRetry: _refresh,
-          );
-        }
-        final items = snapshot.data!;
-        if (items.isEmpty != _pvVides) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _pvVides != items.isEmpty) {
-              setState(() => _pvVides = items.isEmpty);
-            }
-          });
-        }
-        if (items.isEmpty) {
-          return EmptyState(
-            icon: Icons.description_outlined,
-            message: 'Aucun procès-verbal.',
-            actionLabel: 'Créer un procès-verbal',
-            onAction: () async {
-              try {
-                final reunions = await _reunionsFuture;
-                if (mounted) await _createPv(reunions, signataireDefaut);
-              } catch (e) {
-                if (context.mounted) showApiError(context, e);
-              }
-            },
-          );
-        }
-        return ListeAvecFab(
-          child: RefreshIndicator(
-            onRefresh: () async => _refresh(),
-            child: ListView.builder(
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                final pv = items[index];
-              return ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.description_outlined),
-                ),
-                title: Text(pv.numero ?? 'Sans numéro'),
-                subtitle: Text(
-                  '${pv.reunionId != null ? '${reunionsNoms[pv.reunionId] ?? '—'} · ' : ''}'
-                  '${pv.datePv != null ? afficherDate(pv.datePv) : 'Date à compléter'}'
-                  '${pv.signataire != null ? ' · ${pv.signataire}' : ''}',
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    StatusChip(
-                      label: pv.statutLabel,
-                      color: pv.statut == 'signe'
-                          ? AppTheme.violetProfond
-                          : Colors.grey,
-                    ),
-                    if (pv.statut == 'brouillon')
-                      IconButton(
-                        icon: const Icon(Icons.draw_outlined),
-                        tooltip: 'Signer',
-                        onPressed: () => _signer(pv, signataireDefaut),
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      tooltip: 'Supprimer',
-                      onPressed: () => _supprimerPv(pv),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 2,
       initialIndex: _tab,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Conseil et procès-verbaux'),
+          title: const Text('Conseil et décisions'),
           bottom: TabBar(
             isScrollable: true,
+            labelStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+            unselectedLabelStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
             onTap: (i) => setState(() => _tab = i),
             tabs: const [
               Tab(text: 'Réunions'),
               Tab(text: 'Décisions'),
-              Tab(text: 'Procès-verbaux'),
             ],
           ),
         ),
@@ -547,25 +361,16 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
             final reunionsNoms = {
               for (final r in reunionsSnapshot.data!) r.id: r.titre
             };
-            return FutureBuilder<EgliseParametres>(
-              future: _parametresFuture,
-              builder: (context, paramsSnapshot) {
-                final signataireDefaut =
-                    paramsSnapshot.data?.signataireProcesVerbaux;
-                return TabBarView(
-                  children: [
-                    _reunionsTab(),
-                    _decisionsTab(reunionsNoms),
-                    _pvTab(reunionsNoms, signataireDefaut),
-                  ],
-                );
-              },
+            return TabBarView(
+              children: [
+                _reunionsTab(),
+                _decisionsTab(reunionsNoms),
+              ],
             );
           },
         ),
         floatingActionButton: ((_tab == 0 && _reunionsVides) ||
-                (_tab == 1 && _decisionsVides) ||
-                (_tab == 2 && _pvVides))
+                (_tab == 1 && _decisionsVides))
             ? null
             : FloatingActionButton.extended(
                 onPressed: () async {
@@ -574,21 +379,15 @@ class _ReunionsConseilScreenState extends State<ReunionsConseilScreen> {
                     if (!mounted) return;
                     if (_tab == 0) {
                       await _createReunion();
-                    } else if (_tab == 1) {
-                      await _createDecision(reunions);
                     } else {
-                      final params = await _parametresFuture;
-                      if (mounted) {
-                        await _createPv(
-                            reunions, params.signataireProcesVerbaux);
-                      }
+                      await _createDecision(reunions);
                     }
                   } catch (e) {
                     if (context.mounted) showApiError(context, e);
                   }
                 },
                 icon: const Icon(Icons.add),
-                label: const Text('Ajouter'),
+                label: const Text('Ajouter', style: TextStyle(fontSize: 13.5)),
               ),
       ),
     );

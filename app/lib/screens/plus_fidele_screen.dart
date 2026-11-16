@@ -11,6 +11,7 @@ import 'journal_screen.dart';
 import 'mes_attestations_screen.dart';
 import 'parametres_fidele_screen.dart';
 import 'rendez_vous_screen.dart';
+import 'transparence_screen.dart';
 
 /// Menu Plus du fidèle (tranches P1, P2, P4).
 /// Ordre de la projection : Prendre rendez-vous, Mon journal,
@@ -100,6 +101,15 @@ class PlusFideleScreen extends StatelessWidget {
                 },
               ),
               _LigneMenu(
+                icone: Icons.visibility_outlined,
+                titre: 'Transparence financière',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const TransparenceScreen(),
+                  ),
+                ),
+              ),
+              _LigneMenu(
                 icone: Icons.settings_outlined,
                 titre: 'Paramètres',
                 onTap: () => Navigator.of(context).push(
@@ -127,7 +137,7 @@ class PlusFideleScreen extends StatelessWidget {
             children: [
               ListTile(
                 leading: const Icon(Icons.visibility_outlined),
-                title: const Text('Voir l’espace admin'),
+                title: const Text('Voir l’espace admin', style: TextStyle(fontSize: 13.5)),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
                   if (apercu) {
@@ -139,7 +149,7 @@ class PlusFideleScreen extends StatelessWidget {
                 leading: const Icon(Icons.logout, color: Colors.red),
                 title: const Text(
                   'Se déconnecter',
-                  style: TextStyle(color: Colors.red),
+                  style: TextStyle(color: Colors.red, fontSize: 13.5),
                 ),
                 onTap: () => context.read<AppState>().logout(),
               ),
@@ -152,6 +162,7 @@ class PlusFideleScreen extends StatelessWidget {
             'Tu es un don de Dieu',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppTheme.orFonce,
+                  fontSize: 12.5,
                 ),
           ),
         ),
@@ -176,7 +187,7 @@ class _LigneMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icone),
-      title: Text(titre),
+      title: Text(titre, style: const TextStyle(fontSize: 13.5)),
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
     );

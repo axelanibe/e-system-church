@@ -28,9 +28,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   final _titreController = TextEditingController();
   final _messageController = TextEditingController();
-  final _fournisseurController = TextEditingController();
-  final _plafondController = TextEditingController();
   String _canal = 'push';
+
+  /// Destinataires (maquette, écran 16) : « Tous les membres » seul
+  /// choix pour l'instant, la création ne cible pas un membre.
+  String _destinataires = 'tous';
 
   @override
   void initState() {
@@ -42,8 +44,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void dispose() {
     _titreController.dispose();
     _messageController.dispose();
-    _fournisseurController.dispose();
-    _plafondController.dispose();
     super.dispose();
   }
 
@@ -60,10 +60,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       setState(() {
         _parametres = parametres;
         _notifications = notifications;
-        _fournisseurController.text =
-            parametres.notificationFournisseur ?? '';
-        _plafondController.text =
-            parametres.notificationPlafondMensuel.toString();
         _chargement = false;
       });
     } catch (e) {
@@ -120,28 +116,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  Future<void> _sauverParametres() async {
-    final plafond = int.tryParse(_plafondController.text.trim());
-    try {
-      final parametres =
-          await context.read<AppState>().api.patchParametresConfiance(
-                notificationFournisseur:
-                    _fournisseurController.text.trim().isEmpty
-                        ? null
-                        : _fournisseurController.text.trim(),
-                notificationPlafondMensuel: plafond,
-              );
-      if (!mounted) return;
-      setState(() {
-        _parametres = parametres;
-        _message = 'Paramètres enregistrés.';
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _erreur = messageErreurSimple(e));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -177,7 +151,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         children: [
                           const Text(
                             'Fournisseur',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 11.5),
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -188,47 +163,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           const SizedBox(height: 8),
                           const Text(
                             'La clé du fournisseur se saisit dans Réglages et confidentialité.',
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _fournisseurController,
-                            decoration: const InputDecoration(
-                              labelText: 'Fournisseur',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _plafondController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Plafond mensuel',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          SwitchListTile(
-                            value: _parametres?.notificationsActives ?? false,
-                            title: const Text('Notifications actives'),
-                            onChanged: (valeur) async {
-                              try {
-                                final parametres = await context
-                                    .read<AppState>()
-                                    .api
-                                    .patchParametresConfiance(
-                                        notificationsActives: valeur);
-                                if (!mounted) return;
-                                setState(() => _parametres = parametres);
-                              } catch (e) {
-                                if (!mounted) return;
-                                setState(
-                                    () => _erreur = messageErreurSimple(e));
-                              }
-                            },
-                          ),
-                          FilledButton(
-                            onPressed: _sauverParametres,
-                            child: const Text('Enregistrer les paramètres'),
                           ),
                         ],
                       ),
@@ -243,7 +177,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         children: [
                           const Text(
                             'Nouvelle notification',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 11.5),
+                          ),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<String>(
+                            initialValue: _destinataires,
+                            decoration: const InputDecoration(
+                              labelText: 'Destinataires',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                  value: 'tous',
+                                  child: Text('Tous les membres', style: TextStyle(fontSize: 13.5))),
+                            ],
+                            onChanged: (valeur) {
+                              if (valeur != null) {
+                                setState(() => _destinataires = valeur);
+                              }
+                            },
                           ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
@@ -254,9 +207,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             ),
                             items: const [
                               DropdownMenuItem(
-                                  value: 'push', child: Text('Push')),
+                                  value: 'push', child: Text('Push', style: TextStyle(fontSize: 13.5))),
                               DropdownMenuItem(
-                                  value: 'sms', child: Text('SMS')),
+                                  value: 'sms', child: Text('SMS', style: TextStyle(fontSize: 13.5))),
                             ],
                             onChanged: (valeur) {
                               if (valeur != null) {
@@ -284,7 +237,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           const SizedBox(height: 12),
                           FilledButton(
                             onPressed: _creer,
-                            child: const Text('Créer la notification'),
+                            child: const Text('Créer la notification', style: TextStyle(fontSize: 13.5)),
                           ),
                         ],
                       ),
@@ -293,14 +246,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   const SizedBox(height: 16),
                   const Text(
                     'Boîte d’envoi',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
                   ),
                   const SizedBox(height: 8),
                   if (_notifications.isEmpty)
                     const Card(
                       child: Padding(
                         padding: EdgeInsets.all(16),
-                        child: Text('Aucune notification.'),
+                        child: Text('Aucune notification.', style: TextStyle(fontSize: 13)),
                       ),
                     ),
                   for (final notification in _notifications)
@@ -315,16 +268,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             color: AppTheme.orFonce,
                           ),
                         ),
-                        title: Text(notification.titre),
+                        title: Text(notification.titre, style: const TextStyle(fontSize: 13.5)),
                         subtitle: Text(
                           '${notification.canalLabel} · ${notification.statutLabel} · ${formatDateTime(notification.createdAt)}'
                           '${notification.erreur == null ? '' : '\n${notification.erreur}'}',
+                          style: const TextStyle(fontSize: 11.5),
                         ),
                         isThreeLine: notification.erreur != null,
                         trailing: notification.statut == 'en_attente'
                             ? TextButton(
                                 onPressed: () => _envoyer(notification),
-                                child: const Text('Envoyer'),
+                                child: const Text('Envoyer', style: TextStyle(fontSize: 13.5)),
                               )
                             : null,
                       ),

@@ -85,7 +85,7 @@ class _RecusScreenState extends State<RecusScreen> {
                   'Cotisations': 'cotisation',
                 }.entries)
                   ChoiceChip(
-                    label: Text(entry.key),
+                    label: Text(entry.key, style: const TextStyle(fontSize: 12.5)),
                     selected: _typeFilter == entry.value,
                     onSelected: (_) {
                       setState(() {
@@ -129,12 +129,14 @@ class _RecusScreenState extends State<RecusScreen> {
                           leading: const Icon(
                               Icons.receipt_long_outlined),
                           title: Text(
-                            '${c.recuNumero ?? 'Sans numéro'} — ${c.typeLabel} · ${formatMontant(c.amountFcfa, state.devise)}',
+                            '${c.recuNumero != null ? '${c.recuNumero} — ' : ''}${c.typeLabel} · ${formatMontant(c.amountFcfa, state.devise)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13.5),
                           ),
                           subtitle: Text(
                             '${c.paymentLabel}${c.membreNom != null ? ' · ${c.membreNom}' : ''} · ${formatDate(c.createdAt)}',
+                            style: const TextStyle(fontSize: 11.5),
                           ),
                           trailing: IconButton(
                             icon: const Icon(Icons.share_outlined),

@@ -94,19 +94,29 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
         departements.isEmpty ? null : departements.first.id;
     final roleController = TextEditingController(text: '');
     final disponibiliteController = TextEditingController();
+    // Maquette, écran 6 : quand aucun membre n'existe, le champ
+    // Membre affiche « Aucun membre — ajoutez d'abord un membre »
+    // au lieu d'une liste vide.
+    final champMembre = membres.isEmpty
+        ? const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Text('Aucun membre — ajoutez d’abord un membre', style: TextStyle(fontSize: 12.5)),
+          )
+        : dialogDropdown<String?>(
+            value: memberId,
+            label: 'Membre',
+            options: {
+              for (final m in membres)
+                m.id: '${m.fullName} (${m.matricule})',
+            },
+            onChanged: (v) => memberId = v,
+          );
     await showCreateDialog(
       context: context,
       title: 'Affecter un serviteur',
       saveLabel: 'Affecter',
       fields: [
-        dialogDropdown<String?>(
-          value: memberId,
-          label: 'Membre',
-          options: {
-            for (final m in membres) m.id: '${m.fullName} (${m.matricule})',
-          },
-          onChanged: (v) => memberId = v,
-        ),
+        champMembre,
         dialogDropdown<String?>(
           value: departementId,
           label: 'Département',
@@ -210,14 +220,15 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
             initialValue: _departementFilter,
             decoration: const InputDecoration(
               labelText: 'Département',
+              labelStyle: TextStyle(fontSize: 10.5),
               border: OutlineInputBorder(),
               isDense: true,
             ),
             items: [
               const DropdownMenuItem<String?>(
-                  value: null, child: Text('Tous les départements')),
+                  value: null, child: Text('Tous les départements', style: TextStyle(fontSize: 13.5))),
               for (final d in departements)
-                DropdownMenuItem<String?>(value: d.id, child: Text(d.nom)),
+                DropdownMenuItem<String?>(value: d.id, child: Text(d.nom, style: const TextStyle(fontSize: 13.5))),
             ],
             onChanged: (value) {
               setState(() {
@@ -257,8 +268,9 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.volunteer_activism_outlined,
+                  // État vide de la maquette, écran 6.
                   message: snapshot.data!.isEmpty
-                      ? 'Aucun serviteur.'
+                      ? 'Aucun serviteur\nLes affectations des serviteurs s’afficheront ici.'
                       : 'Aucun serviteur ne correspond à la recherche.',
                   actionLabel: 'Affecter un serviteur',
                   onAction: () async {
@@ -285,10 +297,11 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
                         leading: const CircleAvatar(
                           child: Icon(Icons.volunteer_activism_outlined),
                         ),
-                        title: Text(noms[s.memberId] ?? s.memberId),
+                        title: Text(noms[s.memberId] ?? s.memberId, style: const TextStyle(fontSize: 13.5)),
                         subtitle: Text(
                           '${departementsNoms[s.departementId] ?? '—'} · ${s.role}'
                           '${s.disponibilite != null ? ' · ${s.disponibilite}' : ''}',
+                          style: const TextStyle(fontSize: 11.5),
                         ),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete_outline),
@@ -307,7 +320,12 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
     );
   }
 
-  Widget _planningTab(Map<String, String> noms, List<Culte> cultes) {
+  Widget _planningTab(
+    Map<String, String> noms,
+    List<Culte> cultes,
+    List<Member> membres,
+    List<Departement> departements,
+  ) {
     final cultesTitres = {for (final c in cultes) c.id: c.titre};
     return Column(
       children: [
@@ -343,19 +361,28 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.calendar_month_outlined,
+                  // État vide de la maquette, écran 6.
                   message: snapshot.data!.isEmpty
-                      ? 'Aucun service.'
+                      ? 'Planning vide : aucun serviteur affecté.'
                       : 'Aucun service ne correspond à la recherche.',
-                  actionLabel: 'Planifier un service',
+                  // Planning vide : on affecte d'abord un serviteur,
+                  // on ne planifie pas un service sans serviteur.
+                  actionLabel: snapshot.data!.isEmpty
+                      ? 'Affecter un serviteur'
+                      : 'Planifier un service',
                   onAction: () async {
+                    if (snapshot.data!.isEmpty) {
+                      await _createServiteur(membres, departements);
+                      return;
+                    }
                     try {
                       final serviteurs = await _serviteursFuture;
                       final cultesList = await _cultesFuture;
-                      final membres =
+                      final membresList =
                           (await _membresFuture).membres;
                       if (!mounted) return;
                       final nomsMembres = {
-                        for (final m in membres) m.id: m.fullName
+                        for (final m in membresList) m.id: m.fullName
                       };
                       await _createPlanning(
                           serviteurs, cultesList, nomsMembres);
@@ -376,11 +403,12 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
                         leading: const CircleAvatar(
                           child: Icon(Icons.calendar_month_outlined),
                         ),
-                        title: Text(noms[p.serviteurId] ?? p.serviteurId),
+                        title: Text(noms[p.serviteurId] ?? p.serviteurId, style: const TextStyle(fontSize: 13.5)),
                         subtitle: Text(
                           '${afficherDate(p.dateService)}'
                           '${p.culteId != null ? ' · ${cultesTitres[p.culteId] ?? '—'}' : ''}'
                           '${p.roleService != null ? ' · ${p.roleService}' : ''}',
+                          style: const TextStyle(fontSize: 11.5),
                         ),
                         trailing: StatusChip(
                           label: p.statutLabel,
@@ -411,6 +439,8 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
           title: const Text('Serviteurs'),
           bottom: TabBar(
             isScrollable: true,
+            labelStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+            unselectedLabelStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
             onTap: (i) => setState(() {
               _tab = i;
               _query = '';
@@ -422,7 +452,21 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
             ],
           ),
         ),
-        body: FutureBuilder<List<dynamic>>(
+        body: Column(
+          children: [
+            // Maquette, écran 6 : sous-titre 12,5 px.
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Affectations et planning des serviteurs.',
+                  style: TextStyle(fontSize: 12.5),
+                ),
+              ),
+            ),
+            Expanded(
+              child: FutureBuilder<List<dynamic>>(
           future: Future.wait([
             _membresFuture,
             _departementsFuture,
@@ -463,12 +507,16 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
                 return TabBarView(
                   children: [
                     _serviteursTab(noms, departementsNoms, departements),
-                    _planningTab(serviteurNoms, cultes),
+                    _planningTab(
+                        serviteurNoms, cultes, membres, departements),
                   ],
                 );
               },
             );
           },
+              ),
+            ),
+          ],
         ),
         floatingActionButton: ((_tab == 0 && _serviteursVides) ||
                 (_tab == 1 && _planningVides))
@@ -498,7 +546,8 @@ class _ServiteursScreenState extends State<ServiteursScreen> {
                 },
                 icon: const Icon(Icons.add),
                 label: Text(
-                    _tab == 0 ? 'Nouveau serviteur' : 'Nouveau service'),
+                    _tab == 0 ? 'Nouveau serviteur' : 'Nouveau service',
+                    style: const TextStyle(fontSize: 13.5)),
               ),
       ),
     );

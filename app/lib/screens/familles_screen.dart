@@ -15,6 +15,13 @@ import '../widgets/dialog_helpers.dart';
 /// l'onglet Départements ; les fonctions et les postes sont des options
 /// dans les formulaires où on les attribue.
 ///
+/// [masquerCreation] : intégré dans l'onglet Familles de l'écran
+/// Membres (maquette écran 1), sans boutons de création : la création
+/// se fait dans l'écran Départements (maquette écran 4).
+/// [ongletUnique] : intégré comme un seul onglet de l'écran
+/// Départements (maquette écran 4), 0 Familles ou 1 Cellules, sans
+/// sa propre barre d'onglets ni défilement entre les deux.
+///
 /// Mise en page (maquette d'Axel, 14 novembre 2026) : bandeau violet
 /// avec les onglets Familles / Cellules (indicateur or) et la recherche
 /// blanche arrondie, état vide élégant, bouton flottant étendu. Le
@@ -23,7 +30,14 @@ import '../widgets/dialog_helpers.dart';
 /// pas ici : pas d'AppBar propre, pas de pastille logo, pas de barre
 /// de navigation du bas (la coque les fournit déjà).
 class FamillesScreen extends StatefulWidget {
-  const FamillesScreen({super.key});
+  final bool masquerCreation;
+  final int? ongletUnique;
+
+  const FamillesScreen({
+    super.key,
+    this.masquerCreation = false,
+    this.ongletUnique,
+  });
 
   @override
   State<FamillesScreen> createState() => _FamillesScreenState();
@@ -41,6 +55,7 @@ class _FamillesScreenState extends State<FamillesScreen> {
   @override
   void initState() {
     super.initState();
+    _tab = widget.ongletUnique ?? 0;
     _refreshAll();
   }
 
@@ -209,6 +224,9 @@ class _FamillesScreenState extends State<FamillesScreen> {
     required IconData icon,
     required String message,
     String? hint,
+    // Maquette écran 4 : titre 14 px (familles), 13 px pour la ligne
+    // vide des cellules (classe .emptyline).
+    double titleSize = 14,
   }) {
     // Défilant : sur un petit écran, les textes ne se chevauchent pas.
     return Center(
@@ -234,18 +252,18 @@ class _FamillesScreenState extends State<FamillesScreen> {
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                style: TextStyle(
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.bold,
                   color: AppTheme.violetProfond,
                 ),
               ),
               if (hint != null) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   hint,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: AppTheme.violetProfond.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
@@ -282,8 +300,13 @@ class _FamillesScreenState extends State<FamillesScreen> {
                 return _etatVide(
                   icon: Icons.family_restroom_outlined,
                   message: snapshot.data!.isEmpty
-                      ? 'Aucune famille.'
+                      ? 'Aucune famille'
                       : 'Aucune famille ne correspond à la recherche.',
+                  // Maquette écran 4 : la piste vers le bouton
+                  // + Famille, seulement quand il est affiché.
+                  hint: snapshot.data!.isEmpty && !widget.masquerCreation
+                      ? 'Créez votre première famille avec le bouton + Famille'
+                      : null,
                 );
               }
               return ListeAvecFab(
@@ -346,6 +369,7 @@ class _FamillesScreenState extends State<FamillesScreen> {
                   message: snapshot.data!.isEmpty
                       ? 'Aucune cellule.'
                       : 'Aucune cellule ne correspond à la recherche.',
+                  titleSize: 13,
                 );
               }
               return ListeAvecFab(
@@ -385,8 +409,12 @@ class _FamillesScreenState extends State<FamillesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Onglet unique (écran Départements) : pas de barre d'onglets
+    // propre ni de défilement entre Familles et Cellules.
+    final unique = widget.ongletUnique;
     return DefaultTabController(
       length: 2,
+      initialIndex: unique ?? 0,
       child: Scaffold(
         body: Column(
           children: [
@@ -398,25 +426,30 @@ class _FamillesScreenState extends State<FamillesScreen> {
               color: AppTheme.violetProfond,
               child: Column(
                 children: [
-                  TabBar(
-                    onTap: (i) => setState(() {
-                      _tab = i;
-                      _query = '';
-                      _searchController.clear();
-                    }),
-                    indicatorColor: AppTheme.or,
-                    indicatorWeight: 3,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: Colors.white60,
-                    labelStyle: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                  if (unique == null)
+                    TabBar(
+                      onTap: (i) => setState(() {
+                        _tab = i;
+                        _query = '';
+                        _searchController.clear();
+                      }),
+                      indicatorColor: AppTheme.or,
+                      indicatorWeight: 3,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: Colors.white60,
+                      labelStyle: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13.5,
+                      ),
+                      unselectedLabelStyle: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13.5,
+                      ),
+                      tabs: const [
+                        Tab(text: 'Familles'),
+                        Tab(text: 'Cellules'),
+                      ],
                     ),
-                    tabs: const [
-                      Tab(text: 'Familles'),
-                      Tab(text: 'Cellules'),
-                    ],
-                  ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     child: Container(
@@ -485,6 +518,9 @@ class _FamillesScreenState extends State<FamillesScreen> {
                   }
                   final membres = snapshot.data!.membres;
                   return TabBarView(
+                    physics: unique == null
+                        ? null
+                        : const NeverScrollableScrollPhysics(),
                     children: [
                       _famillesTab(membres),
                       _cellulesTab(membres),
@@ -495,23 +531,30 @@ class _FamillesScreenState extends State<FamillesScreen> {
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            try {
-              final membres = (await _membresFuture).membres;
-              if (!mounted) return;
-              if (_tab == 0) {
-                await _createFamille(membres);
-              } else {
-                await _createCellule(membres);
-              }
-            } catch (e) {
-              if (context.mounted) showApiError(context, e);
-            }
-          },
-          icon: const Icon(Icons.add),
-          label: Text(_tab == 0 ? 'Famille' : 'Cellule'),
-        ),
+        // Bouton de création masqué dans l'écran Membres (maquette
+        // écran 1) : la création se fait dans l'écran Départements.
+        floatingActionButton: widget.masquerCreation
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () async {
+                  try {
+                    final membres = (await _membresFuture).membres;
+                    if (!mounted) return;
+                    if (_tab == 0) {
+                      await _createFamille(membres);
+                    } else {
+                      await _createCellule(membres);
+                    }
+                  } catch (e) {
+                    if (context.mounted) showApiError(context, e);
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: Text(
+                  _tab == 0 ? 'Famille' : 'Cellule',
+                  style: const TextStyle(fontSize: 13.5),
+                ),
+              ),
       ),
     );
   }

@@ -9,6 +9,7 @@ import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
 import 'evenements_vie_screen.dart';
+import 'rendez_vous_admin_screen.dart';
 
 /// Module 6 — Suivi pastoral : radar des absences, parcours des
 /// nouveaux convertis, visites pastorales et accompagnements (T6 :
@@ -64,6 +65,13 @@ class _PastoralScreenState extends State<PastoralScreen> {
   int _seuil = 3;
   String? _visiteType;
   bool _casOuverts = false;
+
+  // Une section est-elle vide ? Sert à masquer le bouton de création
+  // de l'en-tête quand l'état vide affiche déjà le sien (motif
+  // Serviteurs : un seul bouton, pas deux).
+  bool _parcoursVides = false;
+  bool _visitesVides = false;
+  bool _accompagnementsVides = false;
 
   late Future<List<AlerteRadar>> _radarFuture;
   late Future<List<ParcoursNouveau>> _parcoursFuture;
@@ -135,7 +143,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
             .map((v) => Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
-                    label: Text(label(v)),
+                    label: Text(label(v), style: const TextStyle(fontSize: 12.5)),
                     selected: selection == v,
                     onSelected: (_) {
                       onSelect(v);
@@ -171,7 +179,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
             TextButton.icon(
               onPressed: onAjouter,
               icon: const Icon(Icons.add, size: 18),
-              label: Text(libelleAjouter ?? 'Ajouter'),
+              label: Text(libelleAjouter ?? 'Ajouter', style: const TextStyle(fontSize: 12.5)),
             ),
         ],
       ),
@@ -205,14 +213,20 @@ class _PastoralScreenState extends State<PastoralScreen> {
               const Expanded(
                 child: Text(
                   'Les membres absents plusieurs cultes de suite remontent ici.',
+                  // Maquette, écrans 5 et 39 : 12 px.
+                  style: TextStyle(fontSize: 12),
                 ),
               ),
               const SizedBox(width: 12),
+              // Maquette, écrans 5 et 39 : libellé « Seuil d'absence »
+              // devant le menu (défaut 16 px).
+              const Text('Seuil d’absence', style: TextStyle(fontSize: 10.5)),
+              const SizedBox(width: 8),
               DropdownButton<int>(
                 value: _seuil,
                 items: [
                   for (var s = 1; s <= 10; s++)
-                    DropdownMenuItem(value: s, child: Text('$s cultes')),
+                    DropdownMenuItem(value: s, child: Text('$s cultes', style: const TextStyle(fontSize: 13.5))),
                 ],
                 onChanged: (s) {
                   if (s == null) return;
@@ -252,11 +266,12 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       leading: const CircleAvatar(
                         child: Icon(Icons.favorite_outline),
                       ),
-                      title: Text(a.membreNom),
+                      title: Text(a.membreNom, style: const TextStyle(fontSize: 13.5)),
                       subtitle: Text(
                         'Absent ${a.absencesConsecutives} cultes de suite\n'
                         '${a.alerte}'
                         '${a.visiteMotif != null ? '\n${a.visiteMotif}' : ''}',
+                        style: const TextStyle(fontSize: 11.5),
                       ),
                       isThreeLine: true,
                       trailing: TextButton(
@@ -275,7 +290,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
                             if (context.mounted) showApiError(context, e);
                           }
                         },
-                        child: const Text('Visite'),
+                        child: const Text('Visite', style: TextStyle(fontSize: 12.5)),
                       ),
                     );
                   },
@@ -371,10 +386,16 @@ class _PastoralScreenState extends State<PastoralScreen> {
     String? memberId = memberIdPrefill ??
         (membres.isEmpty ? null : membres.first.id);
     String? type = typePrefill;
+    String priorite = 'normale';
     final dateController = TextEditingController();
     final motifController = TextEditingController(text: motifPrefill ?? '');
     final lieuController = TextEditingController();
     final compteRenduController = TextEditingController();
+    // Notes de suivi (maquette, écran 34) : réservées aux rôles
+    // autorisés, elles ne s'affichent que pour eux.
+    final notesController = TextEditingController();
+    final peutVoirNotes =
+        context.read<AppState>().canManageMembers;
     await showCreateDialog(
       context: context,
       title: 'Nouvelle visite pastorale',
@@ -402,11 +423,27 @@ class _PastoralScreenState extends State<PastoralScreen> {
         ),
         dialogTextField(controller: lieuController, label: 'Lieu'),
         dialogTextField(controller: motifController, label: 'Motif'),
+        // Priorité (maquette, écran 34). L'API de création des
+        // visites n'a pas encore de champ priorité ni notes de
+        // suivi : les champs sont affichés, leur enregistrement
+        // serveur demande une tranche serveur.
+        dialogDropdown<String>(
+          value: priorite,
+          label: 'Priorité',
+          options: _priorites,
+          onChanged: (v) => priorite = v ?? 'normale',
+        ),
         dialogTextField(
           controller: compteRenduController,
           label: 'Compte rendu',
           maxLines: 3,
         ),
+        if (peutVoirNotes)
+          dialogTextField(
+            controller: notesController,
+            label: 'Notes de suivi (facultatif)',
+            maxLines: 3,
+          ),
       ],
       isValid: () =>
           memberId != null && dateController.text.trim().isNotEmpty,
@@ -511,7 +548,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
                   isExpanded: true,
                   items: _priorites.entries
                       .map((e) => DropdownMenuItem(
-                          value: e.key, child: Text(e.value)))
+                          value: e.key, child: Text(e.value, style: const TextStyle(fontSize: 13.5))))
                       .toList(),
                   onChanged: (v) async {
                     if (v == null || v == priorite) return;
@@ -553,7 +590,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
                     if (rencontres.isEmpty) {
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Text('Aucune rencontre.'),
+                        child: Text('Aucune rencontre.', style: TextStyle(fontSize: 13)),
                       );
                     }
                     return Column(
@@ -605,11 +642,11 @@ class _PastoralScreenState extends State<PastoralScreen> {
                   if (mounted) showApiError(context, e);
                 }
               },
-              child: const Text('Ajouter la rencontre'),
+              child: const Text('Ajouter la rencontre', style: TextStyle(fontSize: 13.5)),
             ),
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Fermer'),
+              child: const Text('Fermer', style: TextStyle(fontSize: 13.5)),
             ),
           ],
         ),
@@ -622,7 +659,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
       children: [
         _enTeteSection(
           'Parcours',
-          onAjouter: () => _nouveau(1),
+          onAjouter: _parcoursVides ? null : () => _nouveau(1),
           libelleAjouter: 'Nouveau parcours',
         ),
         searchField(
@@ -646,6 +683,13 @@ class _PastoralScreenState extends State<PastoralScreen> {
                   .where((p) =>
                       _matches(noms[p.memberId] ?? p.memberId, _queryParcours))
                   .toList();
+              if (items.isEmpty != _parcoursVides) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _parcoursVides != items.isEmpty) {
+                    setState(() => _parcoursVides = items.isEmpty);
+                  }
+                });
+              }
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.route_outlined,
@@ -673,14 +717,15 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       leading: const CircleAvatar(
                         child: Icon(Icons.route_outlined),
                       ),
-                      title: Text(noms[p.memberId] ?? p.memberId),
+                      title: Text(noms[p.memberId] ?? p.memberId, style: const TextStyle(fontSize: 13.5)),
                       subtitle: Text(
                         'Étape : ${_etapes[p.etape] ?? p.etape}'
                         '${p.note != null ? ' · ${p.note}' : ''}',
+                        style: const TextStyle(fontSize: 11.5),
                       ),
                       trailing: TextButton(
                         onPressed: () => _avancerEtape(p),
-                        child: const Text('Avancer'),
+                        child: const Text('Avancer', style: TextStyle(fontSize: 12.5)),
                       ),
                     );
                   },
@@ -696,7 +741,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
       children: [
         _enTeteSection(
           'Visites',
-          onAjouter: () => _nouveau(2),
+          onAjouter: _visitesVides ? null : () => _nouveau(2),
           libelleAjouter: 'Nouvelle visite',
         ),
         searchField(
@@ -729,6 +774,13 @@ class _PastoralScreenState extends State<PastoralScreen> {
                   .where((v) =>
                       _matches(noms[v.memberId] ?? v.memberId, _queryVisites))
                   .toList();
+              if (items.isEmpty != _visitesVides) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _visitesVides != items.isEmpty) {
+                    setState(() => _visitesVides = items.isEmpty);
+                  }
+                });
+              }
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.home_outlined,
@@ -756,11 +808,12 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       leading: const CircleAvatar(
                         child: Icon(Icons.home_outlined),
                       ),
-                      title: Text(noms[v.memberId] ?? v.memberId),
+                      title: Text(noms[v.memberId] ?? v.memberId, style: const TextStyle(fontSize: 13.5)),
                       subtitle: Text(
                         '${afficherDate(v.dateVisite)} · ${v.typeLabel}'
                         '${v.lieu != null ? ' · ${v.lieu}' : ''} · ${v.motif ?? '—'}'
                         '${v.compteRendu != null ? ' · ${v.compteRendu}' : ''}',
+                        style: const TextStyle(fontSize: 11.5),
                       ),
                       trailing: StatusChip(
                         label: v.statutLabel,
@@ -784,7 +837,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
       children: [
         _enTeteSection(
           'Accompagnements',
-          onAjouter: () => _nouveau(3),
+          onAjouter: _accompagnementsVides ? null : () => _nouveau(3),
           libelleAjouter: 'Nouvel accompagnement',
         ),
         searchField(
@@ -818,6 +871,15 @@ class _PastoralScreenState extends State<PastoralScreen> {
                   .where((a) => _matches(
                       noms[a.memberId] ?? a.memberId, _queryAccompagnements))
                   .toList();
+              if (items.isEmpty != _accompagnementsVides) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted &&
+                      _accompagnementsVides != items.isEmpty) {
+                    setState(
+                        () => _accompagnementsVides = items.isEmpty);
+                  }
+                });
+              }
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.handshake_outlined,
@@ -847,9 +909,10 @@ class _PastoralScreenState extends State<PastoralScreen> {
                       leading: const CircleAvatar(
                         child: Icon(Icons.handshake_outlined),
                       ),
-                      title: Text(noms[a.memberId] ?? a.memberId),
+                      title: Text(noms[a.memberId] ?? a.memberId, style: const TextStyle(fontSize: 13.5)),
                       subtitle: Text(
-                          '${a.typeLabel} · ${a.description ?? '—'}'),
+                          '${a.typeLabel} · ${a.description ?? '—'}',
+                          style: const TextStyle(fontSize: 11.5)),
                       trailing: StatusChip(
                         label: a.prioriteLabel,
                         color: _prioriteColor(a.priorite),
@@ -878,7 +941,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
               foregroundColor: Colors.white,
             ),
             icon: const Icon(Icons.cake_outlined),
-            label: const Text('Événements de vie'),
+            label: const Text('Événements de vie', style: TextStyle(fontSize: 12.5)),
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -917,6 +980,26 @@ class _PastoralScreenState extends State<PastoralScreen> {
                   _sectionParcours(noms),
                   _sectionVisites(noms),
                   _sectionAccompagnements(noms),
+                  // Maquette, écran 39 : bouton en bas d'écran.
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const RendezVousAdminScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.event_available_outlined),
+                      label: const Text(
+                        'Ouvrir les rendez-vous',
+                        // Maquette, écran 39 : 13 px.
+                        style: TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 24),
                 ],
               ),

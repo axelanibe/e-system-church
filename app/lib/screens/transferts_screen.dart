@@ -207,7 +207,10 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                 Expanded(
                   child: Text(
                     t.membreNom,
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontSize: 13.5),
                   ),
                 ),
                 StatusChip(label: t.statusLabel, color: color),
@@ -216,7 +219,10 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
             const SizedBox(height: 4),
             Text(
               'Ancien matricule : ${t.ancienMatricule}',
-              style: Theme.of(context).textTheme.bodySmall,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(fontSize: 11.5),
             ),
             const SizedBox(height: 8),
             Text(
@@ -238,19 +244,19 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                     OutlinedButton.icon(
                       onPressed: () => _decide(t.id, true),
                       icon: const Icon(Icons.check),
-                      label: const Text('Accepter'),
+                      label: const Text('Accepter', style: TextStyle(fontSize: 13.5)),
                     ),
                     OutlinedButton.icon(
                       onPressed: () => _decide(t.id, false),
                       icon: const Icon(Icons.close),
-                      label: const Text('Refuser'),
+                      label: const Text('Refuser', style: TextStyle(fontSize: 13.5)),
                     ),
                   ],
                   if (emis && t.status == 'en_attente')
                     OutlinedButton.icon(
                       onPressed: () => _annuler(t.id),
                       icon: const Icon(Icons.cancel_outlined),
-                      label: const Text('Annuler la demande'),
+                      label: const Text('Annuler la demande', style: TextStyle(fontSize: 13.5)),
                     ),
                 ],
               ),
@@ -319,7 +325,18 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text('Demander un transfert',
-                              style: Theme.of(context).textTheme.titleMedium),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontSize: 15)),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Étape 1 sur 2 — saisissez, puis vérifiez le membre et l’église d’arrivée avant tout envoi.',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(fontSize: 12),
+                          ),
                           const SizedBox(height: 8),
                           TextField(
                             controller: _matriculeController,
@@ -359,44 +376,86 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                                     child: CircularProgressIndicator(
                                         strokeWidth: 2),
                                   )
-                                : const Text('Vérifier'),
+                                : const Text('Vérifier avant l’envoi', style: TextStyle(fontSize: 13.5)),
                           ),
-                          if (_membreVerifie != null ||
-                              _membreIntrouvable != null ||
-                              _egliseVerifiee != null ||
-                              _egliseIntrouvable != null) ...[
-                            const SizedBox(height: 12),
-                            if (_membreVerifie != null)
-                              Text(
-                                'Membre retrouvé : ${_membreVerifie!.fullName} (${_membreVerifie!.matricule})',
-                                style: const TextStyle(
-                                  color: AppTheme.violetProfond,
-                                  fontWeight: FontWeight.bold,
+                          const SizedBox(height: 12),
+                          Text(
+                            'Vérification avant envoi',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(fontSize: 15),
+                          ),
+                          const SizedBox(height: 4),
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                const TextSpan(
+                                  text: 'Membre : ',
+                                  style: TextStyle(fontSize: 10.5),
                                 ),
-                              ),
-                            if (_membreIntrouvable != null)
-                              Text(
-                                _membreIntrouvable!,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.error,
+                                TextSpan(
+                                  text: _membreVerifie != null
+                                      ? '${_membreVerifie!.fullName} (${_membreVerifie!.matricule})'
+                                      : _membreIntrouvable ??
+                                          'Nom et matricule — affichés après vérification',
+                                  style: _membreVerifie != null
+                                      ? const TextStyle(
+                                          color: AppTheme.violetProfond,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12.5,
+                                        )
+                                      : _membreIntrouvable != null
+                                          ? TextStyle(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .error,
+                                              fontSize: 12.5,
+                                            )
+                                          : const TextStyle(fontSize: 12.5),
                                 ),
-                              ),
-                            if (_egliseVerifiee != null)
-                              Text(
-                                'Église d’arrivée : ${_egliseVerifiee!.name} (${_egliseVerifiee!.code})',
-                                style: const TextStyle(
-                                  color: AppTheme.violetProfond,
-                                  fontWeight: FontWeight.bold,
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                const TextSpan(
+                                  text: 'Église d’arrivée : ',
+                                  style: TextStyle(fontSize: 10.5),
                                 ),
-                              ),
-                            if (_egliseIntrouvable != null)
-                              Text(
-                                _egliseIntrouvable!,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.error,
+                                TextSpan(
+                                  text: _egliseVerifiee != null
+                                      ? '${_egliseVerifiee!.name} (${_egliseVerifiee!.code})'
+                                      : _egliseIntrouvable ??
+                                          'Nom et code — affichés après vérification',
+                                  style: _egliseVerifiee != null
+                                      ? const TextStyle(
+                                          color: AppTheme.violetProfond,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12.5,
+                                        )
+                                      : _egliseIntrouvable != null
+                                          ? TextStyle(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .error,
+                                              fontSize: 12.5,
+                                            )
+                                          : const TextStyle(fontSize: 12.5),
                                 ),
-                              ),
-                          ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'L’envoi ne se débloque qu’une fois le membre et l’église d’arrivée retrouvés et confirmés à l’écran. Si l’un des deux est introuvable, rien ne part.',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(fontSize: 12),
+                          ),
                           const SizedBox(height: 12),
                           FilledButton(
                             onPressed: (_sending ||
@@ -404,7 +463,7 @@ class _TransfertsScreenState extends State<TransfertsScreen> {
                                     _egliseVerifiee == null)
                                 ? null
                                 : _request,
-                            child: const Text('Confirmer et envoyer'),
+                            child: const Text('Confirmer et envoyer', style: TextStyle(fontSize: 13.5)),
                           ),
                         ],
                       ),

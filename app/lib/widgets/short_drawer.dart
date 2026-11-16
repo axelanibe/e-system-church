@@ -7,38 +7,28 @@ import 'church_avatar.dart';
 import 'mere_badge.dart';
 import '../screens/a_propos_screen.dart';
 import '../screens/abonnement_screen.dart';
-import '../screens/cultes_direct_screen.dart';
+import '../screens/file_hors_ligne_screen.dart';
 import '../screens/mes_eglises_screen.dart';
-import '../screens/modules_screen.dart';
-import '../screens/pastoral_screen.dart';
+import '../screens/notifications_screen.dart';
 import '../screens/paiements_screen.dart';
-import '../screens/prieres_screen.dart';
-import '../screens/rapports_recus_screen.dart';
-import '../screens/rendez_vous_admin_screen.dart';
-import '../screens/annexes_screen.dart';
-import '../screens/gouvernance_screen.dart';
-import '../screens/serviteurs_screen.dart';
 import '../screens/settings_screen.dart';
 
 /// Tiroir désengorgé (maquette Membres Finances, écran 20) :
-/// 13 entrées essentielles, une par ligne avec un titre et un sous-titre,
-/// dans le style clair de la maquette d'Axel (14 novembre 2026) :
-/// icône violet profond sur fond teinté 6 %, titre semi-bold sombre,
-/// sous-titre atténué, petit chevron discret. Le fond est clair
-/// (thème du tiroir, blanc), jamais sombre : un texte sombre y est
-/// illisible. Une seule entrée par fonction, jamais de doublon avec
-/// la barre du bas (Accueil, Membres, Finances, Modules). « Mes
-/// annexes » est la seule entrée du réseau : l'ancien écran Réseau a
-/// fusionné dedans. « Paiements automatiques » (écran 35) est la ligne
-/// Outils du tiroir. Les autres fonctions restent accessibles depuis
-/// leur écran parent : Annonces depuis l'accueil, Présences depuis Cultes,
-/// Budget & caisse depuis Finances, Enfants & jeunesse depuis
-/// Départements, Médias depuis Cultes, Biens et Mon église depuis
-/// Réglages, Transferts et Demandes depuis Mes annexes,
-/// Statistiques et exports depuis Rapports d'annexe. La Plateforme a
-/// sa propre connexion, elle ne se rejoint pas depuis une église.
-/// L'en-tête montre l'église courante ; le toucher change d'église
-/// (même espace seulement, règle de bascule).
+/// 7 entrées seulement, en deux sections (Outils, Compte), une par
+/// ligne avec un titre et un sous-titre, dans le style clair de la
+/// maquette d'Axel (14 novembre 2026) : icône violet profond sur fond
+/// teinté 6 %, titre semi-bold sombre, sous-titre atténué, petit
+/// chevron discret. Le fond est clair (thème du tiroir, blanc),
+/// jamais sombre : un texte sombre y est illisible. Une seule entrée
+/// par fonction, jamais de doublon avec la barre du bas (Accueil,
+/// Membres, Finances, Modules). Les fonctions retirées restent
+/// accessibles depuis leur écran parent : Cultes et Présences depuis
+/// Modules, Suivi pastoral, Rendez-vous, Prières, Serviteurs et
+/// Gouvernance depuis Modules, Rapports d'annexe et Mes annexes
+/// depuis le tableau de bord. La Plateforme a sa propre connexion,
+/// elle ne se rejoint pas depuis une église. L'en-tête montre
+/// l'église courante ; le toucher change d'église (même espace
+/// seulement, règle de bascule).
 class TiroirCourt extends StatelessWidget {
   /// Aller à un onglet de la barre du bas (0 Accueil, 1 Membres,
   /// 2 Finances, 3 Modules).
@@ -89,7 +79,7 @@ class TiroirCourt extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 14.5,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.violetProfond,
                     ),
@@ -100,7 +90,7 @@ class TiroirCourt extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 11.5,
                       fontWeight: FontWeight.w400,
                       color: AppTheme.texteSecondaire,
                     ),
@@ -115,6 +105,93 @@ class TiroirCourt extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Titre d'une section du tiroir (Outils, Compte) : petites
+  /// majuscules, comme SectionTitle.
+  Widget _titreSection(String titre) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Text(
+        titre.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: AppTheme.violetProfond,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  /// Ligne inerte « À venir » (maquette, écran 20 : « Qualité et
+  /// bascule ») : même présentation qu'une entrée, sans chevron et
+  /// sans navigation, avec une pastille « À venir ».
+  Widget _entreeInerte({
+    required IconData icone,
+    required String titre,
+    required String sousTitre,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.violetProfond.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icone, color: AppTheme.violetProfond, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titre,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.violetProfond,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  sousTitre,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w400,
+                    color: AppTheme.texteSecondaire,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppTheme.orClair,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              'À venir',
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.violetProfond,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -156,7 +233,11 @@ class TiroirCourt extends StatelessWidget {
                     church?.name ?? 'e-System Church',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleLarge,
+                    // Maquette, écran 20 : 16 px.
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontSize: 16),
                   ),
                   if (church?.isMere ?? false) ...[
                     const SizedBox(height: 6),
@@ -168,22 +249,30 @@ class TiroirCourt extends StatelessWidget {
                       codeVille,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTheme.styleCode,
+                      // Maquette, écran 20 : 12 px.
+                      style: AppTheme.styleCode.copyWith(fontSize: 12),
                     ),
                   Text(
                     state.user?.fullName ?? '',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
+                    // Maquette, écran 20 : 12 px.
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(fontSize: 12),
                   ),
                   Text(
                     state.roleLabel,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    // Maquette, écran 20 : 12 px.
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
-                        ?.copyWith(color: AppTheme.texteSecondaire),
+                        ?.copyWith(
+                            color: AppTheme.texteSecondaire,
+                            fontSize: 12),
                   ),
                   const SizedBox(height: 8),
                   const Row(
@@ -198,7 +287,8 @@ class TiroirCourt extends StatelessWidget {
                         'Changer d’église',
                         style: TextStyle(
                           color: AppTheme.texteSecondaire,
-                          fontSize: 13,
+                          // Maquette, écran 20 : 12,5 px.
+                          fontSize: 12.5,
                         ),
                       ),
                     ],
@@ -208,65 +298,13 @@ class TiroirCourt extends StatelessWidget {
             ),
           ),
           const Divider(color: AppTheme.bordure, height: 1),
+          _titreSection('Outils'),
           _entree(
-            icone: Icons.church_outlined,
-            titre: 'Cultes et Présences',
-            sousTitre: 'Pointage QR et compteurs portes',
-            onTap: () => _ouvrir(context, const CultesDirectScreen()),
+            icone: Icons.notifications_outlined,
+            titre: 'Notifications',
+            sousTitre: 'Alertes et messages aux membres',
+            onTap: () => _ouvrir(context, const NotificationsScreen()),
           ),
-          if (state.canManageMembers)
-            _entree(
-              icone: Icons.shield_outlined,
-              titre: 'Suivi pastoral',
-              sousTitre: 'Radar d’absences et visites',
-              onTap: () => _ouvrir(context, const PastoralScreen()),
-            ),
-          if (state.canManageMembers)
-            _entree(
-              icone: Icons.event_available_outlined,
-              titre: 'Rendez-vous',
-              sousTitre: 'Demandes et créneaux pastoraux',
-              onTap: () =>
-                  _ouvrir(context, const RendezVousAdminScreen()),
-            ),
-          _entree(
-            icone: Icons.favorite_outline,
-            titre: 'Prières',
-            sousTitre: 'Sujets confidentiels et équipe',
-            onTap: () => _ouvrir(context, const PrieresScreen()),
-          ),
-          _entree(
-            icone: Icons.handshake_outlined,
-            titre: 'Serviteurs',
-            sousTitre: 'Affectations et fonctions',
-            onTap: () => _ouvrir(context, const ServiteursScreen()),
-          ),
-          if (state.canManageMembers)
-            _entree(
-              icone: Icons.verified_outlined,
-              titre: 'Gouvernance',
-              sousTitre: 'Mandats, conseil, documents',
-              onTap: () => _ouvrir(context, const GouvernanceScreen()),
-            ),
-          _entree(
-            icone: Icons.description_outlined,
-            titre: 'Rapports d’annexe',
-            sousTitre: 'Bilans PDF périodiques',
-            onTap: () => _ouvrir(context, const RapportsRecusScreen()),
-          ),
-          _entree(
-            icone: Icons.account_tree_outlined,
-            titre: 'Mes annexes',
-            sousTitre: 'Branches, tutelle et transferts',
-            onTap: () => _ouvrir(context, const AnnexesScreen()),
-          ),
-          if (state.isAdmin)
-            _entree(
-              icone: Icons.payments_outlined,
-              titre: 'Mon abonnement',
-              sousTitre: 'État et renouvellement de l’abonnement',
-              onTap: () => _ouvrir(context, const AbonnementScreen()),
-            ),
           _entree(
             icone: Icons.credit_card_outlined,
             titre: 'Paiements automatiques',
@@ -274,11 +312,25 @@ class TiroirCourt extends StatelessWidget {
             onTap: () => _ouvrir(context, const PaiementsScreen()),
           ),
           _entree(
-            icone: Icons.grid_view_outlined,
-            titre: 'Modules de l’église',
-            sousTitre: 'Noyau et modules activables',
-            onTap: () => _ouvrir(context, ModulesScreen(onAller: onAller)),
+            icone: Icons.cloud_off_outlined,
+            titre: 'File hors ligne',
+            sousTitre: 'Actions en attente de synchronisation',
+            onTap: () =>
+                _ouvrir(context, const FileHorsLigneScreen()),
           ),
+          _entreeInerte(
+            icone: Icons.verified_outlined,
+            titre: 'Qualité et bascule',
+            sousTitre: 'Contrôles et bascule de version',
+          ),
+          _titreSection('Compte'),
+          if (state.isAdmin)
+            _entree(
+              icone: Icons.payments_outlined,
+              titre: 'Mon abonnement',
+              sousTitre: 'État et renouvellement de l’abonnement',
+              onTap: () => _ouvrir(context, const AbonnementScreen()),
+            ),
           _entree(
             icone: Icons.settings_outlined,
             titre: 'Réglages',
@@ -289,7 +341,7 @@ class TiroirCourt extends StatelessWidget {
           _entree(
             icone: Icons.info_outline,
             titre: 'À propos de e-System Church',
-            sousTitre: 'L’église sans frontière',
+            sousTitre: 'L’église sans frontières',
             onTap: () => _ouvrir(context, const AProposScreen()),
           ),
           ListTile(
@@ -300,7 +352,7 @@ class TiroirCourt extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: AppTheme.rougeErreur,
-                fontSize: 16,
+                fontSize: 13.5,
                 fontWeight: FontWeight.bold,
               ),
             ),

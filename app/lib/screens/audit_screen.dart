@@ -8,9 +8,10 @@ import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 
-/// T11 — Journal d'audit : lecture seule, chaîne de hachage vérifiable,
-/// et lectures sensibles journalisées (US17). Aucune route de
-/// suppression ou de modification n'existe, côté serveur comme ici.
+/// T11 — Journal d'audit : lecture seule, et lectures sensibles
+/// journalisées (US17). Aucune route de suppression ou de
+/// modification n'existe, côté serveur comme ici. La purge des
+/// refus à 72 h est une décision serveur, pas un filtre de cet écran.
 class AuditScreen extends StatefulWidget {
   const AuditScreen({super.key});
 
@@ -23,8 +24,11 @@ class _AuditScreenState extends State<AuditScreen> {
   List<ConsultationSensible> _consultations = [];
   bool _chargement = true;
   String? _erreur;
-  String? _message;
-  String? _filtreAction;
+
+  /// Pastille active (maquette, écran 15) : Toutes, Consultations,
+  /// Authentification, Actions sensibles. Le filtre est côté écran :
+  /// la route `/audit` ne filtre que sur une action exacte.
+  String _pastille = 'toutes';
 
   @override
   void initState() {
@@ -39,7 +43,7 @@ class _AuditScreenState extends State<AuditScreen> {
     });
     try {
       final api = context.read<AppState>().api;
-      final entrees = await api.getAudit(action: _filtreAction);
+      final entrees = await api.getAudit();
       final consultations = await api.getConsultations();
       if (!mounted) return;
       setState(() {
@@ -56,23 +60,25 @@ class _AuditScreenState extends State<AuditScreen> {
     }
   }
 
-  Future<void> _verifierChaine() async {
-    try {
-      final resultat = await context.read<AppState>().api.verifierAudit();
-      if (!mounted) return;
-      setState(() {
-        _message = resultat.ok
-            ? 'Chaîne vérifiée : ${resultat.verifies} ligne(s), aucune rupture.'
-            : 'Rupture de chaîne détectée (${resultat.verifies}/${resultat.total} vérifiées).';
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _erreur = messageErreurSimple(e));
-    }
-  }
+  /// Entrées du journal visibles pour la pastille active.
+  List<AuditEntree> get _entreesVisibles => switch (_pastille) {
+        'auth' => _entrees
+            .where((e) => e.action.startsWith('auth.'))
+            .toList(),
+        'sensibles' => _entrees
+            .where((e) => !e.action.startsWith('auth.'))
+            .toList(),
+        _ => _entrees,
+      };
 
   @override
   Widget build(BuildContext context) {
+    // « Consultations » ne montre que les lectures sensibles, les
+    // autres pastilles ne montrent que le journal.
+    final montrerConsultations =
+        _pastille == 'toutes' || _pastille == 'consultations';
+    final montrerJournal = _pastille != 'consultations';
+    final entrees = _entreesVisibles;
     return Scaffold(
       appBar: AppBar(title: const Text('Journal d’audit')),
       body: _chargement
@@ -90,124 +96,93 @@ class _AuditScreenState extends State<AuditScreen> {
                         child: Text(_erreur!),
                       ),
                     ),
-                  if (_message != null)
-                    Card(
-                      color: AppTheme.vertFonce.withValues(alpha: 0.08),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(_message!),
-                      ),
-                    ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          // Sans isExpanded, le bouton prend la largeur de
-                          // son plus long libellé et déborde de 208 px sur
-                          // un téléphone (test d'écran T13).
-                          isExpanded: true,
-                          initialValue: _filtreAction,
-                          decoration: const InputDecoration(
-                            labelText: 'Action',
-                            border: OutlineInputBorder(),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final entry in const <(String, String)>[
+                          ('toutes', 'Toutes'),
+                          ('consultations', 'Consultations'),
+                          ('auth', 'Authentification'),
+                          ('sensibles', 'Actions sensibles'),
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ChoiceChip(
+                              label: Text(entry.$2, style: const TextStyle(fontSize: 12.5)),
+                              selected: _pastille == entry.$1,
+                              onSelected: (_) =>
+                                  setState(() => _pastille = entry.$1),
+                            ),
                           ),
-                          items: const [
-                            DropdownMenuItem(
-                                value: null, child: Text('Toutes')),
-                            DropdownMenuItem(
-                                value: 'membre.cree',
-                                child: Text('Membre créé')),
-                            DropdownMenuItem(
-                                value: 'membre.supprime',
-                                child: Text('Membre supprimé')),
-                            DropdownMenuItem(
-                                value: 'contribution.creee',
-                                child: Text('Contribution créée')),
-                            DropdownMenuItem(
-                                value: 'sauvegarde.creee',
-                                child: Text('Sauvegarde créée')),
-                            DropdownMenuItem(
-                                value: 'sauvegarde.restauree',
-                                child: Text('Sauvegarde restaurée')),
-                            DropdownMenuItem(
-                                value: '2fa.activee',
-                                child: Text('2FA activée')),
-                            DropdownMenuItem(
-                                value: '2fa.desactivee',
-                                child: Text('2FA désactivée')),
-                          ],
-                          onChanged: (valeur) {
-                            setState(() => _filtreAction = valeur);
-                            _charger();
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton.icon(
-                        onPressed: _verifierChaine,
-                        icon: const Icon(Icons.verified_outlined),
-                        label: const Text('Vérifier'),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Journal',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  if (_entrees.isEmpty)
-                    const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text('Aucune ligne dans le journal.'),
-                      ),
+                  if (montrerJournal) ...[
+                    const Text(
+                      'Journal',
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                  for (final entree in _entrees)
-                    Card(
-                      child: ListTile(
-                        leading: const CircleAvatar(
-                          backgroundColor: AppTheme.orClair,
-                          child: Icon(Icons.fact_check_outlined,
-                              color: AppTheme.orFonce),
-                        ),
-                        title: Text(libelleActionAudit(entree.action)),
-                        subtitle: Text(
-                          '${entree.utilisateur ?? '—'} · ${formatDateTime(entree.createdAt)}'
-                          '${entree.hash == null ? '' : '\nHash : ${entree.hash!.substring(0, 12)}…'}',
-                        ),
-                        isThreeLine: entree.hash != null,
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Lectures sensibles',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  if (_consultations.isEmpty)
-                    const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text('Aucune lecture sensible journalisée.'),
-                      ),
-                    ),
-                  for (final consultation in _consultations)
-                    Card(
-                      child: ListTile(
-                        leading: const CircleAvatar(
-                          backgroundColor: AppTheme.orClair,
-                          child: Icon(Icons.visibility_outlined,
-                              color: AppTheme.orFonce),
-                        ),
-                        title: Text(
-                          '${consultation.ressourceLabel} · ${consultation.ressourceNom ?? '—'}',
-                        ),
-                        subtitle: Text(
-                          '${consultation.userNom ?? '—'} · ${formatDateTime(consultation.createdAt)}',
+                    const SizedBox(height: 8),
+                    if (entrees.isEmpty)
+                      const Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text('Aucune ligne dans le journal.', style: TextStyle(fontSize: 13)),
                         ),
                       ),
+                    for (final entree in entrees)
+                      Card(
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            backgroundColor: AppTheme.orClair,
+                            child: Icon(Icons.fact_check_outlined,
+                                color: AppTheme.orFonce),
+                          ),
+                          title: Text(libelleActionAudit(entree.action), style: const TextStyle(fontSize: 13.5)),
+                          subtitle: Text(
+                            '${entree.utilisateur ?? '—'} · ${formatDateTime(entree.createdAt)}'
+                            '${entree.hash == null ? '' : '\nHash : ${entree.hash!.substring(0, 12)}…'}',
+                            style: const TextStyle(fontSize: 11.5),
+                          ),
+                          isThreeLine: entree.hash != null,
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (montrerConsultations) ...[
+                    const Text(
+                      'Lectures sensibles',
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
+                    const SizedBox(height: 8),
+                    if (_consultations.isEmpty)
+                      const Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text('Aucune lecture sensible journalisée.', style: TextStyle(fontSize: 13)),
+                        ),
+                      ),
+                    for (final consultation in _consultations)
+                      Card(
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            backgroundColor: AppTheme.orClair,
+                            child: Icon(Icons.visibility_outlined,
+                                color: AppTheme.orFonce),
+                          ),
+                          title: Text(
+                            '${consultation.ressourceLabel} · ${consultation.ressourceNom ?? '—'}',
+                            style: const TextStyle(fontSize: 13.5),
+                          ),
+                          subtitle: Text(
+                            '${consultation.userNom ?? '—'} · ${formatDateTime(consultation.createdAt)}',
+                            style: const TextStyle(fontSize: 11.5),
+                          ),
+                        ),
+                      ),
+                  ],
                 ],
               ),
             ),

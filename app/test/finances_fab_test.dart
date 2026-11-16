@@ -72,15 +72,23 @@ void main() {
     expect(fab, findsOneWidget);
     const cadre = Rect.fromLTWH(0, 0, 390, 580);
 
+    // Les pastilles sont des ChoiceChip : on les cherche comme telles,
+    // pour ne pas confondre la pastille « Dépenses » avec la carte
+    // « Dépenses » de la liste (même libellé, autre widget).
+    Finder pastille(String libelle) => find.descendant(
+          of: find.byType(ChoiceChip),
+          matching: find.text(libelle),
+        );
+
     List<String> masquees() {
       final bouton = tester.getRect(fab);
       final cachees = <String>[];
       for (final libelle in _pastilles) {
         // Sous le pli, la ListView ne construit pas encore la pastille :
         // non visible donc non masquée.
-        if (find.text(libelle).evaluate().isEmpty) continue;
-        final pastille = tester.getRect(find.text(libelle));
-        if (pastille.overlaps(cadre) && pastille.overlaps(bouton)) {
+        if (pastille(libelle).evaluate().isEmpty) continue;
+        final rect = tester.getRect(pastille(libelle));
+        if (rect.overlaps(cadre) && rect.overlaps(bouton)) {
           cachees.add(libelle);
         }
       }
@@ -91,13 +99,13 @@ void main() {
       final bouton = tester.getRect(fab);
       final lignes = <String>[];
       for (final libelle in _pastilles) {
-        if (find.text(libelle).evaluate().isEmpty) {
+        if (pastille(libelle).evaluate().isEmpty) {
           lignes.add('$libelle:absent');
           continue;
         }
-        final pastille = tester.getRect(find.text(libelle));
+        final rect = tester.getRect(pastille(libelle));
         lignes.add(
-            '$libelle:${pastille.top.toStringAsFixed(0)}-${pastille.bottom.toStringAsFixed(0)}');
+            '$libelle:${rect.top.toStringAsFixed(0)}-${rect.bottom.toStringAsFixed(0)}');
       }
       // ignore: avoid_print
       print('$position bouton=${bouton.top.toStringAsFixed(0)}-'
@@ -108,7 +116,7 @@ void main() {
     // Départ : les pastilles sont en tête de liste, visibles, et aucune
     // n'est sous le bouton.
     mesurer('depart');
-    expect(find.text('Confirmées'), findsOneWidget);
+    expect(pastille('Confirmées'), findsOneWidget);
     expect(masquees(), isEmpty);
 
     // Descente par paliers jusqu'au bout de la liste : à chaque arrêt,
@@ -126,7 +134,7 @@ void main() {
     await tester.drag(liste, const Offset(0, 800));
     await tester.pump(const Duration(milliseconds: 300));
     mesurer('retour');
-    expect(find.text('Confirmées'), findsOneWidget);
+    expect(pastille('Confirmées'), findsOneWidget);
     expect(masquees(), isEmpty);
 
     // La liste a grandi (grille des 4 chiffres en tête, E-F0) : le
@@ -138,9 +146,9 @@ void main() {
     // la marge basse de la liste les laisse défiler au-dessus de lui.
     final bouton = tester.getRect(fab);
     for (final libelle in _pastilles) {
-      if (find.text(libelle).evaluate().isEmpty) continue;
-      final pastille = tester.getRect(find.text(libelle));
-      expect(pastille.bottom, lessThanOrEqualTo(bouton.top),
+      if (pastille(libelle).evaluate().isEmpty) continue;
+      final rect = tester.getRect(pastille(libelle));
+      expect(rect.bottom, lessThanOrEqualTo(bouton.top),
           reason: '$libelle doit être au-dessus du bouton en bas de liste');
     }
     expect(masquees(), isEmpty);

@@ -8,6 +8,7 @@ import 'cultes_direct_screen.dart';
 import 'departements_screen.dart';
 import 'ecole_biblique_screen.dart';
 import 'gouvernance_screen.dart';
+import 'messages_admin_screen.dart';
 import 'pastoral_screen.dart';
 import 'patrimoine_screen.dart';
 import 'prieres_screen.dart';
@@ -23,9 +24,9 @@ import 'serviteurs_screen.dart';
 /// l'application, ni avec l'espace fidèle, périmètre étanche.
 /// La carte « Bible et école » ouvre les vrais écrans Bible de la T9 :
 /// la lecture d'abord, l'école biblique par le bouton de la barre.
-/// La carte « Messages admin » ouvre l'écran Prières, dont le 2e
-/// onglet est « Messages internes » : il n'existe pas d'écran admin
-/// de messages dédié dans l'application.
+/// La carte « Messages admin » ouvre MessagesAdminScreen, l'écran
+/// dédié de l'administration (contrat : `MessagesAdminScreen`,
+/// constructeur par défaut).
 class ModulesScreen extends StatelessWidget {
   /// Aller à un onglet de la barre du bas (0 Accueil, 1 Membres,
   /// 2 Finances, 3 Modules). Sans [onAller], une carte d'onglet revient
@@ -42,19 +43,19 @@ class ModulesScreen extends StatelessWidget {
     (
       'departements',
       'Départements',
-      'Équipes, fonctions et cellules.',
+      'Familles, cellules, enfants & jeunesse',
       Icons.groups_outlined,
     ),
     (
       'cultes',
       'Cultes en direct',
-      'Conducteur, transposition, portes.',
+      'Conducteur chronométré, transposition, portes',
       Icons.schedule_outlined,
     ),
     (
       'pastoral',
-      'Radar pastoral',
-      'Absences, visites et accompagnements.',
+      'Suivi pastoral',
+      'Radar, parcours, visites, accompagnements',
       Icons.track_changes_outlined,
     ),
     (
@@ -84,7 +85,7 @@ class ModulesScreen extends StatelessWidget {
     (
       'prieres',
       'Prières',
-      'Demandes et messages internes.',
+      'Demandes de prière des membres',
       Icons.favorite_outline,
     ),
     (
@@ -114,7 +115,7 @@ class ModulesScreen extends StatelessWidget {
     (
       'messages',
       'Messages admin',
-      'Messages internes de l’église.',
+      'Messages de l’administration aux églises',
       Icons.message_outlined,
     ),
   ];
@@ -165,10 +166,10 @@ class ModulesScreen extends StatelessWidget {
       case 'patrimoine':
         _pousser(context, const PatrimoineScreen());
       case 'prieres':
-      case 'messages':
-        // Pas d'écran admin de messages dédié : les messages
-        // internes vivent dans l'écran Prières, 2e onglet.
         _pousser(context, const PrieresScreen());
+      case 'messages':
+        // Écran admin de messages dédié (maquette, écran 31).
+        _pousser(context, const MessagesAdminScreen());
       case 'annexes':
         _pousser(context, const AnnexesScreen());
       case 'rapports':
@@ -191,7 +192,18 @@ class ModulesScreen extends StatelessWidget {
         children: [
           Text(
             'Tous les modules',
-            style: Theme.of(context).textTheme.headlineSmall,
+            // Maquette, écran 21 : 16 px.
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
+                ?.copyWith(fontSize: 16),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Une carte par fonction : touchez un module pour ouvrir '
+            'son écran.',
+            // Maquette, écran 21 : 12,5 px.
+            style: TextStyle(fontSize: 12.5),
           ),
           const SizedBox(height: 8),
           LayoutBuilder(
@@ -201,8 +213,8 @@ class ModulesScreen extends StatelessWidget {
                 crossAxisCount: crossAxisCount,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
+                mainAxisSpacing: 9,
+                crossAxisSpacing: 9,
                 childAspectRatio: 0.82,
                 children: [
                   for (final (cible, titre, description, icone)
@@ -212,17 +224,18 @@ class ModulesScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                         onTap: () => _ouvrir(context, cible),
                         child: Padding(
-                          padding: const EdgeInsets.all(16),
+                          // Maquette, écran 21 (.modcard) : 10 px.
+                          padding: const EdgeInsets.all(10),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
                                   Icon(icone,
-                                      color: AppTheme.orFonce, size: 28),
+                                      color: AppTheme.orFonce, size: 19),
                                   const Spacer(),
                                   const Icon(Icons.chevron_right,
-                                      color: AppTheme.orFonce, size: 20),
+                                      color: AppTheme.orFonce, size: 15),
                                 ],
                               ),
                               const SizedBox(height: 12),
@@ -230,10 +243,13 @@ class ModulesScreen extends StatelessWidget {
                                 titre,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
+                                // Maquette, écran 21 (.modcard .mt) : 13 px.
                                 style: Theme.of(context)
                                     .textTheme
                                     .titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.bold),
+                                    ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13),
                               ),
                               const SizedBox(height: 4),
                               Expanded(
@@ -241,6 +257,9 @@ class ModulesScreen extends StatelessWidget {
                                   description,
                                   maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
+                                  // Maquette, écran 21 (.modcard .md) : 11 px.
+                                  style:
+                                      const TextStyle(fontSize: 11),
                                 ),
                               ),
                             ],

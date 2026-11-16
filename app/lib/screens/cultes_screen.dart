@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/cultes.dart';
+import '../models/member.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
@@ -142,55 +143,9 @@ class _CultesScreenState extends State<CultesScreen> {
     );
   }
 
-  Future<void> _createCulte(List<CulteType> types) async {
-    final titreController = TextEditingController();
-    final dateController = TextEditingController();
-    final lieuController = TextEditingController();
-    final orateurController = TextEditingController();
-    final themeController = TextEditingController();
-    String? typeId;
-    await showCreateDialog(
-      context: context,
-      title: 'Nouveau culte',
-      saveLabel: 'Créer',
-      fields: [
-        dialogDropdown<String?>(
-          value: typeId,
-          label: 'Type de culte',
-          options: {
-            null: 'Aucun',
-            for (final t in types) t.id: t.nom,
-          },
-          onChanged: (v) => typeId = v,
-        ),
-        dialogTextField(controller: titreController, label: 'Titre'),
-        dialogTextField(controller: dateController, label: 'Date et heure'),
-        dialogTextField(controller: lieuController, label: 'Lieu'),
-        dialogTextField(controller: orateurController, label: 'Orateur'),
-        dialogTextField(controller: themeController, label: 'Thème'),
-      ],
-      isValid: () =>
-          titreController.text.trim().isNotEmpty &&
-          dateController.text.trim().isNotEmpty,
-      onSave: () async {
-        try {
-          await context.read<AppState>().api.createCulte(
-                culteTypeId: typeId,
-                titre: titreController.text.trim(),
-                dateHeure: dateController.text.trim(),
-                lieu: _opt(lieuController),
-                orateur: _opt(orateurController),
-                theme: _opt(themeController),
-              );
-          if (mounted) showSuccess(context, 'Culte créé.');
-          _refresh();
-        } catch (e) {
-          if (mounted) showApiError(context, e);
-        }
-      },
-    );
+  Future<void> _createCulte() async {
+    await ouvrirNouveauCulte(context, onCree: _refresh);
   }
-
   Future<void> _createEvenement() async {
     final titreController = TextEditingController();
     final debutController = TextEditingController();
@@ -293,7 +248,7 @@ class _CultesScreenState extends State<CultesScreen> {
             child: OutlinedButton.icon(
               onPressed: _exporterCultesPdf,
               icon: const Icon(Icons.download_outlined),
-              label: const Text('Exporter en PDF'),
+              label: const Text('Exporter en PDF', style: TextStyle(fontSize: 13.5)),
             ),
           ),
         ),
@@ -302,7 +257,7 @@ class _CultesScreenState extends State<CultesScreen> {
           child: Card(
             child: ListTile(
               leading: const Icon(Icons.library_books_outlined),
-              title: const Text('Médias & bibliothèque'),
+              title: const Text('Médias & bibliothèque', style: TextStyle(fontSize: 13.5)),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).push(
@@ -345,8 +300,7 @@ class _CultesScreenState extends State<CultesScreen> {
                       : 'Aucun culte ne correspond à la recherche.',
                   actionLabel: 'Planifier un culte',
                   onAction: () async {
-                    final types = await _typesFuture;
-                    if (mounted) await _createCulte(types);
+                    if (mounted) await _createCulte();
                   },
                 );
               }
@@ -361,12 +315,13 @@ class _CultesScreenState extends State<CultesScreen> {
                         leading: const CircleAvatar(
                           child: Icon(Icons.event_outlined),
                         ),
-                        title: Text(culte.titre),
+                        title: Text(culte.titre, style: const TextStyle(fontSize: 13.5)),
                         subtitle: Text(
                           '${afficherDateTime(culte.dateHeure)}'
                           '${culte.lieu != null ? ' · ${culte.lieu}' : ''}'
                           '${culte.orateur != null ? ' · ${culte.orateur}' : ''}'
                           '${culte.theme != null ? ' · ${culte.theme}' : ''}',
+                          style: const TextStyle(fontSize: 11.5),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -448,12 +403,13 @@ class _CultesScreenState extends State<CultesScreen> {
                         leading: const CircleAvatar(
                           child: Icon(Icons.category_outlined),
                         ),
-                        title: Text(t.nom),
+                        title: Text(t.nom, style: const TextStyle(fontSize: 13.5)),
                         subtitle: Text(
                           '${t.jourSemaine != null ? _nomJour(t.jourSemaine!) : '—'}'
                           '${t.heureDebut != null ? ' · ${t.heureDebut}' : ''}'
                           '${t.dureeMinutes != null ? ' · ${t.dureeMinutes} min' : ''}'
                           '${t.lieu != null ? ' · ${t.lieu}' : ''}',
+                          style: const TextStyle(fontSize: 11.5),
                         ),
                       );
                     },
@@ -519,11 +475,12 @@ class _CultesScreenState extends State<CultesScreen> {
                         leading: const CircleAvatar(
                           child: Icon(Icons.celebration_outlined),
                         ),
-                        title: Text(e.titre),
+                        title: Text(e.titre, style: const TextStyle(fontSize: 13.5)),
                         subtitle: Text(
                           '${e.typeLabel} · ${afficherDate(e.dateDebut)}'
                           '${e.lieu != null ? ' · ${e.lieu}' : ''}'
                           '${e.responsable != null ? ' · ${e.responsable}' : ''}',
+                          style: const TextStyle(fontSize: 11.5),
                         ),
                       );
                     },
@@ -545,6 +502,8 @@ class _CultesScreenState extends State<CultesScreen> {
         appBar: AppBar(
           title: const Text('Cultes'),
           bottom: TabBar(
+            labelStyle: const TextStyle(fontSize: 13.5),
+            unselectedLabelStyle: const TextStyle(fontSize: 13.5),
             isScrollable: true,
             onTap: (i) => setState(() {
               _tab = i;
@@ -566,12 +525,7 @@ class _CultesScreenState extends State<CultesScreen> {
             : FloatingActionButton.extended(
                 onPressed: () async {
                   if (_tab == 0) {
-                    try {
-                      final types = await _typesFuture;
-                      if (mounted) await _createCulte(types);
-                    } catch (e) {
-                      if (context.mounted) showApiError(context, e);
-                    }
+                    await _createCulte();
                   } else if (_tab == 1) {
                     await _createType();
                   } else {
@@ -579,12 +533,148 @@ class _CultesScreenState extends State<CultesScreen> {
                   }
                 },
                 icon: const Icon(Icons.add),
-                label: Text(_tab == 0
-                    ? 'Nouveau culte'
-                    : _tab == 1
-                        ? 'Nouveau type'
-                        : 'Nouvel événement'),
+                label: Text(
+                  _tab == 0
+                      ? 'Nouveau culte'
+                      : _tab == 1
+                          ? 'Nouveau type'
+                          : 'Nouvel événement',
+                  style: const TextStyle(fontSize: 13.5),
+                ),
               ),
+      ),
+    );
+  }
+}
+
+/// Formulaire « Nouveau culte » (maquette, écran 26) : Date et Heure
+/// séparées, Lieu, Conducteur choisi dans la liste des membres
+/// (obligatoire, son nom est stocké dans le champ `orateur` existant),
+/// bouton « Créer le culte ». Pas de champ Titre dans la maquette :
+/// le titre est dérivé du jour (« Culte du dimanche »), le serveur
+/// l'exige. Pas de champ Programme : ni le modèle de culte ni le
+/// serveur n'ont de champ pour le porter, il n'est pas inventé.
+/// Ouvert directement par l'action rapide « Nouveau culte » comme par
+/// le FAB de l'écran liste : il ne passe jamais par l'écran liste.
+Future<void> ouvrirNouveauCulte(BuildContext context,
+    {VoidCallback? onCree}) async {
+  final api = context.read<AppState>().api;
+  List<Member> membres;
+  try {
+    membres = (await api.getMembers(limit: 200)).membres;
+  } catch (e) {
+    if (context.mounted) showApiError(context, e);
+    return;
+  }
+  if (membres.isEmpty) {
+    if (context.mounted) {
+      showApiError(context, 'Aucun membre — créez d’abord un membre.');
+    }
+    return;
+  }
+  if (!context.mounted) return;
+  final dateController = TextEditingController();
+  final heureController = TextEditingController();
+  final lieuController = TextEditingController();
+  String? conducteurId;
+  await showCreateDialog(
+    context: context,
+    title: 'Nouveau culte',
+    saveLabel: 'Créer le culte',
+    fields: [
+      dialogDateField(
+          context: context, controller: dateController, label: 'Date *'),
+      _DialogTimeField(controller: heureController, label: 'Heure *'),
+      dialogTextField(controller: lieuController, label: 'Lieu *'),
+      dialogDropdown<String>(
+        value: conducteurId,
+        label: 'Conducteur *',
+        options: {
+          for (final m in membres) m.id: '${m.fullName} (${m.matricule})',
+        },
+        onChanged: (v) => conducteurId = v,
+      ),
+    ],
+    isValid: () =>
+        dateController.text.trim().isNotEmpty &&
+        heureController.text.trim().isNotEmpty &&
+        lieuController.text.trim().isNotEmpty &&
+        conducteurId != null,
+    onSave: () async {
+      try {
+        final date = parseDate(dateController.text.trim())!;
+        final conducteur =
+            membres.firstWhere((m) => m.id == conducteurId);
+        await api.createCulte(
+          titre: 'Culte du ${_nomJour(date.weekday % 7)}',
+          dateHeure:
+              '${dateController.text.trim()} ${heureController.text.trim()}',
+          lieu: lieuController.text.trim(),
+          orateur: conducteur.fullName,
+        );
+        if (context.mounted) showSuccess(context, 'Culte créé.');
+        onCree?.call();
+      } catch (e) {
+        if (context.mounted) showApiError(context, e);
+      }
+    },
+  );
+}
+
+/// Champ d'heure avec sélecteur, comme [dialogDateField] pour la date :
+/// le [controller] garde « HH:mm », l'affichage suit le sélecteur.
+class _DialogTimeField extends StatefulWidget {
+  const _DialogTimeField({required this.controller, required this.label});
+
+  final TextEditingController controller;
+  final String label;
+
+  @override
+  State<_DialogTimeField> createState() => _DialogTimeFieldState();
+}
+
+class _DialogTimeFieldState extends State<_DialogTimeField> {
+  late final TextEditingController _displayController;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayController = TextEditingController(text: widget.controller.text);
+  }
+
+  @override
+  void dispose() {
+    _displayController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: _displayController,
+        readOnly: true,
+        decoration: InputDecoration(
+          labelText: widget.label,
+          border: const OutlineInputBorder(),
+          isDense: true,
+          suffixIcon: const Icon(Icons.access_time_outlined),
+        ),
+        onTap: () async {
+          final maintenant = TimeOfDay.now();
+          final choisi = await showTimePicker(
+            context: context,
+            initialTime: maintenant,
+            helpText: 'Choisir l’heure',
+          );
+          if (choisi != null) {
+            final hhmm =
+                '${choisi.hour.toString().padLeft(2, '0')}:${choisi.minute.toString().padLeft(2, '0')}';
+            widget.controller.text = hhmm;
+            _displayController.text = hhmm;
+          }
+        },
       ),
     );
   }
@@ -755,11 +845,12 @@ class _CulteDetailScreenState extends State<CulteDetailScreen> {
                           leading: CircleAvatar(
                             child: Text('${item.ordre}'),
                           ),
-                          title: Text(item.titre),
+                          title: Text(item.titre, style: const TextStyle(fontSize: 13.5)),
                           subtitle: Text(
                             '${item.intervenant ?? '—'}'
                             '${item.dureeMinutes != null ? ' · ${item.dureeMinutes} min' : ''}'
                             '${item.description != null ? ' · ${item.description}' : ''}',
+                            style: const TextStyle(fontSize: 11.5),
                           ),
                         );
                       },
@@ -776,7 +867,7 @@ class _CulteDetailScreenState extends State<CulteDetailScreen> {
           : FloatingActionButton.extended(
               onPressed: _addItem,
               icon: const Icon(Icons.add),
-              label: const Text('Élément'),
+              label: const Text('Élément', style: TextStyle(fontSize: 13.5)),
             ),
     );
   }

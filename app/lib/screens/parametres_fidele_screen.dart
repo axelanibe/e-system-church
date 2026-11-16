@@ -39,7 +39,7 @@ class _ParametresFideleScreenState extends State<ParametresFideleScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Aide'),
+        title: const Text('Aide', style: TextStyle(fontSize: 17)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,35 +88,35 @@ class _ParametresFideleScreenState extends State<ParametresFideleScreen> {
                   children: [
                     ListTile(
                       leading: const Icon(Icons.person_outline),
-                      title: Text(profil.user.fullName),
-                      subtitle: Text(profil.user.email),
+                      title: Text(profil.user.fullName, style: const TextStyle(fontSize: 13.5)),
+                      subtitle: Text(profil.user.email, style: const TextStyle(fontSize: 11.5)),
                     ),
                     if (profil.user.phone != null)
                       ListTile(
                         leading: const Icon(Icons.phone_outlined),
-                        title: Text(profil.user.phone!),
+                        title: Text(profil.user.phone!, style: const TextStyle(fontSize: 13.5)),
                       ),
                     if (profil.matricule != null)
                       ListTile(
                         leading: const Icon(Icons.badge_outlined),
-                        title: Text('Matricule : ${profil.matricule}'),
+                        title: Text('Matricule : ${profil.matricule}', style: const TextStyle(fontSize: 13.5)),
                       ),
                     ListTile(
                       leading: const Icon(Icons.church_outlined),
-                      title: Text(eglise.name),
+                      title: Text(eglise.name, style: const TextStyle(fontSize: 13.5)),
                       subtitle: eglise.city == null || eglise.city!.isEmpty
                           ? null
-                          : Text(eglise.city!),
+                          : Text(eglise.city!, style: const TextStyle(fontSize: 11.5)),
                     ),
                     ListTile(
                       leading: const Icon(Icons.lock_outline),
-                      title: const Text('Changer mon mot de passe'),
+                      title: const Text('Changer mon mot de passe', style: TextStyle(fontSize: 13.5)),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: _changerMotDePasse,
                     ),
                     ListTile(
                       leading: const Icon(Icons.visibility_outlined),
-                      title: const Text('Qui a consulté ma fiche'),
+                      title: const Text('Qui a consulté ma fiche', style: TextStyle(fontSize: 13.5)),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {
                         Navigator.of(context).push(
@@ -134,14 +134,14 @@ class _ParametresFideleScreenState extends State<ParametresFideleScreen> {
               const Card(
                 child: ListTile(
                   leading: Icon(Icons.notifications_outlined),
-                  title: Text('Notifications'),
+                  title: Text('Notifications', style: TextStyle(fontSize: 13.5)),
                 ),
               ),
               const SectionTitle(title: 'Langue'),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.language_outlined),
-                  title: const Text('Langue de l’application'),
+                  title: const Text('Langue de l’application', style: TextStyle(fontSize: 13.5)),
                   subtitle: Text(
                     context.watch<PreferencesLocales>().estAnglais
                         ? 'Anglais'
@@ -161,7 +161,7 @@ class _ParametresFideleScreenState extends State<ParametresFideleScreen> {
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.info_outline),
-                  title: const Text('Aide'),
+                  title: const Text('Aide', style: TextStyle(fontSize: 13.5)),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _aide(profil),
                 ),

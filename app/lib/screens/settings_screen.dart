@@ -15,24 +15,21 @@ import 'audit_screen.dart';
 import 'biens_screen.dart';
 import 'consultations_screen.dart';
 import 'deux_fa_screen.dart';
-import 'file_hors_ligne_screen.dart';
 import 'langue_donnees_screen.dart';
 import 'listes_configurables_screen.dart';
-import 'mon_eglise_screen.dart';
-import 'notifications_screen.dart';
 import 'sauvegarde_screen.dart';
 
-/// Réglages et confiance (fusion E-CF4 + E-RG1, modèle projection,
-/// écran « Réglages et confiance ») : un seul parcours. Les 5 entrées
-/// Confiance en tête, dans l'ordre de la projection, puis les sections
-/// Réglages (Église, Paramètres de l'église, Clés marchandes et API,
-/// Rôles, Compte, API réelle, Application). Les clés marchandes (Wave,
-/// Orange Money, MTN) et la clé du fournisseur de notifications se
-/// saisissent uniquement ici, masquées et chiffrées, jamais affichées
-/// en clair ni pré-remplies, vidées après enregistrement. Le Journal
-/// d'audit ouvre l'écran Audit, qui montre les mêmes données que
-/// l'ancien onglet Journal des paramètres. Les anciens supprimés,
-/// jamais gardés en doublon.
+/// Réglages et confidentialité (fusion E-CF4 + E-RG1, modèle projection,
+/// écran « Réglages et confidentialité ») : un seul parcours. Les 3 entrées
+/// Confiance en tête, dans l'ordre de la maquette (Double authentification,
+/// Journal d'audit, Mot de passe), puis les sections Réglages (Église,
+/// Paramètres de l'église, Clés marchandes et API, Rôles, API réelle,
+/// Application). Les clés marchandes (Wave, Orange Money, MTN) et la clé
+/// du fournisseur de notifications se saisissent uniquement ici, masquées
+/// et chiffrées, jamais affichées en clair ni pré-remplies, vidées après
+/// enregistrement. Le Journal d'audit ouvre l'écran Audit, qui montre les
+/// mêmes données que l'ancien onglet Journal des paramètres. Les anciens
+/// supprimés, jamais gardés en doublon.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -51,9 +48,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _telephoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _logoUrlController = TextEditingController();
-  final _waveController = TextEditingController();
-  final _orangeController = TextEditingController();
-  final _mtnController = TextEditingController();
   final _deviseController = TextEditingController();
   final _fuseauController = TextEditingController();
   // T10 : signataires configurables, vides par défaut (règle non tranchée).
@@ -91,9 +85,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _telephoneController.dispose();
     _emailController.dispose();
     _logoUrlController.dispose();
-    _waveController.dispose();
-    _orangeController.dispose();
-    _mtnController.dispose();
     _deviseController.dispose();
     _fuseauController.dispose();
     _signataireNominationsController.dispose();
@@ -157,10 +148,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     if (!mounted) return;
     setState(() => _suppressionEnCours = false);
+    final confirmationController = TextEditingController();
+    var nomConfirme = false;
     final confirme = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer cette église ?'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+        title: const Text('Supprimer cette église ?', style: TextStyle(fontSize: 17)),
         content: SizedBox(
           width: double.maxFinite,
           child: Column(
@@ -203,23 +197,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 'Membres, contributions, campagnes, attestations et transferts partent avec elle. Cette action est définitive.',
                 style: TextStyle(fontSize: 14),
               ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmationController,
+                decoration: const InputDecoration(
+                  labelText: 'Tapez le nom de l’église pour confirmer',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (v) => setDialogState(
+                  () => nomConfirme = v.trim() == apercu.eglise.nom,
+                ),
+              ),
             ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Annuler'),
+            child: const Text('Annuler', style: TextStyle(fontSize: 13.5)),
           ),
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
+            onPressed: nomConfirme
+                ? () => Navigator.of(ctx).pop(true)
+                : null,
             child: Text(
               'Supprimer définitivement',
-              style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+              style: TextStyle(
+                  color: Theme.of(ctx).colorScheme.error,
+                  fontSize: 13.5),
             ),
           ),
         ],
       ),
+    ),
     );
     if (confirme != true || !mounted) return;
     setState(() => _suppressionEnCours = true);
@@ -237,13 +247,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final partir = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Église supprimée'),
+        title: const Text('Église supprimée', style: TextStyle(fontSize: 17)),
         content: Text(
             '${apercu.eglise.nom} n’existe plus. Vous allez être déconnecté(e).'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('OK'),
+            child: const Text('OK', style: TextStyle(fontSize: 13.5)),
           ),
         ],
       ),
@@ -262,9 +272,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             telephone: _opt(_telephoneController),
             email: _opt(_emailController),
             logoUrl: _opt(_logoUrlController),
-            waveNumero: _opt(_waveController),
-            orangeNumero: _opt(_orangeController),
-            mtnNumero: _opt(_mtnController),
             devise: _opt(_deviseController),
             fuseauHoraire: _opt(_fuseauController),
             signataireNominations: _opt(_signataireNominationsController),
@@ -286,7 +293,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required IconData icone,
     required String titre,
     required String sousTitre,
-    required Widget ecran,
+    Widget? ecran,
+    VoidCallback? onTap,
   }) {
     return Card(
       child: ListTile(
@@ -298,15 +306,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           titre,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(
+              fontWeight: FontWeight.bold, fontSize: 13.5),
         ),
         subtitle: Text(
           sousTitre,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 11.5),
         ),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () => _ouvrir(context, ecran),
+        onTap: onTap ?? (ecran == null ? null : () => _ouvrir(context, ecran)),
       ),
     );
   }
@@ -331,9 +341,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _telephoneController.text = p.telephone ?? '';
           _emailController.text = p.email ?? '';
           _logoUrlController.text = p.logoUrl ?? '';
-          _waveController.text = p.waveNumero ?? '';
-          _orangeController.text = p.orangeNumero ?? '';
-          _mtnController.text = p.mtnNumero ?? '';
           _deviseController.text = p.devise ?? '';
           _fuseauController.text = p.fuseauHoraire ?? '';
           _signataireNominationsController.text =
@@ -359,22 +366,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               keyboardType: TextInputType.emailAddress,
             ),
             dialogTextField(controller: _logoUrlController, label: 'URL du logo'),
-            const SectionTitle(title: 'Paiements mobiles'),
-            dialogTextField(
-              controller: _waveController,
-              label: 'Numéro Wave',
-              keyboardType: TextInputType.phone,
-            ),
-            dialogTextField(
-              controller: _orangeController,
-              label: 'Numéro Orange Money',
-              keyboardType: TextInputType.phone,
-            ),
-            dialogTextField(
-              controller: _mtnController,
-              label: 'Numéro MTN Mobile Money',
-              keyboardType: TextInputType.phone,
-            ),
             const SectionTitle(title: 'Préférences'),
             dialogTextField(controller: _deviseController, label: 'Devise'),
             dialogTextField(
@@ -391,7 +382,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 8),
             FilledButton(
               onPressed: _savingParametres ? null : _saveParametres,
-              child: const Text('Enregistrer les paramètres'),
+              child: const Text('Enregistrer les paramètres', style: TextStyle(fontSize: 13.5)),
             ),
           ],
         );
@@ -455,9 +446,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             Text(
                               r.fullName ?? 'Utilisateur sans nom',
                               style: const TextStyle(
-                                  fontWeight: FontWeight.bold),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13.5),
                             ),
-                            Text(r.email ?? ''),
+                            Text(r.email ?? '',
+                                style: const TextStyle(fontSize: 11.5)),
                             const SizedBox(height: 4),
                             DropdownButton<String>(
                               value: r.role,
@@ -465,19 +458,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               items: const [
                                 DropdownMenuItem(
                                   value: 'admin_eglise',
-                                  child: Text('Admin d’église'),
+                                  child: Text('Admin d’église', style: TextStyle(fontSize: 13.5)),
                                 ),
                                 DropdownMenuItem(
                                   value: 'tresorier',
-                                  child: Text('Trésorier'),
+                                  child: Text('Trésorier', style: TextStyle(fontSize: 13.5)),
                                 ),
                                 DropdownMenuItem(
                                   value: 'responsable_culte',
-                                  child: Text('Responsable de culte'),
+                                  child: Text('Responsable de culte', style: TextStyle(fontSize: 13.5)),
                                 ),
                                 DropdownMenuItem(
                                     value: 'membre',
-                                    child: Text('Membre')),
+                                    child: Text('Membre', style: TextStyle(fontSize: 13.5))),
                               ],
                               onChanged: (value) async {
                                 if (value == null || value == r.role) {
@@ -522,7 +515,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final estEgliseTest =
         state.isAdmin && (state.church?.name.startsWith('TEST') ?? false);
     return Scaffold(
-      appBar: AppBar(title: const Text('Réglages et confiance')),
+      appBar: AppBar(title: const Text('Réglages et confidentialité')),
       body: RefreshIndicator(
         onRefresh: () async => _refresh(),
         child: SingleChildScrollView(
@@ -535,29 +528,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SectionTitle(title: 'Confiance'),
-                  _carteConfiance(
-                    context: context,
-                    icone: Icons.backup_outlined,
-                    titre: 'Sauvegardes',
-                    sousTitre:
-                        'Dernière sauvegarde affichée ici, avec son état.',
-                    ecran: const SauvegardeScreen(),
-                  ),
-                  _carteConfiance(
-                    context: context,
-                    icone: Icons.cloud_off_outlined,
-                    titre: 'File hors ligne',
-                    sousTitre:
-                        'Contenu déjà chargé disponible sans connexion.',
-                    ecran: const FileHorsLigneScreen(),
-                  ),
-                  _carteConfiance(
-                    context: context,
-                    icone: Icons.notifications_outlined,
-                    titre: 'Notifications',
-                    sousTitre: 'Annonces, rappels de culte et rendez-vous.',
-                    ecran: const NotificationsScreen(),
-                  ),
                   _carteConfiance(
                     context: context,
                     icone: Icons.phonelink_lock_outlined,
@@ -574,6 +544,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         'Actions sensibles tracées, avec auteur et horodatage.',
                     ecran: const AuditScreen(),
                   ),
+                  _carteConfiance(
+                    context: context,
+                    icone: Icons.lock_outline,
+                    titre: 'Mot de passe',
+                    sousTitre:
+                        'Vérifie l’ancien mot de passe. Les autres sessions sont déconnectées.',
+                    onTap: () => showChangePasswordDialog(context),
+                  ),
                   const SectionTitle(title: 'Église'),
                   Card(
                     child: Padding(
@@ -582,22 +560,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           ListTile(
                             contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.church_outlined),
-                            title: const Text('Mon église'),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const MonEgliseScreen(),
-                                ),
-                              );
-                            },
-                          ),
-                          const Divider(),
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.home_work_outlined),
-                            title: const Text('Biens de l’église'),
+                            title: const Text('Biens de l’église', style: TextStyle(fontSize: 13.5)),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.of(context).push(
@@ -611,7 +575,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.list_outlined),
-                            title: const Text('Listes configurables'),
+                            title: const Text('Listes configurables', style: TextStyle(fontSize: 13.5)),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.of(context).push(
@@ -626,13 +590,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.visibility_outlined),
-                            title: const Text('Consultations sensibles'),
+                            title: const Text('Consultations sensibles', style: TextStyle(fontSize: 13.5)),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) =>
                                       const ConsultationsScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          const Divider(),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.backup_outlined),
+                            title: const Text('Sauvegardes', style: TextStyle(fontSize: 13.5)),
+                            subtitle: const Text(
+                                'Dernière sauvegarde affichée ici, avec son état.',
+                                style: TextStyle(fontSize: 11.5)),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const SauvegardeScreen(),
                                 ),
                               );
                             },
@@ -648,27 +629,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _ClesMarchandesSection(churchId: state.church!.id),
                   const SectionTitle(title: 'Rôles'),
                   _sectionRoles(),
-                  const SectionTitle(title: 'Compte'),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.lock_outline),
-                            title: const Text('Changer mon mot de passe'),
-                            subtitle: const Text(
-                                'Vérifie l’ancien mot de passe. Les autres sessions sont déconnectées.'),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () => showChangePasswordDialog(context),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                   if (estEgliseTest) ...[
-                    const SectionTitle(title: 'Supprimer cette église'),
+                    const SectionTitle(title: 'Supprimer cette église', taille: 12),
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -684,10 +646,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 style: TextStyle(
                                     color: Theme.of(context)
                                         .colorScheme
-                                        .error),
+                                        .error,
+                                    fontSize: 13.5),
                               ),
                               subtitle: const Text(
-                                  'Supprime définitivement votre église TEST, ses annexes et tout ce qu’elles contiennent. L’aperçu s’affiche avant toute suppression.'),
+                                  'Supprime définitivement votre église TEST, ses annexes et tout ce qu’elles contiennent. L’aperçu s’affiche avant toute suppression.',
+                                  style: TextStyle(fontSize: 11.5)),
                               trailing: _suppressionEnCours
                                   ? const SizedBox(
                                       width: 24,
@@ -723,7 +687,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           const SizedBox(height: 12),
                           FilledButton(
                             onPressed: _savingUrl ? null : _saveUrl,
-                            child: const Text('Enregistrer l’URL'),
+                            child: const Text('Enregistrer l’URL', style: TextStyle(fontSize: 13.5)),
                           ),
                           const SizedBox(height: 8),
                           const Text(
@@ -743,15 +707,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           const ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: Icon(Icons.info_outline),
-                            title: Text(AppConfig.appName),
+                            title: Text(AppConfig.appName,
+                                style: TextStyle(fontSize: 13.5)),
                             subtitle:
-                                Text('Version ${AppConfig.appVersion}'),
+                                Text('Version ${AppConfig.appVersion}',
+                                    style: TextStyle(fontSize: 11.5)),
                           ),
                           const Divider(),
                           ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.language_outlined),
-                            title: const Text('Langue et données'),
+                            title: const Text('Langue et données', style: TextStyle(fontSize: 13.5)),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.of(context).push(
@@ -760,18 +726,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       const LangueDonneesScreen(),
                                 ),
                               );
-                            },
-                          ),
-                          const Divider(),
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.logout),
-                            title: const Text('Se déconnecter'),
-                            onTap: () async {
-                              await context.read<AppState>().logout();
-                              if (context.mounted) {
-                                Navigator.of(context).pop();
-                              }
                             },
                           ),
                         ],
@@ -810,13 +764,27 @@ class _ClesMarchandesSectionState extends State<_ClesMarchandesSection> {
   List<FournisseurPaiement> _fournisseurs = [];
   List<EglisePaiement> _configs = [];
   ParametresConfiance? _confiance;
+  EgliseParametres? _parametres;
   bool _chargement = true;
   bool _enregistrement = false;
 
   /// Contrôleurs par fournisseur puis par champ, créés après le
   /// chargement du catalogue (les champs viennent du serveur).
   final Map<String, Map<String, TextEditingController>> _cles = {};
+
+  /// Numéros marchands, un champ par fournisseur : jamais pré-remplis
+  /// depuis le serveur, l'état affiché est seulement « Aucun numéro
+  /// enregistré » ou le numéro enregistré. Enregistrés par le seul
+  /// bouton « Enregistrer les clés ».
+  final Map<String, TextEditingController> _numeros = {};
   final _cleNotificationController = TextEditingController();
+
+  /// Libellé du numéro marchand par code fournisseur.
+  static const _labelsNumero = {
+    'wave': 'Wave',
+    'orange_money': 'Orange Money',
+    'mtn_momo': 'MTN Mobile Money',
+  };
 
   @override
   void initState() {
@@ -831,6 +799,9 @@ class _ClesMarchandesSectionState extends State<_ClesMarchandesSection> {
         c.dispose();
       }
     }
+    for (final c in _numeros.values) {
+      c.dispose();
+    }
     _cleNotificationController.dispose();
     super.dispose();
   }
@@ -842,6 +813,7 @@ class _ClesMarchandesSectionState extends State<_ClesMarchandesSection> {
       final fournisseurs = await api.getFournisseursPaiement();
       final configs = await api.getMesPaiements(widget.churchId);
       final confiance = await api.getParametresConfiance();
+      final parametres = await api.getParametres();
       if (!mounted) return;
       setState(() {
         _fournisseurs = fournisseurs
@@ -849,11 +821,13 @@ class _ClesMarchandesSectionState extends State<_ClesMarchandesSection> {
             .toList();
         _configs = configs;
         _confiance = confiance;
+        _parametres = parametres;
         for (final f in _fournisseurs) {
           _cles[f.code] ??= {
             for (final champ in f.champsRequis)
               champ.nom: TextEditingController(),
           };
+          _numeros[f.code] ??= TextEditingController();
         }
         _chargement = false;
       });
@@ -867,11 +841,22 @@ class _ClesMarchandesSectionState extends State<_ClesMarchandesSection> {
   EglisePaiement? _configPour(String code) =>
       _configs.where((c) => c.fournisseurCode == code).firstOrNull;
 
+  /// Numéro marchand enregistré pour ce fournisseur, ou null.
+  String? _numeroPour(String code) => switch (code) {
+        'wave' => _parametres?.waveNumero,
+        'orange_money' => _parametres?.orangeNumero,
+        'mtn_momo' => _parametres?.mtnNumero,
+        _ => null,
+      };
+
   void _vider() {
     for (final parChamp in _cles.values) {
       for (final c in parChamp.values) {
         c.clear();
       }
+    }
+    for (final c in _numeros.values) {
+      c.clear();
     }
     _cleNotificationController.clear();
   }
@@ -920,9 +905,24 @@ class _ClesMarchandesSectionState extends State<_ClesMarchandesSection> {
             notificationCle: cleNotification);
         nbEnregistres++;
       }
+      // Numéros marchands : seuls les champs remplis partent, par le
+      // même bouton « Enregistrer les clés ».
+      final numeros = <String, String>{
+        for (final f in _fournisseurs)
+          if ((_numeros[f.code]?.text.trim() ?? '').isNotEmpty)
+            f.code: _numeros[f.code]!.text.trim(),
+      };
+      if (numeros.isNotEmpty) {
+        await api.saveParametres(
+          waveNumero: numeros['wave'],
+          orangeNumero: numeros['orange_money'],
+          mtnNumero: numeros['mtn_momo'],
+        );
+        nbEnregistres++;
+      }
       if (nbEnregistres == 0) {
         if (!mounted) return;
-        showApiError(context, 'Saisissez au moins une clé.');
+        showApiError(context, 'Saisissez au moins un numéro ou une clé.');
         return;
       }
       _vider();
@@ -949,6 +949,11 @@ class _ClesMarchandesSectionState extends State<_ClesMarchandesSection> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const Text(
+              'Tout ce qui se rapporte à la sécurité se saisit ici, dans Réglages — et nulle part ailleurs. Les clés restent chiffrées et masquées : elles ne s’affichent jamais en clair.',
+              style: TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 16),
             for (final f in _fournisseurs) ...[
               Text(
                 f.nom,
@@ -957,18 +962,63 @@ class _ClesMarchandesSectionState extends State<_ClesMarchandesSection> {
               const SizedBox(height: 4),
               Builder(
                 builder: (context) {
+                  final numero = _numeroPour(f.code);
+                  final sansNumero =
+                      numero == null || numero.isEmpty;
+                  // « Aucun numéro enregistré » est un état vide
+                  // atténué (gris), pas une valeur.
+                  return Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '${_labelsNumero[f.code] ?? f.nom} — '
+                              'numéro marchand : ',
+                          style: const TextStyle(fontSize: 10.5),
+                        ),
+                        TextSpan(
+                          text: sansNumero
+                              ? 'Aucun numéro enregistré'
+                              : numero,
+                          style: sansNumero
+                              ? TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                  fontSize: 12.5,
+                                )
+                              : const TextStyle(fontSize: 12.5),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _numeros[f.code]!,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: 'Numéro ${_labelsNumero[f.code] ?? f.nom}',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Builder(
+                builder: (context) {
                   final config = _configPour(f.code);
                   if (config == null) {
-                    return const Text('Aucune clé enregistrée.');
+                    return const Text('Aucune clé enregistrée.', style: TextStyle(fontSize: 12.5));
                   }
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                          '•••••••• — chiffrée, jamais affichée en clair.'),
+                          '•••••••• — chiffrée, jamais affichée en clair.',
+                          style: TextStyle(fontSize: 12.5)),
                       for (final champ in config.champs)
                         Text(
                           '${champ.label} : ${champ.configure ? 'configuré' : 'non configuré'}',
+                          style: const TextStyle(fontSize: 12.5),
                         ),
                     ],
                   );
@@ -994,13 +1044,14 @@ class _ClesMarchandesSectionState extends State<_ClesMarchandesSection> {
             ],
             const Text(
               'Fournisseur de notifications',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10.5),
             ),
             const SizedBox(height: 4),
             Text(
               _confiance?.notificationsConfigurees == true
                   ? '•••••••• — chiffrée, jamais affichée en clair.'
                   : 'Aucune clé enregistrée.',
+              style: const TextStyle(fontSize: 12.5),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -1016,7 +1067,7 @@ class _ClesMarchandesSectionState extends State<_ClesMarchandesSection> {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: _enregistrement ? null : _enregistrer,
-              child: const Text('Enregistrer les clés'),
+              child: const Text('Enregistrer les clés', style: TextStyle(fontSize: 13.5)),
             ),
           ],
         ),

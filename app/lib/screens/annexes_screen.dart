@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../models/annexe.dart';
+import '../models/code_tutelle.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
@@ -13,7 +15,6 @@ import 'transferts_screen.dart';
 import 'tree_screen.dart';
 import 'alertes_mere_screen.dart';
 import 'annexe_detail_screen.dart';
-import 'codes_tutelle_screen.dart';
 
 /// Mes annexes : les églises sous tutelle de mon église mère, avec leurs
 /// chiffres. La mère voit directement ce qui s'y passe, sans changer
@@ -93,6 +94,7 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
               decoration: const InputDecoration(
                 labelText: 'Rechercher une annexe',
                 hintText: 'Nom, code ESC-… ou ville',
+                hintStyle: TextStyle(fontSize: 13),
                 prefixIcon: Icon(Icons.search_outlined),
                 border: OutlineInputBorder(),
               ),
@@ -110,7 +112,7 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                 children: [
                   ListTile(
                     leading: const Icon(Icons.swap_horiz_outlined),
-                    title: const Text('Transferts de membres'),
+                    title: const Text('Transferts de membres', style: TextStyle(fontSize: 13.5)),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       Navigator.of(context).push(
@@ -123,7 +125,7 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.group_add_outlined),
-                    title: const Text('Demandes de rattachement'),
+                    title: const Text('Demandes de rattachement', style: TextStyle(fontSize: 13.5)),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       Navigator.of(context).push(
@@ -133,25 +135,25 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                       );
                     },
                   ),
-                  if (context.watch<AppState>().church?.isMere ?? false) ...[
-                    const Divider(height: 1),
-                    ListTile(
-                      leading:
-                          const Icon(Icons.warning_amber_outlined),
-                      title: const Text('Alertes du réseau'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const AlertesMereScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                  const Divider(height: 1),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.warning_amber_outlined),
+                    title: const Text('Alertes des annexes', style: TextStyle(fontSize: 13.5)),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const AlertesMereScreen(),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
+            const SectionTitle(title: 'Code de tutelle'),
+            const _CodeTutelleSection(),
             const SectionTitle(title: 'Annexes'),
             if (_loading)
               const AppLoading()
@@ -192,11 +194,13 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                         a.egliseNom,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13.5),
                       ),
                       subtitle: Text(
                         '${a.egliseCode} · ${a.egliseVille ?? ''}'
                         '${a.niveau == 1 ? '' : ' · niveau ${a.niveau}'}',
                         maxLines: 2,
+                        style: const TextStyle(fontSize: 11.5),
                       ),
                       trailing: Column(
                         mainAxisAlignment:
@@ -244,16 +248,152 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-                builder: (_) => const CodesTutelleScreen()),
-          );
-        },
-        icon: const Icon(Icons.key_outlined),
-        label: const Text('Code de tutelle'),
+    );
+  }
+}
+
+/// Code de tutelle (maquette, écran 12) : le code actuel affiché,
+/// régénération avec confirmation (l'ancien code s'arrête
+/// immédiatement). Réutilise l'API de codes de tutelle existante
+/// (`GET /codes-tutelle`, création puis annulation de l'ancien).
+class _CodeTutelleSection extends StatefulWidget {
+  const _CodeTutelleSection();
+
+  @override
+  State<_CodeTutelleSection> createState() => _CodeTutelleSectionState();
+}
+
+class _CodeTutelleSectionState extends State<_CodeTutelleSection> {
+  late Future<List<CodeTutelle>> _future;
+  bool _traitement = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = context.read<AppState>().api.getCodesTutelle();
+  }
+
+  void _refresh() =>
+      setState(() => _future = context.read<AppState>().api.getCodesTutelle());
+
+  Future<void> _regenerer(CodeTutelle? actif) async {
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Régénérer le code ?', style: TextStyle(fontSize: 17)),
+        content: const Text(
+          'Ce code sert aux demandes de rattachement des annexes. '
+          'Le régénérer arrête immédiatement l’ancien code.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler', style: TextStyle(fontSize: 13.5)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Régénérer le code', style: TextStyle(fontSize: 13.5)),
+          ),
+        ],
       ),
+    );
+    if (confirme != true || !mounted) return;
+    setState(() => _traitement = true);
+    try {
+      final api = context.read<AppState>().api;
+      if (actif != null) await api.annulerCodeTutelle(actif.id);
+      final code = await api.createCodeTutelle();
+      if (!mounted) return;
+      showSuccess(
+          context, 'Nouveau code ${code.code} créé. Donnez-le à l’église à rattacher.');
+      _refresh();
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    } finally {
+      if (mounted) setState(() => _traitement = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Seule une église mère génère un code : une annexe ne peut pas
+    // avoir d'annexe (règle du 11/11/2026).
+    final estMere = context.watch<AppState>().church?.isMere ?? false;
+    return FutureBuilder<List<CodeTutelle>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AppLoading();
+        }
+        if (snapshot.hasError) {
+          return AppError(
+            message: snapshot.error.toString(),
+            onRetry: _refresh,
+          );
+        }
+        final codes = snapshot.data ?? const <CodeTutelle>[];
+        final actif =
+            codes.where((c) => c.estActif).firstOrNull;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: 'Code actuel : ',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 10.5),
+                      ),
+                      TextSpan(
+                        text: actif?.code ??
+                            'Aucun code généré pour l’instant',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Ce code sert aux demandes de rattachement des annexes. '
+                  'Le régénérer arrête immédiatement l’ancien code : '
+                  'confirmation demandée avant.',
+                  style: TextStyle(fontSize: 12.5),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    if (actif != null)
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          Clipboard.setData(
+                              ClipboardData(text: actif.code));
+                          showSuccess(context, 'Code copié.');
+                        },
+                        icon: const Icon(Icons.copy_outlined),
+                        label: const Text('Copier', style: TextStyle(fontSize: 13.5)),
+                      ),
+                    if (actif != null) const SizedBox(width: 8),
+                    if (estMere)
+                      FilledButton.icon(
+                        onPressed:
+                            _traitement ? null : () => _regenerer(actif),
+                        icon: const Icon(Icons.refresh_outlined),
+                        label: const Text('Régénérer le code', style: TextStyle(fontSize: 13.5)),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
