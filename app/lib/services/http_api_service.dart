@@ -29,6 +29,7 @@ import '../models/gouvernance.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
+import '../models/messagerie.dart';
 import '../models/nettoyage_test.dart';
 import '../models/suppression_eglise.dart';
 import '../models/paiements.dart';
@@ -54,6 +55,7 @@ import 'bible_hors_ligne_service.dart';
 /// Seule implémentation de [ApiService] : aucune donnée de démonstration,
 /// tout vient de l'API réelle (listes vides quand l'église n'a rien saisi).
 class HttpApiService implements ApiService {
+  @override
   final String baseUrl;
   String? _token;
 
@@ -510,6 +512,77 @@ class HttpApiService implements ApiService {
     final data = await _call('POST', '/moi/messages', body: {'corps': corps});
     return MessageFidele.fromJson(
         data['message'] as Map<String, dynamic>);
+  }
+
+  // -- Messagerie (T-Msg-1) : seules des méthodes de route, la couche
+  // [_call] n'est pas touchée. Les listes nues sont lues via
+  // `data['items']` (enveloppe de [_call]).
+  @override
+  String? get token => _token;
+
+  @override
+  Future<List<ConversationMessagerie>> getConversationsMessagerie() async {
+    final data = await _call('GET', '/messagerie/conversations');
+    final items = (data['items'] as List<dynamic>? ?? []);
+    return items
+        .map((e) => ConversationMessagerie.fromJson(
+              e as Map<String, dynamic>,
+            ))
+        .toList();
+  }
+
+  @override
+  Future<ConversationMessagerie> getConversationMessagerie(String id) async {
+    final data = await _call('GET', '/messagerie/conversations/$id');
+    return ConversationMessagerie.fromJson(data);
+  }
+
+  @override
+  Future<ConversationMessagerie> creerConversationMessagerie({
+    required String type,
+    String? title,
+    required List<String> participantMemberIds,
+  }) async {
+    final data = await _call(
+      'POST',
+      '/messagerie/conversations',
+      body: {
+        'type': type,
+        if (title != null && title.trim().isNotEmpty) 'title': title.trim(),
+        'participant_member_ids': participantMemberIds,
+      },
+    );
+    return ConversationMessagerie.fromJson(data);
+  }
+
+  @override
+  Future<List<MessageMessagerie>> getMessagesConversation(
+    String conversationId, {
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    final data = await _call(
+      'GET',
+      '/messagerie/conversations/$conversationId/messages',
+      query: {'limit': '$limit', 'offset': '$offset'},
+    );
+    final items = (data['items'] as List<dynamic>? ?? []);
+    return items
+        .map((e) => MessageMessagerie.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<MessageMessagerie> envoyerMessageConversation(
+    String conversationId, {
+    required String content,
+  }) async {
+    final data = await _call(
+      'POST',
+      '/messagerie/conversations/$conversationId/messages',
+      body: {'content': content, 'type': 'text'},
+    );
+    return MessageMessagerie.fromJson(data);
   }
 
   @override

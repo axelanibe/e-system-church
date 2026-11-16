@@ -32,6 +32,7 @@ import 'package:esystem_church/models/finances.dart';
 import 'package:esystem_church/models/frequentation.dart';
 import 'package:esystem_church/models/medias.dart';
 import 'package:esystem_church/models/member.dart';
+import 'package:esystem_church/models/messagerie.dart';
 import 'package:esystem_church/models/membres_complement.dart';
 import 'package:esystem_church/models/nettoyage_test.dart';
 import 'package:esystem_church/models/suppression_eglise.dart';
@@ -869,6 +870,138 @@ class FauxApiService implements ApiService {
       corps: corps,
       createdAt: DateTime.now(),
     );
+  }
+
+  // -- Messagerie (T-Msg-1) : en mémoire, comme le reste du faux
+  // service. L'expéditeur de mes messages est le premier membre de
+  // l'église active (la démo ne lie pas le compte à une fiche).
+  final List<ConversationMessagerie> _conversationsMessagerie = [];
+  final Map<String, List<MessageMessagerie>> _messagesMessagerie = {};
+
+  @override
+  String get baseUrl => 'https://faux.local';
+
+  @override
+  String? get token => 'faux-jeton';
+
+  @override
+  Future<List<ConversationMessagerie>> getConversationsMessagerie() async {
+    await _latence();
+    _requireAuth();
+    final triees = List<ConversationMessagerie>.of(_conversationsMessagerie);
+    triees.sort((a, b) {
+      final da = a.lastMessageAt;
+      final db = b.lastMessageAt;
+      if (da == null && db == null) return 0;
+      if (da == null) return 1;
+      if (db == null) return -1;
+      return db.compareTo(da);
+    });
+    return List.unmodifiable(triees);
+  }
+
+  @override
+  Future<ConversationMessagerie> getConversationMessagerie(String id) async {
+    await _latence();
+    _requireAuth();
+    for (final conversation in _conversationsMessagerie) {
+      if (conversation.id == id) return conversation;
+    }
+    throw const ApiException('Conversation introuvable (démo).', 404);
+  }
+
+  @override
+  Future<ConversationMessagerie> creerConversationMessagerie({
+    required String type,
+    String? title,
+    required List<String> participantMemberIds,
+  }) async {
+    await _latence();
+    _requireAuth();
+    if (!typesConversationMessagerie.contains(type)) {
+      throw const ApiException(
+        'Type de conversation non proposé en T-Msg-1 (démo).',
+      );
+    }
+    if (type == 'directe' && participantMemberIds.length != 1) {
+      throw const ApiException(
+        'Une conversation directe compte exactement un autre membre (démo).',
+      );
+    }
+    if (type != 'directe' &&
+        (participantMemberIds.isEmpty ||
+            (title?.trim().isEmpty ?? true))) {
+      throw const ApiException(
+        'Un groupe demande un nom et au moins un membre (démo).',
+      );
+    }
+    final conversation = ConversationMessagerie(
+      id: 'demo-conv-${DateTime.now().millisecondsSinceEpoch}',
+      type: type,
+      title: title?.trim(),
+      createdAt: DateTime.now(),
+    );
+    _conversationsMessagerie.add(conversation);
+    _messagesMessagerie[conversation.id] = [];
+    return conversation;
+  }
+
+  @override
+  Future<List<MessageMessagerie>> getMessagesConversation(
+    String conversationId, {
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final messages = _messagesMessagerie[conversationId];
+    if (messages == null) {
+      throw const ApiException('Conversation introuvable (démo).', 404);
+    }
+    final debut = offset.clamp(0, messages.length);
+    final fin = (debut + limit).clamp(0, messages.length);
+    return List.unmodifiable(messages.sublist(debut, fin));
+  }
+
+  @override
+  Future<MessageMessagerie> envoyerMessageConversation(
+    String conversationId, {
+    required String content,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final messages = _messagesMessagerie[conversationId];
+    if (messages == null) {
+      throw const ApiException('Conversation introuvable (démo).', 404);
+    }
+    if (content.trim().isEmpty) {
+      throw const ApiException('Message vide (démo).');
+    }
+    final moi = _data.membersOf(_churchId).isEmpty
+        ? 'demo-m-001'
+        : _data.membersOf(_churchId).first.id;
+    final message = MessageMessagerie(
+      id: 'demo-msg-${DateTime.now().millisecondsSinceEpoch}',
+      conversationId: conversationId,
+      senderId: moi,
+      content: content.trim(),
+      createdAt: DateTime.now(),
+    );
+    messages.add(message);
+    final index = _conversationsMessagerie.indexWhere(
+      (c) => c.id == conversationId,
+    );
+    if (index >= 0) {
+      final ancienne = _conversationsMessagerie[index];
+      _conversationsMessagerie[index] = ConversationMessagerie(
+        id: ancienne.id,
+        type: ancienne.type,
+        title: ancienne.title,
+        createdAt: ancienne.createdAt,
+        lastMessageAt: message.createdAt,
+      );
+    }
+    return message;
   }
 
   @override

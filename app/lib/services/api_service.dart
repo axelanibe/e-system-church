@@ -24,6 +24,7 @@ import '../models/gouvernance.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
+import '../models/messagerie.dart';
 import '../models/nettoyage_test.dart';
 import '../models/suppression_eglise.dart';
 import '../models/paiements.dart';
@@ -1622,4 +1623,39 @@ abstract class ApiService {
   Future<List<ConsultationSensible>> getConsultationsSensibles();
   Future<List<ConsultationSensible>> getMesConsultations();
   Future<void> journaliserConsultation(String ressource, {String? ressourceId});
+
+  // -- Messagerie (tranche T-Msg-1, spécification v2) ----------------------
+  // Routes de base livrées par T-Msg-0 (`server/src/routes/messagerie.ts`) :
+  // conversations et messages texte, isolation par church_id et par
+  // participation. La liste ne renvoie ni participants, ni aperçu, ni
+  // non lus : l'écran les calcule côté client.
+  Future<List<ConversationMessagerie>> getConversationsMessagerie();
+
+  Future<ConversationMessagerie> getConversationMessagerie(String id);
+
+  /// Crée une conversation. Directe : exactement un autre membre
+  /// (le créateur est ajouté par le serveur). Groupe : titre et au
+  /// moins un membre. Seuls les types de T-Msg-1 sont proposés par
+  /// l'écran (directe, groupe_departement, groupe_eglise).
+  Future<ConversationMessagerie> creerConversationMessagerie({
+    required String type,
+    String? title,
+    required List<String> participantMemberIds,
+  });
+
+  Future<List<MessageMessagerie>> getMessagesConversation(
+    String conversationId, {
+    int limit,
+    int offset,
+  });
+
+  Future<MessageMessagerie> envoyerMessageConversation(
+    String conversationId, {
+    required String content,
+  });
+
+  /// Base de l'API et jeton JWT courant : le client WebSocket s'y
+  /// connecte (`wss://<base>/messagerie/ws?token=<jeton>`).
+  String get baseUrl;
+  String? get token;
 }

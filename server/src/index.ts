@@ -7,6 +7,7 @@ config({ path: join(dirname(fileURLToPath(import.meta.url)), "..", ".env") });
 
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import websocket from "@fastify/websocket";
 import type { Pool } from "pg";
 import { getDb } from "./db.js";
 import { registerAuthRoutes } from "./routes/auth.js";
@@ -29,6 +30,7 @@ import { registerServiteursRoutes } from "./routes/serviteurs.js";
 import { registerEnfantsRoutes } from "./routes/enfants.js";
 import { registerMediasRoutes } from "./routes/medias.js";
 import { registerMessagerieRoutes } from "./routes/messagerie.js";
+import { registerMessagerieWs } from "./messagerie_ws.js";
 import { registerBibleRoutes } from "./routes/bible.js";
 import { registerEcoleBibliqueRoutes } from "./routes/ecole_biblique.js";
 import { registerBiensRoutes } from "./routes/biens.js";
@@ -55,6 +57,15 @@ import { registerUsRestantesRoutes } from "./routes/us_restantes.js";
 
 export function buildApp(db: Pool) {
   const app = Fastify({ logger: true });
+
+  // WebSocket (T-Msg-1) : le greffon doit être chargé avant la route
+  // /messagerie/ws, sinon son gestionnaire reçoit (requête, réponse)
+  // au lieu de (socket, requête). app.after attend le chargement du
+  // greffon avant de déclarer la route.
+  app.register(websocket);
+  app.after(() => {
+    registerMessagerieWs(app, db);
+  });
 
   // CORS : le site web et l'API sont sur deux origines différentes, sans
   // ces en-têtes le navigateur bloque chaque appel, dont POST /auth/login

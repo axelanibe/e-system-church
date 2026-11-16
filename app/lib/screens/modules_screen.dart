@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_theme.dart';
+import '../services/messagerie_lecture_service.dart';
+import '../state/app_state.dart';
 import 'annexes_screen.dart';
 import 'attestations_screen.dart';
 import 'bible_fidele_screen.dart';
@@ -9,6 +11,7 @@ import 'departements_screen.dart';
 import 'ecole_biblique_screen.dart';
 import 'gouvernance_screen.dart';
 import 'messages_admin_screen.dart';
+import 'messagerie_liste_screen.dart';
 import 'pastoral_screen.dart';
 import 'patrimoine_screen.dart';
 import 'prieres_screen.dart';
@@ -16,11 +19,14 @@ import 'rapports_recus_screen.dart';
 import 'rendez_vous_admin_screen.dart';
 import 'serviteurs_screen.dart';
 
+import 'package:provider/provider.dart';
+
 /// Modules de l'église (maquette Membres Finances, écran 21) : grille
-/// de 13 cartes EXACTEMENT, dans l'ordre de la maquette. Chaque carte
-/// ouvre sa vraie fonctionnalité, une seule entrée par fonction, jamais
-/// de doublon avec la barre du bas (Accueil, Membres, Finances,
-/// Modules) ni avec la connexion, qui est l'entrée de
+/// de 14 cartes EXACTEMENT, dans l'ordre de la maquette, plus la carte
+/// « Messagerie » ajoutée par la tranche T-Msg-1 (la maquette en
+/// comptait 13). Chaque carte ouvre sa vraie fonctionnalité, une seule
+/// entrée par fonction, jamais de doublon avec la barre du bas (Accueil,
+/// Membres, Finances, Modules) ni avec la connexion, qui est l'entrée de
 /// l'application, ni avec l'espace fidèle, périmètre étanche.
 /// La carte « Bible et école » ouvre les vrais écrans Bible de la T9 :
 /// la lecture d'abord, l'école biblique par le bouton de la barre.
@@ -118,6 +124,12 @@ class ModulesScreen extends StatelessWidget {
       'Messages de l’administration aux églises',
       Icons.message_outlined,
     ),
+    (
+      'messagerie',
+      'Messagerie',
+      'Conversations de l’église',
+      Icons.chat_bubble_outline,
+    ),
   ];
 
   void _pousser(BuildContext context, Widget ecran) {
@@ -170,6 +182,10 @@ class ModulesScreen extends StatelessWidget {
       case 'messages':
         // Écran admin de messages dédié (maquette, écran 31).
         _pousser(context, const MessagesAdminScreen());
+      case 'messagerie':
+        // Messagerie de l'église (T-Msg-1) : conversations directes et
+        // groupes de la même église.
+        _pousser(context, const MessagerieListeScreen());
       case 'annexes':
         _pousser(context, const AnnexesScreen());
       case 'rapports':
@@ -234,60 +250,12 @@ class ModulesScreen extends StatelessWidget {
                   children: [
                     for (final (cible, titre, description, icone)
                         in _modules)
-                      Card(
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () => _ouvrir(context, cible),
-                          child: Padding(
-                            // Maquette, écran 21 (.modcard) : 10 px.
-                            padding: const EdgeInsets.all(10),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(icone,
-                                        color: AppTheme.orFonce, size: 19),
-                                    const Spacer(),
-                                    const Icon(Icons.chevron_right,
-                                        color: AppTheme.orFonce, size: 15),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                // Zone de titre de hauteur fixe (2 lignes
-                                // de 13 px) : le sous-titre commence à
-                                // la même hauteur d'une carte à l'autre,
-                                // titres et chevrons alignés. E10.
-                                SizedBox(
-                                  height: 32,
-                                  child: Text(
-                                    titre,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    // Maquette, écran 21 (.modcard .mt) : 13 px.
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Expanded(
-                                  child: Text(
-                                    description,
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                    // Maquette, écran 21 (.modcard .md) : 11 px.
-                                    style:
-                                        const TextStyle(fontSize: 11),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                      _carteModule(
+                        context,
+                        cible,
+                        titre,
+                        description,
+                        icone,
                       ),
                   ],
                 ),
@@ -296,6 +264,128 @@ class ModulesScreen extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  /// Une carte de la grille. La carte Messagerie porte en plus la
+  /// pastille du nombre de conversations non lues.
+  Widget _carteModule(
+    BuildContext context,
+    String cible,
+    String titre,
+    String description,
+    IconData icone,
+  ) {
+    final carte = Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _ouvrir(context, cible),
+        child: Padding(
+          // Maquette, écran 21 (.modcard) : 10 px.
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icone, color: AppTheme.orFonce, size: 19),
+                  const Spacer(),
+                  const Icon(Icons.chevron_right,
+                      color: AppTheme.orFonce, size: 15),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Zone de titre de hauteur fixe (2 lignes de 13 px) : le
+              // sous-titre commence à la même hauteur d'une carte à
+              // l'autre, titres et chevrons alignés. E10.
+              SizedBox(
+                height: 32,
+                child: Text(
+                  titre,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  // Maquette, écran 21 (.modcard .mt) : 13 px.
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(
+                          fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Expanded(
+                child: Text(
+                  description,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  // Maquette, écran 21 (.modcard .md) : 11 px.
+                  style: const TextStyle(fontSize: 11),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (cible != 'messagerie') return carte;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        carte,
+        const Positioned(
+          top: -4,
+          right: -4,
+          child: _PastilleNonLusMessagerie(),
+        ),
+      ],
+    );
+  }
+}
+
+/// Pastille or du nombre de conversations non lues, sur la carte
+/// Messagerie. Invisible quand il n'y en a aucune ou quand la lecture
+/// échoue : la carte reste utilisable sans badge.
+class _PastilleNonLusMessagerie extends StatelessWidget {
+  const _PastilleNonLusMessagerie();
+
+  Future<int> _totalNonLus(BuildContext context) async {
+    final api = context.read<AppState>().api;
+    try {
+      await MessagerieLectureService.instance.charger();
+      final conversations = await api.getConversationsMessagerie();
+      return MessagerieLectureService.instance
+          .compterConversationsNonLues(conversations);
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<int>(
+      future: _totalNonLus(context),
+      builder: (context, snapshot) {
+        final total = snapshot.data ?? 0;
+        if (total <= 0) return const SizedBox.shrink();
+        return Container(
+          constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppTheme.or,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white, width: 1.5),
+          ),
+          child: Text(
+            '$total',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.violetProfond,
+            ),
+          ),
+        );
+      },
     );
   }
 }
