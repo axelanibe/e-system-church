@@ -185,10 +185,10 @@ class _MembresScreenState extends State<MembresScreen>
         return _idsBaptises?.contains(m.id) == true ||
             m.baptemeDate != null;
       case 'en_attente':
-        // Aucun statut « en attente » n'existe pour un membre : le
-        // plus proche, en données réelles, est le dernier statut
-        // riche « en_formation » (intégration pas terminée).
-        return m.statutRiche == 'en_formation';
+        // « En attente » : la personne ne s'est pas encore décidée
+        // (définition d'Axel). Le statut réel le plus proche est
+        // « sympathisant » : elle vient sans être membre.
+        return m.statutRiche == 'sympathisant';
       default:
         return true;
     }
