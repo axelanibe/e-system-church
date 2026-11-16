@@ -20,9 +20,9 @@ class EnTeteClair extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppTheme.fondPapier,
       padding: const EdgeInsets.fromLTRB(8, 12, 16, 12),
       decoration: const BoxDecoration(
+        color: AppTheme.fondPapier,
         border: Border(
           bottom: BorderSide(color: AppTheme.bordure),
         ),

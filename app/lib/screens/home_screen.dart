@@ -7,7 +7,7 @@ import '../widgets/common_widgets.dart';
 import '../widgets/en_tete_clair.dart';
 import '../widgets/short_drawer.dart';
 import 'dashboard_screen.dart';
-import 'departements_screen.dart';
+import 'modules_screen.dart';
 import 'finances_screen.dart';
 import 'membres_screen.dart';
 
@@ -37,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'Accueil administrateur',
     'Membres',
     'Finances',
-    'Départements',
+    'Modules',
   ];
 
   /// Chaque écran reçoit une clé liée à l'église active : après une
@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// sinon leur Future d'avant (données de l'église précédente). La clé
   /// changeante recrée l'écran, donc son chargement, sans refaire la
   /// navigation. Vaut pour les 4 écrans à Future en initState
-  /// (Accueil, Membres, Finances, Départements).
+  /// (Accueil, Membres, Finances, Modules).
   Widget _screenFor(int index, String? egliseId) {
     final cle = ValueKey(egliseId);
     switch (index) {
@@ -57,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 2:
         return FinancesScreen(key: cle);
       case 3:
-        return DepartementsScreen(key: cle);
+        return ModulesScreen(key: cle, sansAppBar: true);
       default:
         return DashboardScreen(
             key: cle, onAller: (i) => setState(() => _index = i));
@@ -70,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final wide = MediaQuery.of(context).size.width >= 900;
 
     // Libellés courts, une ligne : « Accueil », « Membres »,
-    // « Finances », « Départements ». Les titres complets restent
+    // « Finances », « Modules ». Les titres complets restent
     // dans _titles. Chaque module est joignable par le tiroir, une
     // seule entrée par fonctionnalité, jamais par une grille.
     const destinations = [
@@ -87,9 +87,9 @@ class _HomeScreenState extends State<HomeScreen> {
           selectedIcon: Icon(Icons.account_balance_wallet),
           label: 'Finances'),
       NavigationDestination(
-          icon: Icon(Icons.groups_outlined),
-          selectedIcon: Icon(Icons.groups),
-          label: 'Départements'),
+          icon: Icon(Icons.grid_view_outlined),
+          selectedIcon: Icon(Icons.grid_view),
+          label: 'Modules'),
     ];
 
     // Tous les modules sont affichés pour toutes les églises (règle
