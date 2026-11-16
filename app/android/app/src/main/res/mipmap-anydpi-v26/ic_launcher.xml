@@ -2,6 +2,6 @@
 <!-- Icône adaptative : fond violet du logo, premier plan = logo
      officiel (croix or sur globe violet). -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="#2A0059" />
+    <background android:drawable="@color/ic_launcher_background" />
     <foreground android:drawable="@mipmap/ic_launcher_foreground" />
 </adaptive-icon>
