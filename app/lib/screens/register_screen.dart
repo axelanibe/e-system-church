@@ -258,7 +258,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Téléphone de l’église',
-                      hintText: 'Ex. +225 07 00 00 00',
+                      prefixText: '+225 ',
+                      hintText: 'Ex. 07 00 00 00',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -353,6 +354,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Téléphone de l’administrateur',
+                      prefixText: '+225 ',
+                      hintText: 'Ex. 07 00 00 00',
                       border: OutlineInputBorder(),
                     ),
                     validator: validerTelephoneFacultatif,
