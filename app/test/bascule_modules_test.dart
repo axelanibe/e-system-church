@@ -9,8 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 /// Bascule Modules (maquette, écran 1) : la barre du bas est
-/// Accueil, Membres, Finances, Modules ; Départements n'est plus
-/// un onglet, il reste joignable par sa carte dans la grille Modules.
+/// Accueil, Membres, Finances, Modules, Messagerie (design couleurs
+/// messagerie, 16 nov. 2026) ; Départements n'est plus un onglet, il
+/// reste joignable par sa carte dans la grille Modules.
 /// Aucun appel réseau : le faux service sert des listes vides.
 class _EtatFaux extends AppState {
   _EtatFaux(this._api);
@@ -63,6 +64,11 @@ Future<void> _pomper(WidgetTester tester) async {
   // service (120 ms chacun) : on laisse la chaîne se terminer, sinon
   // un minuteur reste en attente en fin de test.
   await tester.pumpAndSettle();
+  // L'onglet Messagerie charge les lectures locales au démarrage
+  // (délai de 2 s si le stockage ne répond pas, comme en test) : on
+  // laisse ce délai s'écouler, sinon un minuteur reste en attente
+  // en fin de test.
+  await tester.pump(const Duration(seconds: 3));
   // L'accueil (onglet par défaut) déborde dans l'environnement de
   // test : police de test plus large que la vraie (héros « Aujourd'hui »
   // 140 px, carte 2,7 px). Sur un vrai téléphone 390 px ça tient
@@ -79,11 +85,11 @@ Finder _onglet(String libelle) => find.descendant(
 );
 
 void main() {
-  testWidgets('Barre du bas : Accueil, Membres, Finances, Modules', (
+  testWidgets('Barre du bas : Accueil, Membres, Finances, Modules, Messagerie', (
     tester,
   ) async {
     await _pomper(tester);
-    for (final libelle in ['Accueil', 'Membres', 'Finances', 'Modules']) {
+    for (final libelle in ['Accueil', 'Membres', 'Finances', 'Modules', 'Messagerie']) {
       expect(_onglet(libelle), findsOneWidget);
     }
     expect(_onglet('Départements'), findsNothing);

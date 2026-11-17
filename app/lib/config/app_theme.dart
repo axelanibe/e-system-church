@@ -49,6 +49,10 @@ class AppTheme {
   /// carte « Aujourd'hui », aperçu fidèle).
   static const Color violetSecondaire = Color(0xFF3D0073);
 
+  /// Violet vif, second arrêt des dégradés d'avatars de la
+  /// messagerie (identité propre, design couleurs messagerie).
+  static const Color violetVif = Color(0xFF5A00A8);
+
   /// Or du logo, accent : boutons d'action, badge « Église mère »,
   /// détails.
   static const Color or = Color(0xFFE8B820);

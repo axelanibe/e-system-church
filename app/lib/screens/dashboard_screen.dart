@@ -855,17 +855,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         .titleMedium,
                                   ),
                                   const SizedBox(height: 8),
-                                  Text(
-                                      '${pluriel(data.rapport!.totauxReseau.membresActifs, 'membre actif', 'membres actifs')} · '
-                                      '${pluriel(data.rapport!.totauxReseau.nombreContributions, 'contribution')} · '
-                                      '${formatFcfa(data.rapport!.totauxReseau.totalFcfa)}'),
+                                  // Design couleurs messagerie (16 nov.
+                                  // 2026) : compteurs du réseau en
+                                  // pastille or clair, texte violet.
+                                  Container(
+                                    padding:
+                                        const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.orClair,
+                                      borderRadius:
+                                          BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                        '${pluriel(data.rapport!.totauxReseau.membresActifs, 'membre actif', 'membres actifs')} · '
+                                        '${pluriel(data.rapport!.totauxReseau.nombreContributions, 'contribution')} · '
+                                        '${formatFcfa(data.rapport!.totauxReseau.totalFcfa)}',
+                                        style: const TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.violetProfond,
+                                        )),
+                                  ),
                                   const SizedBox(height: 12),
                                   const Divider(),
                                   ...data.rapport!.sousEglises.map(
                                     (s) => ListTile(
                                       contentPadding: EdgeInsets.zero,
                                       leading: const Icon(
-                                          Icons.account_tree_outlined),
+                                        Icons.account_tree_outlined,
+                                        color: AppTheme.orFonce,
+                                      ),
                                       title: Text(
                                         s.egliseNom,
                                         maxLines: 1,
@@ -948,9 +970,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                   if (data.mereCode != null) ...[
                                     const SizedBox(height: 4),
-                                    // Maquette, écran 36 : 13 px.
-                                    Text('Code ${data.mereCode}',
-                                        style: const TextStyle(fontSize: 13)),
+                                    // Maquette, écran 36 : 13 px. Pastille
+                                    // or clair (design couleurs messagerie).
+                                    Container(
+                                      padding:
+                                          const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.orClair,
+                                        borderRadius:
+                                            BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        'Code ${data.mereCode}',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.violetProfond,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                   const SizedBox(height: 8),
                                   Text(
