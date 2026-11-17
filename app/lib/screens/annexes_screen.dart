@@ -89,13 +89,24 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
           children: [
-            // Maquette, écran 12 : phrase d'intro.
-            Text(
-              'Mon église et ses annexes, transferts, rattachements, '
-              'alertes.',
-              style: TextStyle(
-                fontSize: 12.5,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+            // En-tête coloré (design couleurs messagerie, 16 nov.
+            // 2026) : référence Projection (.annexe-cover), fond
+            // carte, bordure or, phrase d'intro en bleu nuit.
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: AppTheme.or, width: 1.5),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Text(
+                'Mon église et ses annexes, transferts, rattachements, '
+                'alertes.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: AppTheme.violetProfond,
+                ),
               ),
             ),
             const SizedBox(height: 16),

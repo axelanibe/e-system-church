@@ -73,7 +73,7 @@ Future<void> _defilerJusqua(WidgetTester tester, Finder cible) async {
 }
 
 void main() {
-  testWidgets('Modules : les 14 cartes s’affichent', (tester) async {
+  testWidgets('Modules : les 13 cartes s’affichent', (tester) async {
     await _pomper(tester);
     for (final titre in [
       'Départements',
@@ -89,13 +89,13 @@ void main() {
       'Rendez-vous',
       'Attestations d’actes',
       'Messages admin',
-      'Messagerie',
     ]) {
       await _defilerJusqua(tester, find.text(titre));
     }
-    // La pastille de non lus de la carte Messagerie charge les
-    // lectures locales (délai de 2 s si le stockage ne répond pas).
-    await tester.pump(const Duration(seconds: 3));
+    // La carte « Messagerie » a été retirée (design couleurs
+    // messagerie, 16 nov. 2026) : la messagerie est un onglet de la
+    // barre du bas, jamais un doublon dans la grille.
+    expect(find.text('Messagerie'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

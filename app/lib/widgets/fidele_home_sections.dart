@@ -21,7 +21,8 @@ import '../screens/carte_fidele_screen.dart';
 import '../screens/cotisations_screen.dart';
 import '../screens/journal_screen.dart';
 import '../screens/mes_attestations_screen.dart';
-import '../screens/messages_fidele_screen.dart';
+import '../screens/messagerie_liste_screen.dart';
+import '../services/messagerie_lecture_service.dart';
 
 /// Contenu partagé des deux écrans d'accueil fidèle (tranche 3,
 /// E-FI1) : « fidele-accueil » (onglet Accueil de la coquille
@@ -75,6 +76,10 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
   /// (le serveur est la source, on met à jour après chaque appel).
   final Map<String, bool> _rsvpParCulte = {};
 
+  /// Conversations de messagerie non lues, pour la pastille de la
+  /// tuile « Messagerie » (design couleurs messagerie, 16 nov. 2026).
+  int _messagerieNonLus = 0;
+
   @override
   void initState() {
     super.initState();
@@ -85,6 +90,10 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
     final api = context.read<AppState>().api;
     final apercu = context.read<AppState>().apercuFidele;
     _profilFuture = api.getMoi();
+    // Badge de la tuile « Messagerie » : même calcul local que côté
+    // admin (MessagerieLectureService, sans route serveur). Un échec
+    // ne bloque pas l'accueil, la pastille reste cachée.
+    _chargerNonLusMessagerie();
     if (apercu) {
       // Aperçu admin : pas de membre lié, états vides partout.
       _carteFuture = Future.value(null);
@@ -112,6 +121,21 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
     _contributionsFuture = api.getMesContributions();
     _attestationsFuture = api.getMesAttestations();
     _annoncesFuture = api.getMesAnnonces();
+  }
+
+  Future<void> _chargerNonLusMessagerie() async {
+    final api = context.read<AppState>().api;
+    try {
+      await MessagerieLectureService.instance.charger();
+      final conversations = await api.getConversationsMessagerie();
+      if (!mounted) return;
+      setState(
+        () => _messagerieNonLus = MessagerieLectureService.instance
+            .compterConversationsNonLues(conversations),
+      );
+    } catch (_) {
+      // Sans messagerie lisible, pas de badge.
+    }
   }
 
   Future<void> _refresh() async {
@@ -257,9 +281,23 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                         children: [
                           Container(
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border.all(
-                                color: AppTheme.bordure,
+                              // Design couleurs messagerie (16 nov. 2026) :
+                              // la Projection (.m-hero) montre ce héros en
+                              // blanc, bordure fine, date en or ; la couleur
+                              // demandée par Axel va au-delà de la
+                              // Projection, appliquée quand même dans sa
+                              // palette : dégradé violet, textes blancs,
+                              // date en or clair. Structure gardée (date,
+                              // salutation, sous-titre). Même motif que la
+                              // carte « Aujourd'hui » de l'accueil admin.
+                              // Jamais de texte blanc sur or.
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppTheme.violetProfond,
+                                  AppTheme.violetSecondaire,
+                                ],
                               ),
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -273,7 +311,7 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                                       .textTheme
                                       .bodySmall
                                       ?.copyWith(
-                                        color: AppTheme.orFonce,
+                                        color: AppTheme.orClair,
                                         fontSize: 10.5,
                                       ),
                                 ),
@@ -283,7 +321,10 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                                   style: Theme.of(context)
                                       .textTheme
                                       .headlineSmall
-                                      ?.copyWith(fontSize: 20),
+                                      ?.copyWith(
+                                        fontSize: 20,
+                                        color: Colors.white,
+                                      ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -291,7 +332,10 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleMedium
-                                      ?.copyWith(fontSize: 13.5),
+                                      ?.copyWith(
+                                        fontSize: 13.5,
+                                        color: Colors.white,
+                                      ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -300,7 +344,11 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodyMedium
-                                      ?.copyWith(fontSize: 12),
+                                      ?.copyWith(
+                                        fontSize: 12,
+                                        color:
+                                            Colors.white.withValues(alpha: 0.85),
+                                      ),
                                 ),
                               ],
                             ),
@@ -379,11 +427,12 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                         builder: (_) => const JournalScreen(),
                       ),
                     ),
-                    onMessages: () => Navigator.of(context).push(
+                    onMessagerie: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
-                        builder: (_) => const MessagesFideleScreen(),
+                        builder: (_) => const MessagerieListeScreen(),
                       ),
                     ),
+                    badgeMessagerie: _messagerieNonLus,
                   ),
                   const SizedBox(height: 8),
                   const SectionTitle(title: 'Prière du jour'),
@@ -424,22 +473,35 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
   }
 }
 
-/// Grille 2 par 2 des accès du fidèle (maquette, écran 37) : 4 tuiles,
-/// Ma Bible, Mes cotisations, Mon journal, Message à mon église, au
-/// texte complet, « Ouvrir » sur sa propre ligne en bas de chaque
-/// carte. L'école biblique s'ouvre depuis l'onglet Bible, le
-/// rendez-vous depuis le menu Plus : un seul point d'entrée chacun.
+/// Grille 2 par 2 des accès du fidèle (Projection, « Actions
+/// rapides ») : 4 tuiles, Ma Bible, Mes cotisations, Mon journal,
+/// Messagerie, au texte complet, « Ouvrir » sur sa propre ligne en
+/// bas de chaque carte. L'école biblique s'ouvre depuis l'onglet
+/// Bible, le rendez-vous depuis le menu Plus : un seul point
+/// d'entrée chacun. La tuile « Messagerie » reprend le modèle
+/// « Message à mon église » de la Projection (icône or, titre bleu
+/// nuit, flèche « Ouvrir → » en or) et ouvre la nouvelle messagerie,
+/// échanges entre membres de l'église (design couleurs messagerie,
+/// 16 nov. 2026). Le fil privé « Message à mon église » (P1) reste
+/// accessible par l'onglet « Messages », inchangé : jamais deux
+/// entrées pour la même fonction, et le libellé ne fait pas croire
+/// au fidèle qu'il parle à son église mère quand il parle aux
+/// membres de son église.
 class _GrilleOutils extends StatelessWidget {
   final VoidCallback onBible;
   final VoidCallback onCotisations;
   final VoidCallback onJournal;
-  final VoidCallback onMessages;
+  final VoidCallback onMessagerie;
+
+  /// Conversations de messagerie non lues, pastille or sur la tuile.
+  final int badgeMessagerie;
 
   const _GrilleOutils({
     required this.onBible,
     required this.onCotisations,
     required this.onJournal,
-    required this.onMessages,
+    required this.onMessagerie,
+    this.badgeMessagerie = 0,
   });
 
   @override
@@ -482,10 +544,12 @@ class _GrilleOutils extends StatelessWidget {
                   onTap: onJournal,
                 ),
                 _TuileAcces(
-                  icone: Icons.mail_outline,
-                  titre: 'Message à mon église',
-                  sousTitre: 'Messagerie privée, dans l’application.',
-                  onTap: onMessages,
+                  icone: Icons.chat_bubble_outline,
+                  titre: 'Messagerie',
+                  sousTitre:
+                      'Conversations avec les membres de votre église.',
+                  badge: badgeMessagerie,
+                  onTap: onMessagerie,
                 ),
               ],
             );
@@ -502,16 +566,21 @@ class _TuileAcces extends StatelessWidget {
   final String sousTitre;
   final VoidCallback onTap;
 
+  /// Nombre de conversations non lues : pastille or en coin, cachée
+  /// à 0. Nul pour les tuiles sans compteur.
+  final int? badge;
+
   const _TuileAcces({
     required this.icone,
     required this.titre,
     required this.sousTitre,
     required this.onTap,
+    this.badge,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    final carte = Card(
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -559,6 +628,36 @@ class _TuileAcces extends StatelessWidget {
           ),
         ),
       ),
+    );
+    final total = badge ?? 0;
+    if (total <= 0) return carte;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        carte,
+        Positioned(
+          top: -4,
+          right: -4,
+          child: Container(
+            constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppTheme.or,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white, width: 1.5),
+            ),
+            child: Text(
+              '$total',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.violetProfond,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

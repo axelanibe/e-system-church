@@ -212,6 +212,12 @@ class _MessagerieConversationScreenState
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.titre),
+        // Liseré or 3 px sous la barre : signature visuelle de la
+        // messagerie, aussi dans la liste des conversations.
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(3),
+          child: Container(height: 3, color: AppTheme.or),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.flag_outlined),
@@ -349,7 +355,7 @@ class _MessagerieConversationScreenState
 
 /// Une bulle de message : à droite sur violet pour mes messages, à
 /// gauche sur blanc pour les autres. L'heure est sous la bulle, en
-/// violet à 75 % sur fond papier (7,37:1), jamais en blanc atténué
+/// or foncé sur fond papier (4,58:1), jamais en blanc atténué
 /// sur violet.
 class _Bulle extends StatelessWidget {
   final MessageMessagerie message;
@@ -390,9 +396,9 @@ class _Bulle extends StatelessWidget {
                   border: mien
                       ? null
                       : Border.all(
-                          color: AppTheme.violetProfond.withValues(
-                            alpha: 0.2,
-                          ),
+                          // Bordure papier-violet : la bulle se
+                          // distingue du fond papier.
+                          color: AppTheme.bordure,
                         ),
                 ),
                 child: Column(
@@ -426,11 +432,10 @@ class _Bulle extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
                   child: Text(
                     heure,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 11,
-                      color: AppTheme.violetProfond.withValues(
-                        alpha: 0.75,
-                      ),
+                      // Horodatage or foncé (4,58:1 sur papier).
+                      color: AppTheme.orFonce,
                     ),
                   ),
                 ),

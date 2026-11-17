@@ -17,7 +17,11 @@ import 'messagerie_conversation_screen.dart';
 /// ils sont calculés ici, à partir des messages lus pour chaque
 /// conversation (voir `models/messagerie.dart`).
 class MessagerieListeScreen extends StatefulWidget {
-  const MessagerieListeScreen({super.key});
+  /// [sansAppBar] : intégré comme onglet (barre du bas), sans sa propre
+  /// barre, l'en-tête clair de HomeScreen donne déjà le titre.
+  final bool sansAppBar;
+
+  const MessagerieListeScreen({super.key, this.sansAppBar = false});
 
   @override
   State<MessagerieListeScreen> createState() => _MessagerieListeScreenState();
@@ -159,8 +163,22 @@ class _MessagerieListeScreenState extends State<MessagerieListeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Total des non lus pour le bandeau d'identité (design couleurs
+    // messagerie, 16 nov. 2026).
+    final totalNonLus =
+        _conversations.fold<int>(0, (total, c) => total + c.nonLus);
     return Scaffold(
-      appBar: AppBar(title: const Text('Messagerie')),
+      appBar: widget.sansAppBar
+          ? null
+          : AppBar(
+              title: const Text('Messagerie'),
+              // Liseré or 3 px sous la barre : signature visuelle de
+              // la messagerie, aussi dans chaque conversation.
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(3),
+                child: Container(height: 3, color: AppTheme.or),
+              ),
+            ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _nouvelleConversation,
         icon: const Icon(Icons.add),
@@ -174,28 +192,102 @@ class _MessagerieListeScreenState extends State<MessagerieListeScreen> {
                   onRefresh: _charger,
                   child: Column(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                      // Bandeau dégradé violet, compteur des non lus
+                      // en or : l'identité propre de la messagerie.
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppTheme.violetProfond,
+                              AppTheme.violetSecondaire,
+                            ],
+                          ),
+                        ),
                         child: Row(
                           children: [
-                            for (final (valeur, libelle)
-                                in const [
-                              ('toutes', 'Toutes'),
-                              ('directe', 'Directes'),
-                              ('groupes', 'Groupes'),
-                              ('pastorale', 'Pastorale'),
-                            ])
-                              Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: ChoiceChip(
-                                  label: Text(libelle),
-                                  selected: _filtre == valeur,
-                                  onSelected: (_) => setState(
-                                    () => _filtre = valeur,
-                                  ),
+                            const Icon(
+                              Icons.chat_bubble_outline,
+                              color: AppTheme.or,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text.rich(
+                                TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: totalNonLus > 0
+                                          ? '$totalNonLus'
+                                          : 'Aucun message non lu',
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: totalNonLus > 0
+                                            ? AppTheme.or
+                                            : Colors.white,
+                                      ),
+                                    ),
+                                    if (totalNonLus > 0)
+                                      TextSpan(
+                                        text:
+                                            ' conversation${totalNonLus > 1 ? 's' : ''} non lue${totalNonLus > 1 ? 's' : ''}',
+                                        style: const TextStyle(
+                                          fontSize: 13.5,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
+                            ),
                           ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        // Défilement horizontal : les 4 filtres ne
+                        // tiennent pas sur un téléphone étroit quand
+                        // la taille du texte est agrandie (Très grand).
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              for (final (valeur, libelle)
+                                  in const [
+                                ('toutes', 'Toutes'),
+                                ('directe', 'Directes'),
+                                ('groupes', 'Groupes'),
+                                ('pastorale', 'Pastorale'),
+                              ])
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: ChoiceChip(
+                                    label: Text(libelle),
+                                    selected: _filtre == valeur,
+                                    selectedColor: AppTheme.violetProfond,
+                                    backgroundColor: Colors.white,
+                                    side: const BorderSide(
+                                      color: AppTheme.bordure,
+                                    ),
+                                    labelStyle: TextStyle(
+                                      color: _filtre == valeur
+                                          ? Colors.white
+                                          : AppTheme.violetProfond,
+                                    ),
+                                    onSelected: (_) => setState(
+                                      () => _filtre = valeur,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                       Expanded(
@@ -221,15 +313,29 @@ class _MessagerieListeScreenState extends State<MessagerieListeScreen> {
                                       horizontal: 16,
                                       vertical: 4,
                                     ),
-                                    leading: CircleAvatar(
-                                      backgroundColor:
-                                          AppTheme.violetProfond,
-                                      foregroundColor: Colors.white,
+                                    leading: Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: const BoxDecoration(
+                                        // Identité messagerie : dégradé
+                                        // violet, initiales en or.
+                                        shape: BoxShape.circle,
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            AppTheme.violetProfond,
+                                            AppTheme.violetVif,
+                                          ],
+                                        ),
+                                      ),
+                                      alignment: Alignment.center,
                                       child: Text(
                                         _initiales(nom),
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 15,
+                                          color: AppTheme.or,
                                         ),
                                       ),
                                     ),
@@ -261,51 +367,81 @@ class _MessagerieListeScreenState extends State<MessagerieListeScreen> {
                                         ),
                                       ],
                                     ),
-                                    subtitle: Row(
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Expanded(
+                                        // Pastille de type (Directe /
+                                        // Groupe / Pastorale) : fond or
+                                        // clair, texte violet profond.
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.orClair,
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                          ),
                                           child: Text(
-                                            conversation.dernierMessage ??
-                                                libelleTypeConversation(
-                                                  conversation.type,
-                                                ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                            libelleTypeConversation(
+                                              conversation.type,
+                                            ),
                                             style: const TextStyle(
-                                              fontSize: 13,
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.violetProfond,
                                             ),
                                           ),
                                         ),
-                                        if (conversation.nonLus > 0) ...[
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            constraints:
-                                                const BoxConstraints(
-                                              minWidth: 20,
-                                              minHeight: 20,
-                                            ),
-                                            padding:
-                                                const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: AppTheme.or,
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                            child: Text(
-                                              '${conversation.nonLus}',
-                                              textAlign: TextAlign.center,
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                                color:
-                                                    AppTheme.violetProfond,
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                conversation.dernierMessage ??
+                                                    'Aucun message pour l’instant.',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ],
+                                            if (conversation.nonLus > 0) ...[
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                constraints:
+                                                    const BoxConstraints(
+                                                  minWidth: 20,
+                                                  minHeight: 20,
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 6,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: AppTheme.or,
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                child: Text(
+                                                  '${conversation.nonLus}',
+                                                  textAlign: TextAlign.center,
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: AppTheme
+                                                        .violetProfond,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
                                       ],
                                     ),
                                     onTap: () => _ouvrir(conversation),
