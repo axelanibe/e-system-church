@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -1822,6 +1823,44 @@ class HttpApiService implements ApiService {
     throw ApiException(message, res.statusCode);
   }
 
+  // -- Signature électronique dessinée (V1) ----------------------------------
+  static const int _signaturePngMaxOctets = 200 * 1024;
+
+  Map<String, dynamic> _corpsSignature(
+      List<Offset> points, Uint8List imagePng, String? nomAffiche) {
+    if (imagePng.lengthInBytes > _signaturePngMaxOctets) {
+      throw const ApiException('Signature trop lourde (200 Ko maximum).');
+    }
+    return {
+      'points': [
+        for (final p in points) {'x': p.dx, 'y': p.dy},
+      ],
+      'image_png_base64': base64Encode(imagePng),
+      if (nomAffiche != null && nomAffiche.isNotEmpty)
+        'nom_affiche': nomAffiche,
+    };
+  }
+
+  @override
+  Future<Signature> signerAttestation(String id,
+      {required List<Offset> points,
+      required Uint8List imagePng,
+      String? nomAffiche}) async =>
+      Signature.fromJson(await _call('POST', '/attestations/$id/signer',
+          body: _corpsSignature(points, imagePng, nomAffiche)));
+
+  @override
+  Future<Signature?> getSignature(
+      {required String documentType, required String documentId}) async {
+    try {
+      return Signature.fromJson(await _call(
+          'GET', '/signatures/$documentType/$documentId'));
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
   // -- Communication : prières et messages (module 5) ------------------------
   @override
   Future<List<DemandePriere>> getDemandesPriere({String? statut}) async =>
@@ -2790,9 +2829,16 @@ class HttpApiService implements ApiService {
       }));
 
   @override
-  Future<ProcesVerbal> signerProcesVerbal(String id, {required String signataire}) async =>
-      ProcesVerbal.fromJson(await _call('PATCH', '/proces-verbaux/$id',
-          body: {'statut': 'signe', 'signataire': signataire}));
+  Future<Signature> signerProcesVerbal(String id,
+      {required List<Offset> points,
+      required Uint8List imagePng,
+      String? nomAffiche}) async =>
+      Signature.fromJson(await _call('POST', '/proces-verbaux/$id/signer',
+          body: _corpsSignature(points, imagePng, nomAffiche)));
+
+  @override
+  Future<Uint8List> telechargerProcesVerbalPdf(String id) =>
+      _telechargerPdf('/proces-verbaux/$id/pdf', {});
 
   @override
   Future<void> deleteProcesVerbal(String id) async {

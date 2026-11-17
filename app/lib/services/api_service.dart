@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:ui';
 
 import '../models/abonnement.dart';
 import '../models/attestation.dart';
@@ -700,6 +701,20 @@ abstract class ApiService {
   /// PDF de l'attestation (octets bruts, contenu figé).
   Future<Uint8List> telechargerAttestationPdf(String id);
 
+  // -- Signature électronique dessinée (V1) ----------------------------------
+  /// Envoie le tracé dessiné d'une attestation : points normalisés 0..1
+  /// et image PNG (200 Ko maximum côté serveur). 409 si déjà signée,
+  /// 403 pour un membre simple. `nomAffiche` est le nom du signataire.
+  Future<Signature> signerAttestation(String id,
+      {required List<Offset> points,
+      required Uint8List imagePng,
+      String? nomAffiche});
+
+  /// Signature d'un document déjà signé, ou null s'il n'y en a aucune
+  /// (404). `documentType` : `attestation` ou `proces_verbal`.
+  Future<Signature?> getSignature(
+      {required String documentType, required String documentId});
+
   // -- Communication : prières et messages (module 5) ------------------------
   Future<List<DemandePriere>> getDemandesPriere({String? statut});
 
@@ -1132,7 +1147,15 @@ abstract class ApiService {
     String? signataire,
   });
 
-  Future<ProcesVerbal> signerProcesVerbal(String id, {required String signataire});
+  /// Signature dessinée d'un procès-verbal (V1) : remplace l'ancienne
+  /// signature texte (PATCH). Mêmes règles que [signerAttestation].
+  Future<Signature> signerProcesVerbal(String id,
+      {required List<Offset> points,
+      required Uint8List imagePng,
+      String? nomAffiche});
+
+  /// PDF d'un procès-verbal (octets bruts, avec la signature).
+  Future<Uint8List> telechargerProcesVerbalPdf(String id);
 
   Future<void> deleteProcesVerbal(String id);
 

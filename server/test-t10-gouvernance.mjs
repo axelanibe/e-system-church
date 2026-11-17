@@ -228,13 +228,29 @@ async function main() {
       pv.statut === 201 && pv.json?.statut === 'brouillon',
       pv.texte,
     );
-    const pvSigne = await appel('PATCH', `/proces-verbaux/${pv.json?.id}`, jetonMere, {
+    // Signature V1 : jamais par le PATCH générique (409), seulement par
+    // la route dédiée, qui passe le PV à 'signe' avec une vraie preuve.
+    const pvSigneParPatch = await appel('PATCH', `/proces-verbaux/${pv.json?.id}`, jetonMere, {
       statut: 'signe',
       signataire: 'Président du conseil',
     });
     verifier(
-      'procès-verbal signé',
-      pvSigne.statut === 200 && pvSigne.json?.signataire === 'Président du conseil',
+      'procès-verbal non signable par PATCH (409)',
+      pvSigneParPatch.statut === 409,
+      pvSigneParPatch.texte,
+    );
+    const pvSigne = await appel('POST', `/proces-verbaux/${pv.json?.id}/signer`, jetonMere, {
+      points: [
+        { x: 0.1, y: 0.2 },
+        { x: 0.5, y: 0.6 },
+        { x: 0.9, y: 0.3 },
+      ],
+      image_png_base64:
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    });
+    verifier(
+      'procès-verbal signé par la route dédiée',
+      pvSigne.statut === 201 && pvSigne.json?.signataire_nom === 'Admin EXEMPLE',
       pvSigne.texte,
     );
 

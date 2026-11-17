@@ -26,6 +26,87 @@ export interface AttestationPdfData {
   donateurMatricule: string | null;
   dons: LignePdf[];
   totalFcfa: number;
+  /** Signature électronique (migration 036) : absente = non signé. */
+  signature?: SignaturePdfData | null;
+}
+
+/**
+ * Signature électronique telle qu'elle apparaît sur un PDF : le tracé
+ * est REDESSINÉ en traits PDF depuis les points normalisés (le PNG
+ * n'est jamais décodé côté serveur), avec le nom, la fonction, la date
+ * et l'empreinte SHA-256 figés à la signature.
+ */
+export interface SignaturePdfData {
+  nom: string;
+  fonction: string;
+  /** Date et heure déjà formatées, ex. « 16/11/2026 à 17:50 UTC ». */
+  dateHeure: string;
+  /** Empreinte SHA-256 complète du PNG ; le PDF n'en montre que le début. */
+  empreinteSha256: string;
+  /** Tracé normalisé 0..1, [{x, y}] ; y = 0 en haut du cadre de saisie. */
+  points: { x: number; y: number }[];
+}
+
+/** Opérateurs PDF du tracé, dans un cadre (x0, yHaut) de `largeur` × `hauteur` points. */
+function operateursTrace(
+  points: { x: number; y: number }[],
+  x0: number,
+  yHaut: number,
+  largeur: number,
+  hauteur: number,
+): string[] {
+  const ops: string[] = [];
+  if (points.length < 2) return ops;
+  const px = (p: { x: number; y: number }) =>
+    Math.round((x0 + Math.min(1, Math.max(0, p.x)) * largeur) * 10) / 10;
+  const py = (p: { x: number; y: number }) =>
+    Math.round((yHaut - Math.min(1, Math.max(0, p.y)) * hauteur) * 10) / 10;
+  ops.push("0.7 w 0 0 0 RG");
+  for (let i = 1; i < points.length; i++) {
+    ops.push(
+      `${px(points[i - 1])} ${py(points[i - 1])} m ${px(points[i])} ${py(points[i])} l S`,
+    );
+  }
+  return ops;
+}
+
+/**
+ * Bloc signature : titre, tracé redessiné, nom, fonction, date et
+ * empreinte courte. Prend ~110 points sous `yDepart`, renvoie le y
+ * sous le bloc. Remplace la ligne « Signature : ____ » quand le
+ * document est signé.
+ */
+function dessinerBlocSignature(
+  lignes: string[],
+  texte: (x: number, y: number, taille: number, s: string, gras?: boolean) => void,
+  yDepart: number,
+  s: SignaturePdfData,
+): number {
+  let y = yDepart;
+  texte(50, y, 11, "Signature électronique", true);
+  y -= 8;
+  lignes.push(...operateursTrace(s.points, 50, y, 200, 50));
+  y -= 56;
+  texte(50, y, 11, s.nom, true);
+  y -= 16;
+  texte(50, y, 10, s.fonction);
+  y -= 15;
+  texte(50, y, 10, `Signé le ${s.dateHeure}`);
+  y -= 15;
+  texte(50, y, 10, `Empreinte SHA-256 : ${s.empreinteSha256.slice(0, 16)}...`);
+  return y;
+}
+
+/** Ligne de signature vierge, pour un document pas encore signé. */
+function dessinerSignatureVierge(
+  texte: (x: number, y: number, taille: number, s: string, gras?: boolean) => void,
+  yDepart: number,
+): number {
+  let y = yDepart;
+  texte(50, y, 11, "Signature : ____________________", true);
+  y -= 40;
+  texte(50, y, 11, "Cachet de l'église", true);
+  return y;
 }
 
 export function formaterMontant(n: number): string {
@@ -74,6 +155,8 @@ export interface AttestationEvenementPdfData {
   officiant: string | null;
   /** Détails propres au type, ex. conjoint, parents, parrain et marraine. */
   details: { label: string; valeur: string }[];
+  /** Signature électronique (migration 036) : absente = non signé. */
+  signature?: SignaturePdfData | null;
 }
 
 /** Objet image PDF (XObject) : JPEG brut ou RVB brut, selon le logo. */
@@ -459,7 +542,15 @@ export function genererAttestationPdf(d: AttestationPdfData): Buffer {
   }
   y -= 8;
   texte(50, y, 12, `Total : ${formaterMontant(d.totalFcfa)}`, true);
-  y -= 40;
+  // Bloc signature APRÈS le total (une page : les dons au-delà sont
+  // dans le total, la signature ne doit pas le précéder).
+  if (d.signature) {
+    y -= 24;
+    y = dessinerBlocSignature(lignes, texte, y, d.signature);
+    y -= 32;
+  } else {
+    y -= 40;
+  }
   texte(50, y, 10, "En Côte d'Ivoire, cette attestation n'a aucune valeur fiscale.");
   y -= 15;
   texte(50, y, 10, "Elle sert de reçu justificatif de vos dons,");
@@ -510,10 +601,117 @@ export function genererAttestationEvenementPdf(d: AttestationEvenementPdfData): 
     texte(50, y, 11, `${detail.label} : ${detail.valeur}`);
   }
   y -= 48;
-  texte(50, y, 11, "Signature : ____________________", true);
-  y -= 40;
-  texte(50, y, 11, "Cachet de l'église", true);
+  // Signé : le bloc signature remplace la ligne « Signature : ____ ».
+  // Non signé : la ligne vierge et le cachet restent.
+  if (d.signature) {
+    y = dessinerBlocSignature(lignes, texte, y, d.signature);
+    y -= 40;
+    texte(50, y, 11, "Cachet de l'église", true);
+  } else {
+    dessinerSignatureVierge(texte, y);
+  }
   return assemblerPdf(lignes, d.logo ?? null);
+}
+
+export interface ProcesVerbalPdfData {
+  egliseNom: string;
+  egliseCode: string;
+  /** Logo de l'église (chargé par la route), null : en-tête sans logo. */
+  logo?: LogoPdf | null;
+  numero: string | null;
+  /** Date du PV, JJ/MM/AAAA. */
+  datePv: string;
+  /** Titre de la réunion liée, null si aucune. */
+  reunionTitre: string | null;
+  contenu: string;
+  statut: "brouillon" | "signe" | "archive";
+  /** Signature électronique (migration 036) : absente = non signé. */
+  signature?: SignaturePdfData | null;
+}
+
+const LIBELLES_STATUT_PV: Record<string, string> = {
+  brouillon: "Brouillon",
+  signe: "Signé",
+  archive: "Archivé",
+};
+
+/** Découpe un texte en lignes d'au plus `largeurMax` caractères, sans couper les mots. */
+function envelopper(texte: string, largeurMax: number): string[] {
+  const lignes: string[] = [];
+  for (const paragraphe of texte.split("\n")) {
+    let reste = paragraphe;
+    if (reste === "") {
+      lignes.push("");
+      continue;
+    }
+    while (reste.length > largeurMax) {
+      let coupe = reste.lastIndexOf(" ", largeurMax);
+      if (coupe <= 0) coupe = largeurMax;
+      lignes.push(reste.slice(0, coupe));
+      reste = reste.slice(coupe).trimStart();
+    }
+    lignes.push(reste);
+  }
+  return lignes;
+}
+
+/**
+ * Procès-verbal (signature électronique V1) : contenu figé à la
+ * signature, date, réunion liée, bloc signature quand il est signé
+ * (tracé redessiné, nom, fonction, date, empreinte), ligne vierge
+ * sinon. Multipage : le contenu déborde sur d'autres pages, le bloc
+ * signature reste sur la dernière.
+ */
+export function genererProcesVerbalPdf(d: ProcesVerbalPdfData): Buffer {
+  const pages: string[][] = [[]];
+  let y = 780;
+  const texte = (x: number, yy: number, taille: number, s: string, gras = false) => {
+    pages[pages.length - 1].push(
+      `BT /${gras ? "F2" : "F1"} ${taille} Tf ${x} ${yy} Td ${litteral(s)} Tj ET`,
+    );
+  };
+  const nouvellePage = () => {
+    pages.push([]);
+    y = 780;
+    texte(50, y, 13, "Procès-verbal (suite)", true);
+    y -= 28;
+  };
+  texte(50, y, 16, d.egliseNom, true);
+  if (d.logo) pages[0].push(operateurLogo(d.logo, 501, 792, 44));
+  y -= 20;
+  texte(50, y, 11, `Code : ${d.egliseCode}`);
+  y -= 32;
+  texte(50, y, 15, "Procès-verbal", true);
+  y -= 22;
+  texte(50, y, 11, `Numéro : ${d.numero ?? "-"}`);
+  y -= 18;
+  texte(50, y, 11, `Date : ${d.datePv}`);
+  y -= 18;
+  texte(50, y, 11, `Réunion : ${d.reunionTitre ?? "-"}`);
+  y -= 18;
+  texte(50, y, 11, `Statut : ${LIBELLES_STATUT_PV[d.statut] ?? d.statut}`);
+  y -= 32;
+  texte(50, y, 12, "Contenu", true);
+  y -= 20;
+  for (const ligne of envelopper(d.contenu, 86)) {
+    if (y < 200) nouvellePage(); // garde la place du bloc signature
+    texte(50, y, 11, ligne);
+    y -= 15;
+  }
+  // Bloc signature sur la dernière page (nouvelle page si pas la place).
+  if (y - 130 < 60) nouvellePage();
+  y -= 24;
+  if (d.signature) {
+    y = dessinerBlocSignature(pages[pages.length - 1], texte, y, d.signature);
+    y -= 32;
+    texte(50, y, 11, "Cachet de l'église", true);
+  } else {
+    dessinerSignatureVierge(texte, y);
+  }
+  return construirePdfMultiPages(
+    pages.map((p) => p.join("\n")),
+    d.logo ?? null,
+  );
 }
 
 export interface RecuPdfData {

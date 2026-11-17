@@ -5,9 +5,11 @@ import 'package:share_plus/share_plus.dart';
 import '../config/app_theme.dart';
 import '../models/attestation.dart';
 import '../models/member.dart';
+import '../services/api_service.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/signature_pad.dart';
 
 /// US3 + tranche B + T10 — Attestations d'actes (maquette, écran 30),
 /// côté trésorier / admin : baptême, mariage, naissance seulement.
@@ -31,6 +33,11 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
   late Future<List<Attestation>> _future;
   List<Member> _membres = [];
   bool _working = false;
+
+  /// Attestations signées pendant cette session : la liste serveur
+  /// n'expose pas l'état signé, le bouton Signer se masque après
+  /// signature (et sur 409, déjà signée côté serveur).
+  final Set<String> _signees = {};
 
   @override
   void initState() {
@@ -275,6 +282,44 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
     marraineCtrl.dispose();
   }
 
+  /// Signature dessinée (V1) : pad, POST .../signer, puis le PDF signé
+  /// est re-téléchargé. Admin et trésorier seulement.
+  Future<void> _signer(Attestation a) async {
+    final resultat = await montrerDialogueSignature(
+      context,
+      titre: 'Signer l’attestation ${a.numero}',
+      nomInitial: context.read<AppState>().user?.fullName ?? '',
+    );
+    if (resultat == null || !mounted) return;
+    setState(() => _working = true);
+    try {
+      await context.read<AppState>().api.signerAttestation(
+            a.id,
+            points: resultat.trace.points,
+            imagePng: resultat.trace.pngBytes,
+            nomAffiche: resultat.nom,
+          );
+      if (!mounted) return;
+      setState(() => _signees.add(a.id));
+      showSuccess(context, 'Attestation ${a.numero} signée.');
+      await _telecharger(a);
+      _refresh();
+    } on ApiException catch (e) {
+      if (e.statusCode == 409) {
+        if (mounted) {
+          setState(() => _signees.add(a.id));
+          showApiError(context, 'Attestation déjà signée.');
+        }
+      } else if (mounted) {
+        showApiError(context, e);
+      }
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
   Future<void> _corriger(Attestation a) async {
     final motifCtrl = TextEditingController();
     DateTime? dateEvenement;
@@ -438,6 +483,9 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
   @override
   Widget build(BuildContext context) {
     final annees = [for (var i = 0; i < 3; i++) DateTime.now().year - i];
+    // Signature : admin et trésorier seulement (canManageFinances),
+    // jamais en lecture seule (abonnement expiré).
+    final peutSigner = context.watch<AppState>().canManageFinances;
     return Scaffold(
       appBar: AppBar(title: const Text('Attestations d’actes')),
       body: Column(
@@ -541,6 +589,14 @@ class _AttestationsScreenState extends State<AttestationsScreen> {
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
+                                    if (a.estEmise &&
+                                        peutSigner &&
+                                        !_signees.contains(a.id))
+                                      IconButton(
+                                        icon: const Icon(Icons.draw_outlined),
+                                        tooltip: 'Signer',
+                                        onPressed: () => _signer(a),
+                                      ),
                                     if (a.estEmise)
                                       IconButton(
                                         icon: const Icon(Icons.download_outlined),

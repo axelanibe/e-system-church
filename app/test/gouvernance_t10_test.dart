@@ -159,6 +159,20 @@ void main() {
       expect(Attestation.libelleType('membre'), 'Membre');
     });
 
+    test('Signature disponible via les modèles de gouvernance (PV)', () {
+      final s = Signature.fromJson(const {
+        'id': 'EXEMPLE-SIG-1',
+        'signataire_nom': 'Secrétaire du conseil',
+        'signataire_fonction': 'Secrétaire',
+        'date_signature': '2026-01-15T10:00:00Z',
+        'empreinte_sha256': 'exemple-empreinte',
+      });
+      expect(s.signataireNom, 'Secrétaire du conseil');
+      expect(s.signataireFonction, 'Secrétaire');
+      expect(s.empreinteSha256, 'exemple-empreinte');
+      expect(s.imageBytes, isNull);
+    });
+
     test('parse des paramètres avec signataires configurables', () {
       final p = EgliseParametres.fromJson(const {
         'signataire_nominations': 'Président du conseil',
