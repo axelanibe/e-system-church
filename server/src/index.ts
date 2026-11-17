@@ -53,6 +53,7 @@ import { registerImportMembresRoutes } from "./routes/import_membres.js";
 import { registerExportsPdfRoutes } from "./routes/exports_pdf.js";
 import { registerPlanComptableRoutes } from "./routes/plan_comptable.js";
 import { registerGouvernanceRoutes } from "./routes/gouvernance.js";
+import { registerSignaturesRoutes } from "./routes/signatures.js";
 import { registerConfianceRoutes } from "./routes/confiance.js";
 import { registerUsRestantesRoutes } from "./routes/us_restantes.js";
 
@@ -192,6 +193,7 @@ export function buildApp(db: Pool) {
   registerExportsPdfRoutes(app, db);
   registerPlanComptableRoutes(app, db);
   registerGouvernanceRoutes(app, db);
+  registerSignaturesRoutes(app, db);
   registerConfianceRoutes(app, db);
   registerUsRestantesRoutes(app, db);
 

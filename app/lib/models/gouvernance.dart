@@ -1,5 +1,10 @@
 import '../utils/format.dart';
 
+/// Signature électronique dessinée (V1), définie dans
+/// `models/attestation.dart` et réexportée ici pour les écrans de
+/// gouvernance (procès-verbaux) : une seule définition, pas de doublon.
+export 'attestation.dart' show Signature;
+
 /// Réunion du conseil (`reunions_conseil`, T10).
 class ReunionConseil {
   final String id;

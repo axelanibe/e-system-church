@@ -1176,6 +1176,23 @@ class FauxApiService implements ApiService {
       throw UnimplementedError('Attestations non gérées en démo.');
 
   @override
+  Future<Signature> signerAttestation(String id,
+      {required List<Offset> points,
+      required Uint8List imagePng,
+      String? nomAffiche}) async {
+    return Signature(
+      id: 'demo-sig-$id',
+      signataireNom: nomAffiche ?? '',
+      dateSignature: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<Signature?> getSignature(
+          {required String documentType, required String documentId}) async =>
+      null;
+
+  @override
   Future<Uint8List> telechargerAttestationPdf(String id) async =>
       throw UnimplementedError('Attestations non gérées en démo.');
 
@@ -4620,9 +4637,20 @@ class FauxApiService implements ApiService {
   }
 
   @override
-  Future<ProcesVerbal> signerProcesVerbal(String id, {required String signataire}) async {
-    throw UnimplementedError('Gouvernance non gérée en démo.');
+  Future<Signature> signerProcesVerbal(String id,
+      {required List<Offset> points,
+      required Uint8List imagePng,
+      String? nomAffiche}) async {
+    return Signature(
+      id: 'demo-sig-$id',
+      signataireNom: nomAffiche ?? '',
+      dateSignature: DateTime.now(),
+    );
   }
+
+  @override
+  Future<Uint8List> telechargerProcesVerbalPdf(String id) async =>
+      throw UnimplementedError('Gouvernance non gérée en démo.');
 
   @override
   Future<void> deleteProcesVerbal(String id) async {

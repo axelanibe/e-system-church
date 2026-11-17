@@ -60,6 +60,8 @@ toute migration « 001bis » casserait la traçabilité.
 |---|---|
 | 017 | Trou historique dans la numérotation (aucun fichier 017). |
 
+Le numéro 035, anciennement réservé par la PR #127 (push FCM, non fusionnée), est comblé par la PR #128 (`035_jetons_appareil_fcm.sql`, jetons d'appareil FCM).
+
 Le numéro 027, anciennement manquant, est comblé par la T9
 (`027_ecole_biblique.sql`, école biblique + Bible, PR #119).
 

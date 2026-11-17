@@ -5,6 +5,7 @@ import { auditLog } from "../auth.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
 import { genererAttestationEvenementPdf, genererAttestationPdf } from "../pdf.js";
 import { chargerLogo } from "../logo_pdf.js";
+import { chargerSignature, signatureVersPdf } from "./signatures.js";
 
 /**
  * US3 — Attestations annuelles de dons.
@@ -29,7 +30,12 @@ import { chargerLogo } from "../logo_pdf.js";
  * GET   /attestations           — admin_eglise, tresorier (filtres annee, type).
  * GET   /attestations/:id/pdf   — admin_eglise, tresorier, ou le membre lui-même.
  * POST  /attestations/:id/corriger — admin_eglise, tresorier (motif obligatoire).
+ * POST  /attestations/:id/signer   — admin_eglise, tresorier (signature électronique V1, voir signatures.ts).
  * GET   /moi/attestations       — membre, ses attestations émises seulement.
+ *
+ * Invalidation (signature V1) : une attestation signée ne peut plus
+ * être corrigée ; la correction crée toujours une nouvelle attestation
+ * NON signée, la signature de l'ancienne ne suit pas.
  */
 
 const TYPES_DONS = ["dime", "offrande", "don"] as const;
@@ -491,6 +497,10 @@ export function registerAttestationsRoutes(app: FastifyInstance, db: Pool) {
           (att.contenu as { eglise: { logo_url: string | null } }).eglise
             .logo_url,
         );
+        // Signature électronique V1 : le PDF porte le bloc signature
+        // (tracé, nom, fonction, date, empreinte) quand elle est signée.
+        const sig = await chargerSignature(db, "attestation", att.id as string);
+        const signature = sig ? signatureVersPdf(sig) : null;
         // Dons : générateur US3. Événement : générateur tranche B, depuis
         // le même contenu figé, jamais recalculé.
         const pdf =
@@ -510,6 +520,7 @@ export function registerAttestationsRoutes(app: FastifyInstance, db: Pool) {
                   montantFcfa: d.montant_fcfa,
                 })),
                 totalFcfa: att.total_fcfa,
+                signature,
               })
             : (() => {
                 const c = att.contenu as ContenuEvenement;
@@ -526,6 +537,7 @@ export function registerAttestationsRoutes(app: FastifyInstance, db: Pool) {
                   lieu: c.lieu,
                   officiant: c.officiant,
                   details: detailsEvenement(c),
+                  signature,
                 });
               })();
         return reply
@@ -570,6 +582,21 @@ export function registerAttestationsRoutes(app: FastifyInstance, db: Pool) {
           });
         }
         const ancienne = rows[0];
+        // Signature V1 : une attestation signée ne peut plus être
+        // corrigée. La correction passe par une nouvelle attestation
+        // non signée (voir plus bas), jamais par la modification de
+        // celle-ci, et sa signature ne suit pas.
+        const sigAncienne = await client.query(
+          `SELECT 1 FROM signatures WHERE document_type = 'attestation' AND document_id = $1`,
+          [ancienne.id],
+        );
+        if ((sigAncienne.rowCount ?? 0) > 0) {
+          await client.query("ROLLBACK");
+          return reply.code(409).send({
+            error: "conflict",
+            message: "Attestation signée : elle ne peut plus être corrigée.",
+          });
+        }
         const { rows: memberRows } = await client.query(
           `SELECT full_name, matricule FROM members WHERE id = $1`,
           [ancienne.member_id],
