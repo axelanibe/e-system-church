@@ -91,7 +91,6 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                       CodeInputFormatter(expectedPrefix: 'ESC-F-'),
                     ],
                     textInputAction: TextInputAction.next,
-                    style: const TextStyle(fontSize: 16),
                     decoration: const InputDecoration(
                       labelText: 'Code de l’église *',
                       helperText: 'Code reçu de votre église',
@@ -111,7 +110,6 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                   TextFormField(
                     controller: _nomController,
                     textInputAction: TextInputAction.next,
-                    style: const TextStyle(fontSize: 16),
                     decoration: const InputDecoration(
                       labelText: 'Nom *',
                       helperText: 'Nom de famille',
@@ -130,7 +128,6 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                   TextFormField(
                     controller: _prenomController,
                     textInputAction: TextInputAction.next,
-                    style: const TextStyle(fontSize: 16),
                     decoration: const InputDecoration(
                       labelText: 'Prénom *',
                       helperText: 'Prénom',
@@ -150,7 +147,6 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                     controller: _contactController,
                     keyboardType: TextInputType.text,
                     textInputAction: TextInputAction.next,
-                    style: const TextStyle(fontSize: 16),
                     decoration: InputDecoration(
                       labelText: 'Téléphone ou e-mail *',
                       helperText: 'Votre contact',
@@ -186,7 +182,6 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                     obscureText: _obscurePassword,
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _submit(),
-                    style: const TextStyle(fontSize: 16),
                     decoration: InputDecoration(
                       labelText: 'Mot de passe *',
                       helperText: '••••••••',

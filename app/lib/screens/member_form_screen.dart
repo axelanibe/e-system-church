@@ -428,7 +428,6 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                             TextFormField(
                               controller: _nomController,
                               textInputAction: TextInputAction.next,
-                              style: const TextStyle(fontSize: 16),
                               decoration: const InputDecoration(
                                 labelText: 'Nom *',
                                 hintText: 'Nom de famille',
@@ -443,7 +442,6 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                             TextFormField(
                               controller: _prenomController,
                               textInputAction: TextInputAction.next,
-                              style: const TextStyle(fontSize: 16),
                               decoration: const InputDecoration(
                                 labelText: 'Prénom *',
                                 hintText: 'Prénom',
@@ -561,7 +559,6 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                             TextFormField(
                               controller: _phoneController,
                               keyboardType: TextInputType.phone,
-                              style: const TextStyle(fontSize: 16),
                               decoration: const InputDecoration(
                                 labelText: 'Téléphone *',
                                 hintText: 'Numéro de téléphone',
@@ -576,7 +573,6 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
-                              style: const TextStyle(fontSize: 16),
                               decoration: const InputDecoration(
                                 labelText: 'E-mail (facultatif)',
                                 hintText: 'Adresse e-mail',
@@ -607,7 +603,6 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                                     _departements!.isEmpty)
                               TextFormField(
                                 controller: _departmentController,
-                                style: const TextStyle(fontSize: 16),
                                 decoration: const InputDecoration(
                                   labelText: 'Département',
                                   hintText:
@@ -663,7 +658,6 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                             const SizedBox(height: 12),
                             TextFormField(
                               controller: _cellController,
-                              style: const TextStyle(fontSize: 16),
                               decoration: const InputDecoration(
                                 labelText: 'Cellule / groupe',
                                 border: OutlineInputBorder(),

@@ -536,8 +536,11 @@ class _LoginScreenState extends State<LoginScreen> {
             validator: validator,
             // 16 px minimum : en dessous, Safari sur iPhone zoome sur le
             // champ, le zoom reste après la connexion et l'accueil est
-            // coupé à droite (page penchée d'un côté).
-            style: TextStyle(fontSize: 16, color: scheme.onSurface),
+            // coupé à droite (page penchée d'un côté). Le plancher est
+            // dans AppTheme (bodyLarge compensé) : pas de taille en dur
+            // ici, sinon la taille du texte choisie le ferait passer
+            // sous 16 px.
+            style: TextStyle(color: scheme.onSurface),
             decoration: InputDecoration(
               filled: true,
               fillColor: scheme.surface,

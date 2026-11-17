@@ -101,7 +101,24 @@ class EsystemApp extends StatelessWidget {
               title: AppConfig.appName,
               debugShowCheckedModeBanner: false,
               navigatorKey: _cleNavigateur,
-              theme: AppTheme.theme,
+              theme: AppTheme.themePourFacteur(prefs.facteurTailleTexte),
+              // Taille du texte : le facteur choisi multiplie toutes les
+              // tailles de texte, y compris celles écrites en dur dans
+              // les écrans. Il multiplie l'échelle du système (réglage
+              // d'accessibilité du téléphone), il ne la remplace pas.
+              // L'échelle du système est lue sans son API dépréciée :
+              // scale(16) / 16 donne son facteur effectif.
+              builder: (context, child) {
+                final echelleSysteme =
+                    MediaQuery.textScalerOf(context).scale(16) / 16;
+                return MediaQuery(
+                  data: MediaQuery.of(context).copyWith(
+                    textScaler: TextScaler.linear(
+                        echelleSysteme * prefs.facteurTailleTexte),
+                  ),
+                  child: child!,
+                );
+              },
               // T12 (US15) : la langue choisie s'applique aux nouveaux
               // écrans ; le reste de l'application reste en français.
               locale: Locale(prefs.langue),

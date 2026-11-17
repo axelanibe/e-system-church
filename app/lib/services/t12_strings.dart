@@ -1,3 +1,5 @@
+import 'preferences_locales.dart';
+
 /// Chaînes des écrans de la tranche T12 (US15) : français par défaut,
 /// anglais au choix. Seuls les nouveaux écrans sont traduits ; le reste
 /// de l'application reste en français.
@@ -196,6 +198,19 @@ class T12Strings {
   String get langue => _t('Langue des nouveaux écrans', 'Language of new screens');
   String get francais => _t('Français', 'French');
   String get anglais => _t('Anglais', 'English');
+  String get tailleTexte => _t('Taille du texte', 'Text size');
+  String get taillePetite => _t('Petite', 'Small');
+  String get tailleNormale => _t('Normale', 'Normal');
+  String get tailleGrande => _t('Grande', 'Large');
+  String get tailleTresGrande => _t('Très grande', 'Extra large');
+
+  /// Libellé du choix de taille du texte en cours.
+  String nomTailleTexte(TailleTexte taille) => switch (taille) {
+        TailleTexte.petit => taillePetite,
+        TailleTexte.normal => tailleNormale,
+        TailleTexte.grand => tailleGrande,
+        TailleTexte.tresGrand => tailleTresGrande,
+      };
   String get modeEconomique => _t('Mode économique', 'Low-data mode');
   String get modeEconomiqueDetail => _t(
       'Coupe le chargement des photos en réseau pour économiser les données.',

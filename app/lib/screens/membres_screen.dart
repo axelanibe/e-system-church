@@ -289,7 +289,6 @@ class _MembresScreenState extends State<MembresScreen>
                 child: TextField(
                   controller: _searchController,
                   onChanged: _onSearchChanged,
-                  style: const TextStyle(fontSize: 16),
                   decoration: const InputDecoration(
                     labelText: 'Rechercher un membre par nom ou matricule',
                     prefixIcon: Icon(Icons.search),
