@@ -268,7 +268,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _churchPhoneController,
                     keyboardType: TextInputType.phone,
                     textInputAction: TextInputAction.next,
-                    style: const TextStyle(fontSize: 16),
                     decoration: InputDecoration(
                       labelText: 'Téléphone de l’église',
                       prefix: SelecteurIndicatifPays(
@@ -369,7 +368,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _adminPhoneController,
                     keyboardType: TextInputType.phone,
                     textInputAction: TextInputAction.next,
-                    style: const TextStyle(fontSize: 16),
                     decoration: InputDecoration(
                       labelText: 'Téléphone de l’administrateur',
                       prefix: SelecteurIndicatifPays(

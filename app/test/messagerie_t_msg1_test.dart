@@ -424,9 +424,13 @@ void main() {
       expect(find.text('Premier message'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
       expect(find.byTooltip('Signaler'), findsOneWidget);
-      // Le champ de saisie est à 16 px minimum (pas de zoom iPhone).
+      // Le champ de saisie est à 16 px minimum (pas de zoom iPhone) :
+      // sans taille en dur, il hérite du bodyLarge du thème (plancher
+      // compensé dans AppTheme, taille_texte_test).
       final champ = tester.widget<TextField>(find.byType(TextField));
-      expect(champ.style?.fontSize, 16);
+      expect(champ.style?.fontSize, isNull);
+      final theme = Theme.of(tester.element(find.byType(TextField)));
+      expect(theme.textTheme.bodyLarge?.fontSize, 16);
       // Signaler est inerte en T-Msg-1.
       await tester.tap(find.byTooltip('Signaler'));
       await tester.pump();

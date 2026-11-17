@@ -13,6 +13,9 @@ import '../widgets/common_widgets.dart';
 /// US16 : le mode économique coupe le chargement des photos en réseau
 /// (avatars et carte) pour économiser les données. Le repli SMS dépend
 /// d'un fournisseur non choisi : aucun envoi réel, aucun coût.
+/// Taille du texte : quatre choix (Petite, Normale, Grande, Très grande),
+/// persistés sur l'appareil comme la langue, appliqués à tous les textes
+/// de l'application (mise à l'échelle globale, main.dart).
 class LangueDonneesScreen extends StatelessWidget {
   const LangueDonneesScreen({super.key});
 
@@ -57,6 +60,26 @@ class LangueDonneesScreen extends StatelessWidget {
               onChanged: (v) => context
                   .read<PreferencesLocales>()
                   .definirModeEconomique(v),
+            ),
+          ),
+          SectionTitle(title: t.tailleTexte),
+          Card(
+            child: RadioGroup<TailleTexte>(
+              groupValue: prefs.tailleTexte,
+              onChanged: (v) {
+                if (v != null) {
+                  context.read<PreferencesLocales>().definirTailleTexte(v);
+                }
+              },
+              child: Column(
+                children: [
+                  for (final taille in TailleTexte.values)
+                    RadioListTile<TailleTexte>(
+                      title: Text(t.nomTailleTexte(taille)),
+                      value: taille,
+                    ),
+                ],
+              ),
             ),
           ),
           if (estMembre) ...[

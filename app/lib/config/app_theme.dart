@@ -89,7 +89,20 @@ class AppTheme {
   static const TextStyle styleCode =
       TextStyle(fontFamily: 'JetBrainsMono', fontSize: 14, color: violetProfond);
 
-  static ThemeData get theme {
+  static ThemeData get theme => themePourFacteur(1.0);
+
+  /// Thème pour un facteur de taille de texte : les tailles du thème ne
+  /// sont pas mises à l'échelle ici, c'est la mise à l'échelle globale
+  /// (textScaler, main.dart) qui les multiplie, y compris les tailles
+  /// écrites en dur dans les écrans. Seul le texte saisi fait exception :
+  /// le style des champs est `bodyLarge`, et sa taille est compensée pour
+  /// que le texte tapé rende 16 px minimum une fois mis à l'échelle,
+  /// sinon Safari sur iPhone zoome à la saisie et le zoom reste après
+  /// (leçon durable du projet, connexion). À Petit (0,9) : 17,8 px dans
+  /// le thème, 16 px rendus. À Grand et Très grand, 16 px dans le thème,
+  /// donc un texte saisi plus grand que 16 px rendus.
+  static ThemeData themePourFacteur(double facteur) {
+    final tailleSaisie = facteur <= 1 ? 16 / facteur : 16.0;
     const titres = TextStyle(
       fontFamily: 'PlusJakartaSans',
       fontWeight: FontWeight.bold,
@@ -219,6 +232,12 @@ class AppTheme {
         titleLarge: titres.copyWith(fontSize: 18),
         titleMedium: const TextStyle(
             fontFamily: 'PlusJakartaSans', fontSize: 18, color: violetProfond),
+        // Style des champs de saisie (Material 3) : taille compensée
+        // (voir themePourFacteur), jamais moins de 16 px rendus.
+        bodyLarge: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: tailleSaisie,
+            color: violetProfond),
         bodyMedium: corps.copyWith(fontSize: 16),
         bodySmall: const TextStyle(
             fontFamily: 'Inter', fontSize: 14, color: violetProfond),

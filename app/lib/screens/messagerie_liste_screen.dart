@@ -450,8 +450,8 @@ class _FeuilleNouvelleConversationState
             const SizedBox(height: 12),
             TextField(
               controller: _titreController,
-              // 16 px minimum : Safari iPhone ne zoome pas.
-              style: const TextStyle(fontSize: 16),
+              // 16 px minimum : Safari iPhone ne zoome pas. Le plancher
+              // est dans AppTheme (bodyLarge compensé).
               decoration: const InputDecoration(
                 labelText: 'Nom du groupe',
                 hintText: 'Par exemple : Chorale',

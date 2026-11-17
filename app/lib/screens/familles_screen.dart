@@ -499,7 +499,6 @@ class _FamillesScreenState extends State<FamillesScreen> {
                           onChanged: (v) =>
                               setState(() => _query = v.trim()),
                           style: const TextStyle(
-                            fontSize: 16,
                             color: AppTheme.violetProfond,
                           ),
                           decoration: InputDecoration(

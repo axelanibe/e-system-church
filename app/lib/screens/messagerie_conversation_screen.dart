@@ -307,8 +307,9 @@ class _MessagerieConversationScreenState
                   Expanded(
                     child: TextField(
                       controller: _saisieController,
-                      // 16 px minimum : Safari iPhone ne zoome pas.
-                      style: const TextStyle(fontSize: 16),
+                      // 16 px minimum : Safari iPhone ne zoome pas. Le
+                      // plancher est dans AppTheme (bodyLarge compensé),
+                      // pas de taille en dur ici.
                       decoration: const InputDecoration(
                         hintText: 'Écrire un message…',
                         border: OutlineInputBorder(),

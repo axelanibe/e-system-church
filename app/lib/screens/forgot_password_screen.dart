@@ -108,7 +108,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.done,
                           onFieldSubmitted: (_) => _submit(),
-                          style: const TextStyle(fontSize: 16),
                           decoration: InputDecoration(
                             helperText: 'L’e-mail du compte',
                             helperStyle: TextStyle(

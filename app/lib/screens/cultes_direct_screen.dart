@@ -422,7 +422,6 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                   TextField(
                     controller: _capaciteController,
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(fontSize: 16),
                     decoration: const InputDecoration(
                       labelText: 'Capacité',
                       hintText: 'Nombre de places pour ce culte',
@@ -542,7 +541,6 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                   TextField(
                     controller: _retourRegieController,
                     maxLines: 4,
-                    style: const TextStyle(fontSize: 16),
                     decoration: const InputDecoration(
                       labelText: 'Retour régie',
                       hintText: 'Saisissez une courte note…',

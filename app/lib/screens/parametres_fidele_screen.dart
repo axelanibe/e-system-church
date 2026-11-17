@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/fidele.dart';
 import '../state/app_state.dart';
 import '../services/preferences_locales.dart';
+import '../services/t12_strings.dart';
 import '../widgets/change_password_dialog.dart';
 import '../widgets/common_widgets.dart';
 import 'consultations_screen.dart';
@@ -139,22 +140,42 @@ class _ParametresFideleScreenState extends State<ParametresFideleScreen> {
               ),
               const SectionTitle(title: 'Langue'),
               Card(
-                child: ListTile(
-                  leading: const Icon(Icons.language_outlined),
-                  title: const Text('Langue de l’application', style: TextStyle(fontSize: 13.5)),
-                  subtitle: Text(
-                    context.watch<PreferencesLocales>().estAnglais
-                        ? 'Anglais'
-                        : 'Français',
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const LangueDonneesScreen(),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.language_outlined),
+                      title: const Text('Langue de l’application', style: TextStyle(fontSize: 13.5)),
+                      subtitle: Text(
+                        context.watch<PreferencesLocales>().estAnglais
+                            ? 'Anglais'
+                            : 'Français',
                       ),
-                    );
-                  },
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const LangueDonneesScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.text_fields_outlined),
+                      title: const Text('Taille du texte', style: TextStyle(fontSize: 13.5)),
+                      subtitle: Text(
+                        T12Strings(context.watch<PreferencesLocales>().estAnglais)
+                            .nomTailleTexte(context.watch<PreferencesLocales>().tailleTexte),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const LangueDonneesScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
               const SectionTitle(title: 'Aide'),
