@@ -6,18 +6,18 @@ import '../models/ecole_biblique.dart';
 import '../services/api_service.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/progression_ecole.dart';
 import 'concordance_screen.dart';
 import 'dictionnaire_screen.dart';
 import 'ecole_biblique_screen.dart';
 
-/// Ma Bible (tranches P1 + T9) : lecture de la Bible en deux versions
-/// (Louis Segond 1910, français, par défaut ; King James Version,
-/// anglais), canon complet des 66 livres, chapitres, versets numérotés
-/// et recherche plein texte sur la version active. Le texte vient de
-/// l'API (mode réel) ou des assets bundlés (mode démo) ; il n'est
-/// jamais inventé. La concordance Strong et le dictionnaire biblique
-/// sont accessibles depuis cet écran (la langue du dictionnaire suit
-/// celle de la version choisie).
+/// Ma Bible (tranches P1 + T9, refonte design écran 40) : trois cartes
+/// distinctes sur fond clair, lecture d'abord, école ensuite,
+/// progression ensuite. La carte Lecture porte seule la lecture :
+/// recherche de passages à un seul métier, sélecteurs Livre et
+/// Chapitre côte à côte, texte du chapitre dans la même carte avec
+/// précédent et suivant. Le texte vient de l'API (mode réel) ou des
+/// assets bundlés (mode démo) ; il n'est jamais inventé.
 class BibleFideleScreen extends StatefulWidget {
   const BibleFideleScreen({super.key});
 
@@ -26,23 +26,25 @@ class BibleFideleScreen extends StatefulWidget {
 }
 
 class _BibleFideleScreenState extends State<BibleFideleScreen> {
-  int _testament = 0; // 0 = Ancien, 1 = Nouveau
+  int _testament = 0; // 0 = Ancien, 1 = Nouveau (filtre du sélecteur seul)
   String _version = 'lsg1910';
-  String _rechercheLivre = '';
   String _rechercheTexte = '';
   LivreBible? _livreChoisi;
   int _chapitreChoisi = 1;
   bool _modeRecherche = false;
 
   final _rechercheTexteController = TextEditingController();
+  final _defilement = ScrollController();
+  final _cleTexte = GlobalKey();
 
   late Future<List<VersionBible>> _versionsFuture;
   late Future<List<LivreBible>> _livresFuture;
   Future<ChapitreBible>? _chapitreFuture;
   Future<List<ResultatRechercheBible>>? _resultatsFuture;
 
-  /// École biblique (maquette, écran 40) : cours et progression sous
-  /// la lecture, mêmes sources que l'écran École biblique.
+  /// École et progression : un seul chargement par carte, mêmes
+  /// sources que l'écran École biblique, sans recopier sa liste ni
+  /// son widget de progression (voir ProgressionEcole partagé).
   late Future<List<CoursEcole>> _coursFuture;
   late Future<List<ProgressionCours>> _progressionsFuture;
 
@@ -65,20 +67,40 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
   @override
   void dispose() {
     _rechercheTexteController.dispose();
+    _defilement.dispose();
     super.dispose();
   }
 
   ApiService get _api => context.read<AppState>().api;
 
+  /// Changer de version garde le livre et le chapitre quand le canon
+  /// est le même (les deux versions ont les 66 livres) : la position
+  /// de lecture est conservée, seul le texte est rechargé.
   void _choisirVersion(String version) {
     if (version == _version) return;
+    final code = _livreChoisi?.code;
+    final chapitre = _chapitreChoisi;
     setState(() {
       _version = version;
-      _livreChoisi = null;
-      _chapitreFuture = null;
-      _resultatsFuture = null;
-      _modeRecherche = false;
       _livresFuture = _chargerLivres();
+    });
+    if (code == null) return;
+    _livresFuture.then((livres) {
+      if (!mounted) return;
+      LivreBible? livreTrouve;
+      for (final l in livres) {
+        if (l.code == code) livreTrouve = l;
+      }
+      if (livreTrouve == null) return;
+      final livre = livreTrouve;
+      final chapitreGarde = chapitre.clamp(1, livre.chapitres);
+      setState(() {
+        _livreChoisi = livre;
+        _chapitreChoisi = chapitreGarde;
+        _chapitreFuture = _api.getChapitreBible(
+            code: livre.code, chapitre: chapitreGarde, version: _version);
+      });
+      _defilerVersTexte();
     });
   }
 
@@ -90,16 +112,33 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
       _chapitreFuture = _api.getChapitreBible(
           code: livre.code, chapitre: 1, version: _version);
     });
+    _defilerVersTexte();
   }
 
   void _choisirChapitre(int chapitre) {
     final livre = _livreChoisi;
     if (livre == null) return;
+    final garde = chapitre.clamp(1, livre.chapitres);
     setState(() {
-      _chapitreChoisi = chapitre;
+      _chapitreChoisi = garde;
       _modeRecherche = false;
       _chapitreFuture = _api.getChapitreBible(
-          code: livre.code, chapitre: chapitre, version: _version);
+          code: livre.code, chapitre: garde, version: _version);
+    });
+    _defilerVersTexte();
+  }
+
+  void _chapitrePrecedent() => _choisirChapitre(_chapitreChoisi - 1);
+
+  void _chapitreSuivant() => _choisirChapitre(_chapitreChoisi + 1);
+
+  void _defilerVersTexte() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final contexte = _cleTexte.currentContext;
+      if (contexte != null && mounted) {
+        Scrollable.ensureVisible(contexte,
+            duration: const Duration(milliseconds: 300), alignment: 0.0);
+      }
     });
   }
 
@@ -124,23 +163,21 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
   void _ouvrirDictionnaire() {
     Navigator.of(context).push(
       MaterialPageRoute(
-          builder: (_) =>
-              DictionnaireScreen(langue: _langueDictionnaire)),
+          builder: (_) => DictionnaireScreen(langue: _langueDictionnaire)),
     );
   }
 
   Future<void> _ouvrirResultat(ResultatRechercheBible resultat) async {
-    // Le nombre de chapitres du livre vient du canon déjà chargé :
-    // sinon les pastilles de chapitres seraient vides après une recherche.
     final livres = await _livresFuture;
-    final livre = livres.firstWhere(
-      (l) => l.code == resultat.code,
-      orElse: () => LivreBible(
-        code: resultat.code,
-        nom: resultat.livre,
-        testament: '',
-        chapitres: 0,
-      ),
+    LivreBible? livre;
+    for (final l in livres) {
+      if (l.code == resultat.code) livre = l;
+    }
+    livre ??= LivreBible(
+      code: resultat.code,
+      nom: resultat.livre,
+      testament: '',
+      chapitres: 0,
     );
     if (!mounted) return;
     setState(() {
@@ -150,254 +187,358 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
       _chapitreFuture = _api.getChapitreBible(
           code: resultat.code, chapitre: resultat.chapitre, version: _version);
     });
+    _defilerVersTexte();
   }
 
-  List<LivreBible> _livresVisibles(List<LivreBible> livres) {
-    final testament = _testament == 0 ? 'ancien' : 'nouveau';
-    var liste = livres.where((l) => l.testament == testament).toList();
-    final q = _rechercheLivre.trim().toLowerCase();
-    if (q.isNotEmpty) {
-      liste = liste.where((l) => l.nom.toLowerCase().contains(q)).toList();
+  List<LivreBible> _livresParTestament(List<LivreBible> livres, int testament) {
+    final code = testament == 0 ? 'ancien' : 'nouveau';
+    return livres.where((l) => l.testament == code).toList();
+  }
+
+  /// Sélecteur de livre : liste uniforme, une ligne par livre, nom
+  /// entier et nombre de chapitres en seconde ligne fixe. Le
+  /// testament n'est qu'un filtre de cette liste : il n'efface jamais
+  /// le livre en cours de lecture.
+  Future<void> _ouvrirSelecteurLivre(List<LivreBible> livres) async {
+    var testament = _livreChoisi == null
+        ? _testament
+        : (_livreChoisi!.testament == 'nouveau' ? 1 : 0);
+    final choix = await showDialog<LivreBible>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: const Text('Livre'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 400,
+            child: Column(
+              children: [
+                SegmentedButton<int>(
+                  segments: const [
+                    ButtonSegment(value: 0, label: Text('Ancien')),
+                    ButtonSegment(value: 1, label: Text('Nouveau')),
+                  ],
+                  selected: {testament},
+                  onSelectionChanged: (s) => setStateDialog(() {
+                    testament = s.first;
+                  }),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView(
+                    children: _livresParTestament(livres, testament)
+                        .map((livre) => ListTile(
+                              title: Text(livre.nom),
+                              subtitle: Text(
+                                  '${livre.chapitres} chapitres'),
+                              trailing: _livreChoisi?.code == livre.code
+                                  ? const Icon(Icons.check)
+                                  : null,
+                              onTap: () =>
+                                  Navigator.of(context).pop(livre),
+                            ))
+                        .toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (choix != null) {
+      setState(() => _testament = choix.testament == 'nouveau' ? 1 : 0);
+      _choisirLivre(choix);
     }
-    return liste;
+  }
+
+  /// Sélecteur de chapitre : saisie du numéro, ou liste déroulante
+  /// uniforme regroupée par dizaines. Aucune pastille étalée.
+  Future<void> _ouvrirSelecteurChapitre() async {
+    final livre = _livreChoisi;
+    if (livre == null) return;
+    final numeroController =
+        TextEditingController(text: '$_chapitreChoisi');
+    final choix = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${livre.nom} : chapitre'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: Column(
+            children: [
+              TextField(
+                key: const Key('numero-chapitre'),
+                controller: numeroController,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(fontSize: 16),
+                decoration: const InputDecoration(
+                  labelText: 'Numéro du chapitre',
+                  hintText: '1',
+                ),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (v) => Navigator.of(context)
+                    .pop(int.tryParse(v.trim())),
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(
+                      int.tryParse(numeroController.text.trim())),
+                  child: const Text('Aller'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView(
+                  children: [
+                    for (var debut = 1;
+                        debut <= livre.chapitres;
+                        debut += 10) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: Text(
+                          'Chapitres $debut à '
+                          '${(debut + 9).clamp(1, livre.chapitres)}',
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelLarge
+                              ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary),
+                        ),
+                      ),
+                      for (var n = debut;
+                          n < debut + 10 && n <= livre.chapitres;
+                          n++)
+                        ListTile(
+                          title: Text('Chapitre $n'),
+                          trailing: _chapitreChoisi == n
+                              ? const Icon(Icons.check)
+                              : null,
+                          onTap: () => Navigator.of(context).pop(n),
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (choix != null) _choisirChapitre(choix);
   }
 
   @override
   Widget build(BuildContext context) {
-    // Introduction fixe au-dessus de la zone de défilement : sa
-    // première ligne ne peut plus passer sous la barre violette.
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640),
+        child: ListView(
+          controller: _defilement,
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text(
+              'Lecture de la Bible, cours de l’école biblique et '
+              'progression de chacun.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            _carteLecture(),
+            const SizedBox(height: 12),
+            _carteEcole(),
+            const SizedBox(height: 12),
+            _carteProgression(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Carte Lecture (maquette, écran 40) : un seul état de chargement
+  /// pour le canon, recherche de passages à un seul métier, Livre et
+  /// Chapitre côte à côte, texte dans la même carte.
+  Widget _carteLecture() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                'Lisez, cherchez un passage, puis choisissez un livre '
-                'et un chapitre. Deux versions : Louis Segond 1910 '
-                '(français) et King James Version (anglais).',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                children: [
-                FutureBuilder<List<VersionBible>>(
-                  future: _versionsFuture,
-                  builder: (context, snapshot) {
-                    final versions = snapshot.data ?? const <VersionBible>[];
-                    if (versions.isEmpty) {
-                      return const SizedBox.shrink();
-                    }
-                    return SegmentedButton<String>(
-                      style: SegmentedButton.styleFrom(
-                          textStyle: const TextStyle(fontSize: 12.5)),
-                      segments: versions
-                          .map((v) => ButtonSegment(
-                                value: v.id,
-                                label: Text(v.id == 'kjv'
-                                    ? 'King James'
-                                    : 'Louis Segond 1910'),
-                              ))
-                          .toList(),
-                      selected: {_version},
-                      onSelectionChanged: (s) =>
-                          _choisirVersion(s.first),
-                    );
+            Text('Bible',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            FutureBuilder<List<VersionBible>>(
+              future: _versionsFuture,
+              builder: (context, snapshot) {
+                final versions = snapshot.data ?? const <VersionBible>[];
+                if (versions.isEmpty) return const SizedBox.shrink();
+                return DropdownButtonFormField<String>(
+                  key: const Key('selecteur-version'),
+                  initialValue: _version,
+                  isExpanded: true,
+                  decoration:
+                      const InputDecoration(labelText: 'Version'),
+                  items: versions
+                      .map((v) => DropdownMenuItem(
+                          value: v.id, child: Text(v.nom)))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) _choisirVersion(v);
                   },
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const Key('recherche-passages'),
+              controller: _rechercheTexteController,
+              style: const TextStyle(fontSize: 16),
+              decoration: InputDecoration(
+                labelText: 'Rechercher dans la Bible',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.search),
+                  tooltip: 'Rechercher',
+                  onPressed: _lancerRechercheTexte,
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _ouvrirConcordance,
-                        icon: const Icon(Icons.translate_outlined),
-                        label: const Text('Concordance Strong', style: TextStyle(fontSize: 13.5)),
+              ),
+              textInputAction: TextInputAction.search,
+              onChanged: (v) => _rechercheTexte = v,
+              onSubmitted: (_) => _lancerRechercheTexte(),
+            ),
+            const SizedBox(height: 12),
+            if (_modeRecherche) _resultatsRecherche(),
+            if (!_modeRecherche)
+              FutureBuilder<List<LivreBible>>(
+                future: _livresFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const Center(
+                        child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return EmptyState(
+                      icon: Icons.error_outline,
+                      message:
+                          'Impossible de charger la Bible : ${snapshot.error}',
+                    );
+                  }
+                  final livres = snapshot.data ?? const <LivreBible>[];
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _BoutonSelecteur(
+                              key: const Key('selecteur-livre'),
+                              libelle: 'Livre',
+                              valeur: _livreChoisi?.nom ?? 'Choisir',
+                              onTap: () => _ouvrirSelecteurLivre(livres),
+                            ),
+                          ),
+                          const SizedBox(width: 9),
+                          Expanded(
+                            child: _BoutonSelecteur(
+                              key: const Key('selecteur-chapitre'),
+                              libelle: 'Chapitre',
+                              valeur: _livreChoisi == null
+                                  ? 'Choisir'
+                                  : '$_chapitreChoisi / ${_livreChoisi!.chapitres}',
+                              onTap: _livreChoisi == null
+                                  ? null
+                                  : _ouvrirSelecteurChapitre,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _ouvrirDictionnaire,
-                        icon: const Icon(Icons.book_outlined),
-                        label: const Text('Dictionnaire', style: TextStyle(fontSize: 13.5)),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // Un seul champ de recherche (maquette, écran 40) : il
-                // filtre la liste des livres en direct et lance la
-                // recherche de passages avec le bouton Rechercher.
-                TextField(
-                  controller: _rechercheTexteController,
-                  decoration: const InputDecoration(
-                    labelText: 'Rechercher dans la Bible',
-                    prefixIcon: Icon(Icons.search),
-                  ),
-                  textInputAction: TextInputAction.search,
-                  onChanged: (v) => setState(() {
-                    _rechercheTexte = v;
-                    _rechercheLivre = v;
-                  }),
-                  onSubmitted: (_) => _lancerRechercheTexte(),
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton.icon(
-                    onPressed: _lancerRechercheTexte,
-                    icon: const Icon(Icons.search),
-                    label: const Text('Rechercher', style: TextStyle(fontSize: 13.5)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (_modeRecherche) _resultatsRecherche(),
-                if (!_modeRecherche) ...[
-                  SegmentedButton<int>(
-                    style: SegmentedButton.styleFrom(
-                        textStyle: const TextStyle(fontSize: 12.5)),
-                    segments: const [
-                      ButtonSegment(
-                        value: 0,
-                        label: Text('Ancien Testament'),
-                      ),
-                      ButtonSegment(
-                        value: 1,
-                        label: Text('Nouveau Testament'),
+                      const SizedBox(height: 12),
+                      Container(
+                        key: _cleTexte,
+                        child: _livreChoisi == null
+                            ? Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Text(
+                                  'Aucun texte chargé.\nChoisissez un livre '
+                                  'et un chapitre pour lire.',
+                                  textAlign: TextAlign.center,
+                                ),
+                              )
+                            : _lectureChapitre(),
                       ),
                     ],
-                    selected: {_testament},
-                    onSelectionChanged: (s) => setState(() {
-                      _testament = s.first;
-                      _livreChoisi = null;
-                      _chapitreFuture = null;
-                    }),
-                  ),
-                  const SizedBox(height: 16),
-                  const SectionTitle(title: 'Liste des livres'),
-                  FutureBuilder<List<LivreBible>>(
-                    future: _livresFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState ==
-                          ConnectionState.waiting) {
-                        return const Center(
-                            child: CircularProgressIndicator());
-                      }
-                      if (snapshot.hasError) {
-                        return EmptyState(
-                          icon: Icons.error_outline,
-                          message:
-                              'Impossible de charger la Bible : ${snapshot.error}',
-                        );
-                      }
-                      final livres = _livresVisibles(snapshot.data ?? []);
-                      if (livres.isEmpty) {
-                        return const EmptyState(
-                          icon: Icons.menu_book_outlined,
-                          message: 'Aucun livre avec ce nom.',
-                        );
-                      }
-                      // Grille uniforme : chaque livre a une cellule de
-                      // même largeur, la liste ne paraît plus éparpillée.
-                      return LayoutBuilder(
-                        builder: (context, contraintes) {
-                          final colonnes =
-                              contraintes.maxWidth > 480 ? 3 : 2;
-                          return GridView.count(
-                            crossAxisCount: colonnes,
-                            shrinkWrap: true,
-                            physics:
-                                const NeverScrollableScrollPhysics(),
-                            mainAxisSpacing: 8,
-                            crossAxisSpacing: 8,
-                            childAspectRatio: 2.8,
-                            children: livres.map((livre) {
-                              final selectionne =
-                                  _livreChoisi?.code == livre.code;
-                              return InkWell(
-                                onTap: () => _choisirLivre(livre),
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  alignment: Alignment.center,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: selectionne
-                                        ? Theme.of(context)
-                                            .colorScheme
-                                            .primaryContainer
-                                        : null,
-                                    border: Border.all(
-                                      color: selectionne
-                                          ? Theme.of(context)
-                                              .colorScheme
-                                              .primary
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .outlineVariant,
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    livre.nom,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 12.5,
-                                      fontWeight: selectionne
-                                          ? FontWeight.w600
-                                          : FontWeight.normal,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                  if (_livreChoisi != null) ...[
-                    const SizedBox(height: 16),
-                    SectionTitle(
-                        title:
-                            '${_livreChoisi!.nom} — chapitre $_chapitreChoisi'),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: List.generate(
-                        _livreChoisi!.chapitres,
-                        (i) => ChoiceChip(
-                          label: Text('${i + 1}', style: const TextStyle(fontSize: 12.5)),
-                          selected: _chapitreChoisi == i + 1,
-                          onSelected: (_) => _choisirChapitre(i + 1),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _chapitre(),
-                  ],
-                ],
-                const SizedBox(height: 24),
-                const SectionTitle(title: 'École biblique, cours', taille: 15),
-                _EcoleCoursSection(future: _coursFuture),
-                const SizedBox(height: 16),
-                const SectionTitle(title: 'Ma progression', taille: 15),
-                _MaProgressionBible(future: _progressionsFuture),
+                  );
+                },
+              ),
+            const SizedBox(height: 8),
+            Wrap(
+              alignment: WrapAlignment.center,
+              children: [
+                TextButton.icon(
+                  onPressed: _ouvrirConcordance,
+                  icon: const Icon(Icons.translate_outlined),
+                  label: const Text('Concordance Strong'),
+                ),
+                TextButton.icon(
+                  onPressed: _ouvrirDictionnaire,
+                  icon: const Icon(Icons.book_outlined),
+                  label: const Text('Dictionnaire'),
+                ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
+
+  /// Titre du chapitre, précédent et suivant, puis texte.
+  Widget _lectureChapitre() {
+    final livre = _livreChoisi!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed:
+                    _chapitreChoisi > 1 ? _chapitrePrecedent : null,
+                icon: const Icon(Icons.chevron_left),
+                label: const Text('Précédent'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _chapitreChoisi < livre.chapitres
+                    ? _chapitreSuivant
+                    : null,
+                icon: const Icon(Icons.chevron_right),
+                label: const Text('Suivant'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _chapitre(),
+      ],
+    );
   }
 
   Widget _resultatsRecherche() {
@@ -423,7 +564,17 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SectionTitle(title: '${resultats.length} passage(s) trouvé(s)'),
+            Row(
+              children: [
+                Expanded(
+                    child: SectionTitle(
+                        title: '${resultats.length} passage(s) trouvé(s)')),
+                TextButton(
+                  onPressed: () => setState(() => _modeRecherche = false),
+                  child: const Text('Retour à la lecture'),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             ...resultats.map((r) => Card(
                   child: ListTile(
@@ -432,7 +583,8 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    subtitle: Text(r.reference, style: const TextStyle(fontSize: 11.5)),
+                    subtitle: Text(r.reference,
+                        style: const TextStyle(fontSize: 11.5)),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _ouvrirResultat(r),
                   ),
@@ -446,6 +598,7 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
   Widget _chapitre() {
     final future = _chapitreFuture;
     if (future == null) return const SizedBox.shrink();
+    final livre = _livreChoisi!;
     return FutureBuilder<ChapitreBible>(
       future: future,
       builder: (context, snapshot) {
@@ -465,167 +618,204 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
             message: 'Chapitre introuvable.',
           );
         }
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: chapitre.versets
-                  .map((v) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: RichText(
-                          text: TextSpan(
-                            style: Theme.of(context).textTheme.bodyLarge,
-                            children: [
-                              TextSpan(
-                                text: '${v.numero} ',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primary,
-                                ),
-                              ),
-                              TextSpan(text: v.texte),
-                            ],
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color:
+                Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '${livre.nom} — chapitre $_chapitreChoisi',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                _version == 'kjv'
+                    ? 'King James Version'
+                    : 'Louis Segond 1910',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              ...chapitre.versets.map((v) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: RichText(
+                      text: TextSpan(
+                        style: Theme.of(context).textTheme.bodyLarge,
+                        children: [
+                          TextSpan(
+                            text: '${v.numero} ',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary,
+                            ),
                           ),
-                        ),
-                      ))
-                  .toList(),
-            ),
+                          TextSpan(text: v.texte),
+                        ],
+                      ),
+                    ),
+                  )),
+            ],
           ),
         );
       },
     );
   }
-}
 
-/// École biblique, cours (maquette, écran 40) : cours publiés par la
-/// structure, leçon par leçon. Même source que l'écran École
-/// biblique ; un cours s'ouvre sur son détail.
-class _EcoleCoursSection extends StatelessWidget {
-  final Future<List<CoursEcole>> future;
-
-  const _EcoleCoursSection({required this.future});
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<CoursEcole>>(
-      future: future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return const EmptyState(
-            icon: Icons.school_outlined,
-            message: 'Cours indisponibles.',
-          );
-        }
-        final cours = snapshot.data ?? const <CoursEcole>[];
-        if (cours.isEmpty) {
-          return const EmptyState(
-            icon: Icons.school_outlined,
-            message: 'Aucun cours publié. Les cours créés par la structure '
-                'apparaîtront ici, leçon par leçon.',
-          );
-        }
-        return Column(
+  /// Carte École (maquette, écran 40) : aperçu court des cours, un
+  /// seul bouton vers l'écran complet. Aucune gestion de cours ici,
+  /// elle reste dans EcoleBibliqueScreen.
+  Widget _carteEcole() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final c in cours)
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.school_outlined),
-                  title: Text(c.titre, style: const TextStyle(fontSize: 13.5)),
-                  subtitle: Text(c.niveauLabel, style: const TextStyle(fontSize: 11.5)),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => EcoleCoursDetailScreen(cours: c),
+            Text('École biblique, cours',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            FutureBuilder<List<CoursEcole>>(
+              future: _coursFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState ==
+                    ConnectionState.waiting) {
+                  return const Center(
+                      child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return const EmptyState(
+                    icon: Icons.school_outlined,
+                    message: 'Cours indisponibles.',
+                  );
+                }
+                final cours = snapshot.data ?? const <CoursEcole>[];
+                if (cours.isEmpty) {
+                  return const EmptyState(
+                    icon: Icons.school_outlined,
+                    message: 'Aucun cours publié. Les cours créés par la '
+                        'structure apparaîtront ici, leçon par leçon.',
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final c in cours.take(3))
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.school_outlined),
+                          title: Text(c.titre,
+                              style: const TextStyle(fontSize: 13.5)),
+                          subtitle: Text(c.niveauLabel,
+                              style: const TextStyle(fontSize: 11.5)),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) =>
+                                  EcoleCoursDetailScreen(cours: c),
+                            ),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const EcoleBibliqueScreen(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.school_outlined),
+                      label: const Text('Ouvrir l’école biblique',
+                          style: TextStyle(fontSize: 13.5)),
                     ),
-                  ),
-                ),
-              ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const EcoleBibliqueScreen(),
-                ),
-              ),
-              icon: const Icon(Icons.school_outlined),
-              label: const Text('Ouvrir l’école biblique', style: TextStyle(fontSize: 13.5)),
+                  ],
+                );
+              },
             ),
           ],
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  /// Carte Progression : le widget partagé avec l'écran École
+  /// biblique, un seul chargement, aucune copie locale.
+  Widget _carteProgression() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: ProgressionEcole(future: _progressionsFuture),
+      ),
     );
   }
 }
 
-/// Ma progression (maquette, écran 40) : agrégat réel des
-/// progressions des cours du membre connecté (leçons terminées /
-/// total, %). Sans inscription : 0 % / 0 leçon sur 0.
-class _MaProgressionBible extends StatelessWidget {
-  final Future<List<ProgressionCours>> future;
+/// Sélecteur compact, comme la maquette : libellé et valeur, bordure,
+/// chevron. Hauteur et structure identiques pour Livre et Chapitre.
+class _BoutonSelecteur extends StatelessWidget {
+  final String libelle;
+  final String valeur;
+  final VoidCallback? onTap;
 
-  const _MaProgressionBible({required this.future});
+  const _BoutonSelecteur({
+    super.key,
+    required this.libelle,
+    required this.valeur,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (context.watch<AppState>().apercuFidele) {
-      return const EmptyState(
-        icon: Icons.school_outlined,
-        message: 'En aperçu, la progression d’un membre n’est pas visible. '
-            'Connectez-vous avec un compte fidèle pour suivre votre '
-            'progression.',
-      );
-    }
-    return FutureBuilder<List<ProgressionCours>>(
-      future: future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return EmptyState(
-            icon: Icons.error_outline,
-            message: 'Progression indisponible : ${snapshot.error}',
-          );
-        }
-        final progressions = snapshot.data ?? const <ProgressionCours>[];
-        final total =
-            progressions.fold<int>(0, (somme, p) => somme + p.total);
-        final terminees =
-            progressions.fold<int>(0, (somme, p) => somme + p.terminees);
-        final pourcentage =
-            total == 0 ? 0 : (terminees * 100 / total).round();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    final desactive = onTap == null;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: BoxDecoration(
+          border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
           children: [
-            LinearProgressIndicator(
-                value: total == 0 ? 0 : terminees / total),
-            const SizedBox(height: 4),
-            RichText(
-              text: TextSpan(
-                style: DefaultTextStyle.of(context).style,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextSpan(
-                    text: '$pourcentage %',
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                  TextSpan(
-                    text: ' — $terminees leçon(s) terminée(s) sur $total.',
-                    style: const TextStyle(fontSize: 12),
+                  Text(libelle,
+                      style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    valeur,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: desactive
+                          ? Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                          : null,
+                    ),
                   ),
                 ],
               ),
             ),
+            const Icon(Icons.unfold_more, size: 16),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 }
