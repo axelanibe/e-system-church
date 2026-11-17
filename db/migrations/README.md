@@ -59,6 +59,7 @@ toute migration « 001bis » casserait la traçabilité.
 | Numéro | Raison |
 |---|---|
 | 017 | Trou historique dans la numérotation (aucun fichier 017). |
+| 035 | Réservé par la PR #127 (push FCM, non fusionnée) : la 036_signatures_electroniques.sql utilise 036 pour ne pas entrer en collision à la fusion. |
 
 Le numéro 027, anciennement manquant, est comblé par la T9
 (`027_ecole_biblique.sql`, école biblique + Bible, PR #119).

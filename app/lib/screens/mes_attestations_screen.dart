@@ -6,6 +6,7 @@ import '../models/attestation.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/signature_pad.dart';
 
 /// US3 + tranche B — Mes attestations (membre) : liste par année, tous
 /// types (dons, mariage, naissance, baptême), téléchargement du PDF.
@@ -19,6 +20,19 @@ class MesAttestationsScreen extends StatefulWidget {
 
 class _MesAttestationsScreenState extends State<MesAttestationsScreen> {
   late Future<List<Attestation>> _future;
+
+  /// Signatures déjà demandées, une par attestation : le Future est
+  /// mémorisé pour ne pas relancer GET /signatures à chaque rebuild.
+  final Map<String, Future<Signature?>> _signatures = {};
+
+  Future<Signature?> _signaturePour(Attestation a) =>
+      _signatures.putIfAbsent(
+        a.id,
+        () => context.read<AppState>().api.getSignature(
+              documentType: 'attestation',
+              documentId: a.id,
+            ),
+      );
 
   @override
   void initState() {
@@ -91,8 +105,18 @@ class _MesAttestationsScreenState extends State<MesAttestationsScreen> {
                         title: Text(a.estDon && a.totalFcfa != null
                             ? '${a.annee} — ${formatFcfa(a.totalFcfa!)}'
                             : '${a.libelle} — ${a.annee}'),
-                        subtitle: Text(
-                            '${a.numero}${a.estDon && a.nbDons != null ? ' · ${pluriel(a.nbDons!, 'don')}' : ''} · ${formatDate(a.dateEmission)}'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                                '${a.numero}${a.estDon && a.nbDons != null ? ' · ${pluriel(a.nbDons!, 'don')}' : ''} · ${formatDate(a.dateEmission)}'),
+                            // Lecture seule : le PDF téléchargé montre la
+                            // signature ; le nom du signataire et la date
+                            // s'affichent ici quand la signature existe.
+                            MentionSignature(future: _signaturePour(a)),
+                          ],
+                        ),
                         trailing: IconButton(
                           icon: const Icon(Icons.download_outlined),
                           tooltip: 'Télécharger le PDF',

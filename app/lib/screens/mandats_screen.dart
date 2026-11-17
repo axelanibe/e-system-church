@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../config/app_theme.dart';
 import '../models/gouvernance.dart';
@@ -10,6 +11,7 @@ import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
 import '../widgets/liste_avec_fab.dart';
+import '../widgets/signature_pad.dart';
 import 'documents_screen.dart';
 
 /// Mandats et nominations (maquette Membres Finances, écran 7) : hub
@@ -223,34 +225,58 @@ class _MandatsScreenState extends State<MandatsScreen> {
     );
   }
 
+  /// Signature dessinée (V1) : le dialogue texte est remplacé par le
+  /// pad, le champ nom est gardé (pré-rempli par le signataire du PV,
+  /// le signataire configuré, ou le nom de l'utilisateur connecté).
+  /// Après signature, le PDF signé est re-téléchargé.
   Future<void> _signer(ProcesVerbal pv, String? signataireDefaut) async {
-    final signataireController = TextEditingController(
-      text: pv.signataire ?? signataireDefaut ?? '',
+    final resultat = await montrerDialogueSignature(
+      context,
+      titre: 'Signer le procès-verbal',
+      nomInitial: pv.signataire ??
+          signataireDefaut ??
+          context.read<AppState>().user?.fullName ??
+          '',
     );
-    await showCreateDialog(
-      context: context,
-      title: 'Signer le procès-verbal',
-      saveLabel: 'Signer',
-      fields: [
-        dialogTextField(
-          controller: signataireController,
-          label: 'Signataire',
+    if (resultat == null || !mounted) return;
+    try {
+      await context.read<AppState>().api.signerProcesVerbal(
+            pv.id,
+            points: resultat.trace.points,
+            imagePng: resultat.trace.pngBytes,
+            nomAffiche: resultat.nom,
+          );
+      if (!mounted) return;
+      showSuccess(context, 'Procès-verbal signé.');
+      _refresh();
+      await _telechargerPv(pv);
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
+  Future<void> _telechargerPv(ProcesVerbal pv) async {
+    try {
+      final bytes = await context
+          .read<AppState>()
+          .api
+          .telechargerProcesVerbalPdf(pv.id);
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(bytes,
+                name: '${pv.numero ?? 'proces-verbal'}.pdf',
+                mimeType: 'application/pdf'),
+          ],
+          subject: 'Procès-verbal ${pv.numero ?? ''}',
         ),
-      ],
-      isValid: () => signataireController.text.trim().isNotEmpty,
-      onSave: () async {
-        try {
-          await context.read<AppState>().api.signerProcesVerbal(
-                pv.id,
-                signataire: signataireController.text.trim(),
-              );
-          if (mounted) showSuccess(context, 'Procès-verbal signé.');
-          _refresh();
-        } catch (e) {
-          if (mounted) showApiError(context, e);
-        }
-      },
-    );
+      );
+      if (mounted) {
+        showSuccess(context, 'Procès-verbal ${pv.numero ?? ''} partagé.');
+      }
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
   }
 
   Future<void> _supprimerPv(ProcesVerbal pv) async {
@@ -433,6 +459,12 @@ class _MandatsScreenState extends State<MandatsScreen> {
                           icon: const Icon(Icons.draw_outlined),
                           tooltip: 'Signer',
                           onPressed: () => _signer(pv, signataireDefaut),
+                        ),
+                      if (pv.statut == 'signe')
+                        IconButton(
+                          icon: const Icon(Icons.download_outlined),
+                          tooltip: 'Voir le PDF signé',
+                          onPressed: () => _telechargerPv(pv),
                         ),
                       IconButton(
                         icon: const Icon(Icons.delete_outline),

@@ -1,4 +1,64 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import '../utils/format.dart';
+
+/// Signature électronique dessinée (V1) : tracé monté au serveur, image
+/// PNG stockée côté serveur, empreinte SHA-256 pour vérifier l'intégrité.
+/// Renvoyée par POST `/attestations/:id/signer`,
+/// POST `/proces-verbaux/:id/signer` et GET `/signatures/:type/:id`.
+/// Le `fromJson` tolère une réponse enveloppée (`{'signature': {...}}`)
+/// et un nom sous la clé `signataire` (cas d'un procès-verbal renvoyé).
+class Signature {
+  final String id;
+  final String signataireNom;
+  final String? signataireFonction;
+  final DateTime? dateSignature;
+  final String? empreinteSha256;
+  final String? imagePngBase64;
+  final String? documentType;
+  final String? documentId;
+
+  const Signature({
+    required this.id,
+    required this.signataireNom,
+    this.signataireFonction,
+    this.dateSignature,
+    this.empreinteSha256,
+    this.imagePngBase64,
+    this.documentType,
+    this.documentId,
+  });
+
+  factory Signature.fromJson(Map<String, dynamic> json) {
+    final raw = json['signature'] is Map<String, dynamic>
+        ? json['signature'] as Map<String, dynamic>
+        : json;
+    return Signature(
+      id: raw['id'] as String? ?? '',
+      signataireNom: raw['signataire_nom'] as String? ??
+          raw['signataire'] as String? ??
+          '',
+      signataireFonction: raw['signataire_fonction'] as String?,
+      dateSignature: parseDate(raw['date_signature'] as String?),
+      empreinteSha256: raw['empreinte_sha256'] as String?,
+      imagePngBase64: raw['image_png_base64'] as String?,
+      documentType: raw['document_type'] as String?,
+      documentId: raw['document_id'] as String?,
+    );
+  }
+
+  /// Octets PNG du tracé, null si l'image est absente ou illisible.
+  Uint8List? get imageBytes {
+    final base64 = imagePngBase64;
+    if (base64 == null || base64.isEmpty) return null;
+    try {
+      return base64Decode(base64);
+    } catch (_) {
+      return null;
+    }
+  }
+}
 
 /// Attestation (US3 + tranche B) : un PDF par membre, contenu figé à
 /// l'émission. Type `don` : attestation annuelle de dons, total en FCFA.

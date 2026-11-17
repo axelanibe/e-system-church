@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -29,7 +30,6 @@ import '../models/gouvernance.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
-import '../models/messagerie.dart';
 import '../models/nettoyage_test.dart';
 import '../models/suppression_eglise.dart';
 import '../models/paiements.dart';
@@ -55,7 +55,6 @@ import 'bible_hors_ligne_service.dart';
 /// Seule implémentation de [ApiService] : aucune donnée de démonstration,
 /// tout vient de l'API réelle (listes vides quand l'église n'a rien saisi).
 class HttpApiService implements ApiService {
-  @override
   final String baseUrl;
   String? _token;
 
@@ -72,18 +71,9 @@ class HttpApiService implements ApiService {
   /// pour que l'appelant persiste les deux. Jamais appelée sur un échec.
   void Function(String token, String? refreshToken)? onTokensRefreshed;
 
-  HttpApiService(
-      {required this.baseUrl,
-      String? token,
-      String? refreshToken,
-      http.Client? client})
+  HttpApiService({required this.baseUrl, String? token, String? refreshToken})
       : _token = token,
-        _refreshToken = refreshToken,
-        _client = client ?? http.Client();
-
-  /// Client HTTP : injectable pour les tests (client simulé), un vrai
-  /// client sinon.
-  final http.Client _client;
+        _refreshToken = refreshToken;
 
   void setToken(String? token) => _token = token;
 
@@ -120,26 +110,24 @@ class HttpApiService implements ApiService {
     try {
       switch (method) {
         case 'GET':
-          res = await _client
+          res = await http
               .get(uri, headers: headers)
               .timeout(const Duration(seconds: 20));
         case 'POST':
-          res = await _client
+          res = await http
               .post(uri,
                   headers: headers,
                   body: body == null ? null : jsonEncode(body))
               .timeout(const Duration(seconds: 20));
         case 'PATCH':
-          res = await _client
+          res = await http
               .patch(uri,
                   headers: headers,
                   body: body == null ? null : jsonEncode(body))
               .timeout(const Duration(seconds: 20));
         case 'DELETE':
-          res = await _client
-              .delete(uri,
-                  headers: headers,
-                  body: body == null ? null : jsonEncode(body))
+          res = await http
+              .delete(uri, headers: headers)
               .timeout(const Duration(seconds: 20));
         default:
           throw const ApiException('Méthode HTTP inconnue.');
@@ -524,92 +512,6 @@ class HttpApiService implements ApiService {
     return MessageFidele.fromJson(
         data['message'] as Map<String, dynamic>);
   }
-
-  // -- Messagerie (T-Msg-1) : seules des méthodes de route, la couche
-  // [_call] n'est pas touchée. Les listes nues sont lues via
-  // `data['items']` (enveloppe de [_call]).
-  @override
-  String? get token => _token;
-
-  @override
-  Future<List<ConversationMessagerie>> getConversationsMessagerie() async {
-    final data = await _call('GET', '/messagerie/conversations');
-    final items = (data['items'] as List<dynamic>? ?? []);
-    return items
-        .map((e) => ConversationMessagerie.fromJson(
-              e as Map<String, dynamic>,
-            ))
-        .toList();
-  }
-
-  @override
-  Future<ConversationMessagerie> getConversationMessagerie(String id) async {
-    final data = await _call('GET', '/messagerie/conversations/$id');
-    return ConversationMessagerie.fromJson(data);
-  }
-
-  @override
-  Future<ConversationMessagerie> creerConversationMessagerie({
-    required String type,
-    String? title,
-    required List<String> participantMemberIds,
-  }) async {
-    final data = await _call(
-      'POST',
-      '/messagerie/conversations',
-      body: {
-        'type': type,
-        if (title != null && title.trim().isNotEmpty) 'title': title.trim(),
-        'participant_member_ids': participantMemberIds,
-      },
-    );
-    return ConversationMessagerie.fromJson(data);
-  }
-
-  @override
-  Future<List<MessageMessagerie>> getMessagesConversation(
-    String conversationId, {
-    int limit = 100,
-    int offset = 0,
-  }) async {
-    final data = await _call(
-      'GET',
-      '/messagerie/conversations/$conversationId/messages',
-      query: {'limit': '$limit', 'offset': '$offset'},
-    );
-    final items = (data['items'] as List<dynamic>? ?? []);
-    return items
-        .map((e) => MessageMessagerie.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
-  @override
-  Future<MessageMessagerie> envoyerMessageConversation(
-    String conversationId, {
-    required String content,
-  }) async {
-    final data = await _call(
-      'POST',
-      '/messagerie/conversations/$conversationId/messages',
-      body: {'content': content, 'type': 'text'},
-    );
-    return MessageMessagerie.fromJson(data);
-  }
-
-  /// Notifications push (tranche push FCM) : enregistrement du jeton
-  /// FCM de cet appareil, pour recevoir les nouveaux messages en push.
-  @override
-  Future<void> enregistrerJetonPush(
-      {required String jeton, required String plateforme}) async {
-    await _call('POST', '/messagerie/jetons',
-        body: {'jeton': jeton, 'plateforme': plateforme});
-  }
-
-  /// Notifications push (tranche push FCM) : retrait du jeton FCM à la
-  /// déconnexion, pour ne plus recevoir de push sur cet appareil.
-  @override
-  Future<void> retirerJetonPush({required String jeton}) async {
-    await _call('DELETE', '/messagerie/jetons', body: {'jeton': jeton});  }
 
   @override
   Future<void> confirmerPresenceCulte(String culteId) async {
@@ -1822,6 +1724,44 @@ class HttpApiService implements ApiService {
     throw ApiException(message, res.statusCode);
   }
 
+  // -- Signature électronique dessinée (V1) ----------------------------------
+  static const int _signaturePngMaxOctets = 200 * 1024;
+
+  Map<String, dynamic> _corpsSignature(
+      List<Offset> points, Uint8List imagePng, String? nomAffiche) {
+    if (imagePng.lengthInBytes > _signaturePngMaxOctets) {
+      throw const ApiException('Signature trop lourde (200 Ko maximum).');
+    }
+    return {
+      'points': [
+        for (final p in points) {'x': p.dx, 'y': p.dy},
+      ],
+      'image_png_base64': base64Encode(imagePng),
+      if (nomAffiche != null && nomAffiche.isNotEmpty)
+        'nom_affiche': nomAffiche,
+    };
+  }
+
+  @override
+  Future<Signature> signerAttestation(String id,
+      {required List<Offset> points,
+      required Uint8List imagePng,
+      String? nomAffiche}) async =>
+      Signature.fromJson(await _call('POST', '/attestations/$id/signer',
+          body: _corpsSignature(points, imagePng, nomAffiche)));
+
+  @override
+  Future<Signature?> getSignature(
+      {required String documentType, required String documentId}) async {
+    try {
+      return Signature.fromJson(await _call(
+          'GET', '/signatures/$documentType/$documentId'));
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
   // -- Communication : prières et messages (module 5) ------------------------
   @override
   Future<List<DemandePriere>> getDemandesPriere({String? statut}) async =>
@@ -2790,9 +2730,16 @@ class HttpApiService implements ApiService {
       }));
 
   @override
-  Future<ProcesVerbal> signerProcesVerbal(String id, {required String signataire}) async =>
-      ProcesVerbal.fromJson(await _call('PATCH', '/proces-verbaux/$id',
-          body: {'statut': 'signe', 'signataire': signataire}));
+  Future<Signature> signerProcesVerbal(String id,
+      {required List<Offset> points,
+      required Uint8List imagePng,
+      String? nomAffiche}) async =>
+      Signature.fromJson(await _call('POST', '/proces-verbaux/$id/signer',
+          body: _corpsSignature(points, imagePng, nomAffiche)));
+
+  @override
+  Future<Uint8List> telechargerProcesVerbalPdf(String id) =>
+      _telechargerPdf('/proces-verbaux/$id/pdf', {});
 
   @override
   Future<void> deleteProcesVerbal(String id) async {

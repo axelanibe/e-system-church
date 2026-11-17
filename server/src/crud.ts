@@ -92,6 +92,9 @@ export interface CrudOptions {
    * null si OK. Sert à fermer un contournement par PATCH générique
    * (ex. refuser le changement de `statut` d'une dépense hors de la
    * machine à états, ou revalider un chevauchement de réservation).
+   * Convention : un message préfixé « 409: » est un conflit (le préfixe
+   * est retiré de la réponse), ex. document signé figé ; les autres
+   * messages restent des 400.
    * `data` ne contient que les champs envoyés par le client.
    */
   validateUpdate?: (
@@ -344,6 +347,9 @@ export function registerCrud(app: FastifyInstance, db: Pool, opts: CrudOptions):
             data,
           );
           if (message) {
+            if (message.startsWith("409:")) {
+              return reply.code(409).send({ error: "conflict", message: message.slice(4) });
+            }
             return reply.code(400).send({ error: "invalid_update", message });
           }
         }

@@ -139,6 +139,43 @@ export function registerGouvernanceRoutes(app: FastifyInstance, db: Pool) {
       ) {
         return "Réunion introuvable dans votre église.";
       }
+      // Un PV ne naît pas signé : il naît en brouillon, puis se signe
+      // par POST /proces-verbaux/:id/signer (signature électronique V1).
+      if (data.statut === "signe") {
+        return "Un procès-verbal ne naît pas signé : créez-le en brouillon, puis signez-le.";
+      }
+      return null;
+    },
+    // Signature électronique V1 : un PV ne se signe JAMAIS par le PATCH
+    // générique (statut 'signe' avec un nom tapé, sans preuve), et un PV
+    // signé est figé : seul le passage en 'archive' reste permis.
+    validateUpdate: async (db2, churchId, id, data) => {
+      const { rows } = await db2.query(
+        `SELECT statut FROM proces_verbaux WHERE id = $1 AND church_id = $2`,
+        [id, churchId],
+      );
+      if (rows.length === 0) return null; // le CRUD répondra 404
+      if ((rows[0].statut as string) === "signe") {
+        const cles = Object.keys(data);
+        const seulArchive = cles.length === 1 && data.statut === "archive";
+        if (!seulArchive) {
+          return "409:Un procès-verbal signé ne peut plus être modifié, seul l'archivage est permis.";
+        }
+        return null;
+      }
+      if (data.statut === "signe") {
+        return "409:Un procès-verbal ne se signe pas par modification directe : utilisez POST /proces-verbaux/:id/signer.";
+      }
+      return null;
+    },
+    beforeDelete: async (db2, churchId, id) => {
+      const { rows } = await db2.query(
+        `SELECT statut FROM proces_verbaux WHERE id = $1 AND church_id = $2`,
+        [id, churchId],
+      );
+      if (rows.length > 0 && (rows[0].statut as string) === "signe") {
+        return "Un procès-verbal signé ne peut pas être supprimé.";
+      }
       return null;
     },
   });
