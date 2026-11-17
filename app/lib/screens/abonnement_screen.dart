@@ -229,6 +229,11 @@ class _VueMere extends StatelessWidget {
                   'Statut : ${abonnement.statutLibelle}',
                   style: const TextStyle(fontSize: 13),
                 ),
+                if (abonnement.joursRestants != null)
+                  Text(
+                    'Jours restants : ${abonnement.joursRestants}',
+                    style: const TextStyle(fontSize: 13),
+                  ),
                 if (abonnement.dateExpiration == null)
                   // État vide atténué, pas une valeur : aucune date
                   // d'expiration n'est connue.

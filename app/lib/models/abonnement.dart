@@ -18,6 +18,12 @@ class Abonnement {
   /// Montant annuel en FCFA (200 000 par défaut).
   final int montantFcfa;
 
+  /// Date de début, null tant qu'elle n'est pas renseignée.
+  /// Pour un essai, c'est le premier jour de l'essai : l'essai se
+  /// termine dateDebut + essaiJours jours (colonnes DATE côté
+  /// serveur, migration 021, donc sans heure).
+  final DateTime? dateDebut;
+
   /// Date d'expiration, null tant qu'elle n'est pas renseignée
   /// (affichée « À compléter », jamais inventée).
   final DateTime? dateExpiration;
@@ -35,10 +41,41 @@ class Abonnement {
     required this.statut,
     required this.plan,
     required this.montantFcfa,
+    this.dateDebut,
     this.dateExpiration,
     required this.essaiJours,
     required this.lectureSeule,
   });
+
+  /// Jours restants avant la fin de l'essai ou de l'abonnement, null
+  /// quand aucune date ne permet le calcul. Comparaison en dates
+  /// seules (sans heure), comme le serveur (colonnes DATE,
+  /// CURRENT_DATE) : essai -> dateDebut + essaiJours, grâce ->
+  /// dateExpiration + 30 jours, sinon dateExpiration. Borné à 0,
+  /// jamais négatif.
+  int? get joursRestants => joursRestantsLe(DateTime.now());
+
+  /// Même calcul, à une date de référence donnée (tests).
+  int? joursRestantsLe(DateTime reference) {
+    final aujourdHui =
+        DateTime(reference.year, reference.month, reference.day);
+    final DateTime fin;
+    if (statut == 'essai' && dateDebut != null) {
+      fin = _dateSeule(dateDebut!).add(Duration(days: essaiJours));
+    } else if (statut == 'grace' && dateExpiration != null) {
+      fin = _dateSeule(dateExpiration!)
+          .add(const Duration(days: dureeGraceJours));
+    } else if (dateExpiration != null) {
+      fin = _dateSeule(dateExpiration!);
+    } else {
+      return null;
+    }
+    final restants = fin.difference(aujourdHui).inDays;
+    return restants < 0 ? 0 : restants;
+  }
+
+  static DateTime _dateSeule(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
 
   /// Libellé du statut, tel qu'affiché dans la projection.
   String get statutLibelle {
@@ -63,6 +100,9 @@ class Abonnement {
       statut: abo?['statut'] as String? ?? 'actif',
       plan: abo?['plan'] as String? ?? 'annuel',
       montantFcfa: (abo?['montant_fcfa'] as num?)?.toInt() ?? 200000,
+      dateDebut: abo?['date_debut'] == null
+          ? null
+          : DateTime.tryParse(abo!['date_debut'] as String),
       dateExpiration: abo?['date_expiration'] == null
           ? null
           : DateTime.tryParse(abo!['date_expiration'] as String),
@@ -101,6 +141,10 @@ class ValidationCodePromo {
         totalApres: (json['total_apres'] as num?)?.toInt() ?? 0,
       );
 }
+
+/// Durée de la grâce après expiration, en jours (30, comme le
+/// serveur : GRACE_JOURS dans routes/abonnements.ts).
+const int dureeGraceJours = 30;
 
 /// Tarifs validés par Axel le 12 novembre 2026, remises déjà incluses.
 /// 1 an 200 000 FCFA, 3 ans 540 000 au lieu de 600 000, 10 ans
