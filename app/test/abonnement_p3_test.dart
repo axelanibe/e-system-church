@@ -78,6 +78,93 @@ void main() {
       expect(statut('expire').statutLibelle, 'Expiré');
       expect(statut('actif').statutLibelle, 'Actif');
     });
+
+    test('parse date_debut', () {
+      final abo = Abonnement.fromJson(const {
+        'est_annexe': false,
+        'abonnement': {
+          'statut': 'essai',
+          'date_debut': '2026-11-06',
+          'date_expiration': null,
+          'essai_jours': 30,
+        },
+      });
+      expect(abo.dateDebut, DateTime(2026, 11, 6));
+    });
+  });
+
+  group('Jours restants', () {
+    // Date de référence fixe : le calcul ne dépend jamais de l'heure
+    // d'exécution des tests.
+    final ref = DateTime(2026, 11, 16);
+
+    Abonnement abo({
+      required String statut,
+      DateTime? dateDebut,
+      DateTime? dateExpiration,
+    }) =>
+        Abonnement(
+          estAnnexe: false,
+          statut: statut,
+          plan: 'annuel',
+          montantFcfa: 200000,
+          dateDebut: dateDebut,
+          dateExpiration: dateExpiration,
+          essaiJours: 30,
+          lectureSeule: false,
+        );
+
+    test('essai commencé il y a 10 jours : 20 restants', () {
+      expect(
+        abo(statut: 'essai', dateDebut: DateTime(2026, 11, 6))
+            .joursRestantsLe(ref),
+        20,
+      );
+    });
+
+    test('expiration dans 45 jours : 45', () {
+      expect(
+        abo(statut: 'actif', dateExpiration: DateTime(2026, 12, 31))
+            .joursRestantsLe(ref),
+        45,
+      );
+    });
+
+    test('grâce, expiration passée de 5 jours : 25 restants', () {
+      expect(
+        abo(statut: 'grace', dateExpiration: DateTime(2026, 11, 11))
+            .joursRestantsLe(ref),
+        25,
+      );
+    });
+
+    test('expiré depuis 40 jours : borné à 0, jamais négatif', () {
+      expect(
+        abo(statut: 'expire', dateExpiration: DateTime(2026, 10, 7))
+            .joursRestantsLe(ref),
+        0,
+      );
+    });
+
+    test('aucune date : null, rien à afficher', () {
+      expect(abo(statut: 'actif').joursRestantsLe(ref), isNull);
+      expect(
+        abo(statut: 'essai').joursRestantsLe(ref),
+        isNull,
+      );
+    });
+
+    test('dates avec heure : comparaison en dates seules', () {
+      // Essai commencé le 6 à 23 h, référence le 16 à 1 h : 20 jours,
+      // pas 19 à cause des heures.
+      expect(
+        abo(
+          statut: 'essai',
+          dateDebut: DateTime(2026, 11, 6, 23),
+        ).joursRestantsLe(DateTime(2026, 11, 16, 1)),
+        20,
+      );
+    });
   });
 
   group('Tarifs abonnement', () {
