@@ -561,7 +561,7 @@ Future<void> ouvrirNouveauCulte(BuildContext context,
   final api = context.read<AppState>().api;
   List<Member> membres;
   try {
-    membres = (await api.getMembers(limit: 200)).membres;
+    membres = (await api.getMembers(limit: 100)).membres;
   } catch (e) {
     if (context.mounted) showApiError(context, e);
     return;

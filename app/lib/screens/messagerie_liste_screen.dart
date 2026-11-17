@@ -57,7 +57,7 @@ class _MessagerieListeScreenState extends State<MessagerieListeScreen> {
       var membresParId = <String, Member>{};
       String? monMembreId;
       try {
-        final page = await api.getMembers(limit: 200);
+        final page = await api.getMembers(limit: 100);
         membresParId = {
           for (final membre in page.membres) membre.id: membre,
         };
@@ -462,7 +462,7 @@ class _MessagerieListeScreenState extends State<MessagerieListeScreen> {
     final api = context.read<AppState>().api;
     List<Member> membres;
     try {
-      membres = (await api.getMembers(limit: 200)).membres;
+      membres = (await api.getMembers(limit: 100)).membres;
     } catch (e) {
       if (mounted) showApiError(context, e);
       return;

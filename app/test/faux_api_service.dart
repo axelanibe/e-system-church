@@ -58,6 +58,11 @@ import 'faux_donnees.dart';
 class FauxApiService implements ApiService {
   final DemoSeed _data = DemoSeed();
 
+  /// Limites demandées à `getMembers`, dans l'ordre des appels. Sert à
+  /// prouver qu'aucun écran n'envoie une limite au-delà du plafond
+  /// serveur (100 sur GET /membres, sinon 400).
+  final List<int> limitesGetMembers = [];
+
   /// Église de chaque élément du seed ou créé en démo, par identifiant.
   /// Tout le seed appartient à Plateau ; chaque création est rattachée à
   /// l'église active au moment de sa création. Sert le filtre d'isolation :
@@ -1660,6 +1665,7 @@ class FauxApiService implements ApiService {
       String? status,
       int? limit,
       int? offset}) async {
+    if (limit != null) limitesGetMembers.add(limit);
     await _latence();
     _requireAuth();
     var list = _data.membersOf(_churchId);
