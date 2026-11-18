@@ -836,6 +836,16 @@ class FauxApiService implements ApiService {
     return List.unmodifiable(_visible(_data.cultes, (e) => e.id));
   }
 
+  /// Remplace les cultes visibles en démo (défaut : les cultes de
+  /// démonstration). Sert aux tests de la carte « Prochain culte »,
+  /// pour figer un culte à venir ou l'absence de culte, sans
+  /// dépendre du calendrier.
+  void definirCultes(List<Culte> cultes) {
+    _data.cultes
+      ..clear()
+      ..addAll(cultes);
+  }
+
   @override
   Future<List<Presence>> getMesPresences() async {
     await _latence();

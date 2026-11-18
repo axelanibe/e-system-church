@@ -598,7 +598,7 @@ class _TuileAcces extends StatelessWidget {
 /// et pastille or « À venir », compte à rebours (jours, heures,
 /// minutes), lieu et heure côte à côte, puis « Je serai présent ».
 /// Sans culte : mêmes cases à « -- », lieu et heure « à confirmer »,
-/// sans bouton (aucun culte à confirmer).
+/// bouton visible mais désactivé, aucun culte à confirmer.
 class _ProchainCulte extends StatelessWidget {
   final Future<List<Culte>> future;
   final Map<String, bool> rsvpParCulte;
@@ -747,25 +747,28 @@ class _ProchainCulte extends StatelessWidget {
                     ),
                   ),
                 ),
-              if (culte != null) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () =>
-                        onBasculerPresence(culte, !confirme),
-                    icon: Icon(
-                      confirme
-                          ? Icons.check_circle_outline
-                          : Icons.event_available_outlined,
-                    ),
-                    label: Text(
-                      confirme ? 'Présence confirmée' : 'Je serai présent',
-                      style: const TextStyle(fontSize: 13.5),
-                    ),
+              // Bouton toujours visible : la projection le montre même
+              // quand le compte à rebours est à « -- » (aucun culte
+              // planifié) ; sans culte, il est désactivé, il n'y a
+              // rien à confirmer.
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: culte == null
+                      ? null
+                      : () => onBasculerPresence(culte, !confirme),
+                  icon: Icon(
+                    confirme
+                        ? Icons.check_circle_outline
+                        : Icons.event_available_outlined,
+                  ),
+                  label: Text(
+                    confirme ? 'Présence confirmée' : 'Je serai présent',
+                    style: const TextStyle(fontSize: 13.5),
                   ),
                 ),
-              ],
+              ),
             ],
           ),
         );

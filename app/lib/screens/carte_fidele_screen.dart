@@ -88,11 +88,31 @@ class _CarteMembreSeuleState extends State<_CarteMembreSeule> {
             ),
           );
         }
-        // La carte visuelle seule, sans rien autour.
-        return MemberDetailScreen(
-          member: snapshot.data!.member,
-          lectureSeule: true,
-          carteSeule: true,
+        // La carte visuelle seule, avec la note de la projection
+        // en dessous : les modifications se font depuis le profil.
+        return Column(
+          children: [
+            Expanded(
+              child: MemberDetailScreen(
+                member: snapshot.data!.member,
+                lectureSeule: true,
+                carteSeule: true,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              child: Text(
+                'La carte affiche le visuel seul : photo, nom, matricule, '
+                'établissement et QR. Les modifications se font depuis le '
+                'profil.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(fontSize: 12.5),
+              ),
+            ),
+          ],
         );
       },
     );

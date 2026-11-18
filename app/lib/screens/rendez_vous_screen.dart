@@ -3,13 +3,15 @@ import 'package:provider/provider.dart';
 
 import '../config/app_theme.dart';
 import '../models/fidele.dart';
+import '../models/profil.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 
 /// Prendre rendez-vous (tranche P4) : demande auprès du pasteur de
-/// son église. Date souhaitée, créneau à compléter, motif. Aucun
-/// pasteur nommé, aucun créneau inventé : les créneaux du pasteur
+/// son église. Date souhaitée, créneau à compléter, motif. Nom du
+/// pasteur affiché quand la présentation de l'église le fournit,
+/// sinon le libellé seul, aucun nom inventé ; les créneaux du pasteur
 /// s'afficheront ici quand ils seront définis.
 class RendezVousScreen extends StatefulWidget {
   const RendezVousScreen({super.key});
@@ -24,6 +26,7 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
   var _envoi = false;
   var _envoye = false;
   late Future<List<CreneauPasteur>> _creneauxFuture;
+  Future<ProfilEglise>? _presentationFuture;
   String? _periodeChoisie;
   String? _creneauChoisi;
 
@@ -31,6 +34,12 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
   void initState() {
     super.initState();
     _creneauxFuture = context.read<AppState>().api.getMesCreneaux();
+    // Nom du pasteur : présentation publique de mon église
+    // (pasteur_principal). Sans église, le libellé seul s'affiche.
+    final code = context.read<AppState>().church?.code;
+    _presentationFuture = code == null
+        ? null
+        : context.read<AppState>().api.getPresentation(code);
   }
 
   @override
@@ -202,6 +211,18 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.arrow_back, size: 18),
+                    label: const Text(
+                      'Retour au menu',
+                      style: TextStyle(fontSize: 13.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
                 const Text(
                   'Demandez un rendez-vous auprès de votre pasteur local.',
                 ),
@@ -247,17 +268,32 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
                   const SizedBox(height: 16),
                 ],
                 const SectionTitle(title: 'Votre pasteur'),
-                const Card(
+                Card(
                   child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Le rendez-vous se fait avec le pasteur de '
-                          'votre église.',
-                        ),
-                      ],
+                    padding: const EdgeInsets.all(16),
+                    child: FutureBuilder<ProfilEglise>(
+                      future: _presentationFuture,
+                      builder: (context, snapshot) {
+                        final nom = snapshot.data?.pasteurPrincipal;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Pasteur de mon église',
+                              style: TextStyle(fontSize: 15),
+                            ),
+                            if (nom != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                nom,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium,
+                              ),
+                            ],
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
