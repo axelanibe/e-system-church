@@ -58,16 +58,6 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
 
   Future<void> _demander() async {
     final appState = context.read<AppState>();
-    final apercu = appState.apercuFidele;
-
-    if (apercu) {
-      if (!mounted) return;
-      showApiError(
-        context,
-        'Connectez-vous avec un compte fidèle pour demander un rendez-vous.',
-      );
-      return;
-    }
 
     if (_date == null) {
       if (!mounted) return;

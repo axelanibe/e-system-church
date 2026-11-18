@@ -17,7 +17,7 @@ import 'transparence_screen.dart';
 /// Ordre de la projection : Prendre rendez-vous, Mon journal,
 /// Mes cotisations, Mes camps, Mes attestations, Prière du jour,
 /// Sujet de prière privé, Paramètres, À propos de e-System Church,
-/// puis Voir l'espace admin et Se déconnecter.
+/// puis Se déconnecter.
 class PlusFideleScreen extends StatelessWidget {
   /// Appelé pour aller sur l'accueil fidèle (Prière du jour, Sujet de prière).
   final VoidCallback? onAllerAccueil;
@@ -26,7 +26,6 @@ class PlusFideleScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final apercu = context.watch<AppState>().apercuFidele;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -131,20 +130,9 @@ class PlusFideleScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        const SectionTitle(title: 'Démonstration'),
         Card(
           child: Column(
             children: [
-              ListTile(
-                leading: const Icon(Icons.visibility_outlined),
-                title: const Text('Voir l’espace admin', style: TextStyle(fontSize: 13.5)),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  if (apercu) {
-                    context.read<AppState>().sortirApercuFidele();
-                  }
-                },
-              ),
               ListTile(
                 leading: const Icon(Icons.logout, color: Colors.red),
                 title: const Text(

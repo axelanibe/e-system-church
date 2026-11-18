@@ -40,9 +40,7 @@ import '../services/messagerie_lecture_service.dart';
 /// Mon Parcours, chiffres réels, Mes camps, Mes attestations,
 /// Prière du jour, Sujet de prière privé, devise. Rien d'inventé :
 /// que des données réelles, et des états vides chaleureux quand
-/// il n'y a rien. En aperçu admin (Voir l'espace fidèle), seules
-/// les données du profil se chargent, le reste montre des états
-/// vides.
+/// il n'y a rien.
 class FideleHomeContenu extends StatefulWidget {
   /// Titre de la section outils : « Mes accès » ou
   /// « Actions rapides ».
@@ -88,22 +86,11 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
 
   void _charger() {
     final api = context.read<AppState>().api;
-    final apercu = context.read<AppState>().apercuFidele;
     _profilFuture = api.getMoi();
     // Badge de la tuile « Messagerie » : même calcul local que côté
     // admin (MessagerieLectureService, sans route serveur). Un échec
     // ne bloque pas l'accueil, la pastille reste cachée.
     _chargerNonLusMessagerie();
-    if (apercu) {
-      // Aperçu admin : pas de membre lié, états vides partout.
-      _carteFuture = Future.value(null);
-      _cultesFuture = Future.value(const []);
-      _presencesFuture = Future.value(const []);
-      _contributionsFuture = Future.value(const []);
-      _attestationsFuture = Future.value(const []);
-      _annoncesFuture = Future.value(const []);
-      return;
-    }
     _carteFuture = api.getMaCarte();
     // « Cultes à venir » : on ne garde que les cultes d'aujourd'hui ou
     // après. Un culte sans date exploitable est gardé plutôt que caché.
@@ -159,18 +146,6 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
   }
 
   Future<void> _basculerPresence(Culte culte, bool confirme) async {
-    final apercu = context.read<AppState>().apercuFidele;
-    if (apercu) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Connectez-vous avec un compte fidèle pour confirmer '
-            'votre présence.',
-          ),
-        ),
-      );
-      return;
-    }
     try {
       if (confirme) {
         await context.read<AppState>().api.confirmerPresenceCulte(culte.id);
@@ -211,49 +186,6 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                     eglise: context.watch<AppState>().church,
                   ),
                   const SizedBox(height: 12),
-                  // En aperçu admin : bandeau de retour vers l'espace
-                  // admin (maquette de refonte), en plus du retour de
-                  // l'en-tête.
-                  if (context.watch<AppState>().apercuFidele) ...[
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppTheme.orClair,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppTheme.or),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.visibility_outlined,
-                            size: 18,
-                            color: AppTheme.orAttention,
-                          ),
-                          const SizedBox(width: 8),
-                          const Expanded(
-                            child: Text(
-                              'Mode Aperçu Fidèle',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.violetProfond,
-                              ),
-                            ),
-                          ),
-                          TextButton.icon(
-                            onPressed: () => context
-                                .read<AppState>()
-                                .sortirApercuFidele(),
-                            icon: const Icon(Icons.chevron_left, size: 18),
-                            label: const Text('Retour Admin', style: TextStyle(fontSize: 13.5)),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
                   FutureBuilder<FideleProfil>(
                     future: _profilFuture,
                     builder: (context, snapshot) {

@@ -80,20 +80,6 @@ class AppState extends ChangeNotifier {
   /// les écrans d'administration.
   bool get isMembre => _role == 'membre';
 
-  /// Aperçu de l'espace fidèle par un administrateur (« Voir l'espace
-  /// fidèle » sur l'accueil admin, tranche P1) : la coquille fidèle
-  /// s'affiche sans changer de session ni de rôle. Les lectures
-  /// réservées au rôle `membre` ne sont pas appelées en aperçu, les
-  /// sections montrent leurs états vides. « Voir l'espace admin »
-  /// dans le menu Plus du fidèle quitte l'aperçu.
-  bool _apercuFidele = false;
-  bool get apercuFidele => _apercuFidele;
-
-  void sortirApercuFidele() {
-    _apercuFidele = false;
-    notifyListeners();
-  }
-
   /// L'utilisateur est admin de son église.
   bool get isAdmin => _role == 'admin_eglise';
 
@@ -367,7 +353,6 @@ class AppState extends ChangeNotifier {
     _church = null;
     _role = null;
     _eglises = [];
-    _apercuFidele = false;
     _abonnement = null;
     await _store.clearToken();
     await _store.clearRefreshToken();
@@ -391,7 +376,6 @@ class AppState extends ChangeNotifier {
     _church = null;
     _role = null;
     _eglises = [];
-    _apercuFidele = false;
     _abonnement = null;
     await _store.clearToken();
     await _store.clearRefreshToken();

@@ -14,9 +14,7 @@ import 'plus_fidele_screen.dart';
 /// Coquille fidèle (tranche P1) : la navigation du fidèle, séparée de
 /// l'admin. Barre du bas Accueil, Bible, Carte, Messages, Plus.
 /// Écrans larges (≥ 900 px) : rail latéral, comme la coquille admin.
-/// La barre admin est absente ici. En aperçu admin
-/// (« Voir l'espace fidèle »), les écrans montrent leurs états vides
-/// pour les lectures réservées au rôle `membre`.
+/// La barre admin est absente ici.
 class FideleShell extends StatefulWidget {
   const FideleShell({super.key, this.ongletInitial = 0});
 
@@ -114,16 +112,6 @@ class _FideleShellState extends State<FideleShell> {
               children: [
                 EnTeteClair(
                   titre: _titles[courant],
-                  // En aperçu admin, un retour visible vers l'espace admin.
-                  leading: context.watch<AppState>().apercuFidele
-                      ? IconButton(
-                          icon: const Icon(Icons.chevron_left),
-                          tooltip: 'Voir l’espace admin',
-                          onPressed: () => context
-                              .read<AppState>()
-                              .sortirApercuFidele(),
-                        )
-                      : null,
                 ),
                 // T13, D04 : abonnement expiré, bandeau persistant.
                 if (context.watch<AppState>().lectureSeule)
