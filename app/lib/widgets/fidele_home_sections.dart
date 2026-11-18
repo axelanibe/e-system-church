@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_theme.dart';
+import '../models/activites.dart';
 import '../models/announcement.dart';
 import '../models/attestation.dart';
 import '../models/contribution.dart';
@@ -65,6 +66,7 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
   late Future<FideleProfil> _profilFuture;
   late Future<MaCarte?> _carteFuture;
   late Future<List<Culte>> _cultesFuture;
+  late Future<List<Activite>> _activitesFuture;
   late Future<List<Presence>> _presencesFuture;
   late Future<List<Contribution>> _contributionsFuture;
   late Future<List<Attestation>> _attestationsFuture;
@@ -108,6 +110,10 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
     _contributionsFuture = api.getMesContributions();
     _attestationsFuture = api.getMesAttestations();
     _annoncesFuture = api.getMesAnnonces();
+    // « Activités à venir » (V1, migration 039) : publiées à venir de
+    // son église, triées par date côté serveur. Les brouillons ne
+    // sortent jamais de la route /moi/activites.
+    _activitesFuture = api.getMesActivites();
   }
 
   Future<void> _chargerNonLusMessagerie() async {
@@ -313,6 +319,9 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                     rsvpParCulte: _rsvpParCulte,
                     onBasculerPresence: _basculerPresence,
                   ),
+                  const SizedBox(height: 8),
+                  const SectionTitle(title: 'Activités à venir'),
+                  _ActivitesAVenirSection(future: _activitesFuture),
                   const SizedBox(height: 8),
                   _ParcoursSection(future: _carteFuture),
                   const SizedBox(height: 8),
@@ -1208,6 +1217,67 @@ class _VersetDuJour extends StatelessWidget {
 /// Annonces de mon église (maquette, écran 37) : les 3 dernières
 /// annonces de l'église du fidèle, même source que l'accueil fidèle
 /// (`GET /moi/annonces`).
+/// Activités à venir (V1, migration 039) : publiées à venir de son
+/// église, triées par date, titre, date et heure, lieu. Simple liste,
+/// sans détail au toucher.
+class _ActivitesAVenirSection extends StatelessWidget {
+  final Future<List<Activite>> future;
+
+  const _ActivitesAVenirSection({required this.future});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Activite>>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AppLoading();
+        }
+        final activites = [...(snapshot.data ?? const <Activite>[])]
+          ..sort((a, b) {
+            final da = a.date;
+            final db = b.date;
+            if (da == null && db == null) return 0;
+            if (da == null) return 1;
+            if (db == null) return -1;
+            return da.compareTo(db);
+          });
+        if (activites.isEmpty) {
+          return const EmptyState(
+            icon: Icons.event_outlined,
+            message: 'Aucune activité à venir',
+          );
+        }
+        return Column(
+          children: [
+            for (final activite in activites)
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.event_outlined),
+                  title: Text(
+                    activite.titre,
+                    style: const TextStyle(fontSize: 13.5),
+                  ),
+                  subtitle: Text(
+                    [
+                      formatDateTime(activite.date),
+                      if (activite.lieu != null) activite.lieu,
+                      if (activite.responsable != null)
+                        'Avec ${activite.responsable}',
+                    ].join(' · '),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11.5),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _AnnoncesEgliseSection extends StatelessWidget {
   final Future<List<Announcement>> future;
 

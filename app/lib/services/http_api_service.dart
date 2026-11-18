@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/abonnement.dart';
+import '../models/activites.dart';
 import '../models/attestation.dart';
 import '../models/annexe.dart';
 import '../models/anniversaire.dart';
@@ -485,6 +486,14 @@ class HttpApiService implements ApiService {
     final data = await _call('GET', '/moi/cultes');
     return (data['cultes'] as List<dynamic>? ?? [])
         .map((e) => Culte.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<List<Activite>> getMesActivites() async {
+    final data = await _call('GET', '/moi/activites');
+    return (data['activites'] as List<dynamic>? ?? [])
+        .map((e) => Activite.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
@@ -1287,6 +1296,52 @@ class HttpApiService implements ApiService {
   @override
   Future<void> deleteCulte(String id) async {
     await _call('DELETE', '/cultes/$id');
+  }
+
+  @override
+  Future<List<Activite>> getActivites() async =>
+      _items(await _call('GET', '/activites'), Activite.fromJson);
+
+  @override
+  Future<Activite> createActivite({
+    required String titre,
+    String? description,
+    required String dateHeure,
+    String? lieu,
+    String? responsable,
+    String statut = 'brouillon',
+  }) async =>
+      Activite.fromJson(await _call('POST', '/activites', body: {
+        'titre': titre,
+        if (description != null) 'description': description,
+        'date_heure': dateHeure,
+        if (lieu != null) 'lieu': lieu,
+        if (responsable != null) 'responsable': responsable,
+        'statut': statut,
+      }));
+
+  @override
+  Future<Activite> updateActivite(
+    String id, {
+    String? titre,
+    String? description,
+    String? dateHeure,
+    String? lieu,
+    String? responsable,
+    String? statut,
+  }) async =>
+      Activite.fromJson(await _call('PATCH', '/activites/$id', body: {
+        if (titre != null) 'titre': titre,
+        if (description != null) 'description': description,
+        if (dateHeure != null) 'date_heure': dateHeure,
+        if (lieu != null) 'lieu': lieu,
+        if (responsable != null) 'responsable': responsable,
+        if (statut != null) 'statut': statut,
+      }));
+
+  @override
+  Future<void> deleteActivite(String id) async {
+    await _call('DELETE', '/activites/$id');
   }
 
   @override

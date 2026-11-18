@@ -640,6 +640,31 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
     },
   );
 
+  // -- Activités à venir (V1, migration 039) : publiées seulement,
+  //    à venir seulement, de SON église. Les brouillons ne sortent
+  //    jamais ici, pas plus que les activités passées.
+  app.get(
+    "/moi/activites",
+    { preHandler: [requireAuth(db), requireRole("membre")] },
+    async (req, reply) => {
+      try {
+        const { rows } = await db.query(
+          `SELECT id, church_id, titre, description, date_heure, lieu,
+                  responsable, statut, created_at
+             FROM activites
+            WHERE church_id = $1 AND statut = 'publié'
+              AND date_heure >= now()
+            ORDER BY date_heure ASC
+            LIMIT 50`,
+          [req.session.churchId],
+        );
+        return reply.send({ activites: rows });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
   app.get(
     "/moi/presences",
     { preHandler: [requireAuth(db), requireRole("membre")] },

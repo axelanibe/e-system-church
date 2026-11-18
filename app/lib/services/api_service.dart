@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import '../models/abonnement.dart';
+import '../models/activites.dart';
 import '../models/attestation.dart';
 import '../models/annexe.dart';
 import '../models/anniversaire.dart';
@@ -171,6 +172,9 @@ abstract class ApiService {
   Future<void> marquerAnnonceLue(String id);
 
   Future<List<Culte>> getMesCultes();
+
+  /// Mes activités à venir publiées (V1, migration 039).
+  Future<List<Activite>> getMesActivites();
 
   Future<List<Presence>> getMesPresences();
 
@@ -493,6 +497,30 @@ abstract class ApiService {
   });
 
   Future<void> deleteCulte(String id);
+
+  // -- Activités à venir (V1, migration 039) ---------------------------------
+  Future<List<Activite>> getActivites();
+
+  Future<Activite> createActivite({
+    required String titre,
+    String? description,
+    required String dateHeure,
+    String? lieu,
+    String? responsable,
+    String statut = 'brouillon',
+  });
+
+  Future<Activite> updateActivite(
+    String id, {
+    String? titre,
+    String? description,
+    String? dateHeure,
+    String? lieu,
+    String? responsable,
+    String? statut,
+  });
+
+  Future<void> deleteActivite(String id);
 
   Future<List<OrdreCulteItem>> getOrdreCulte(String culteId);
 

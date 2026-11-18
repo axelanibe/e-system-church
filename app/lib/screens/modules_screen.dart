@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_theme.dart';
+import 'activites_screen.dart';
 import 'annexes_screen.dart';
 import 'attestations_screen.dart';
 import 'bible_fidele_screen.dart';
@@ -18,8 +19,10 @@ import 'rendez_vous_admin_screen.dart';
 import 'serviteurs_screen.dart';
 
 /// Modules de l'église (maquette Membres Finances, écran 21) : grille
-/// de 14 cartes, les 13 de la maquette plus « Identité
-/// institutionnelle » (phase 2), en dernière position. La carte
+/// de 15 cartes, les 13 de la maquette plus « Identité
+/// institutionnelle » (phase 2), en dernière position, et « Activités »
+/// (V1, migration 039), après « Cultes en direct » : la maquette ne
+/// parle d'aucune carte Activités, c'est le placement retenu. La carte
 /// « Messagerie » ajoutée par la tranche T-Msg-1 a été retirée
 /// (design couleurs messagerie, 16 nov. 2026) : la messagerie est
 /// désormais un onglet de la barre du bas, une seule entrée par
@@ -58,6 +61,12 @@ class ModulesScreen extends StatelessWidget {
       'Cultes en direct',
       'Conducteur chronométré, transposition, portes',
       Icons.schedule_outlined,
+    ),
+    (
+      'activites',
+      'Activités',
+      'Sorties, réunions, formations.',
+      Icons.event_outlined,
     ),
     (
       'pastoral',
@@ -146,6 +155,8 @@ class ModulesScreen extends StatelessWidget {
         _pousser(context, const DepartementsScreen());
       case 'cultes':
         _pousser(context, const CultesDirectScreen());
+      case 'activites':
+        _pousser(context, const ActivitesScreen());
       case 'pastoral':
         _pousser(context, const PastoralScreen());
       case 'serviteurs':
