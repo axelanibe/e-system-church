@@ -18,6 +18,7 @@ import 'package:esystem_church/models/auth.dart';
 import 'package:esystem_church/models/biens.dart';
 import 'package:esystem_church/models/bible.dart';
 import 'package:esystem_church/models/gouvernance.dart';
+import 'package:esystem_church/models/identite.dart';
 import 'package:esystem_church/models/church.dart';
 import 'package:esystem_church/models/code_tutelle.dart';
 import 'package:esystem_church/models/campagne.dart';
@@ -5051,6 +5052,51 @@ class FauxApiService implements ApiService {
     );
     _data.parametresByChurch[_churchId] = maj;
     return maj;
+  }
+
+  // -- Identité institutionnelle (phase 2) : en mémoire. L'identité
+  // par défaut est celle de la mère du seed (Plateau, brouillon) ; les
+  // tests la remplacent par [definirIdentite] (annexe héritée…).
+  IdentiteInstitutionnelle _identite = const IdentiteInstitutionnelle(
+    egliseId: DemoIds.plateau,
+    egliseCode: 'ESC-0411',
+    egliseNom: 'Église Grâce Divine',
+    statut: 'brouillon',
+    nomOfficiel: 'Église Grâce Divine',
+    adresse: 'Cocody, Abidjan',
+    ville: 'Abidjan',
+    pays: 'Côte d’Ivoire',
+    telephone: '+225 07 47 00 01',
+    email: 'contact@gracedivine.ci',
+    devise: 'FCFA',
+    fuseauHoraire: 'Africa/Abidjan',
+    description: 'Église mère du réseau Grâce Divine.',
+  );
+
+  /// Dernier corps envoyé à [patchIdentite], pour les assertions.
+  Map<String, dynamic>? dernierPatchIdentite;
+
+  void definirIdentite(IdentiteInstitutionnelle identite) {
+    _identite = identite;
+    dernierPatchIdentite = null;
+  }
+
+  @override
+  Future<IdentiteInstitutionnelle> getIdentite() async {
+    await _latence();
+    _requireAuth();
+    return _identite;
+  }
+
+  @override
+  Future<IdentiteInstitutionnelle> patchIdentite(
+      Map<String, dynamic> champs) async {
+    await _latence();
+    _requireAuth();
+    dernierPatchIdentite = Map<String, dynamic>.from(champs);
+    final fusion = _identite.toJson()..addAll(champs);
+    _identite = IdentiteInstitutionnelle.fromJson(fusion);
+    return _identite;
   }
 
   @override

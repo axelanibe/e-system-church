@@ -27,6 +27,7 @@ import '../models/fidele.dart';
 import '../models/finances.dart';
 import '../models/frequentation.dart';
 import '../models/gouvernance.dart';
+import '../models/identite.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
@@ -3311,6 +3312,16 @@ class HttpApiService implements ApiService {
         if (seuilBaisseContributionsPct != null)
           'seuil_baisse_contributions_pct': seuilBaisseContributionsPct,
       }));
+
+  @override
+  Future<IdentiteInstitutionnelle> getIdentite() async =>
+      IdentiteInstitutionnelle.fromJson(await _call('GET', '/identite'));
+
+  @override
+  Future<IdentiteInstitutionnelle> patchIdentite(
+          Map<String, dynamic> champs) async =>
+      IdentiteInstitutionnelle.fromJson(
+          await _call('PATCH', '/identite', body: champs));
 
   @override
   Future<List<RoleEglise>> getRoles() async {

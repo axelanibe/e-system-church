@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
+import { estDescendante } from "../identite.js";
 import {
   MODULES_ACTIVABLES,
   MODULES_NOYAU,
@@ -24,24 +25,6 @@ import {
  * données nominatives (membres, transactions) : la promesse de
  * `db/schema.sql` (agrégats seulement pour la mère) est respectée.
  */
-
-async function estDescendante(
-  db: Pool,
-  racineId: string,
-  egliseId: string,
-): Promise<boolean> {
-  if (racineId === egliseId) return false;
-  const { rows } = await db.query(
-    `WITH RECURSIVE descendants AS (
-       SELECT id FROM churches WHERE id = $1
-       UNION ALL
-       SELECT c.id FROM churches c JOIN descendants d ON c.parent_church_id = d.id
-     )
-     SELECT 1 FROM descendants WHERE id = $2`,
-    [racineId, egliseId],
-  );
-  return (rows.length ?? 0) > 0;
-}
 
 export function registerAnnexesRoutes(app: FastifyInstance, db: Pool) {
   app.get(

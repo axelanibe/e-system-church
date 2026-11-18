@@ -7,6 +7,10 @@ import type { Pool } from "pg";
 import { z } from "zod";
 import { auditLog, basculeAutorisee, issueTokenForChurch, rotateRefreshTokenForChurch } from "../auth.js";
 import { invalidInput } from "../crud.js";
+import {
+  MESSAGE_CHAMP_HERITE,
+  synchroniserParametresIdentite,
+} from "../identite.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
 
 /**
@@ -85,6 +89,14 @@ export function registerProfilEgliseRoutes(app: FastifyInstance, db: Pool) {
           message: "On ne modifie le logo que de sa propre église.",
         });
       }
+      // Le logo d'une annexe vient de sa mère : elle ne le téléverse pas.
+      const { rows: cibleLogoRows } = await db.query<{ parent_church_id: string | null }>(
+        `SELECT parent_church_id FROM churches WHERE id = $1`,
+        [churchId],
+      );
+      if (cibleLogoRows.length > 0 && cibleLogoRows[0].parent_church_id !== null) {
+        return reply.code(403).send({ error: "forbidden", message: MESSAGE_CHAMP_HERITE });
+      }
       const parsed = logoSchema.safeParse(req.body);
       if (!parsed.success) {
         invalidInput(reply, parsed.error);
@@ -110,6 +122,7 @@ export function registerProfilEgliseRoutes(app: FastifyInstance, db: Pool) {
         await writeFile(join(LOGOS_DIR, filename), buffer);
         const logoUrl = `/logos/${filename}`;
         await db.query(`UPDATE churches SET logo_url = $2 WHERE id = $1`, [churchId, logoUrl]);
+        await synchroniserParametresIdentite(db, churchId, { logo_url: logoUrl });
         await auditLog(db, {
           churchId,
           userId: req.session.userId,
@@ -210,6 +223,14 @@ export function registerProfilEgliseRoutes(app: FastifyInstance, db: Pool) {
         return;
       }
       const data = parsed.data as Record<string, unknown>;
+      // Champs institutionnels hérités : la cible annexe ne les reçoit pas.
+      const CHAMPS_HERITES_PROFIL = ["logo_url", "couleur_principale", "devise", "fuseau_horaire"];
+      if (
+        parent !== null &&
+        CHAMPS_HERITES_PROFIL.some((k) => data[k] !== undefined)
+      ) {
+        return reply.code(403).send({ error: "forbidden", message: MESSAGE_CHAMP_HERITE });
+      }
       const columns = [
         "name",
         "description",
@@ -241,6 +262,24 @@ export function registerProfilEgliseRoutes(app: FastifyInstance, db: Pool) {
         if (rows.length === 0) {
           return reply.code(404).send({ error: "not_found", message: "Église introuvable." });
         }
+        // Synchronisation vers `eglise_parametres` (source de référence) :
+        // coordonnées dans les deux cas, champs institutionnels en plus
+        // quand la cible est une mère (une annexe ne les reçoit pas, voir
+        // la garde ci-dessus).
+        const syncChamps: Record<string, unknown> = {};
+        if (data.address !== undefined) syncChamps.adresse = data.address;
+        if (data.city !== undefined) syncChamps.ville = data.city;
+        if (data.phone !== undefined) syncChamps.telephone = data.phone;
+        if (data.email !== undefined) syncChamps.email = data.email;
+        if (parent === null) {
+          if (data.logo_url !== undefined) syncChamps.logo_url = data.logo_url;
+          if (data.couleur_principale !== undefined) {
+            syncChamps.couleurs = { principale: data.couleur_principale };
+          }
+          if (data.devise !== undefined) syncChamps.devise = data.devise;
+          if (data.fuseau_horaire !== undefined) syncChamps.fuseau_horaire = data.fuseau_horaire;
+        }
+        await synchroniserParametresIdentite(db, churchId, syncChamps);
         await auditLog(db, {
           churchId,
           userId: req.session.userId,

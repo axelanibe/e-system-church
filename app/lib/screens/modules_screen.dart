@@ -8,6 +8,7 @@ import 'cultes_direct_screen.dart';
 import 'departements_screen.dart';
 import 'ecole_biblique_screen.dart';
 import 'gouvernance_screen.dart';
+import 'identite_institutionnelle_screen.dart';
 import 'messages_admin_screen.dart';
 import 'pastoral_screen.dart';
 import 'patrimoine_screen.dart';
@@ -17,7 +18,8 @@ import 'rendez_vous_admin_screen.dart';
 import 'serviteurs_screen.dart';
 
 /// Modules de l'église (maquette Membres Finances, écran 21) : grille
-/// de 13 cartes EXACTEMENT, dans l'ordre de la maquette. La carte
+/// de 14 cartes, les 13 de la maquette plus « Identité
+/// institutionnelle » (phase 2), en dernière position. La carte
 /// « Messagerie » ajoutée par la tranche T-Msg-1 a été retirée
 /// (design couleurs messagerie, 16 nov. 2026) : la messagerie est
 /// désormais un onglet de la barre du bas, une seule entrée par
@@ -123,6 +125,12 @@ class ModulesScreen extends StatelessWidget {
       'Messages de l’administration aux églises',
       Icons.message_outlined,
     ),
+    (
+      'identite',
+      'Identité institutionnelle',
+      'Logo, coordonnées et modèles hérités.',
+      Icons.account_balance_outlined,
+    ),
   ];
 
   void _pousser(BuildContext context, Widget ecran) {
@@ -183,6 +191,8 @@ class ModulesScreen extends StatelessWidget {
         _pousser(context, const RendezVousAdminScreen());
       case 'attestations':
         _pousser(context, const AttestationsScreen());
+      case 'identite':
+        _pousser(context, const IdentiteInstitutionnelleScreen());
     }
   }
 
