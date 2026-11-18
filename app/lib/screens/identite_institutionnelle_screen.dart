@@ -118,12 +118,17 @@ class _IdentiteInstitutionnelleScreenState
   }
 
   /// Vrai quand l'utilisateur peut modifier : mère et admin d'église.
-  /// Une annexe hérite (lecture seule), un trésorier ou un responsable
-  /// de culte lit seulement : `PATCH /identite` est réservé à l'admin
-  /// de la mère (403 sinon).
+  /// Une annexe est toujours en lecture seule, même quand sa mère n'a
+  /// pas encore publié son identité (`heritee` faux) : `PATCH /identite`
+  /// est réservé à l'admin de la mère (403 sinon). Un trésorier ou un
+  /// responsable de culte lit seulement.
   bool get _modifiable {
     final identite = _identite;
-    if (identite == null || identite.heritee) return false;
+    if (identite == null ||
+        identite.heritee ||
+        identite.estAnnexe) {
+      return false;
+    }
     return context.read<AppState>().isAdmin;
   }
 
@@ -267,7 +272,7 @@ class _IdentiteInstitutionnelleScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (identite.heritee && identite.mere != null)
+                if (identite.estAnnexe && identite.mere != null)
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -282,49 +287,56 @@ class _IdentiteInstitutionnelleScreenState
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Identité héritée de votre église mère '
-                            '${identite.mere!.nom}',
+                            identite.heritee
+                                ? 'Identité héritée de votre église mère '
+                                    '${identite.mere!.nom}'
+                                : 'Votre église mère ${identite.mere!.nom} '
+                                    'n’a pas encore publié son identité. '
+                                    'Vos valeurs actuelles restent affichées, '
+                                    'en lecture seule.',
                             style: const TextStyle(fontSize: 16),
                           ),
                         ),
                       ],
                     ),
                   ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Statut de diffusion',
-                  style: TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(
-                        value: 'brouillon', label: Text('Brouillon')),
-                    ButtonSegment(value: 'publié', label: Text('Publié')),
-                  ],
-                  selected: {_statut},
-                  onSelectionChanged: modifiable
-                      ? (selection) =>
-                          setState(() => _statut = selection.first)
-                      : null,
-                  style: ButtonStyle(
-                    minimumSize: WidgetStateProperty.all(
-                        const Size(double.infinity, 48)),
+                if (!identite.estAnnexe) ...[
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Statut de diffusion',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Seule l’identité publiée est diffusée aux branches.',
-                  style: TextStyle(fontSize: 16),
-                ),
-                if (!identite.heritee && _statut == 'brouillon') ...[
+                  const SizedBox(height: 8),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(
+                          value: 'brouillon', label: Text('Brouillon')),
+                      ButtonSegment(value: 'publié', label: Text('Publié')),
+                    ],
+                    selected: {_statut},
+                    onSelectionChanged: modifiable
+                        ? (selection) =>
+                            setState(() => _statut = selection.first)
+                        : null,
+                    style: ButtonStyle(
+                      minimumSize: WidgetStateProperty.all(
+                          const Size(double.infinity, 48)),
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Non publiée : vos branches voient encore leurs '
-                    'valeurs actuelles.',
+                    'Seule l’identité publiée est diffusée aux branches.',
                     style: TextStyle(fontSize: 16),
                   ),
+                  if (!identite.heritee && _statut == 'brouillon') ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Non publiée : vos branches voient encore leurs '
+                      'valeurs actuelles.',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ],
                 ],
                 const SizedBox(height: 16),
                 _section(
