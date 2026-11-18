@@ -61,6 +61,26 @@ const _annexe = IdentiteInstitutionnelle(
   couleurPrincipale: '#2A0059',
 );
 
+const _annexeMereBrouillon = IdentiteInstitutionnelle(
+  egliseId: DemoIds.yopougon,
+  egliseCode: 'ESC-0420',
+  egliseNom: 'Grâce Divine Yopougon',
+  estAnnexe: true,
+  mere: EgliseMereIdentite(
+    id: DemoIds.plateau,
+    code: 'ESC-0411',
+    nom: 'Église Grâce Divine',
+  ),
+  heritee: false,
+  statut: 'brouillon',
+  statutMere: 'brouillon',
+  nomOfficiel: 'Grâce Divine Yopougon',
+  ville: 'Abidjan',
+  pays: 'Côte d’Ivoire',
+  devise: 'FCFA',
+  fuseauHoraire: 'Africa/Abidjan',
+);
+
 Future<FauxApiService> _pomper(
     WidgetTester tester, IdentiteInstitutionnelle identite) async {
   final api = FauxApiService();
@@ -170,6 +190,31 @@ void main() {
     final champVille =
         tester.widget<TextField>(find.byKey(const Key('champ_ville')));
     expect(champVille.enabled, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('annexe dont la mère est en brouillon : lecture seule, '
+      'bandeau mère non publiée, pas de diffusion', (tester) async {
+    await _pomper(tester, _annexeMereBrouillon);
+    expect(
+        find.text('Votre église mère Église Grâce Divine n’a pas encore '
+            'publié son identité. Vos valeurs actuelles restent affichées, '
+            'en lecture seule.'),
+        findsOneWidget);
+    expect(find.text('Enregistrer'), findsNothing);
+    expect(find.text('Changer le logo (PNG/JPG, max 2 Mo)'), findsNothing);
+    expect(find.text('Statut de diffusion'), findsNothing);
+    expect(
+        find.text('Seule l’identité publiée est diffusée aux branches.'),
+        findsNothing);
+    expect(
+        find.text('Non publiée : vos branches voient encore leurs '
+            'valeurs actuelles.'),
+        findsNothing);
+    final champNom =
+        tester.widget<TextField>(find.byKey(const Key('champ_nom_officiel')));
+    expect(champNom.enabled, isFalse);
+    expect(champNom.controller?.text, 'Grâce Divine Yopougon');
     expect(tester.takeException(), isNull);
   });
 }
