@@ -110,9 +110,11 @@ class _FideleShellState extends State<FideleShell> {
           Expanded(
             child: Column(
               children: [
-                EnTeteClair(
-                  titre: _titles[courant],
-                ),
+                // Page Carte : visuel seul, sans titre (projection).
+                if (courant != 2)
+                  EnTeteClair(
+                    titre: _titles[courant],
+                  ),
                 // T13, D04 : abonnement expiré, bandeau persistant.
                 if (context.watch<AppState>().lectureSeule)
                   const BandeauLectureSeule(),
