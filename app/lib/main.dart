@@ -87,12 +87,12 @@ class EsystemApp extends StatelessWidget {
           } else {
             // Connexion Plateforme (admin ou aide) : l'écran Plateforme
             // directement, jamais une église. Coquille fidèle (tranche
-            // P1) : le fidèle a sa propre navigation. L'admin peut aussi
-            // la regarder en aperçu (« Voir l'espace fidèle »), sans
-            // changer de session.
+            // P1) : le fidèle a sa propre navigation, sans passer par
+            // l'espace admin. Les périmètres sont étanches : l'espace
+            // fidèle ne s'ouvre pas depuis l'admin.
             home = state.isPlateforme
                 ? const PlateformeScreen()
-                : (state.isMembre || state.apercuFidele)
+                : state.isMembre
                     ? const FideleShell()
                     : const HomeScreen();
           }

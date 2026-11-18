@@ -46,7 +46,7 @@ class AppTheme {
   static const Color bleuNuit = violetProfond;
 
   /// Violet secondaire, second arrêt des dégradés (carte membre,
-  /// carte « Aujourd'hui », aperçu fidèle).
+  /// carte « Aujourd'hui »).
   static const Color violetSecondaire = Color(0xFF3D0073);
 
   /// Violet vif, second arrêt des dégradés d'avatars de la

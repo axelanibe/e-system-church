@@ -72,7 +72,6 @@ class _MessagesFideleScreenState extends State<MessagesFideleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final apercu = context.watch<AppState>().apercuFidele;
     return FutureBuilder<FilMessages>(
       future: _future,
       builder: (context, snapshot) {
@@ -80,14 +79,6 @@ class _MessagesFideleScreenState extends State<MessagesFideleScreen> {
           return const AppLoading();
         }
         if (snapshot.hasError) {
-          // En aperçu admin, le fil n'existe pas : état vide, pas d'erreur.
-          if (apercu) {
-            return const EmptyState(
-              icon: Icons.mail_outline,
-              message: 'En aperçu, la conversation privée du fidèle '
-                  'ne s’affiche pas.',
-            );
-          }
           return AppError(
             message: snapshot.error.toString(),
             onRetry: _refresh,

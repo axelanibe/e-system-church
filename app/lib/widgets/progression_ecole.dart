@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../models/ecole_biblique.dart';
-import '../state/app_state.dart';
 import 'common_widgets.dart';
 
 /// « Ma progression » (maquette, écran 40) : agrégat réel des
 /// progressions des cours du membre connecté (leçons terminées /
 /// total, %). Sans inscription : 0 % / 0 leçon sur 0. Widget partagé
 /// entre l'écran École biblique et la carte Progression de Ma Bible :
-/// une seule copie, un seul chargement par écran. En aperçu admin, la
-/// progression d'un membre n'est pas visible : état explicite, comme
-/// Carte / Messages.
+/// une seule copie, un seul chargement par écran.
 class ProgressionEcole extends StatelessWidget {
   final Future<List<ProgressionCours>> future;
 
@@ -19,14 +15,6 @@ class ProgressionEcole extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (context.watch<AppState>().apercuFidele) {
-      return const EmptyState(
-        icon: Icons.school_outlined,
-        message: 'En aperçu, la progression d’un membre n’est pas visible. '
-            'Connectez-vous avec un compte fidèle pour suivre votre '
-            'progression.',
-      );
-    }
     return FutureBuilder<List<ProgressionCours>>(
       future: future,
       builder: (context, snapshot) {
