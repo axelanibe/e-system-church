@@ -591,7 +591,7 @@ Future<void> ouvrirNouveauCulte(BuildContext context,
       ),
       dialogDateField(
           context: context, controller: dateController, label: 'Date *'),
-      _DialogTimeField(controller: heureController, label: 'Heure *'),
+      dialogTimeField(controller: heureController, label: 'Heure *'),
       dialogTextField(
           controller: lieuController,
           label: 'Lieu *',
@@ -629,66 +629,6 @@ Future<void> ouvrirNouveauCulte(BuildContext context,
       }
     },
   );
-}
-
-/// Champ d'heure avec sélecteur, comme [dialogDateField] pour la date :
-/// le [controller] garde « HH:mm », l'affichage suit le sélecteur.
-class _DialogTimeField extends StatefulWidget {
-  const _DialogTimeField({required this.controller, required this.label});
-
-  final TextEditingController controller;
-  final String label;
-
-  @override
-  State<_DialogTimeField> createState() => _DialogTimeFieldState();
-}
-
-class _DialogTimeFieldState extends State<_DialogTimeField> {
-  late final TextEditingController _displayController;
-
-  @override
-  void initState() {
-    super.initState();
-    _displayController = TextEditingController(text: widget.controller.text);
-  }
-
-  @override
-  void dispose() {
-    _displayController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: TextField(
-        controller: _displayController,
-        readOnly: true,
-        decoration: InputDecoration(
-          labelText: widget.label,
-          hintText: 'Choisir l’heure',
-          border: const OutlineInputBorder(),
-          isDense: true,
-          suffixIcon: const Icon(Icons.access_time_outlined),
-        ),
-        onTap: () async {
-          final maintenant = TimeOfDay.now();
-          final choisi = await showTimePicker(
-            context: context,
-            initialTime: maintenant,
-            helpText: 'Choisir l’heure',
-          );
-          if (choisi != null) {
-            final hhmm =
-                '${choisi.hour.toString().padLeft(2, '0')}:${choisi.minute.toString().padLeft(2, '0')}';
-            widget.controller.text = hhmm;
-            _displayController.text = hhmm;
-          }
-        },
-      ),
-    );
-  }
 }
 
 /// Détail d'un culte : ordre du culte avec ajout d'item.

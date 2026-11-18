@@ -10,6 +10,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 
 import 'package:esystem_church/models/abonnement.dart';
+import 'package:esystem_church/models/activites.dart';
 import 'package:esystem_church/models/attestation.dart';
 import 'package:esystem_church/models/annexe.dart';
 import 'package:esystem_church/models/anniversaire.dart';
@@ -95,6 +96,7 @@ class FauxApiService implements ApiService {
     }
 
     tag(_data.cultes, (c) => c.id);
+    tag(_data.activites, (a) => a.id);
     tag(_data.culteTypes, (t) => t.id);
     tag(_data.ordreCulte, (o) => o.id);
     tag(_data.evenements, (e) => e.id);
@@ -844,6 +846,28 @@ class FauxApiService implements ApiService {
     _data.cultes
       ..clear()
       ..addAll(cultes);
+  }
+
+  @override
+  Future<List<Activite>> getMesActivites() async {
+    await _latence();
+    _requireAuth();
+    return List.unmodifiable(
+      _visible(
+        _data.activites.where((a) => a.publiee).toList(),
+        (e) => e.id,
+      ),
+    );
+  }
+
+  /// Remplace les activités visibles en démo (défaut : celles de
+  /// démonstration). Sert aux tests de la section « Activités à
+  /// venir », pour figer des activités publiées ou l'absence
+  /// d'activité, sans dépendre du calendrier.
+  void definirActivites(List<Activite> activites) {
+    _data.activites
+      ..clear()
+      ..addAll(activites);
   }
 
   @override
@@ -2393,6 +2417,76 @@ class FauxApiService implements ApiService {
     await _latence();
     _requireAuth();
     _data.cultes.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
+  }
+
+  @override
+  Future<List<Activite>> getActivites() async {
+    await _latence();
+    _requireAuth();
+    return List.unmodifiable(_visible(_data.activites, (e) => e.id));
+  }
+
+  @override
+  Future<Activite> createActivite({
+    required String titre,
+    String? description,
+    required String dateHeure,
+    String? lieu,
+    String? responsable,
+    String statut = 'brouillon',
+  }) async {
+    await _latence();
+    _requireAuth();
+    final activite = Activite(
+      id: _nextId('activite'),
+      titre: titre,
+      description: description,
+      dateHeure: dateHeure,
+      lieu: lieu,
+      responsable: responsable,
+      statut: statut,
+      createdAt: DateTime.now(),
+    );
+    _data.activites.add(activite);
+    _tag(activite.id);
+    return activite;
+  }
+
+  @override
+  Future<Activite> updateActivite(
+    String id, {
+    String? titre,
+    String? description,
+    String? dateHeure,
+    String? lieu,
+    String? responsable,
+    String? statut,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final index = _data.activites.indexWhere((a) => a.id == id);
+    if (index < 0) throw StateError('Activité introuvable.');
+    final ancienne = _data.activites[index];
+    final miseAJour = Activite(
+      id: ancienne.id,
+      titre: titre ?? ancienne.titre,
+      description: description ?? ancienne.description,
+      dateHeure: dateHeure ?? ancienne.dateHeure,
+      lieu: lieu ?? ancienne.lieu,
+      responsable: responsable ?? ancienne.responsable,
+      statut: statut ?? ancienne.statut,
+      createdAt: ancienne.createdAt,
+    );
+    _data.activites[index] = miseAJour;
+    return miseAJour;
+  }
+
+  @override
+  Future<void> deleteActivite(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.activites.removeWhere((e) => e.id == id);
     _itemChurch.remove(id);
   }
 

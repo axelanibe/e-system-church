@@ -6,6 +6,7 @@
 // L'application réelle (`lib/main.dart`) n'y touche jamais : elle n'affiche
 // que les données de l'API, et ses listes vides restent vides.
 
+import 'package:esystem_church/models/activites.dart';
 import 'package:esystem_church/models/announcement.dart';
 import 'package:esystem_church/models/biens.dart';
 import 'package:esystem_church/models/church.dart';
@@ -60,6 +61,7 @@ class DemoSeed {
   final List<Culte> cultes = _buildCultes();
   final List<OrdreCulteItem> ordreCulte = _buildOrdreCulte();
   final List<EvenementSpecial> evenements = _buildEvenements();
+  final List<Activite> activites = _buildActivites();
   final List<Presence> presences = _buildPresences();
   final List<Announcement> annonces = _buildAnnonces();
   final List<Famille> familles = _buildFamilles();
@@ -665,6 +667,28 @@ List<EvenementSpecial> _buildEvenements() => [
         dateDebut: '2026-12-05',
         lieu: 'Temple du Plateau',
         responsable: 'Pasteur Emmanuel Aka',
+      ),
+    ];
+
+// -- Activités à venir -------------------------------------------------------
+
+List<Activite> _buildActivites() => [
+      const Activite(
+        id: 'demo-act-1',
+        titre: 'Sortie jeunesse EXEMPLE',
+        description: 'Une sortie pour les jeunes de l’église.',
+        dateHeure: '2027-01-16T09:00',
+        lieu: 'Parc EXEMPLE',
+        responsable: 'Responsable EXEMPLE',
+        statut: 'publié',
+      ),
+      const Activite(
+        id: 'demo-act-2',
+        titre: 'Formation EXEMPLE',
+        dateHeure: '2027-01-23T18:30',
+        lieu: 'Salle EXEMPLE',
+        responsable: 'Formatrice EXEMPLE',
+        statut: 'brouillon',
       ),
     ];
 

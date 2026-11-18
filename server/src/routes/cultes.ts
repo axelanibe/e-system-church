@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import { z } from "zod";
 import {
   READ_ALL,
+  WRITE_ADMIN,
   WRITE_STD,
   existsInChurch,
   registerCrud,
@@ -104,5 +105,36 @@ export function registerCultesRoutes(app: FastifyInstance, db: Pool) {
     filters: { type: "type" },
     searchColumn: "titre",
     orderBy: "date_debut ASC",
+  });
+
+  // -- Activités à venir (V1, migration 039) : titre, description,
+  //    date et heure, lieu, responsable (nom libre), statut brouillon
+  //    ou publié. Écriture réservée à l'admin de l'église ; les
+  //    brouillons sont invisibles aux membres (readScope), la lecture
+  //    fidèle passe par GET /moi/activites (publiées à venir seulement).
+  registerCrud(app, db, {
+    base: "/activites",
+    table: "activites",
+    columns: ["titre", "description", "date_heure", "lieu", "responsable", "statut"],
+    createSchema: z.object({
+      titre: z.string().min(2).max(200),
+      description: z.string().max(1000).optional(),
+      date_heure: z.string().min(10).max(40),
+      lieu: z.string().max(200).optional(),
+      responsable: z.string().max(200).optional(),
+      statut: z.enum(["brouillon", "publié"]).default("brouillon"),
+    }),
+    readRoles: READ_ALL,
+    writeRoles: WRITE_ADMIN,
+    audit: "activite",
+    filters: { statut: "statut" },
+    searchColumn: "titre",
+    orderBy: "date_heure ASC",
+    readScope: async (_db, session) => {
+      if (session.role === "membre") {
+        return { condition: "statut = 'publié'", values: [] };
+      }
+      return null;
+    },
   });
 }
