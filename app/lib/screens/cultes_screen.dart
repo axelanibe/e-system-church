@@ -317,7 +317,7 @@ class _CultesScreenState extends State<CultesScreen> {
                         ),
                         title: Text(culte.titre, style: const TextStyle(fontSize: 13.5)),
                         subtitle: Text(
-                          '${afficherDateTime(culte.dateHeure)}'
+                          '${afficherDateTimeSansDecalage(culte.dateHeure)}'
                           '${culte.lieu != null ? ' · ${culte.lieu}' : ''}'
                           '${culte.orateur != null ? ' · ${culte.orateur}' : ''}'
                           '${culte.theme != null ? ' · ${culte.theme}' : ''}',
@@ -734,7 +734,7 @@ class _CulteDetailScreenState extends State<CulteDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${afficherDateTime(culte.dateHeure)}'
+                  '${afficherDateTimeSansDecalage(culte.dateHeure)}'
                   '${culte.lieu != null ? ' · ${culte.lieu}' : ''}',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),

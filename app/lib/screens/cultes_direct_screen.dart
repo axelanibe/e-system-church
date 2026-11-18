@@ -584,7 +584,7 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                                   title: Text(titreStatCulte(entree)),
                                   subtitle: date == null
                                       ? null
-                                      : Text(afficherDateTime(date)),
+                                      : Text(afficherDateTimeSansDecalage(date)),
                                   trailing: Text(
                                     '$presents '
                                     '${presents > 1 ? 'présents' : 'présent'}',
