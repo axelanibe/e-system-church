@@ -80605,7 +80605,7 @@ s.j(0,o,new A.P(new A.bL(r,B.aq,B.a9),$.R()))}r=a.as
 if(r==null)r=""
 s.j(0,"couleur_principale",new A.P(new A.bL(r,B.aq,B.a9),$.R()))},
 gaSm(){var s,r=this.e
-if(r==null||r.f)return!1
+if(r==null||r.f||r.d)return!1
 s=this.c
 s.toString
 return A.y(s,!1,t.i).x==="admin_eglise"},
@@ -80725,10 +80725,10 @@ A.bkC.prototype={
 $0(){return this.a.w=!1},
 $S:0}
 A.bkH.prototype={
-$2(a,b){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d,c=null
-if(b.a===B.D)return B.bF
-if(b.c!=null||b.b==null)return A.c2(A.M(A.b([B.b4X,B.m,A.ck(B.b7z,new A.bkE(this.a),A.ql(c,c,c,B.aXC,c,c,c,c))],t.p),B.j,c,B.e,B.R,0,B.i),c,c)
-s=b.b
+$2(a,a0){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d,c,b=null
+if(a0.a===B.D)return B.bF
+if(a0.c!=null||a0.b==null)return A.c2(A.M(A.b([B.b4X,B.m,A.ck(B.b7z,new A.bkE(this.a),A.ql(b,b,b,B.aXC,b,b,b,b))],t.p),B.j,b,B.e,B.R,0,B.i),b,b)
+s=a0.b
 s.toString
 r=this.a
 q=r.gaSm()
@@ -80740,44 +80740,40 @@ m=B.b.B(n==null?s.c:n)
 l=m.length===0?"E":m[0].toUpperCase()
 n=t.p
 k=A.b([],n)
-j=s.f
+j=s.d
 if(j&&s.e!=null){i=A.c5(12)
 h=A.ju(B.av,1)
-k.push(A.c0(c,A.aw(A.b([B.acd,B.aV,A.as(A.k("Identit\xe9 h\xe9rit\xe9e de votre \xe9glise m\xe8re "+s.e.c,c,c,c,c,B.bp,c,c,c),1)],n),B.j,B.e,B.f,0,c),B.C,c,c,new A.cj(B.bv,c,h,i,c,c,B.al),c,c,c,c,B.c4,c,c,c))}k.push(B.I)
-k.push(B.b5G)
-k.push(B.y)
-i=t.N
-h=A.dO([r.r],i)
-g=q?new A.bkF(r):c
-k.push(A.bP3(g,B.arI,h,A.pX(c,c,c,c,c,c,c,c,c,c,c,c,c,new A.bP(B.lu,t.j8),c,c,c,c,c,c,c,c,c,c,c),i))
-k.push(B.y)
-k.push(B.b8R)
-if(!j&&r.r==="brouillon")B.c.G(k,A.b([B.y,B.b6h],n))
-k.push(B.I)
+g=s.e
+k.push(A.c0(b,A.aw(A.b([B.acd,B.aV,A.as(A.k(s.f?"Identit\xe9 h\xe9rit\xe9e de votre \xe9glise m\xe8re "+g.c:"Votre \xe9glise m\xe8re "+g.c+" n\u2019a pas encore publi\xe9 son identit\xe9. Vos valeurs actuelles restent affich\xe9es, en lecture seule.",b,b,b,b,B.bp,b,b,b),1)],n),B.j,B.e,B.f,0,b),B.C,b,b,new A.cj(B.bv,b,h,i,b,b,B.al),b,b,b,b,B.c4,b,b,b))}if(!j){j=t.N
+i=A.dO([r.r],j)
+h=q?new A.bkF(r):b
+j=A.b([B.I,B.b5G,B.y,A.bP3(h,B.arI,i,A.pX(b,b,b,b,b,b,b,b,b,b,b,b,b,new A.bP(B.lu,t.j8),b,b,b,b,b,b,b,b,b,b,b),j),B.y,B.b8R],n)
+if(!s.f&&r.r==="brouillon")B.c.G(j,A.b([B.y,B.b6h],n))
+B.c.G(k,j)}k.push(B.I)
 j=A.b([],n)
-for(i=t.kK,f=0;f<13;++f){h=B.uc[f]
-e=h.a
-g=e==="description"?3:1
-if(e==="email")d=B.cY
-else if(e==="telephone")d=B.dw
-else d=e==="site_web"?B.vX:c
-j.push(A.bT(c,B.Z,!1,c,!0,B.k,c,A.bX(),r.f.h(0,e),c,c,c,c,c,2,new A.b9(c,c,c,h.b,c,c,c,c,c,c,c,c,c,c,c,c,!0,!0,!1,c,c,c,c,c,c,c,B.zg,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,B.K,!0,c,c,c,c),B.u,!0,c,!0,q,!1,c,B.a_,c,c,c,new A.dP("champ_"+e,i),c,d,c,c,c,g,c,c,!1,"\u2022",c,c,c,c,c,!1,c,c,!1,c,!0,c,B.a0,c,c,c,c,c,c,c,c,c,c,c,B.bp,!0,B.z,c,B.H,c,c,c,c))}k.push(r.ah4("Informations de l\u2019\xe9glise",j))
+for(i=t.kK,h=r.f,f=0;f<13;++f){g=B.uc[f]
+e=g.a
+d=e==="description"?3:1
+if(e==="email")c=B.cY
+else if(e==="telephone")c=B.dw
+else c=e==="site_web"?B.vX:b
+j.push(A.bT(b,B.Z,!1,b,!0,B.k,b,A.bX(),h.h(0,e),b,b,b,b,b,2,new A.b9(b,b,b,g.b,b,b,b,b,b,b,b,b,b,b,b,b,!0,!0,!1,b,b,b,b,b,b,b,B.zg,b,b,b,b,b,b,b,b,b,b,b,b,b,b,b,b,b,b,b,b,b,b,b,b,b,B.K,!0,b,b,b,b),B.u,!0,b,!0,q,!1,b,B.a_,b,b,b,new A.dP("champ_"+e,i),b,c,b,b,b,d,b,b,!1,"\u2022",b,b,b,b,b,!1,b,b,!1,b,!0,b,B.a0,b,b,b,b,b,b,b,b,b,b,b,B.bp,!0,B.z,b,B.H,b,b,b,b))}k.push(r.ah4("Informations de l\u2019\xe9glise",j))
 k.push(B.I)
 j=A.b([],n)
 s=s.Q
 if(s!=null&&s.length!==0)j.push(A.yQ(A.c5(36),A.bVl(s,new A.bkG(r,l),B.k1,72,72),B.c2))
-else j.push(A.hG(B.v,c,A.k(l,c,c,c,c,B.Td,c,c,c),c,36))
+else j.push(A.hG(B.v,b,A.k(l,b,b,b,b,B.Td,b,b,b),b,36))
 j.push(B.aZ)
 s=A.c5(8)
-s=A.c0(c,c,B.C,c,c,new A.cj(o,c,A.ju(B.ei,1),s,c,c,B.al),c,32,c,c,c,c,c,32)
-j.push(A.as(A.aw(A.b([s,B.aV,A.as(A.k(p==null?"Couleur non d\xe9finie":p,c,c,c,c,B.bp,c,c,c),1)],n),B.j,B.e,B.f,0,c),1))
-s=A.b([A.aw(j,B.j,B.e,B.f,0,c),B.m,r.aDQ("couleur_principale","Couleur principale",q)],n)
-if(q)B.c.G(s,A.b([B.m,A.aD1(B.tW,B.bbD,r.gaDZ(),A.ql(c,c,c,B.lu,c,c,c,c))],n))
+s=A.c0(b,b,B.C,b,b,new A.cj(o,b,A.ju(B.ei,1),s,b,b,B.al),b,32,b,b,b,b,b,32)
+j.push(A.as(A.aw(A.b([s,B.aV,A.as(A.k(p==null?"Couleur non d\xe9finie":p,b,b,b,b,B.bp,b,b,b),1)],n),B.j,B.e,B.f,0,b),1))
+s=A.b([A.aw(j,B.j,B.e,B.f,0,b),B.m,r.aDQ("couleur_principale","Couleur principale",q)],n)
+if(q)B.c.G(s,A.b([B.m,A.aD1(B.tW,B.bbD,r.gaDZ(),A.ql(b,b,b,B.lu,b,b,b,b))],n))
 k.push(r.ah4("Logo et identit\xe9 visuelle",s))
-if(q){s=r.w?c:r.gaQe()
-p=A.ql(c,c,c,B.lu,c,c,c,c)
-B.c.G(k,A.b([B.I,A.ck(A.k(r.w?"Enregistrement\u2026":"Enregistrer",c,c,c,c,B.bp,c,c,c),s,p)],n))}k.push(B.I)
-return A.db(A.M(k,B.P,c,B.e,B.f,0,B.i),c,B.u,B.x,c,c,B.a2)},
+if(q){s=r.w?b:r.gaQe()
+p=A.ql(b,b,b,B.lu,b,b,b,b)
+B.c.G(k,A.b([B.I,A.ck(A.k(r.w?"Enregistrement\u2026":"Enregistrer",b,b,b,b,B.bp,b,b,b),s,p)],n))}k.push(B.I)
+return A.db(A.M(k,B.P,b,B.e,B.f,0,B.i),b,B.u,B.x,b,b,B.a2)},
 $S:399}
 A.bkE.prototype={
 $0(){var s=this.a
