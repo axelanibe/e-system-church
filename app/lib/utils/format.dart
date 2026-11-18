@@ -77,7 +77,8 @@ String formatDateTime(DateTime? date) {
 /// heure locale de l'appareil la décalerait (14:00 saisies affichées
 /// 09:00 à Toronto, UTC−5). Même motif que [formatDateSeule] pour les
 /// dates seules. À utiliser pour les dates et heures saisies comme
-/// heure murale (activités à venir), pas pour les horodatages réels.
+/// heure murale (activités à venir, cultes), pas pour les horodatages
+/// réels.
 String formatDateTimeSansDecalage(DateTime? date) {
   if (date == null) return '—';
   final d = date.isUtc ? date.toUtc() : date;
@@ -112,6 +113,20 @@ String afficherDateTime(dynamic value) {
   if (value is String) {
     final parsed = parseDate(value);
     return parsed == null ? value : formatDateTime(parsed);
+  }
+  return value.toString();
+}
+
+/// Comme [afficherDateTime], sans décalage de fuseau : pour les dates
+/// et heures saisies comme heure murale (cultes), voir
+/// [formatDateTimeSansDecalage]. Les horodatages réels gardent
+/// [afficherDateTime].
+String afficherDateTimeSansDecalage(dynamic value) {
+  if (value == null) return '—';
+  if (value is DateTime) return formatDateTimeSansDecalage(value);
+  if (value is String) {
+    final parsed = parseDate(value);
+    return parsed == null ? value : formatDateTimeSansDecalage(parsed);
   }
   return value.toString();
 }

@@ -734,7 +734,7 @@ class _ProchainCulte extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           culte?.date != null
-                              ? formatDateTime(culte!.date)
+                              ? formatDateTimeSansDecalage(culte!.date)
                               : 'Heure à confirmer',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontSize: 13,

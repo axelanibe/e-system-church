@@ -611,7 +611,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        '${formatDateTime(prochain.date)}'
+                                        '${formatDateTimeSansDecalage(prochain.date)}'
                                         '${prochain.lieu == null || prochain.lieu!.isEmpty ? '' : ' · ${prochain.lieu}'}'
                                         '${prochain.orateur == null || prochain.orateur!.isEmpty ? '' : ' · ${prochain.orateur}'}',
                                         maxLines: 2,

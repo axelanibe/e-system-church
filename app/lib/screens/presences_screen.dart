@@ -207,7 +207,7 @@ class _PresencesScreenState extends State<PresencesScreen> {
                       .map((c) => DropdownMenuItem<String>(
                             value: c.id,
                             child: Text(
-                                '${c.titre} — ${afficherDateTime(c.dateHeure)}'),
+                                '${c.titre} — ${afficherDateTimeSansDecalage(c.dateHeure)}'),
                           ))
                       .toList(),
                   onChanged: (value) {
