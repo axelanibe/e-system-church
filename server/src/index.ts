@@ -37,6 +37,7 @@ import { registerEcoleBibliqueRoutes } from "./routes/ecole_biblique.js";
 import { registerBiensRoutes } from "./routes/biens.js";
 import { registerStatsRoutes } from "./routes/stats.js";
 import { registerParametresRoutes } from "./routes/parametres.js";
+import { registerIdentiteRoutes } from "./routes/identite.js";
 import { registerProfilEgliseRoutes } from "./routes/profil_eglise.js";
 import { registerPaiementsRoutes } from "./routes/paiements.js";
 import { registerWebhooksPaiementsRoutes } from "./routes/webhooks_paiements.js";
@@ -177,6 +178,7 @@ export function buildApp(db: Pool) {
   registerBiensRoutes(app, db);
   registerStatsRoutes(app, db);
   registerParametresRoutes(app, db);
+  registerIdentiteRoutes(app, db);
   registerProfilEgliseRoutes(app, db);
   registerPaiementsRoutes(app, db);
   registerWebhooksPaiementsRoutes(app, db);

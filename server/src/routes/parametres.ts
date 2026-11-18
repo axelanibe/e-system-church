@@ -3,7 +3,8 @@ import type { Pool } from "pg";
 import { z } from "zod";
 import { auditLog } from "../auth.js";
 import { invalidInput } from "../crud.js";
-import { dbError, requireAuth, requireRole } from "../middleware.js";
+import { MESSAGE_CHAMP_HERITE, synchroniserParametresIdentite } from "../identite.js";
+import { dbError, estAnnexe, requireAuth, requireRole } from "../middleware.js";
 
 /**
  * Module 12 — Administration : paramètres de l'église (coordonnées, logo,
@@ -83,6 +84,16 @@ export function registerParametresRoutes(app: FastifyInstance, db: Pool) {
       }
       const data = parsed.data;
       const keys = Object.keys(data) as (keyof typeof data)[];
+      // Champs institutionnels hérités de la mère : une annexe ne les
+      // modifie pas (ses champs propres restent modifiables).
+      const CHAMPS_HERITES = ["logo_url", "devise", "fuseau_horaire"] as const;
+      const annexe = await estAnnexe(db, req.session.churchId);
+      if (
+        keys.some((k) => (CHAMPS_HERITES as readonly string[]).includes(k)) &&
+        annexe
+      ) {
+        return reply.code(403).send({ error: "forbidden", message: MESSAGE_CHAMP_HERITE });
+      }
       if (keys.length === 0) {
         return reply.code(400).send({ error: "invalid_input", message: "Rien à modifier." });
       }
@@ -98,6 +109,18 @@ export function registerParametresRoutes(app: FastifyInstance, db: Pool) {
            RETURNING *`,
           values,
         );
+        // Pour une mère, les champs institutionnels restent synchronisés
+        // vers `churches` (lecture seule transitoire, sens inverse).
+        const syncCles = (["logo_url", "devise", "fuseau_horaire"] as const).filter((k) =>
+          keys.includes(k),
+        );
+        if (syncCles.length > 0 && !annexe) {
+          const sets = syncCles.map((c, i) => `${c} = $${i + 2}`).join(", ");
+          await db.query(`UPDATE churches SET ${sets} WHERE id = $1`, [
+            req.session.churchId,
+            ...syncCles.map((c) => data[c]),
+          ]);
+        }
         await auditLog(db, {
           churchId: req.session.churchId,
           userId: req.session.userId,

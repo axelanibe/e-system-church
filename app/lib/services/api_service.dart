@@ -22,6 +22,7 @@ import '../models/confiance.dart';
 import '../models/finances.dart';
 import '../models/frequentation.dart';
 import '../models/gouvernance.dart';
+import '../models/identite.dart';
 import '../models/medias.dart';
 import '../models/member.dart';
 import '../models/membres_complement.dart';
@@ -1361,6 +1362,18 @@ abstract class ApiService {
   });
 
   Future<List<RoleEglise>> getRoles();
+
+  // -- Identité institutionnelle (phase 2) ----------------------------------
+  /// Identité résolue de l'église active (`GET /identite`) : champs de
+  /// la mère quand l'église est une annexe et que l'identité de la mère
+  /// est publiée, valeurs propres sinon.
+  Future<IdentiteInstitutionnelle> getIdentite();
+
+  /// Modifie l'identité (`PATCH /identite`, admin de la mère seulement) :
+  /// seuls les champs présents dans [champs] sont modifiés. Renvoie
+  /// l'identité résolue.
+  Future<IdentiteInstitutionnelle> patchIdentite(
+      Map<String, dynamic> champs);
 
   Future<RoleEglise> setRole(String userId, String role);
 
