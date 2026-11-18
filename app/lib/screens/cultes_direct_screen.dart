@@ -209,11 +209,20 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                       icon: Icons.event_outlined,
                       message: 'Aucun culte planifié pour l’instant.',
                       actionLabel: 'Planifier un culte',
-                      onAction: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const CultesScreen(),
-                        ),
-                      ),
+                      // La liste ne se charge qu'au démarrage de
+                      // l'écran : on la recharge au retour de l'écran
+                      // Cultes, sinon un culte créé (ou supprimé)
+                      // là-bas n'apparaît pas ici. Même motif que le
+                      // scan QR ci-dessous, qui rafraîchit les
+                      // présences au retour.
+                      onAction: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const CultesScreen(),
+                          ),
+                        );
+                        if (mounted) await _charger();
+                      },
                     )
                   : _contenu(),
     );
@@ -440,12 +449,19 @@ class _CultesDirectScreenState extends State<CultesDirectScreen> {
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
                       ),
-                      Text(
-                        _capacite == null
-                            ? 'Aucune capacité saisie.'
-                            : '${_presents + _entrees} / $_capacite '
-                                '(${pourcentageJauge(_presents + _entrees, _capacite)} %)',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                      // Flexible : la valeur peut dépasser la largeur
+                      // restante sur un écran étroit ou en gros
+                      // caractères, elle passe alors sur deux lignes
+                      // au lieu de déborder.
+                      Flexible(
+                        child: Text(
+                          _capacite == null
+                              ? 'Aucune capacité saisie.'
+                              : '${_presents + _entrees} / $_capacite '
+                                  '(${pourcentageJauge(_presents + _entrees, _capacite)} %)',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          textAlign: TextAlign.end,
+                        ),
                       ),
                     ],
                   ),
