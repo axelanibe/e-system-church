@@ -555,14 +555,15 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
         // (table culte_rsvp, migration 020). Sans membre lié, faux partout.
         const memberId = await memberIdDe(req.session.userId);
         const { rows } = await db.query(
-          `SELECT id, church_id, culte_type_id, titre, date_heure, lieu,
-                  orateur, theme, created_at,
+          `SELECT cultes.id, cultes.church_id, cultes.culte_type_id,
+                  cultes.titre, cultes.date_heure, cultes.lieu,
+                  cultes.orateur, cultes.theme, cultes.created_at,
                   (r.id IS NOT NULL) AS serai_present
              FROM cultes
              LEFT JOIN culte_rsvp r
                ON r.culte_id = cultes.id AND r.member_id = $2
-            WHERE church_id = $1 AND date_heure >= now()
-            ORDER BY date_heure ASC
+            WHERE cultes.church_id = $1 AND cultes.date_heure >= now()
+            ORDER BY cultes.date_heure ASC
             LIMIT 50`,
           [req.session.churchId, memberId],
         );
