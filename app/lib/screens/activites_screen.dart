@@ -246,7 +246,7 @@ class _ActivitesScreenState extends State<ActivitesScreen> {
                       ),
                       subtitle: Text(
                         [
-                          formatDateTime(activite.date),
+                          formatDateTimeSansDecalage(activite.date),
                           if (activite.lieu != null) activite.lieu,
                           if (activite.responsable != null)
                             'Avec ${activite.responsable}',

@@ -43,6 +43,19 @@ const _activiteBrouillon = Activite(
   statut: 'brouillon',
 );
 
+/// Activité telle que le serveur la renvoie : la date-heure arrive
+/// avec le suffixe Z (TIMESTAMPTZ lue en UTC). L'heure saisie, 14:00
+/// heure murale de l'église, doit s'afficher 14:00, pas 09:00 en heure
+/// de l'Est (UTC−5).
+const _activiteServeurUtc = Activite(
+  id: 'test-act-serveur-utc',
+  titre: 'Visite EXEMPLE',
+  dateHeure: '2026-11-25T14:00:00.000Z',
+  lieu: 'Lieu EXEMPLE',
+  responsable: 'Responsable EXEMPLE',
+  statut: 'publié',
+);
+
 Future<FauxApiService> _connecter(
   WidgetTester tester, {
   String identifiant = DemoAccounts.membreEmail,
@@ -125,6 +138,18 @@ void main() {
       expect(tester.takeException(), isNull);
       await _demonter(tester);
     });
+
+    testWidgets('heure renvoyée en UTC affichée telle quelle, sans décalage',
+        (tester) async {
+      final api = await _connecter(tester);
+      api.definirActivites([_activiteServeurUtc]);
+      await _pomper(tester, const FideleHomeScreen(), api);
+      expect(find.text('Visite EXEMPLE'), findsOneWidget);
+      expect(find.textContaining('25/11/2026 14:00'), findsOneWidget);
+      expect(find.textContaining('25/11/2026 09:00'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await _demonter(tester);
+    });
   });
 
   group('Écran admin : liste, publication, suppression', () {
@@ -172,6 +197,20 @@ void main() {
       await _pomper(tester, const ActivitesScreen(), api);
       expect(find.text('Aucune activité planifiée'), findsOneWidget);
       expect(find.text('Nouvelle activité'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('liste admin : heure renvoyée en UTC affichée telle quelle',
+        (tester) async {
+      final api = await _connecter(
+        tester,
+        identifiant: DemoAccounts.adminEmail,
+      );
+      api.definirActivites([_activiteServeurUtc]);
+      await _pomper(tester, const ActivitesScreen(), api);
+      expect(find.text('Visite EXEMPLE'), findsOneWidget);
+      expect(find.textContaining('25/11/2026 14:00'), findsOneWidget);
+      expect(find.textContaining('25/11/2026 09:00'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   });

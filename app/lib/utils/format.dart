@@ -69,6 +69,23 @@ String formatDateTime(DateTime? date) {
   return '${formatDate(d)} $hour:$minute';
 }
 
+/// 2026-11-10T14:00:00.000Z → « 10/11/2026 14:00 ».
+/// Contrairement à [formatDateTime], aucun décalage de fuseau n'est
+/// appliqué : l'heure saisie par l'admin est l'heure murale de
+/// l'église, stockée telle quelle en UTC côté serveur (la chaîne
+/// « AAAA-MM-JJ HH:mm » sans fuseau est lue en UTC) ; l'afficher en
+/// heure locale de l'appareil la décalerait (14:00 saisies affichées
+/// 09:00 à Toronto, UTC−5). Même motif que [formatDateSeule] pour les
+/// dates seules. À utiliser pour les dates et heures saisies comme
+/// heure murale (activités à venir), pas pour les horodatages réels.
+String formatDateTimeSansDecalage(DateTime? date) {
+  if (date == null) return '—';
+  final d = date.isUtc ? date.toUtc() : date;
+  final hour = d.hour.toString().padLeft(2, '0');
+  final minute = d.minute.toString().padLeft(2, '0');
+  return '${formatDateSeule(d)} $hour:$minute';
+}
+
 /// Date ISO « 2026-11-10 » (ou ISO complet) → DateTime, ou null.
 DateTime? parseDate(String? value) {
   if (value == null || value.isEmpty) return null;

@@ -1260,7 +1260,7 @@ class _ActivitesAVenirSection extends StatelessWidget {
                   ),
                   subtitle: Text(
                     [
-                      formatDateTime(activite.date),
+                      formatDateTimeSansDecalage(activite.date),
                       if (activite.lieu != null) activite.lieu,
                       if (activite.responsable != null)
                         'Avec ${activite.responsable}',
