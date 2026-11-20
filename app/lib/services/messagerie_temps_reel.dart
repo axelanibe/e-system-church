@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../models/messagerie.dart';
@@ -11,17 +12,19 @@ import '../models/messagerie.dart';
 /// Connexion à `wss://<base API>/messagerie/ws?token=<jeton JWT>`,
 /// avec le jeton courant du service API (lu à chaque connexion, pour
 /// suivre les rotations). Reconnexion automatique avec délai
-/// exponentiel, réabonnement après reconnexion, et repli HTTP : tant
-/// que le WebSocket est coupé, les écrans rafraîchissent par `GET`
-/// (au retour sur l'écran et par interrogation périodique) et affichent
+/// exponentiel (sauf après une fermeture 1008, jeton ou rôle refusé),
+/// réabonnement après reconnexion, et repli HTTP : tant que le
+/// WebSocket est coupé, les écrans rafraîchissent par `GET` (au retour
+/// sur l'écran et par interrogation périodique) et affichent
 /// « Reconnexion… ».
 ///
-/// État du serveur en T-Msg-0 : la route `/messagerie/ws` n'existe pas
-/// encore côté serveur (seule la dépendance `@fastify/websocket` est
-/// installée). Le client se connecte, échoue proprement, et bascule sur
-/// le repli HTTP en attendant la tranche serveur du WebSocket.
+/// État du serveur : la route `/messagerie/ws` existe depuis T-Msg-1
+/// (T-Msg-0 n'avait installé que la dépendance `@fastify/websocket`).
+/// Le serveur ferme en 1008 quand le jeton est invalide ou le rôle
+/// refusé ; le client ne reconnecte pas après une 1008, toute
+/// reconnexion serait vouée à l'échec, et bascule sur le repli HTTP.
 ///
-/// Protocole supposé, à confirmer avec le lot serveur :
+/// Protocole (T-Msg-1) :
 /// - abonnement envoyé à chaque connexion, par conversation ouverte :
 ///   `{"type":"subscribe","conversation_id":"…"}` ;
 /// - message reçu : `{"type":"message","message":{…}}`, ou l'objet
@@ -58,6 +61,10 @@ class MessagerieTempsReel {
   WebSocketChannel? _canal;
   bool _connecte = false;
   bool _ferme = false;
+
+  /// Fermeture 1008 reçue (jeton invalide ou rôle refusé) : le
+  /// serveur l'a dit, toute reconnexion serait vouée à l'échec.
+  bool _refusAuthentification = false;
   int _tentative = 0;
   Timer? _minuteurReconnexion;
   final Set<String> _abonnements = {};
@@ -81,10 +88,12 @@ class MessagerieTempsReel {
     return Duration(seconds: secondes);
   }
 
-  /// Ouvre (ou rouvre) la connexion. Sans effet si déjà connecté ou
-  /// si le service est fermé.
+  /// Ouvre (ou rouvre) la connexion. Sans effet si déjà connecté, si
+  /// le service est fermé, ou après un refus d'authentification (1008).
   void connecter() {
-    if (_ferme || _connecte || _canal != null) return;
+    if (_ferme || _refusAuthentification || _connecte || _canal != null) {
+      return;
+    }
     WebSocketChannel canal;
     try {
       canal = _fabriqueCanal(urlWebSocket(baseUrl, jeton()));
@@ -96,7 +105,7 @@ class MessagerieTempsReel {
     canal.stream.listen(
       _recevoir,
       onError: (_) => _perdreConnexion(),
-      onDone: _perdreConnexion,
+      onDone: () => _perdreConnexion(codeFermeture: canal.closeCode),
       cancelOnError: true,
     );
     _connecte = true;
@@ -162,10 +171,18 @@ class MessagerieTempsReel {
     }
   }
 
-  void _perdreConnexion() {
+  void _perdreConnexion({int? codeFermeture}) {
     if (!_connecte && _canal == null) return;
     _connecte = false;
     _canal = null;
+    if (codeFermeture == 1008) {
+      // Jeton invalide ou rôle refusé : le serveur l'a dit, toute
+      // reconnexion serait vouée à l'échec, on ne reprogramme rien.
+      _refusAuthentification = true;
+      debugPrint(
+        '[Messagerie] WebSocket fermé en 1008, pas de reconnexion.',
+      );
+    }
     if (!_ferme) {
       _etatController.add(false);
       _programmerReconnexion();
@@ -173,6 +190,7 @@ class MessagerieTempsReel {
   }
 
   void _programmerReconnexion() {
+    if (_refusAuthentification) return;
     _minuteurReconnexion?.cancel();
     _tentative++;
     _minuteurReconnexion = Timer(
