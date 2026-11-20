@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../models/bible.dart';
 import '../models/ecole_biblique.dart';
 import '../services/api_service.dart';
+import '../services/preferences_locales.dart';
+import '../services/verset_du_jour.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/progression_ecole.dart';
@@ -41,6 +43,7 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
   late Future<List<LivreBible>> _livresFuture;
   Future<ChapitreBible>? _chapitreFuture;
   Future<List<ResultatRechercheBible>>? _resultatsFuture;
+  late Future<VersetDuJour> _versetFuture;
 
   /// École et progression : un seul chargement par carte, mêmes
   /// sources que l'écran École biblique, sans recopier sa liste ni
@@ -54,6 +57,7 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
     final api = context.read<AppState>().api;
     _versionsFuture = api.getVersionsBible();
     _livresFuture = _chargerLivres();
+    _versetFuture = chargerVersetDuJour(api, version: _version);
     _coursFuture = api.getCoursEcole();
     _progressionsFuture = api.getInscriptionsEcole().then(
       (inscriptions) => Future.wait(
@@ -73,6 +77,15 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
 
   ApiService get _api => context.read<AppState>().api;
 
+  /// Mémorise la position de lecture en cours pour la carte
+  /// « Reprendre ma lecture ». Sans livre ouvert, rien à mémoriser.
+  void _memoriserLecture() {
+    final livre = _livreChoisi;
+    if (livre == null) return;
+    context.read<PreferencesLocales>().definirLecture(
+        code: livre.code, chapitre: _chapitreChoisi, version: _version);
+  }
+
   /// Changer de version garde le livre et le chapitre quand le canon
   /// est le même (les deux versions ont les 66 livres) : la position
   /// de lecture est conservée, seul le texte est rechargé.
@@ -83,6 +96,7 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
     setState(() {
       _version = version;
       _livresFuture = _chargerLivres();
+      _versetFuture = chargerVersetDuJour(_api, version: version);
     });
     if (code == null) return;
     _livresFuture.then((livres) {
@@ -100,6 +114,7 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
         _chapitreFuture = _api.getChapitreBible(
             code: livre.code, chapitre: chapitreGarde, version: _version);
       });
+      _memoriserLecture();
       _defilerVersTexte();
     });
   }
@@ -112,10 +127,11 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
       _chapitreFuture = _api.getChapitreBible(
           code: livre.code, chapitre: 1, version: _version);
     });
+    _memoriserLecture();
     _defilerVersTexte();
   }
 
-  void _choisirChapitre(int chapitre) {
+  void _choisirChapitre(int chapitre, {bool defiler = true}) {
     final livre = _livreChoisi;
     if (livre == null) return;
     final garde = chapitre.clamp(1, livre.chapitres);
@@ -125,12 +141,71 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
       _chapitreFuture = _api.getChapitreBible(
           code: livre.code, chapitre: garde, version: _version);
     });
+    _memoriserLecture();
+    // Précédent, Suivant et grille ne défilent pas : le membre est
+    // déjà en train de lire ce passage, un défilement animé à chaque
+    // changement avalerait le tap suivant. Le défilement reste pour
+    // les choix par dialogue (livre, numéro de chapitre).
+    if (defiler) _defilerVersTexte();
+  }
+
+  /// Reprendre la dernière position lue : la version mémorisée est
+  /// restaurée avec le livre et le chapitre, puis le texte est
+  /// rechargé dans cette version.
+  Future<void> _reprendreLecture(PositionLecture position) async {
+    setState(() {
+      _version = position.version;
+      _livresFuture = _chargerLivres();
+      _versetFuture =
+          chargerVersetDuJour(_api, version: position.version);
+    });
+    final livres = await _livresFuture;
+    if (!mounted) return;
+    LivreBible? livreTrouve;
+    for (final l in livres) {
+      if (l.code == position.code) livreTrouve = l;
+    }
+    if (livreTrouve == null) return;
+    final livre = livreTrouve;
+    final chapitreGarde = position.chapitre.clamp(1, livre.chapitres);
+    setState(() {
+      _livreChoisi = livre;
+      _chapitreChoisi = chapitreGarde;
+      _modeRecherche = false;
+      _chapitreFuture = _api.getChapitreBible(
+          code: livre.code, chapitre: chapitreGarde, version: _version);
+    });
+    _memoriserLecture();
     _defilerVersTexte();
   }
 
-  void _chapitrePrecedent() => _choisirChapitre(_chapitreChoisi - 1);
+  /// Ouvrir le passage du verset du jour dans la version en cours.
+  Future<void> _ouvrirVerset(VersetDuJour verset) async {
+    final livres = await _livresFuture;
+    if (!mounted) return;
+    LivreBible? livreTrouve;
+    for (final l in livres) {
+      if (l.code == verset.code) livreTrouve = l;
+    }
+    if (livreTrouve == null) return;
+    final livre = livreTrouve;
+    final chapitreGarde = verset.chapitre.clamp(1, livre.chapitres);
+    setState(() {
+      _livreChoisi = livre;
+      _chapitreChoisi = chapitreGarde;
+      _modeRecherche = false;
+      _chapitreFuture = _api.getChapitreBible(
+          code: livre.code, chapitre: chapitreGarde, version: _version);
+    });
+    _memoriserLecture();
+    _defilerVersTexte();
+  }
 
-  void _chapitreSuivant() => _choisirChapitre(_chapitreChoisi + 1);
+  void _chapitrePrecedent() =>
+      _choisirChapitre(_chapitreChoisi - 1, defiler: false);
+
+  void _chapitreSuivant() =>
+      _choisirChapitre(_chapitreChoisi + 1, defiler: false);
 
   void _defilerVersTexte() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -187,6 +262,7 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
       _chapitreFuture = _api.getChapitreBible(
           code: resultat.code, chapitre: resultat.chapitre, version: _version);
     });
+    _memoriserLecture();
     _defilerVersTexte();
   }
 
@@ -348,6 +424,8 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 12),
+            _carteReprendre(),
+            _carteVersetDuJour(),
             _carteLecture(),
             const SizedBox(height: 12),
             _carteEcole(),
@@ -356,6 +434,134 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Reprendre ma lecture : carte distincte de la Progression de
+  /// l'École biblique, absente tant que rien n'a été lu. La
+  /// progression est la position réelle dans le livre en cours
+  /// (« Chapitre X sur N »), jamais un chiffre inventé : N vient
+  /// du canon chargé, la carte disparaît si le livre est introuvable.
+  Widget _carteReprendre() {
+    return Consumer<PreferencesLocales>(
+      builder: (context, preferences, _) {
+        final position = preferences.derniereLecture;
+        if (position == null) return const SizedBox.shrink();
+        return FutureBuilder<List<LivreBible>>(
+          future: _livresFuture,
+          builder: (context, snapshot) {
+            final livres = snapshot.data ?? const <LivreBible>[];
+            LivreBible? livre;
+            for (final l in livres) {
+              if (l.code == position.code) livre = l;
+            }
+            if (livre == null) return const SizedBox.shrink();
+            final chapitre =
+                position.chapitre.clamp(1, livre.chapitres);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text('Reprendre ma lecture',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${livre.nom} — Chapitre $chapitre '
+                          'sur ${livre.chapitres}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton.icon(
+                          onPressed: () => _reprendreLecture(position),
+                          icon: const Icon(Icons.menu_book_outlined),
+                          label: const Text('Reprendre'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Verset du jour calendaire, dans la version en cours : un seul
+  /// verset par jour, le même sur l'accueil fidèle et ici. Un
+  /// toucher ouvre le passage. Si le verset ne charge pas, la carte
+  /// se masque au lieu d'afficher une erreur.
+  Widget _carteVersetDuJour() {
+    return FutureBuilder<VersetDuJour>(
+      future: _versetFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              ),
+              SizedBox(height: 12),
+            ],
+          );
+        }
+        final verset = snapshot.data;
+        if (verset == null) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Verset du jour',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text(
+                      '« ${verset.texte} »',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      verset.reference,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () => _ouvrirVerset(verset),
+                      icon: const Icon(Icons.menu_book_outlined),
+                      label: const Text('Lire ce passage'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+        );
+      },
     );
   }
 
@@ -507,7 +713,9 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
     );
   }
 
-  /// Titre du chapitre, précédent et suivant, puis texte.
+  /// Titre du chapitre, précédent et suivant, grille des chapitres,
+  /// puis texte. La grille garde Précédent et Suivant, elle ajoute
+  /// le saut direct par numéro.
   Widget _lectureChapitre() {
     final livre = _livreChoisi!;
     return Column(
@@ -533,6 +741,22 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
                 label: const Text('Suivant'),
               ),
             ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text('Chapitres', style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (var n = 1; n <= livre.chapitres; n++)
+              _BoutonChapitre(
+                key: Key('grille-chapitre-$n'),
+                numero: n,
+                actif: n == _chapitreChoisi,
+                onTap: () => _choisirChapitre(n, defiler: false),
+              ),
           ],
         ),
         const SizedBox(height: 12),
@@ -814,6 +1038,50 @@ class _BoutonSelecteur extends StatelessWidget {
             ),
             const Icon(Icons.unfold_more, size: 16),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Bouton numéroté de la grille des chapitres : le chapitre en cours
+/// est plein, les autres ont une bordure. Taille fixe, 44 px de large
+/// minimum pour rester touchable.
+class _BoutonChapitre extends StatelessWidget {
+  final int numero;
+  final bool actif;
+  final VoidCallback onTap;
+
+  const _BoutonChapitre({
+    super.key,
+    required this.numero,
+    required this.actif,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final couleurs = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 44,
+        height: 36,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: actif ? couleurs.primary : null,
+          border: Border.all(
+              color: actif ? couleurs.primary : couleurs.outlineVariant),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          '$numero',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: actif ? FontWeight.bold : FontWeight.normal,
+            color: actif ? couleurs.onPrimary : null,
+          ),
         ),
       ),
     );

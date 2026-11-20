@@ -323,8 +323,13 @@ Future<void> _pomper(WidgetTester tester, {double facteur = 1.0}) async {
 }
 
 /// Pompes bornées : les futurs du faux service se résolvent en
-/// microtâches, quelques pompes suffisent.
+/// microtâches, quelques pompes suffisent. Cinq pompes de 100 ms :
+/// le défilement animé vers le texte (300 ms, lancé une trame après
+/// le changement de chapitre) doit être terminé avant le tap
+/// suivant, sinon le tap est avalé par la liste en mouvement.
 Future<void> _attendre(WidgetTester tester) async {
+  await tester.pump(const Duration(milliseconds: 100));
+  await tester.pump(const Duration(milliseconds: 100));
   await tester.pump(const Duration(milliseconds: 100));
   await tester.pump(const Duration(milliseconds: 100));
   await tester.pump(const Duration(milliseconds: 100));
@@ -424,11 +429,22 @@ void main() {
       await tester.testTextInput.receiveAction(TextInputAction.search);
       await _attendre(tester);
       expect(find.text('1 PASSAGE(S) TROUVÉ(S)'), findsOneWidget);
-      expect(find.text('Psaumes 23:1'), findsOneWidget);
-      await tester.tap(find.text('Psaumes 23:1'));
+      // La référence apparaît deux fois : dans le résultat de
+      // recherche et dans la carte Verset du jour (le verset du jour
+      // du faux service retombe sur Psaumes 23:1). On vise le
+      // résultat, dans sa tuile.
+      final resultat = find.descendant(
+        of: find.byType(ListTile),
+        matching: find.text('Psaumes 23:1'),
+      );
+      expect(resultat, findsOneWidget);
+      await tester.tap(resultat);
       await _attendre(tester);
       expect(find.text('Psaumes — chapitre 23'), findsOneWidget);
-      expect(_verset('L’Éternel est mon berger'), findsOneWidget);
+      // Le verset 1 du chapitre porte le même texte que la carte
+      // Verset du jour (Psaumes 23:1) : on vise le verset numéroté
+      // du chapitre, pas la carte.
+      expect(_verset('1 Cantique de David'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -462,6 +478,18 @@ void main() {
       await _choisirLivre(tester, 'Genèse');
       expect(find.text('Genèse — chapitre 1'), findsOneWidget);
       expect(find.text('Bible'), findsOneWidget);
+      // La page est plus haute qu'avant (grille des chapitres,
+      // cartes Reprendre et Verset du jour) : la Progression est
+      // sous le pli, on descend la voir au lieu de l'attendre en
+      // haut de page.
+      await tester.scrollUntilVisible(
+        find.text('Ma progression'),
+        500,
+        scrollable: find.ancestor(
+          of: find.byKey(const Key('selecteur-livre')),
+          matching: find.byType(Scrollable),
+        ),
+      );
       expect(find.text('Ma progression'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

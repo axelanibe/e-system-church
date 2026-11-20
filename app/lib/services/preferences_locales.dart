@@ -31,16 +31,37 @@ enum TailleTexte {
 /// US16 : le mode économique coupe le chargement des photos en réseau
 /// (avatars et carte) pour économiser les données. Le repli SMS, lui,
 /// dépend d'un fournisseur non choisi : aucun envoi réel, aucun coût.
+/// Dernière position de lecture de la Bible (livre, chapitre,
+/// version), persistée sur l'appareil comme les autres réglages.
+/// Sert la carte « Reprendre ma lecture » : absente tant que rien
+/// n'a été lu.
+class PositionLecture {
+  final String code;
+  final int chapitre;
+  final String version;
+
+  const PositionLecture({
+    required this.code,
+    required this.chapitre,
+    required this.version,
+  });
+}
+
 class PreferencesLocales extends ChangeNotifier {
   static const _cleLangue = 'langue';
   static const _cleEconomique = 'mode_economique';
   static const _cleTailleTexte = 'taille_texte';
+  static const _cleLecture = 'lecture_bible';
 
   final FlutterSecureStorage _stockage;
   String _langue = 'fr';
   bool _modeEconomique = false;
   TailleTexte _tailleTexte = TailleTexte.normal;
   bool _initialise = false;
+  PositionLecture? _derniereLecture;
+
+  /// Dernière position de lecture, null si rien n'a encore été lu.
+  PositionLecture? get derniereLecture => _derniereLecture;
 
   PreferencesLocales([FlutterSecureStorage? stockage])
       : _stockage = stockage ?? const FlutterSecureStorage();
@@ -58,7 +79,35 @@ class PreferencesLocales extends ChangeNotifier {
     _modeEconomique = await _stockage.read(key: _cleEconomique) == '1';
     _tailleTexte =
         TailleTexte.depuisValeur(await _stockage.read(key: _cleTailleTexte));
+    _derniereLecture =
+        _positionDepuisValeur(await _stockage.read(key: _cleLecture));
     _initialise = true;
+    notifyListeners();
+  }
+
+  static PositionLecture? _positionDepuisValeur(String? valeur) {
+    if (valeur == null) return null;
+    final parties = valeur.split('|');
+    if (parties.length != 3) return null;
+    final chapitre = int.tryParse(parties[1]);
+    if (parties[0].isEmpty || chapitre == null || chapitre < 1) {
+      return null;
+    }
+    return PositionLecture(
+        code: parties[0], chapitre: chapitre, version: parties[2]);
+  }
+
+  /// Mémorise la position de lecture en cours (livre ouvert,
+  /// chapitre affiché, version choisie).
+  Future<void> definirLecture({
+    required String code,
+    required int chapitre,
+    required String version,
+  }) async {
+    _derniereLecture =
+        PositionLecture(code: code, chapitre: chapitre, version: version);
+    await _stockage.write(
+        key: _cleLecture, value: '$code|$chapitre|$version');
     notifyListeners();
   }
 
