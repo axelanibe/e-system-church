@@ -23,6 +23,7 @@ import '../screens/cotisations_screen.dart';
 import '../screens/journal_screen.dart';
 import '../screens/mes_attestations_screen.dart';
 import '../screens/messagerie_liste_screen.dart';
+import '../screens/recherche_globale_screen.dart';
 import '../services/messagerie_lecture_service.dart';
 
 /// Contenu partagé des deux écrans d'accueil fidèle (tranche 3,
@@ -314,6 +315,14 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                     },
                   ),
                   const SizedBox(height: 8),
+                  _BarreRechercheAccueil(
+                    onOuvrir: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const RechercheGlobaleScreen(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   _ProchainCulte(
                     future: _cultesFuture,
                     rsvpParCulte: _rsvpParCulte,
@@ -409,6 +418,49 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Barre de recherche de l'accueil fidèle (T2, modèle CP) : un faux
+/// champ, sous le héros. Un toucher ouvre la recherche globale.
+class _BarreRechercheAccueil extends StatelessWidget {
+  final VoidCallback onOuvrir;
+
+  const _BarreRechercheAccueil({required this.onOuvrir});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onOuvrir,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Theme.of(context).dividerColor),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.search, color: Theme.of(context).hintColor),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Rechercher dans l’application',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).hintColor,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
