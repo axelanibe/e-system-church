@@ -6,6 +6,7 @@ import '../models/member.dart';
 import '../models/messagerie.dart';
 import '../services/messagerie_lecture_service.dart';
 import '../state/app_state.dart';
+import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import 'messagerie_conversation_screen.dart';
 
@@ -29,6 +30,11 @@ class MessagerieListeScreen extends StatefulWidget {
 
 class _MessagerieListeScreenState extends State<MessagerieListeScreen> {
   String _filtre = 'toutes';
+
+  /// Recherche locale dans les conversations (T2) : nom affiché et
+  /// aperçu du dernier message, insensible aux accents.
+  final _rechercheController = TextEditingController();
+  String _recherche = '';
   List<ConversationMessagerie> _conversations = [];
   Map<String, Member> _membresParId = {};
   String? _monMembreId;
@@ -39,6 +45,12 @@ class _MessagerieListeScreenState extends State<MessagerieListeScreen> {
   void initState() {
     super.initState();
     _charger();
+  }
+
+  @override
+  void dispose() {
+    _rechercheController.dispose();
+    super.dispose();
   }
 
   Future<void> _charger() async {
@@ -107,20 +119,30 @@ class _MessagerieListeScreenState extends State<MessagerieListeScreen> {
   }
 
   List<ConversationMessagerie> get _filtrees {
+    final List<ConversationMessagerie> parType;
     switch (_filtre) {
       case 'directe':
-        return _conversations
-            .where((c) => c.type == 'directe')
-            .toList();
+        parType =
+            _conversations.where((c) => c.type == 'directe').toList();
       case 'groupes':
-        return _conversations.where((c) => c.estGroupe).toList();
+        parType = _conversations.where((c) => c.estGroupe).toList();
       case 'pastorale':
-        return _conversations
-            .where((c) => c.type == 'pastorale')
-            .toList();
+        parType =
+            _conversations.where((c) => c.type == 'pastorale').toList();
       default:
-        return _conversations;
+        parType = _conversations;
     }
+    final mots = normaliserRecherche(_recherche)
+        .split(RegExp(r'\s+'))
+        .where((mot) => mot.isNotEmpty)
+        .toList();
+    if (mots.isEmpty) return parType;
+    return parType.where((conversation) {
+      final texte = normaliserRecherche(
+        '${_nomAffiche(conversation)} ${conversation.dernierMessage ?? ''}',
+      );
+      return mots.every(texte.contains);
+    }).toList();
   }
 
   /// Nom affiché : titre quand il existe, sinon, pour une directe,
@@ -252,6 +274,19 @@ class _MessagerieListeScreenState extends State<MessagerieListeScreen> {
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: TextField(
+                          controller: _rechercheController,
+                          decoration: const InputDecoration(
+                            hintText: 'Rechercher une conversation…',
+                            prefixIcon: Icon(Icons.search),
+                          ),
+                          textInputAction: TextInputAction.search,
+                          onChanged: (valeur) =>
+                              setState(() => _recherche = valeur),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                         // Défilement horizontal : les 4 filtres ne
                         // tiennent pas sur un téléphone étroit quand
                         // la taille du texte est agrandie (Très grand).
@@ -294,9 +329,12 @@ class _MessagerieListeScreenState extends State<MessagerieListeScreen> {
                         child: _filtrees.isEmpty
                             ? EmptyState(
                                 icon: Icons.chat_bubble_outline,
-                                message: _filtre == 'toutes'
-                                    ? 'Aucune conversation pour l’instant.\nÉcrivez à un membre de votre église pour commencer.'
-                                    : 'Aucune conversation dans ce filtre.',
+                                message: _recherche.trim().isNotEmpty
+                                    ? 'Aucune conversation trouvée pour '
+                                        '« ${_recherche.trim()} ».'
+                                    : _filtre == 'toutes'
+                                        ? 'Aucune conversation pour l’instant.\nÉcrivez à un membre de votre église pour commencer.'
+                                        : 'Aucune conversation dans ce filtre.',
                                 actionLabel: 'Nouvelle conversation',
                                 onAction: _nouvelleConversation,
                               )
