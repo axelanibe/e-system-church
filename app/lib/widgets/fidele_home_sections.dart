@@ -25,6 +25,7 @@ import '../screens/mes_attestations_screen.dart';
 import '../screens/messagerie_liste_screen.dart';
 import '../screens/recherche_globale_screen.dart';
 import '../services/messagerie_lecture_service.dart';
+import '../services/verset_du_jour.dart';
 
 /// Contenu partagé des deux écrans d'accueil fidèle (tranche 3,
 /// E-FI1) : « fidele-accueil » (onglet Accueil de la coquille
@@ -1233,35 +1234,64 @@ class _AttestationsResume extends StatelessWidget {
   }
 }
 
-/// Verset du jour (maquette, écran 37) : texte exact de la maquette,
-/// Psaume 118, 24.
-class _VersetDuJour extends StatelessWidget {
+/// Verset du jour calendaire (maquette, écran 37) : un seul verset
+/// par jour, le même dans l'écran Bible, texte chargé depuis les
+/// données LSG, jamais inventé. En cours de chargement, une carte
+/// discrète ; si le verset ne charge pas, la carte se masque au
+/// lieu d'afficher une erreur.
+class _VersetDuJour extends StatefulWidget {
   const _VersetDuJour();
 
   @override
+  State<_VersetDuJour> createState() => _VersetDuJourState();
+}
+
+class _VersetDuJourState extends State<_VersetDuJour> {
+  late final Future<VersetDuJour> _versetFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _versetFuture =
+        chargerVersetDuJour(context.read<AppState>().api);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SoftCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '« Voici le jour que l’Éternel a fait : qu’il soit pour nous un sujet d’allégresse et de joie ! »',
-            style: Theme.of(context)
-                .textTheme
-                .bodyLarge
-                ?.copyWith(fontSize: 13.5),
+    return FutureBuilder<VersetDuJour>(
+      future: _versetFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SoftCard(
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final verset = snapshot.data;
+        if (verset == null) return const SizedBox.shrink();
+        return SoftCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '« ${verset.texte} »',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyLarge
+                    ?.copyWith(fontSize: 13.5),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                verset.reference,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.orFonce,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11.5,
+                    ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Psaume 118, 24',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.orFonce,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11.5,
-                ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
