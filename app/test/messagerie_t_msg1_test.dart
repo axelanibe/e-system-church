@@ -300,6 +300,37 @@ void main() {
       expect(canaux[1].envoyes.single, contains('subscribe'));
       await service.deconnecter();
     });
+
+    test('fermeture 1008 : pas de reconnexion', () async {
+      final canaux = <_CanalFaux>[];
+      final service = MessagerieTempsReel(
+        baseUrl: 'https://faux.local',
+        jeton: () => 'faux-jeton',
+        fabriqueCanal: (uri) {
+          final canal = _CanalFaux();
+          canaux.add(canal);
+          return canal;
+        },
+      );
+      final etats = <bool>[];
+      service.connecte.listen(etats.add);
+      service.connecter();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(service.estConnecte, isTrue);
+      // Fermeture 1008 (jeton ou rôle refusé) : l'état passe à
+      // faux, et aucune reconnexion ne suit, même après le délai.
+      canaux.single.couper(code: 1008);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(service.estConnecte, isFalse);
+      expect(etats.last, isFalse);
+      await Future<void>.delayed(const Duration(seconds: 1, milliseconds: 200));
+      expect(canaux.length, 1);
+      // Un appel explicite à connecter() ne relance rien non plus.
+      service.connecter();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      expect(canaux.length, 1);
+      await service.deconnecter();
+    });
   });
 
   group('MessagerieLectureService', () {
@@ -459,7 +490,13 @@ class _CanalFaux extends StreamChannelMixin<dynamic>
 
   void recevoir(String trame) => _entrant.add(trame);
 
-  void couper() => _entrant.close();
+  /// Code de fermeture du canal (1008 = jeton ou rôle refusé).
+  int? codeFermeture;
+
+  void couper({int? code}) {
+    codeFermeture = code;
+    _entrant.close();
+  }
 
   @override
   Stream<dynamic> get stream => _entrant.stream;
@@ -471,7 +508,7 @@ class _CanalFaux extends StreamChannelMixin<dynamic>
   String? get protocol => null;
 
   @override
-  int? get closeCode => null;
+  int? get closeCode => codeFermeture;
 
   @override
   String? get closeReason => null;

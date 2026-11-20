@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../models/messagerie.dart';
@@ -51,8 +52,9 @@ class MessagerieLectureService {
           _lus[entree.key.substring(_prefixeCle.length)] = date;
         }
       }
-    } catch (_) {
+    } catch (e) {
       // Sans stockage lisible, on repart d'une carte vide.
+      debugPrint('[Messagerie] Lectures sécurisées illisibles : $e');
     }
   }
 
@@ -70,8 +72,11 @@ class MessagerieLectureService {
         key: '$_prefixeCle$conversationId',
         value: moment.toIso8601String(),
       );
-    } catch (_) {
+    } catch (e) {
       // La carte en mémoire reste valable pour la session.
+      debugPrint(
+        '[Messagerie] Écriture de la lecture sécurisée échouée : $e',
+      );
     }
   }
 
