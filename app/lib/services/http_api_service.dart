@@ -47,6 +47,7 @@ import '../models/transfert.dart';
 import '../models/rapport.dart';
 import '../models/rapport_annexe.dart';
 import '../models/rattachement.dart';
+import '../models/rsvp.dart';
 import '../models/serviteurs.dart';
 import '../models/stats.dart';
 import '../models/sycebnl.dart';
@@ -631,6 +632,26 @@ class HttpApiService implements ApiService {
   Future<void> annulerPresenceCulte(String culteId) async {
     await _call('DELETE', '/moi/cultes/$culteId/present');
   }
+
+  @override
+  Future<void> confirmerPresenceActivite(String activiteId) async {
+    await _call('POST', '/moi/activites/$activiteId/present');
+  }
+
+  @override
+  Future<void> annulerPresenceActivite(String activiteId) async {
+    await _call('DELETE', '/moi/activites/$activiteId/present');
+  }
+
+  @override
+  Future<RsvpListe> getRsvpCulte(String culteId) async =>
+      RsvpListe.fromJson(await _call('GET', '/cultes/$culteId/rsvp'));
+
+  @override
+  Future<RsvpListe> getRsvpActivite(String activiteId) async =>
+      RsvpListe.fromJson(
+        await _call('GET', '/activites/$activiteId/rsvp'),
+      );
 
   @override
   Future<Abonnement> getMonAbonnement() async =>

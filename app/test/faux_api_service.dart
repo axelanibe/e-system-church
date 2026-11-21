@@ -49,6 +49,7 @@ import 'package:esystem_church/models/profil.dart';
 import 'package:esystem_church/models/rapport.dart';
 import 'package:esystem_church/models/rapport_annexe.dart';
 import 'package:esystem_church/models/rattachement.dart';
+import 'package:esystem_church/models/rsvp.dart';
 import 'package:esystem_church/models/serviteurs.dart';
 import 'package:esystem_church/models/stats.dart';
 import 'package:esystem_church/models/sycebnl.dart';
@@ -1073,6 +1074,47 @@ class FauxApiService implements ApiService {
   Future<void> annulerPresenceCulte(String culteId) async {
     await _latence();
     _requireAuth();
+  }
+
+  /// Confirmations « Je serai présent » en démo (lot 3b) : listes
+  /// figées par culte / activité, pour les tests des vues admin.
+  final Map<String, RsvpListe> _rsvpCultes = {};
+  final Map<String, RsvpListe> _rsvpActivites = {};
+
+  void definirRsvpCulte(String culteId, RsvpListe liste) {
+    _rsvpCultes[culteId] = liste;
+  }
+
+  void definirRsvpActivite(String activiteId, RsvpListe liste) {
+    _rsvpActivites[activiteId] = liste;
+  }
+
+  @override
+  Future<void> confirmerPresenceActivite(String activiteId) async {
+    await _latence();
+    _requireAuth();
+  }
+
+  @override
+  Future<void> annulerPresenceActivite(String activiteId) async {
+    await _latence();
+    _requireAuth();
+  }
+
+  @override
+  Future<RsvpListe> getRsvpCulte(String culteId) async {
+    await _latence();
+    _requireAuth();
+    return _rsvpCultes[culteId] ??
+        const RsvpListe(total: 0, confirmes: []);
+  }
+
+  @override
+  Future<RsvpListe> getRsvpActivite(String activiteId) async {
+    await _latence();
+    _requireAuth();
+    return _rsvpActivites[activiteId] ??
+        const RsvpListe(total: 0, confirmes: []);
   }
 
   // P3 : abonnement vierge en démo, sans ligne en base : statut Actif,

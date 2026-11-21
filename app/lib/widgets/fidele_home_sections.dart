@@ -174,6 +174,40 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
     }
   }
 
+  /// Confirmation de présence par activité (lot 3b, migration 040) :
+  /// même motif que les cultes, doublon refusé en 409 par le serveur.
+  final Map<String, bool> _rsvpParActivite = {};
+
+  Future<void> _basculerPresenceActivite(
+    Activite activite,
+    bool confirme,
+  ) async {
+    try {
+      if (confirme) {
+        await context
+            .read<AppState>()
+            .api
+            .confirmerPresenceActivite(activite.id);
+      } else {
+        await context
+            .read<AppState>()
+            .api
+            .annulerPresenceActivite(activite.id);
+      }
+      if (mounted) {
+        setState(() => _rsvpParActivite[activite.id] = confirme);
+        showSuccess(
+          context,
+          confirme
+              ? 'Présence confirmée.'
+              : 'Présence annulée.',
+        );
+      }
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
@@ -331,7 +365,11 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                   ),
                   const SizedBox(height: 8),
                   const SectionTitle(title: 'Activités à venir'),
-                  _ActivitesAVenirSection(future: _activitesFuture),
+                  _ActivitesAVenirSection(
+                    future: _activitesFuture,
+                    rsvpParActivite: _rsvpParActivite,
+                    onBasculerPresence: _basculerPresenceActivite,
+                  ),
                   const SizedBox(height: 8),
                   _ParcoursSection(future: _carteFuture),
                   const SizedBox(height: 8),
@@ -656,11 +694,68 @@ class _TuileAcces extends StatelessWidget {
   }
 }
 
+/// Pastille verte « Présence confirmée » + bouton « Annuler »
+/// (lot 3b, modèle Connexion Prophétique adapté aux couleurs AppTheme) :
+/// affichée à la place du bouton « Je serai présent » quand le fidèle
+/// a confirmé. Le Wrap évite tout débordement sur écran étroit : le
+/// bouton « Annuler » passe à la ligne suivante si besoin.
+class _PresenceConfirmee extends StatelessWidget {
+  final VoidCallback onAnnuler;
+
+  const _PresenceConfirmee({required this.onAnnuler});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppTheme.vertFonce.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.check_circle_outline,
+                size: 18,
+                color: AppTheme.vertFonce,
+              ),
+              SizedBox(width: 6),
+              Text(
+                'Présence confirmée',
+                style: TextStyle(
+                  color: AppTheme.vertFonce,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+        TextButton(
+          onPressed: onAnnuler,
+          child: const Text(
+            'Annuler',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Prochain culte (maquette, écran 37) : carte blanche, titre violet
 /// et pastille or « À venir », compte à rebours (jours, heures,
 /// minutes), lieu et heure côte à côte, puis « Je serai présent ».
-/// Sans culte : mêmes cases à « -- », lieu et heure « à confirmer »,
-/// bouton visible mais désactivé, aucun culte à confirmer.
+/// Confirmé : pastille verte « Présence confirmée » + « Annuler ».
+/// Sans culte daté à venir (lot 3b) : la carte est masquée et un état
+/// vide explicite s'affiche — le compte à rebours « -- » et le bouton
+/// désactivé de la PR #143 ne sont plus montrés.
 class _ProchainCulte extends StatelessWidget {
   final Future<List<Culte>> future;
   final Map<String, bool> rsvpParCulte;
@@ -693,10 +788,16 @@ class _ProchainCulte extends StatelessWidget {
             if (db == null) return -1;
             return da.compareTo(db);
           });
-        final culte = cultes.isEmpty ? null : cultes.first;
-        final confirme = culte == null
-            ? false
-            : rsvpParCulte[culte.id] ?? culte.seraiPresent;
+        // Seuls les cultes datés à venir comptent comme prochain culte.
+        final dates = cultes.where((c) => c.date != null).toList();
+        final culte = dates.isEmpty ? null : dates.first;
+        if (culte == null) {
+          return const EmptyState(
+            icon: Icons.event_outlined,
+            message: 'Aucun culte à venir',
+          );
+        }
+        final confirme = rsvpParCulte[culte.id] ?? culte.seraiPresent;
         final theme = Theme.of(context);
         return Container(
           decoration: BoxDecoration(
@@ -739,18 +840,16 @@ class _ProchainCulte extends StatelessWidget {
                   ),
                 ],
               ),
-              if (culte != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  culte.titre,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                  ),
+              const SizedBox(height: 8),
+              Text(
+                culte.titre,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
+              ),
               const SizedBox(height: 12),
-              _CompteRebours(date: culte?.date),
+              _CompteRebours(date: culte.date),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -766,7 +865,7 @@ class _ProchainCulte extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          culte?.lieu ?? 'Lieu à confirmer',
+                          culte.lieu ?? 'Lieu à confirmer',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontSize: 13,
                           ),
@@ -786,8 +885,8 @@ class _ProchainCulte extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          culte?.date != null
-                              ? formatDateTimeSansDecalage(culte!.date)
+                          culte.date != null
+                              ? formatDateTimeSansDecalage(culte.date)
                               : 'Heure à confirmer',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontSize: 13,
@@ -798,39 +897,34 @@ class _ProchainCulte extends StatelessWidget {
                   ),
                 ],
               ),
-              if (culte?.orateur != null)
+              if (culte.orateur != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
-                    'Avec ${culte!.orateur}',
+                    'Avec ${culte.orateur}',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color:
                           Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),
-              // Bouton toujours visible : la projection le montre même
-              // quand le compte à rebours est à « -- » (aucun culte
-              // planifié) ; sans culte, il est désactivé, il n'y a
-              // rien à confirmer.
               const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: culte == null
-                      ? null
-                      : () => onBasculerPresence(culte, !confirme),
-                  icon: Icon(
-                    confirme
-                        ? Icons.check_circle_outline
-                        : Icons.event_available_outlined,
-                  ),
-                  label: Text(
-                    confirme ? 'Présence confirmée' : 'Je serai présent',
-                    style: const TextStyle(fontSize: 13.5),
+              if (confirme)
+                _PresenceConfirmee(
+                  onAnnuler: () => onBasculerPresence(culte, false),
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => onBasculerPresence(culte, true),
+                    icon: const Icon(Icons.event_available_outlined),
+                    label: const Text(
+                      'Je serai présent',
+                      style: TextStyle(fontSize: 13.5),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         );
@@ -1300,12 +1394,20 @@ class _VersetDuJourState extends State<_VersetDuJour> {
 /// annonces de l'église du fidèle, même source que l'accueil fidèle
 /// (`GET /moi/annonces`).
 /// Activités à venir (V1, migration 039) : publiées à venir de son
-/// église, triées par date, titre, date et heure, lieu. Simple liste,
-/// sans détail au toucher.
+/// église, triées par date, titre, date et heure, lieu. Chaque activité
+/// porte son bouton « Je serai présent » (lot 3b, migration 040),
+/// qui devient pastille verte « Présence confirmée » + « Annuler ».
 class _ActivitesAVenirSection extends StatelessWidget {
   final Future<List<Activite>> future;
+  final Map<String, bool> rsvpParActivite;
+  final Future<void> Function(Activite activite, bool confirme)
+      onBasculerPresence;
 
-  const _ActivitesAVenirSection({required this.future});
+  const _ActivitesAVenirSection({
+    required this.future,
+    required this.rsvpParActivite,
+    required this.onBasculerPresence,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1334,23 +1436,52 @@ class _ActivitesAVenirSection extends StatelessWidget {
           children: [
             for (final activite in activites)
               Card(
-                child: ListTile(
-                  leading: const Icon(Icons.event_outlined),
-                  title: Text(
-                    activite.titre,
-                    style: const TextStyle(fontSize: 13.5),
-                  ),
-                  subtitle: Text(
-                    [
-                      formatDateTimeSansDecalage(activite.date),
-                      if (activite.lieu != null) activite.lieu,
-                      if (activite.responsable != null)
-                        'Avec ${activite.responsable}',
-                    ].join(' · '),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11.5),
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.event_outlined),
+                      title: Text(
+                        activite.titre,
+                        style: const TextStyle(fontSize: 13.5),
+                      ),
+                      subtitle: Text(
+                        [
+                          formatDateTimeSansDecalage(activite.date),
+                          if (activite.lieu != null) activite.lieu,
+                          if (activite.responsable != null)
+                            'Avec ${activite.responsable}',
+                        ].join(' · '),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 11.5),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child:
+                          (rsvpParActivite[activite.id] ??
+                                  activite.seraiPresent)
+                              ? _PresenceConfirmee(
+                                  onAnnuler: () =>
+                                      onBasculerPresence(activite, false),
+                                )
+                              : SizedBox(
+                                  width: double.infinity,
+                                  child: FilledButton.icon(
+                                    onPressed: () =>
+                                        onBasculerPresence(activite, true),
+                                    icon: const Icon(
+                                      Icons.event_available_outlined,
+                                    ),
+                                    label: const Text(
+                                      'Je serai présent',
+                                      style: TextStyle(fontSize: 13.5),
+                                    ),
+                                  ),
+                                ),
+                    ),
+                  ],
                 ),
               ),
           ],

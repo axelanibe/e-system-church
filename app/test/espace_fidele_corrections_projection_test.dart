@@ -16,9 +16,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 /// Corrections de l'espace fidèle d'après la projection (18 nov. 2026) :
-/// bouton « Je serai présent » toujours visible sur Prochain culte,
-/// page Carte sans titre avec la note de la projection, page
-/// rendez-vous avec le nom du pasteur et « Retour au menu ».
+/// bouton « Je serai présent » sur Prochain culte, page Carte sans
+/// titre avec la note de la projection, page rendez-vous avec le nom
+/// du pasteur et « Retour au menu ». Lot 3b (21 nov.) : sans culte
+/// daté à venir, la carte est masquée et un état vide explicite
+/// s'affiche (le bouton désactivé de la PR #143 ne l'est plus) ;
+/// confirmé, le bouton devient pastille verte « Présence confirmée »
+/// + « Annuler ».
 /// La tuile Messagerie des accès rapides n'est pas touchée ici.
 /// Données EXEMPLE uniquement, jamais de données réelles.
 class _EtatFaux extends AppState {
@@ -104,24 +108,45 @@ void main() {
   setUp(() => MessagerieLectureService.instance.reinitialiserPourTests());
 
   group('Prochain culte : bouton Je serai présent', () {
-    testWidgets('sans culte planifié : bouton visible mais désactivé',
+    testWidgets('sans culte daté à venir : carte masquée, état vide',
         (tester) async {
       final api = await _connecter(tester);
       api.definirCultes([]);
+      // Sans activité non plus : le seul « Je serai présent » de
+      // l'écran serait celui des activités.
+      api.definirActivites([]);
       await _pomper(tester, const FideleHomeScreen(), api);
-      expect(find.text('Prochain culte'), findsOneWidget);
-      expect(find.text('Je serai présent'), findsOneWidget);
-      final bouton = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Je serai présent'),
-      );
-      expect(bouton.onPressed, isNull);
+      expect(find.text('Prochain culte'), findsNothing);
+      expect(find.text('Je serai présent'), findsNothing);
+      expect(find.text('Aucun culte à venir'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await _demonter(tester);
     });
 
-    testWidgets('avec un culte à venir : bouton actif, appui confirme',
-        (tester) async {
+    testWidgets('culte sans date : carte masquée aussi', (tester) async {
       final api = await _connecter(tester);
+      api.definirActivites([]);
+      api.definirCultes([
+        const Culte(
+          id: 'test-culte-sans-date',
+          titre: 'Culte sans date EXEMPLE',
+          dateHeure: '',
+          lieu: 'Temple EXEMPLE',
+        ),
+      ]);
+      await _pomper(tester, const FideleHomeScreen(), api);
+      expect(find.text('Prochain culte'), findsNothing);
+      expect(find.text('Culte sans date EXEMPLE'), findsNothing);
+      expect(find.text('Aucun culte à venir'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await _demonter(tester);
+    });
+
+    testWidgets(
+        'avec un culte à venir : bouton actif, appui confirme puis '
+        'Annuler annule', (tester) async {
+      final api = await _connecter(tester);
+      api.definirActivites([]);
       api.definirCultes([_culteAvenir]);
       await _pomper(tester, const FideleHomeScreen(), api);
       expect(find.text('Culte EXEMPLE'), findsOneWidget);
@@ -134,6 +159,13 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.text('Présence confirmée'), findsOneWidget);
+      expect(find.text('Annuler'), findsOneWidget);
+      expect(find.text('Je serai présent'), findsNothing);
+      await tester.tap(find.text('Annuler'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('Je serai présent'), findsOneWidget);
+      expect(find.text('Présence confirmée'), findsNothing);
       expect(tester.takeException(), isNull);
       await _demonter(tester);
     });

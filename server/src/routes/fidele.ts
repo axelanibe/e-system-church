@@ -642,23 +642,107 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
 
   // -- Activités à venir (V1, migration 039) : publiées seulement,
   //    à venir seulement, de SON église. Les brouillons ne sortent
-  //    jamais ici, pas plus que les activités passées.
+  //    jamais ici, pas plus que les activités passées. `serai_present`
+  //    : le fidèle a confirmé sa présence à cette activité
+  //    (table activite_rsvp, migration 040). Sans membre lié, faux
+  //    partout.
   app.get(
     "/moi/activites",
     { preHandler: [requireAuth(db), requireRole("membre")] },
     async (req, reply) => {
       try {
+        const memberId = await memberIdDe(req.session.userId);
         const { rows } = await db.query(
-          `SELECT id, church_id, titre, description, date_heure, lieu,
-                  responsable, statut, created_at
-             FROM activites
-            WHERE church_id = $1 AND statut = 'publié'
-              AND date_heure >= now()
-            ORDER BY date_heure ASC
+          `SELECT a.id, a.church_id, a.titre, a.description, a.date_heure,
+                  a.lieu, a.responsable, a.statut, a.created_at,
+                  (r.id IS NOT NULL) AS serai_present
+             FROM activites a
+             LEFT JOIN activite_rsvp r
+               ON r.activite_id = a.id AND r.member_id = $2
+            WHERE a.church_id = $1 AND a.statut = 'publié'
+              AND a.date_heure >= now()
+            ORDER BY a.date_heure ASC
             LIMIT 50`,
-          [req.session.churchId],
+          [req.session.churchId, memberId],
         );
         return reply.send({ activites: rows });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  // -- « Je serai présent » à une activité (migration 040) : même
+  //    motif que le culte (migration 020), avec une différence
+  //    voulue : le doublon est refusé en 409 (modèle Connexion
+  //    Prophétique), la route culte restant idempotente pour ne pas
+  //    casser son contrat existant. L'annulation supprime la ligne,
+  //    la reprise est donc toujours possible. Ne crée pas une
+  //    présence pointée et ne compte pas dans les statistiques.
+  app.post(
+    "/moi/activites/:id/present",
+    { preHandler: [requireAuth(db), requireRole("membre")] },
+    async (req, reply) => {
+      try {
+        const memberId = await memberIdDe(req.session.userId);
+        if (!memberId) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Aucun membre lié à ce compte.",
+          });
+        }
+        const activiteId = (req.params as { id: string }).id;
+        const { rows: activites } = await db.query(
+          `SELECT id FROM activites
+            WHERE id = $1 AND church_id = $2 AND statut = 'publié'
+              AND date_heure >= now()`,
+          [activiteId, req.session.churchId],
+        );
+        if (activites.length === 0) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Activité introuvable, non publiée ou déjà passée dans votre église.",
+          });
+        }
+        const inseree = await db.query(
+          `INSERT INTO activite_rsvp (church_id, activite_id, member_id)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (member_id, activite_id) DO NOTHING
+           RETURNING id`,
+          [req.session.churchId, activiteId, memberId],
+        );
+        if ((inseree.rowCount ?? 0) === 0) {
+          return reply.code(409).send({
+            error: "deja_confirme",
+            message: "Présence déjà confirmée pour cette activité.",
+          });
+        }
+        return reply.send({ present: true });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  app.delete(
+    "/moi/activites/:id/present",
+    { preHandler: [requireAuth(db), requireRole("membre")] },
+    async (req, reply) => {
+      try {
+        const memberId = await memberIdDe(req.session.userId);
+        if (!memberId) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Aucun membre lié à ce compte.",
+          });
+        }
+        const activiteId = (req.params as { id: string }).id;
+        await db.query(
+          `DELETE FROM activite_rsvp
+            WHERE activite_id = $1 AND member_id = $2 AND church_id = $3`,
+          [activiteId, memberId, req.session.churchId],
+        );
+        return reply.send({ present: false });
       } catch (e) {
         return dbError(reply, e);
       }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/cultes.dart';
 import '../models/presences.dart';
+import '../models/rsvp.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
@@ -28,6 +29,7 @@ class _PresencesScreenState extends State<PresencesScreen> {
   late Future<PresenceStats> _statsFuture;
   late Future<List<Culte>> _cultesFuture;
   Future<List<Presence>>? _presencesFuture;
+  Future<RsvpListe>? _rsvpFuture;
 
   @override
   void initState() {
@@ -49,6 +51,8 @@ class _PresencesScreenState extends State<PresencesScreen> {
       if (_culteId != null) {
         _presencesFuture =
             context.read<AppState>().api.getPresences(culteId: _culteId);
+        _rsvpFuture =
+            context.read<AppState>().api.getRsvpCulte(_culteId!);
       }
     });
   }
@@ -198,6 +202,10 @@ class _PresencesScreenState extends State<PresencesScreen> {
                 final cultes = snapshot.data ?? const <Culte>[];
                 return DropdownButtonFormField<String>(
                   initialValue: _culteId,
+                  // Pleine largeur : sans isExpanded, le bouton prend la
+                  // largeur intrinsèque de l'item sélectionné et déborde
+                  // de ~300 px sur écran étroit (libellé « titre — date »).
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Culte',
                     border: OutlineInputBorder(),
@@ -207,7 +215,9 @@ class _PresencesScreenState extends State<PresencesScreen> {
                       .map((c) => DropdownMenuItem<String>(
                             value: c.id,
                             child: Text(
-                                '${c.titre} — ${afficherDateTimeSansDecalage(c.dateHeure)}'),
+                              '${c.titre} — ${afficherDateTimeSansDecalage(c.dateHeure)}',
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ))
                       .toList(),
                   onChanged: (value) {
@@ -219,6 +229,12 @@ class _PresencesScreenState extends State<PresencesScreen> {
                               .read<AppState>()
                               .api
                               .getPresences(culteId: value);
+                      _rsvpFuture = value == null
+                          ? null
+                          : context
+                              .read<AppState>()
+                              .api
+                              .getRsvpCulte(value);
                     });
                   },
                 );
@@ -284,6 +300,67 @@ class _PresencesScreenState extends State<PresencesScreen> {
             onChanged: (v) => setState(() => _query = v.trim()),
             label: 'Rechercher un présent',
           ),
+          // Confirmations « Je serai présent » (lot 3b) : qui a confirmé
+          // pour le culte choisi, avec le compteur. Distinct du pointage
+          // ci-dessous : une confirmation n'est pas une présence pointée.
+          if (_culteId != null && _rsvpFuture != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              child: FutureBuilder<RsvpListe>(
+                future: _rsvpFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const AppLoading();
+                  }
+                  if (snapshot.hasError) {
+                    return AppError(
+                      message: snapshot.error.toString(),
+                      onRetry: _refresh,
+                    );
+                  }
+                  final rsvp = snapshot.data!;
+                  return Card(
+                    child: ExpansionTile(
+                      leading: const Icon(Icons.event_available_outlined),
+                      title: const Text(
+                        'Confirmations « Je serai présent »',
+                      ),
+                      subtitle: Text(
+                        rsvp.total == 0
+                            ? 'Aucune confirmation pour ce culte'
+                            : '${rsvp.total} membre${rsvp.total > 1 ? 's' : ''}'
+                                ' confirmé${rsvp.total > 1 ? 's' : ''}',
+                      ),
+                      children: [
+                        if (rsvp.confirmes.isEmpty)
+                          const ListTile(
+                            title: Text(
+                              'Aucune confirmation pour ce culte.',
+                            ),
+                          )
+                        else
+                          for (final c in rsvp.confirmes)
+                            ListTile(
+                              leading: const CircleAvatar(
+                                child: Icon(Icons.person_outline),
+                              ),
+                              title: Text(c.membreNom),
+                              subtitle: Text(
+                                [
+                                  if (c.membreMatricule != null)
+                                    c.membreMatricule!,
+                                  if (c.createdAt != null)
+                                    afficherDateTime(c.createdAt),
+                                ].join(' · '),
+                              ),
+                            ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
           Expanded(
             child: _presencesFuture == null
                 ? const SizedBox.shrink()
