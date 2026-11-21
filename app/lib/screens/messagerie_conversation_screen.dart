@@ -9,6 +9,7 @@ import '../services/messagerie_lecture_service.dart';
 import '../services/messagerie_temps_reel.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
+import 'messagerie_signalement.dart';
 
 /// Une conversation (T-Msg-1, spécification §6).
 ///
@@ -17,9 +18,9 @@ import '../widgets/common_widgets.dart';
 /// tactiles de 48 px minimum, champs à 16 px minimum sur iPhone.
 /// Les nouveaux messages arrivent par WebSocket ; quand il est coupé,
 /// l'écran rafraîchit par HTTP toutes les 15 secondes et affiche
-/// « Reconnexion… ». Le bouton « Signaler » est présent mais inerte en
-/// T-Msg-1 : il affiche « Bientôt disponible », le signalement arrive
-/// en T-Msg-2.
+/// « Reconnexion… ». T-Msg-4 : le bouton « Signaler » ouvre la feuille
+/// de signalement de la conversation, l'appui long sur une bulle
+/// propose Modifier / Supprimer (mes bulles) et Signaler (toutes).
 class MessagerieConversationScreen extends StatefulWidget {
   final ConversationMessagerie conversation;
 
@@ -132,8 +133,16 @@ class _MessagerieConversationScreenState
       if (!mounted || message.conversationId != widget.conversation.id) {
         return;
       }
-      if (_messages.any((m) => m.id == message.id)) return;
-      setState(() => _messages = [..._messages, message]);
+      // T-Msg-4 : un message déjà connu est remplacé (modification ou
+      // suppression douce diffusée par WebSocket), pas ignoré.
+      setState(() {
+        final index = _messages.indexWhere((m) => m.id == message.id);
+        if (index >= 0) {
+          _messages = [..._messages]..[index] = message;
+        } else {
+          _messages = [..._messages, message];
+        }
+      });
       _marquerLu();
       _defilerEnBas();
     });
@@ -198,12 +207,143 @@ class _MessagerieConversationScreenState
     }
   }
 
-  void _signaler() {
-    // T-Msg-1 : bouton présent, sans action. Le signalement (motif,
-    // preuve figée, file de modération) arrive en T-Msg-2.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Bientôt disponible')),
+  /// T-Msg-4 : signale la conversation (motif, description
+  /// facultative, phrase de visibilité avant envoi).
+  Future<void> _signaler() async {
+    await ouvrirFeuilleSignalement(
+      context,
+      api: context.read<AppState>().api,
+      targetType: 'conversation',
+      targetId: widget.conversation.id,
     );
+  }
+
+  /// T-Msg-4 : appui long sur une bulle — Modifier / Supprimer sur
+  /// mes bulles, Signaler sur toutes. Un message supprimé ne propose
+  /// plus que Signaler, il n'y a plus rien à modifier.
+  Future<void> _menuMessage(MessageMessagerie message, bool mien) async {
+    final choix = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (mien && !message.supprime)
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Modifier'),
+                onTap: () => Navigator.of(ctx).pop('modifier'),
+              ),
+            if (mien && !message.supprime)
+              ListTile(
+                leading: const Icon(Icons.delete_outline),
+                title: const Text('Supprimer'),
+                onTap: () => Navigator.of(ctx).pop('supprimer'),
+              ),
+            ListTile(
+              leading: const Icon(Icons.flag_outlined),
+              title: const Text('Signaler'),
+              onTap: () => Navigator.of(ctx).pop('signaler'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (choix == 'modifier') {
+      await _modifierMessage(message);
+    } else if (choix == 'supprimer') {
+      await _supprimerMessage(message);
+    } else if (choix == 'signaler') {
+      await ouvrirFeuilleSignalement(
+        context,
+        api: context.read<AppState>().api,
+        targetType: 'message',
+        targetId: message.id,
+      );
+    }
+  }
+
+  Future<void> _modifierMessage(MessageMessagerie message) async {
+    final api = context.read<AppState>().api;
+    final controleur = TextEditingController(text: message.content);
+    final nouveau = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Modifier le message'),
+        content: TextField(
+          controller: controleur,
+          maxLines: 4,
+          maxLength: 5000,
+          autofocus: true,
+          decoration: const InputDecoration(border: OutlineInputBorder()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(controleur.text.trim()),
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+    if (nouveau == null || nouveau.isEmpty || nouveau == message.content) {
+      return;
+    }
+    try {
+      final modifie = await api.modifierMessageConversation(
+        widget.conversation.id,
+        message.id,
+        content: nouveau,
+      );
+      if (!mounted) return;
+      setState(() {
+        final index = _messages.indexWhere((m) => m.id == message.id);
+        if (index >= 0) _messages = [..._messages]..[index] = modifie;
+      });
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
+  }
+
+  Future<void> _supprimerMessage(MessageMessagerie message) async {
+    final api = context.read<AppState>().api;
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer ce message ?'),
+        content: const Text(
+          'Le message restera visible comme « Message supprimé ».',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirme != true) return;
+    try {
+      final supprime = await api.supprimerMessageConversation(
+        widget.conversation.id,
+        message.id,
+      );
+      if (!mounted) return;
+      setState(() {
+        final index = _messages.indexWhere((m) => m.id == message.id);
+        if (index >= 0) _messages = [..._messages]..[index] = supprime;
+      });
+    } catch (e) {
+      if (mounted) showApiError(context, e);
+    }
   }
 
   @override
@@ -281,6 +421,7 @@ class _MessagerieConversationScreenState
                                     widget.conversation.estGroupe && !mien
                                         ? nom
                                         : null,
+                                onLongPress: () => _menuMessage(message, mien),
                               );
                             },
                           ),
@@ -356,16 +497,20 @@ class _MessagerieConversationScreenState
 /// Une bulle de message : à droite sur violet pour mes messages, à
 /// gauche sur blanc pour les autres. L'heure est sous la bulle, en
 /// or foncé sur fond papier (4,58:1), jamais en blanc atténué
-/// sur violet.
+/// sur violet. T-Msg-4 : appui long (Modifier / Supprimer /
+/// Signaler), « (modifié) » quand l'auteur a modifié le message,
+/// style atténué pour un message supprimé.
 class _Bulle extends StatelessWidget {
   final MessageMessagerie message;
   final bool mien;
   final String? nomExpediteur;
+  final VoidCallback? onLongPress;
 
   const _Bulle({
     required this.message,
     required this.mien,
     this.nomExpediteur,
+    this.onLongPress,
   });
 
   @override
@@ -373,6 +518,10 @@ class _Bulle extends StatelessWidget {
     final heure = message.createdAt == null
         ? ''
         : heureCourteConversation(message.createdAt);
+    final sousTitre = [
+      if (heure.isNotEmpty) heure,
+      if (message.estModifie) '(modifié)',
+    ].join(' ');
     return Align(
       alignment: mien ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
@@ -385,53 +534,65 @@ class _Bulle extends StatelessWidget {
             crossAxisAlignment:
                 mien ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: mien ? AppTheme.violetProfond : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: mien
-                      ? null
-                      : Border.all(
-                          // Bordure papier-violet : la bulle se
-                          // distingue du fond papier.
-                          color: AppTheme.bordure,
+              GestureDetector(
+                onLongPress: onLongPress,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: message.supprime
+                        ? AppTheme.fondPapier
+                        : mien
+                            ? AppTheme.violetProfond
+                            : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: mien && !message.supprime
+                        ? null
+                        : Border.all(
+                            // Bordure papier-violet : la bulle se
+                            // distingue du fond papier.
+                            color: AppTheme.bordure,
+                          ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (nomExpediteur != null) ...[
+                        Text(
+                          nomExpediteur!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.violetProfond,
+                          ),
                         ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (nomExpediteur != null) ...[
+                        const SizedBox(height: 2),
+                      ],
                       Text(
-                        nomExpediteur!,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.violetProfond,
+                        message.content,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontStyle: message.supprime
+                              ? FontStyle.italic
+                              : FontStyle.normal,
+                          color: message.supprime
+                              ? AppTheme.orFonce
+                              : mien
+                                  ? Colors.white
+                                  : AppTheme.violetProfond,
                         ),
                       ),
-                      const SizedBox(height: 2),
                     ],
-                    Text(
-                      message.content,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: mien
-                            ? Colors.white
-                            : AppTheme.violetProfond,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              if (heure.isNotEmpty)
+              if (sousTitre.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
                   child: Text(
-                    heure,
+                    sousTitre,
                     style: const TextStyle(
                       fontSize: 11,
                       // Horodatage or foncé (4,58:1 sur papier).

@@ -30,6 +30,7 @@ import { registerServiteursRoutes } from "./routes/serviteurs.js";
 import { registerEnfantsRoutes } from "./routes/enfants.js";
 import { registerMediasRoutes } from "./routes/medias.js";
 import { registerMessagerieRoutes } from "./routes/messagerie.js";
+import { registerMessagerieModerationRoutes } from "./routes/messagerie_moderation.js";
 import { registerMessagerieWs } from "./messagerie_ws.js";
 import { registerNotificationsPushRoutes } from "./routes/notifications_push.js";
 import { registerBibleRoutes } from "./routes/bible.js";
@@ -172,6 +173,7 @@ export function buildApp(db: Pool) {
   registerEnfantsRoutes(app, db);
   registerMediasRoutes(app, db);
   registerMessagerieRoutes(app, db);
+  registerMessagerieModerationRoutes(app, db);
   registerNotificationsPushRoutes(app, db);
   registerBibleRoutes(app, db);
   registerEcoleBibliqueRoutes(app, db);
