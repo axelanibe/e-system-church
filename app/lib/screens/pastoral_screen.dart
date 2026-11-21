@@ -6,6 +6,7 @@ import '../models/member.dart';
 import '../models/pastoral.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
+import '../widgets/champ_membre_choisir_creer.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
 import 'evenements_vie_screen.dart';
@@ -305,21 +306,32 @@ class _PastoralScreenState extends State<PastoralScreen> {
   }
 
   Future<void> _createParcours(List<Member> membres) async {
-    String? memberId = membres.isEmpty ? null : membres.first.id;
+    final api = context.read<AppState>().api;
+    String? memberId;
     String etape = 'accueil';
     final noteController = TextEditingController();
+    Future<Member> creerMembre({
+      required String fullName,
+      String? phone,
+      String? email,
+    }) =>
+        api.createMember(fullName: fullName, phone: phone, email: email);
     await showCreateDialog(
       context: context,
       title: 'Nouveau parcours',
       saveLabel: 'Créer',
       fields: [
-        dialogDropdown<String?>(
-          value: memberId,
-          label: 'Nouveau converti',
-          options: {
-            for (final m in membres) m.id: '${m.fullName} (${m.matricule})',
-          },
+        mentionChampsObligatoires,
+        ChampMembreChoisirCreer(
+          membres: membres,
+          valeur: memberId,
           onChanged: (v) => memberId = v,
+          onCreerMembre: creerMembre,
+          onMembreCree: (m) => membres.add(m),
+          label: 'Nouveau converti',
+          obligatoire: true,
+          aide: 'Choisissez un membre de la base, ou créez-le sur place '
+              's’il n’y est pas encore.',
         ),
         dialogDropdown<String>(
           value: etape,
@@ -327,9 +339,14 @@ class _PastoralScreenState extends State<PastoralScreen> {
           options: _etapes,
           onChanged: (v) => etape = v ?? 'accueil',
         ),
-        dialogTextField(controller: noteController, label: 'Note'),
+        dialogTextField(
+          controller: noteController,
+          label: 'Note',
+          aide: 'Ex. Premier contact après le culte de dimanche.',
+        ),
       ],
       isValid: () => memberId != null,
+      messageInvalide: 'Choisissez le nouveau converti.',
       onSave: () async {
         try {
           await context.read<AppState>().api.createParcoursNouveau(
@@ -386,8 +403,14 @@ class _PastoralScreenState extends State<PastoralScreen> {
     String? motifPrefill,
     String? typePrefill,
   }) async {
-    String? memberId = memberIdPrefill ??
-        (membres.isEmpty ? null : membres.first.id);
+    final api = context.read<AppState>().api;
+    String? memberId = memberIdPrefill;
+    Future<Member> creerMembre({
+      required String fullName,
+      String? phone,
+      String? email,
+    }) =>
+        api.createMember(fullName: fullName, phone: phone, email: email);
     String? type = typePrefill;
     String priorite = 'normale';
     final dateController = TextEditingController();
@@ -404,16 +427,20 @@ class _PastoralScreenState extends State<PastoralScreen> {
       title: 'Nouvelle visite pastorale',
       saveLabel: 'Enregistrer la visite',
       fields: [
-        dialogDropdown<String?>(
-          value: memberId,
-          label: 'Membre visité',
-          options: {
-            for (final m in membres) m.id: '${m.fullName} (${m.matricule})',
-          },
+        mentionChampsObligatoires,
+        ChampMembreChoisirCreer(
+          membres: membres,
+          valeur: memberId,
           onChanged: (v) => memberId = v,
+          onCreerMembre: creerMembre,
+          onMembreCree: (m) => membres.add(m),
+          label: 'Membre visité',
+          obligatoire: true,
+          aide: 'Qui a été visité ? Choisissez un membre de la base, ou '
+              'créez-le sur place s’il n’y est pas encore.',
         ),
         dialogDateField(
-            context: context, controller: dateController, label: 'Date de la visite'),
+            context: context, controller: dateController, label: 'Date de la visite *'),
         dialogDropdown<String?>(
           value: type,
           label: 'Type',
@@ -424,8 +451,16 @@ class _PastoralScreenState extends State<PastoralScreen> {
           },
           onChanged: (v) => type = v,
         ),
-        dialogTextField(controller: lieuController, label: 'Lieu'),
-        dialogTextField(controller: motifController, label: 'Motif'),
+        dialogTextField(
+          controller: lieuController,
+          label: 'Lieu',
+          aide: 'Ex. Domicile, hôpital, lieu de travail',
+        ),
+        dialogTextField(
+          controller: motifController,
+          label: 'Motif',
+          aide: 'Ex. Maladie, deuil, visite de routine',
+        ),
         // Priorité (maquette, écran 34). L'API de création des
         // visites n'a pas encore de champ priorité ni notes de
         // suivi : les champs sont affichés, leur enregistrement
@@ -439,6 +474,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
         dialogTextField(
           controller: compteRenduController,
           label: 'Compte rendu',
+          aide: 'Ce qui a été dit et décidé pendant la visite.',
           maxLines: 3,
         ),
         if (peutVoirNotes)
@@ -450,6 +486,7 @@ class _PastoralScreenState extends State<PastoralScreen> {
       ],
       isValid: () =>
           memberId != null && dateController.text.trim().isNotEmpty,
+      messageInvalide: 'Choisissez le membre visité et une date.',
       onSave: () async {
         try {
           await context.read<AppState>().api.createVisitePastorale(
@@ -470,22 +507,33 @@ class _PastoralScreenState extends State<PastoralScreen> {
   }
 
   Future<void> _createAccompagnement(List<Member> membres) async {
-    String? memberId = membres.isEmpty ? null : membres.first.id;
+    final api = context.read<AppState>().api;
+    String? memberId;
     String type = 'autre';
     String priorite = 'normale';
     final descriptionController = TextEditingController();
+    Future<Member> creerMembre({
+      required String fullName,
+      String? phone,
+      String? email,
+    }) =>
+        api.createMember(fullName: fullName, phone: phone, email: email);
     await showCreateDialog(
       context: context,
       title: 'Nouvel accompagnement',
       saveLabel: 'Créer',
       fields: [
-        dialogDropdown<String?>(
-          value: memberId,
-          label: 'Membre accompagné',
-          options: {
-            for (final m in membres) m.id: '${m.fullName} (${m.matricule})',
-          },
+        mentionChampsObligatoires,
+        ChampMembreChoisirCreer(
+          membres: membres,
+          valeur: memberId,
           onChanged: (v) => memberId = v,
+          onCreerMembre: creerMembre,
+          onMembreCree: (m) => membres.add(m),
+          label: 'Membre accompagné',
+          obligatoire: true,
+          aide: 'Qui est accompagné ? Choisissez un membre de la base, '
+              'ou créez-le sur place s’il n’y est pas encore.',
         ),
         dialogDropdown<String>(
           value: type,
@@ -508,10 +556,12 @@ class _PastoralScreenState extends State<PastoralScreen> {
         dialogTextField(
           controller: descriptionController,
           label: 'Description',
+          aide: 'Ex. Couple en difficulté, suivi après un deuil.',
           maxLines: 3,
         ),
       ],
       isValid: () => memberId != null,
+      messageInvalide: 'Choisissez le membre accompagné.',
       onSave: () async {
         try {
           await context.read<AppState>().api.createAccompagnement(

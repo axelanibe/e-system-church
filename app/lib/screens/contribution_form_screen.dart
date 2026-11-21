@@ -9,6 +9,7 @@ import '../models/member.dart';
 import '../models/paiements.dart';
 import '../services/api_service.dart';
 import '../services/file_hors_ligne_service.dart';
+import '../widgets/champ_membre_choisir_creer.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 
@@ -154,12 +155,12 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_memberId == null) {
-      setState(() => _error = 'Un membre est requis.');
+      setState(() => _error = 'Choisissez le membre qui donne.');
       return;
     }
     final amount = int.tryParse(_amountController.text.trim());
     if (amount == null || amount <= 0) {
-      setState(() => _error = 'Montant invalide.');
+      setState(() => _error = 'Le montant doit être supérieur à 0 FCFA.');
       return;
     }
     setState(() {
@@ -347,41 +348,38 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'Saisir une contribution : type, montant et moyen.',
+                    '(*) Champs obligatoires',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Saisir une contribution : membre, type, montant et moyen.',
                     style: TextStyle(fontSize: 12.5),
                   ),
                   const SizedBox(height: 12),
-                  // Membre obligatoire : sans membre, l'état vide de la
-                  // maquette, pas un sélecteur vide.
-                  if (_members.isEmpty)
-                    const Text(
-                      'Aucun membre — créez d’abord un membre',
-                      style: TextStyle(fontSize: 16),
-                    )
-                  else
-                    DropdownButtonFormField<String>(
-                      isExpanded: true,
-                      initialValue: _memberId,
-                      decoration: const InputDecoration(
-                        labelText: 'Membre *',
-                        border: OutlineInputBorder(),
-                      ),
-                      hint: const Text('Choisir un membre'),
-                      validator: (v) {
-                        if (v == null) {
-                          return 'Un membre est requis.';
-                        }
-                        return null;
-                      },
-                      items: [
-                        for (final m in _members)
-                          DropdownMenuItem(
-                            value: m.id,
-                            child: Text('${m.fullName} (${m.matricule})'),
-                          ),
-                      ],
-                      onChanged: (v) => setState(() => _memberId = v),
-                    ),
+                  // Membre obligatoire (Tranche Formulaires P0) :
+                  // sélecteur avec recherche sur la base, ou création
+                  // sur place — même sans aucun membre au départ.
+                  ChampMembreChoisirCreer(
+                    membres: _members,
+                    valeur: _memberId,
+                    onChanged: (v) => setState(() => _memberId = v),
+                    onCreerMembre: ({
+                      required String fullName,
+                      String? phone,
+                      String? email,
+                    }) =>
+                        context.read<AppState>().api.createMember(
+                              fullName: fullName,
+                              phone: phone,
+                              email: email,
+                            ),
+                    onMembreCree: (m) => setState(() => _members.add(m)),
+                    label: 'Membre',
+                    obligatoire: true,
+                    aide: 'Qui donne ? Choisissez un membre de la base, '
+                        'ou créez-le sur place s’il n’y est pas encore.',
+                  ),
                   const SizedBox(height: 12),
                   // Type figé quand l'écran l'impose (ex. « cotisation »
                   // depuis Finances) : il s'affiche, il ne se choisit pas.
@@ -420,13 +418,14 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       labelText: 'Montant ($devise) *',
+                      helperText: 'Montant en FCFA, supérieur à 0.',
                       border: const OutlineInputBorder(),
                     ),
                     onChanged: (_) => setState(() {}),
                     validator: (v) {
                       final amount = int.tryParse(v?.trim() ?? '');
                       if (amount == null || amount <= 0) {
-                        return 'Montant invalide.';
+                        return 'Le montant doit être supérieur à 0 FCFA.';
                       }
                       return null;
                     },
@@ -495,7 +494,9 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                     controller: _refController,
                     decoration: const InputDecoration(
                       labelText: 'Référence (facultatif)',
-                      hintText: 'Référence du paiement',
+                      hintText: 'Ex. WAVE-123456',
+                      helperText:
+                          'Référence du paiement (reçu Wave, Orange ou MTN).',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -534,6 +535,7 @@ class _ContributionFormScreenState extends State<ContributionFormScreen> {
                     maxLines: 2,
                     decoration: const InputDecoration(
                       labelText: 'Note',
+                      hintText: 'Ex. Dîme de novembre',
                       border: OutlineInputBorder(),
                     ),
                   ),

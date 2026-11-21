@@ -6,6 +6,7 @@ import '../models/membres_complement.dart';
 import '../models/member.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/champ_membre_choisir_creer.dart';
 import '../widgets/liste_avec_fab.dart';
 import '../widgets/dialog_helpers.dart';
 
@@ -92,35 +93,54 @@ class _FamillesScreenState extends State<FamillesScreen> {
       _query.isEmpty || text.toLowerCase().contains(_query.toLowerCase());
 
   Future<void> _createFamille(List<Member> membres) async {
+    final api = context.read<AppState>().api;
     final nomController = TextEditingController();
     final adresseController = TextEditingController();
     final telephoneController = TextEditingController();
     String? chefId;
+    // Création sur place (Tranche Formulaires P0) : même appel API que
+    // le formulaire membre, pas de nouvelle route serveur.
+    Future<Member> creerMembre({
+      required String fullName,
+      String? phone,
+      String? email,
+    }) =>
+        api.createMember(fullName: fullName, phone: phone, email: email);
     await showCreateDialog(
       context: context,
       title: 'Nouvelle famille',
       saveLabel: 'Créer la famille',
       fields: [
-        dialogTextField(controller: nomController, label: 'Nom de la famille'),
-        dialogDropdown<String?>(
-          value: chefId,
-          label: 'Responsable',
-          options: {
-            null: membres.isEmpty
-                ? 'Aucun membre — créez d’abord un membre'
-                : 'Aucun',
-            for (final m in membres) m.id: '${m.fullName} (${m.matricule})',
-          },
-          onChanged: (v) => chefId = v,
+        mentionChampsObligatoires,
+        dialogTextField(
+          controller: nomController,
+          label: 'Nom de la famille *',
+          aide: 'Ex. Famille Koné',
         ),
-        dialogTextField(controller: adresseController, label: 'Adresse'),
+        ChampMembreChoisirCreer(
+          membres: membres,
+          valeur: chefId,
+          onChanged: (v) => chefId = v,
+          onCreerMembre: creerMembre,
+          onMembreCree: (m) => membres.add(m),
+          label: 'Responsable',
+          aide: 'Chef de famille : choisissez un membre de la base, '
+              'ou créez-le sur place s’il n’y est pas encore.',
+        ),
+        dialogTextField(
+          controller: adresseController,
+          label: 'Adresse',
+          aide: 'Ex. Cocody, rue des Jardins',
+        ),
         dialogTextField(
           controller: telephoneController,
           label: 'Téléphone',
           keyboardType: TextInputType.phone,
+          aide: '10 chiffres, ex. 07 07 07 07 07',
         ),
       ],
-      isValid: () => nomController.text.trim().isNotEmpty,
+      isValid: () => nomController.text.trim().length >= 2,
+      messageInvalide: 'Entrez un nom de famille (2 lettres au minimum).',
       onSave: () async {
         try {
           await context.read<AppState>().api.createFamille(
@@ -143,31 +163,57 @@ class _FamillesScreenState extends State<FamillesScreen> {
   }
 
   Future<void> _createCellule(List<Member> membres) async {
+    final api = context.read<AppState>().api;
     final nomController = TextEditingController();
     final quartierController = TextEditingController();
     final jourController = TextEditingController();
     final heureController = TextEditingController();
     String? responsableId;
+    Future<Member> creerMembre({
+      required String fullName,
+      String? phone,
+      String? email,
+    }) =>
+        api.createMember(fullName: fullName, phone: phone, email: email);
     await showCreateDialog(
       context: context,
       title: 'Nouvelle cellule',
       saveLabel: 'Créer la cellule',
       fields: [
-        dialogTextField(controller: nomController, label: 'Nom de la cellule'),
-        dialogTextField(controller: quartierController, label: 'Quartier'),
-        dialogDropdown<String?>(
-          value: responsableId,
-          label: 'Responsable',
-          options: {
-            null: 'Aucun',
-            for (final m in membres) m.id: '${m.fullName} (${m.matricule})',
-          },
-          onChanged: (v) => responsableId = v,
+        mentionChampsObligatoires,
+        dialogTextField(
+          controller: nomController,
+          label: 'Nom de la cellule *',
+          aide: 'Ex. Cellule de Yopougon',
         ),
-        dialogTextField(controller: jourController, label: 'Jour de réunion'),
-        dialogTextField(controller: heureController, label: 'Heure de réunion'),
+        dialogTextField(
+          controller: quartierController,
+          label: 'Quartier',
+          aide: 'Ex. Yopougon Selmer',
+        ),
+        ChampMembreChoisirCreer(
+          membres: membres,
+          valeur: responsableId,
+          onChanged: (v) => responsableId = v,
+          onCreerMembre: creerMembre,
+          onMembreCree: (m) => membres.add(m),
+          label: 'Responsable',
+          aide: 'Qui anime cette cellule ? Choisissez un membre de la '
+              'base, ou créez-le sur place s’il n’y est pas encore.',
+        ),
+        dialogTextField(
+          controller: jourController,
+          label: 'Jour de réunion',
+          aide: 'Ex. Mercredi',
+        ),
+        dialogTextField(
+          controller: heureController,
+          label: 'Heure de réunion',
+          aide: 'Ex. 18:30',
+        ),
       ],
-      isValid: () => nomController.text.trim().isNotEmpty,
+      isValid: () => nomController.text.trim().length >= 2,
+      messageInvalide: 'Entrez un nom de cellule (2 lettres au minimum).',
       onSave: () async {
         try {
           await context.read<AppState>().api.createCellule(

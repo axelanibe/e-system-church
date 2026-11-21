@@ -6,6 +6,7 @@ import '../models/cultes.dart';
 import '../models/member.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
+import '../widgets/champ_membre_choisir_creer.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/liste_avec_fab.dart';
 import '../widgets/dialog_helpers.dart';
@@ -147,18 +148,34 @@ class _CultesScreenState extends State<CultesScreen> {
     await ouvrirNouveauCulte(context, onCree: _refresh);
   }
   Future<void> _createEvenement() async {
+    final api = context.read<AppState>().api;
     final titreController = TextEditingController();
     final debutController = TextEditingController();
     final finController = TextEditingController();
     final descriptionController = TextEditingController();
     final lieuController = TextEditingController();
-    final responsableController = TextEditingController();
+    String? responsableNom;
     String type = 'autre';
+    // Membres de la base, pour « choisir ou créer » le responsable.
+    List<Member> membres = [];
+    try {
+      membres = (await api.getMembers(limit: 100)).membres;
+    } catch (_) {
+      // La liste est facultative : le nom libre suffit.
+    }
+    if (!mounted) return;
+    Future<Member> creerMembre({
+      required String fullName,
+      String? phone,
+      String? email,
+    }) =>
+        api.createMember(fullName: fullName, phone: phone, email: email);
     await showCreateDialog(
       context: context,
       title: 'Nouvel événement spécial',
       saveLabel: 'Créer',
       fields: [
+        mentionChampsObligatoires,
         dialogDropdown<String>(
           value: type,
           label: 'Type',
@@ -174,20 +191,41 @@ class _CultesScreenState extends State<CultesScreen> {
           },
           onChanged: (v) => type = v ?? 'autre',
         ),
-        dialogTextField(controller: titreController, label: 'Titre'),
+        dialogTextField(
+          controller: titreController,
+          label: 'Titre *',
+          aide: 'Ex. Mariage de Koné et Yao',
+        ),
         dialogDateField(
-            context: context, controller: debutController, label: 'Date de début'),
+            context: context, controller: debutController, label: 'Date de début *'),
         dialogDateField(
             context: context, controller: finController, label: 'Date de fin'),
         dialogTextField(
-            controller: descriptionController, label: 'Description'),
-        dialogTextField(controller: lieuController, label: 'Lieu'),
+          controller: descriptionController,
+          label: 'Description',
+          aide: 'Ce que les membres doivent savoir.',
+        ),
         dialogTextField(
-            controller: responsableController, label: 'Responsable'),
+          controller: lieuController,
+          label: 'Lieu',
+          aide: 'Ex. Temple principal',
+        ),
+        ChampResponsableNomLibre(
+          membres: membres,
+          valeurInitiale: null,
+          onChanged: (v) => responsableNom = v,
+          onCreerMembre: creerMembre,
+          onMembreCree: (m) => membres.add(m),
+          label: 'Responsable',
+          aide: 'Choisissez un membre de la base, créez-le s’il n’y est '
+              'pas, ou tapez un nom.',
+        ),
       ],
       isValid: () =>
-          titreController.text.trim().isNotEmpty &&
+          titreController.text.trim().length >= 2 &&
           debutController.text.trim().isNotEmpty,
+      messageInvalide:
+          'Entrez un titre (2 lettres au minimum) et une date de début.',
       onSave: () async {
         try {
           await context.read<AppState>().api.createEvenementSpecial(
@@ -199,7 +237,7 @@ class _CultesScreenState extends State<CultesScreen> {
                     : finController.text.trim(),
                 description: _opt(descriptionController),
                 lieu: _opt(lieuController),
-                responsable: _opt(responsableController),
+                responsable: responsableNom,
               );
           if (mounted) showSuccess(context, 'Événement créé.');
           _refresh();
@@ -566,17 +604,19 @@ Future<void> ouvrirNouveauCulte(BuildContext context,
     if (context.mounted) showApiError(context, e);
     return;
   }
-  if (membres.isEmpty) {
-    if (context.mounted) {
-      showApiError(context, 'Aucun membre — créez d’abord un membre.');
-    }
-    return;
-  }
+  // Plus de blocage quand la base est vide (Tranche Formulaires P0) :
+  // le conducteur se crée sur place, dans le dialogue.
   if (!context.mounted) return;
   final dateController = TextEditingController();
   final heureController = TextEditingController();
   final lieuController = TextEditingController();
   String? conducteurId;
+  Future<Member> creerMembre({
+    required String fullName,
+    String? phone,
+    String? email,
+  }) =>
+      api.createMember(fullName: fullName, phone: phone, email: email);
   await showCreateDialog(
     context: context,
     title: 'Nouveau culte',
@@ -589,20 +629,25 @@ Future<void> ouvrirNouveauCulte(BuildContext context,
           style: TextStyle(fontSize: 12.5),
         ),
       ),
+      mentionChampsObligatoires,
       dialogDateField(
           context: context, controller: dateController, label: 'Date *'),
       dialogTimeField(controller: heureController, label: 'Heure *'),
       dialogTextField(
           controller: lieuController,
           label: 'Lieu *',
-          hintText: 'Lieu du culte'),
-      dialogDropdown<String>(
-        value: conducteurId,
-        label: 'Conducteur *',
-        options: {
-          for (final m in membres) m.id: '${m.fullName} (${m.matricule})',
-        },
+          hintText: 'Lieu du culte',
+          aide: 'Ex. Temple principal'),
+      ChampMembreChoisirCreer(
+        membres: membres,
+        valeur: conducteurId,
         onChanged: (v) => conducteurId = v,
+        onCreerMembre: creerMembre,
+        onMembreCree: (m) => membres.add(m),
+        label: 'Conducteur',
+        obligatoire: true,
+        aide: 'Qui conduit ce culte ? Choisissez un membre de la base, '
+            'ou créez-le sur place s’il n’y est pas encore.',
       ),
     ],
     isValid: () =>
@@ -610,6 +655,8 @@ Future<void> ouvrirNouveauCulte(BuildContext context,
         heureController.text.trim().isNotEmpty &&
         lieuController.text.trim().isNotEmpty &&
         conducteurId != null,
+    messageInvalide:
+        'Choisissez une date, une heure, un lieu et un conducteur.',
     onSave: () async {
       try {
         final date = parseDate(dateController.text.trim())!;
