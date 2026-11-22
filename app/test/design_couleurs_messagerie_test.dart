@@ -95,6 +95,12 @@ Future<void> _pomperAccueil(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 500));
   await tester.pump(const Duration(milliseconds: 500));
   await tester.pumpAndSettle();
+  // L'accueil n'attend plus le chargement des lectures de messagerie
+  // (carte Messagerie retirée, 21 nov. 2026) : la pastille de l'onglet
+  // charge seule, avec un délai de 2 s. On avance l'horloge factice
+  // pour que ce chargement se termine, sinon un minuteur reste en
+  // attente en fin de test.
+  await tester.pump(const Duration(seconds: 3));
   // L'accueil déborde dans l'environnement de test (police de test
   // plus large que la vraie) : on purge ces débordements antérieurs,
   // la vérification finale garde les erreurs de l'interaction.

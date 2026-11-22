@@ -42,6 +42,11 @@ class _CampagnesScreenState extends State<CampagnesScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   late Future<List<Campagne>> _future;
+  // Doublon (21 nov. 2026) : la pastille « Nouvelle campagne » ne
+  // s'affiche que si la liste n'est pas vide — sinon le bouton de
+  // l'état vide est le seul point d'entrée. Motif repris de
+  // activites_screen.dart (`_listeVide ? null`).
+  bool _campagnesVides = false;
 
   @override
   void initState() {
@@ -215,12 +220,20 @@ class _CampagnesScreenState extends State<CampagnesScreen>
             onCreate: _create,
             statutColor: _statutColor,
             canManageFinances: state.canManageFinances,
+            campagnesVides: _campagnesVides,
+            onVideChanged: (vide) {
+              if (vide != _campagnesVides) {
+                setState(() => _campagnesVides = vide);
+              }
+            },
           ),
           const _BudgetTab(),
         ],
       ),
       floatingActionButton:
-          _tabController.index == 0 && state.canManageFinances
+          _tabController.index == 0 &&
+                  state.canManageFinances &&
+                  !_campagnesVides
               ? FloatingActionButton.extended(
                   onPressed: _create,
                   icon: const Icon(Icons.add),
@@ -240,6 +253,8 @@ class _CampagneTab extends StatelessWidget {
   final VoidCallback onCreate;
   final Color Function(String) statutColor;
   final bool canManageFinances;
+  final bool campagnesVides;
+  final ValueChanged<bool> onVideChanged;
 
   const _CampagneTab({
     required this.future,
@@ -250,6 +265,8 @@ class _CampagneTab extends StatelessWidget {
     required this.onCreate,
     required this.statutColor,
     required this.canManageFinances,
+    required this.campagnesVides,
+    required this.onVideChanged,
   });
 
   @override
@@ -267,6 +284,14 @@ class _CampagneTab extends StatelessWidget {
           );
         }
         final campagnes = snapshot.data!;
+        // Doublon (21 nov. 2026) : signale au parent que la liste est
+        // vide pour masquer la pastille. Motif repris de
+        // activites_screen.dart (mise à jour hors build).
+        if (campagnes.isEmpty != campagnesVides) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            onVideChanged(campagnes.isEmpty);
+          });
+        }
         if (campagnes.isEmpty) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
