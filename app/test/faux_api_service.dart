@@ -53,6 +53,7 @@ import 'package:esystem_church/models/rsvp.dart';
 import 'package:esystem_church/models/serviteurs.dart';
 import 'package:esystem_church/models/stats.dart';
 import 'package:esystem_church/models/sycebnl.dart';
+import 'package:esystem_church/models/temoignage.dart';
 import 'package:esystem_church/models/transfert.dart';
 import 'package:esystem_church/models/us_restantes.dart';
 import 'package:esystem_church/services/api_service.dart';
@@ -1487,6 +1488,118 @@ class FauxApiService implements ApiService {
     await _latence();
     _requireAuth();
     jetonsPushRetires.add(jeton);  }
+
+  // -- Témoignages (lot 3c) : en mémoire, comme le reste du faux
+  // service. « Mes témoignages » renvoie tous les témoignages
+  // définis (la démo ne distingue pas l'auteur), le fil seulement les
+  // approuvés, la modération seulement les en attente.
+  final List<Temoignage> _temoignages = [];
+
+  /// Remplace les témoignages visibles en démo. Sert aux tests de la
+  /// page Témoignages, pour figer un fil, des témoignages à modérer ou
+  /// l'absence de témoignage.
+  void definirTemoignages(List<Temoignage> temoignages) {
+    _temoignages
+      ..clear()
+      ..addAll(temoignages);
+  }
+
+  @override
+  Future<TemoignagesPageData> getTemoignages() async {
+    await _latence();
+    _requireAuth();
+    return TemoignagesPageData(
+      fil: _temoignages.where((t) => t.approuve).toList(),
+      miens: List.unmodifiable(_temoignages),
+      moderation: _temoignages.where((t) => t.enAttente).toList(),
+    );
+  }
+
+  @override
+  Future<Temoignage> publierTemoignage({
+    String? texte,
+    Uint8List? mediaOctets,
+    String? mediaNom,
+    String? mediaMime,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final textePropre = (texte ?? '').trim();
+    if (textePropre.isEmpty && mediaOctets == null) {
+      throw const ApiException('Ajoutez un texte ou un média (démo).');
+    }
+    if (textePropre.length > longueurMaxTexteTemoignage) {
+      throw const ApiException('Texte trop long : 2000 caractères au plus (démo).');
+    }
+    final typeMedia = mediaOctets == null
+        ? 'texte'
+        : (mediaMime ?? '').startsWith('image/')
+            ? 'photo'
+            : (mediaMime ?? '').startsWith('video/')
+                ? 'video'
+                : 'audio';
+    final temoignage = Temoignage(
+      id: 'demo-tem-${DateTime.now().millisecondsSinceEpoch}',
+      auteurNom: 'Membre EXEMPLE',
+      urlMedia: mediaOctets == null ? null : '/temoignages/demo/media',
+      texte: textePropre,
+      typeMedia: typeMedia,
+      statut: 'en_attente',
+      creeLe: DateTime.now(),
+    );
+    _temoignages.add(temoignage);
+    return temoignage;
+  }
+
+  @override
+  Future<Temoignage> modererTemoignage(
+    String id,
+    String statut, {
+    String? motifRejet,
+  }) async {
+    await _latence();
+    _requireAuth();
+    if (!statutsTemoignage.contains(statut) || statut == 'en_attente') {
+      throw const ApiException('Statut de modération invalide (démo).');
+    }
+    final index = _temoignages.indexWhere((t) => t.id == id);
+    if (index < 0) {
+      throw const ApiException('Témoignage introuvable (démo).', 404);
+    }
+    final ancien = _temoignages[index];
+    if (!ancien.enAttente) {
+      throw const ApiException('Témoignage déjà modéré (démo).', 409);
+    }
+    final modere = Temoignage(
+      id: ancien.id,
+      auteurNom: ancien.auteurNom,
+      urlMedia: ancien.urlMedia,
+      texte: ancien.texte,
+      typeMedia: ancien.typeMedia,
+      statut: statut,
+      creeLe: ancien.creeLe,
+    );
+    _temoignages[index] = modere;
+    return modere;
+  }
+
+  @override
+  Future<void> supprimerTemoignage(String id) async {
+    await _latence();
+    _requireAuth();
+    final index = _temoignages.indexWhere((t) => t.id == id);
+    if (index < 0) {
+      throw const ApiException('Témoignage introuvable (démo).', 404);
+    }
+    _temoignages.removeAt(index);
+  }
+
+  @override
+  String urlMediaTemoignage(Temoignage temoignage) {
+    final chemin = temoignage.urlMedia;
+    if (chemin == null || chemin.isEmpty) return '';
+    return '$baseUrl$chemin?token=faux-jeton';
+  }
 
   @override
   Future<void> confirmerPresenceCulte(String culteId) async {

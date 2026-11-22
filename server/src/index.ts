@@ -58,6 +58,7 @@ import { registerGouvernanceRoutes } from "./routes/gouvernance.js";
 import { registerSignaturesRoutes } from "./routes/signatures.js";
 import { registerConfianceRoutes } from "./routes/confiance.js";
 import { registerUsRestantesRoutes } from "./routes/us_restantes.js";
+import { registerTemoignagesRoutes } from "./routes/temoignages.js";
 
 export function buildApp(db: Pool) {
   const app = Fastify({ logger: true });
@@ -200,6 +201,7 @@ export function buildApp(db: Pool) {
   registerSignaturesRoutes(app, db);
   registerConfianceRoutes(app, db);
   registerUsRestantesRoutes(app, db);
+  registerTemoignagesRoutes(app, db);
 
   app.setNotFoundHandler((_req, reply) => {
     reply.code(404).send({ error: "not_found", message: "Route inconnue." });

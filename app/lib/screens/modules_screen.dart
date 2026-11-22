@@ -17,11 +17,13 @@ import 'prieres_screen.dart';
 import 'rapports_recus_screen.dart';
 import 'rendez_vous_admin_screen.dart';
 import 'serviteurs_screen.dart';
+import 'temoignages_screen.dart';
 
 /// Modules de l'église (maquette Membres Finances, écran 21) : grille
-/// de 15 cartes, les 13 de la maquette plus « Identité
-/// institutionnelle » (phase 2), en dernière position, et « Activités »
-/// (V1, migration 039), après « Cultes en direct » : la maquette ne
+/// de 16 cartes, les 13 de la maquette plus « Identité
+/// institutionnelle » (phase 2), en dernière position, « Activités »
+/// (V1, migration 039), après « Cultes en direct », et « Témoignages »
+/// (lot 3c, migration 041), après « Prières » : la maquette ne
 /// parle d'aucune carte Activités, c'est le placement retenu. La carte
 /// « Messagerie » ajoutée par la tranche T-Msg-1 a été retirée
 /// (design couleurs messagerie, 16 nov. 2026) : la messagerie est
@@ -103,6 +105,12 @@ class ModulesScreen extends StatelessWidget {
       'Prières',
       'Demandes de prière des membres',
       Icons.favorite_outline,
+    ),
+    (
+      'temoignages',
+      'Témoignages',
+      'Témoignages des membres, modérés par l’église.',
+      Icons.mic_outlined,
     ),
     (
       'annexes',
@@ -191,6 +199,8 @@ class ModulesScreen extends StatelessWidget {
         _pousser(context, const PatrimoineScreen());
       case 'prieres':
         _pousser(context, const PrieresScreen());
+      case 'temoignages':
+        _pousser(context, const TemoignagesScreen());
       case 'messages':
         // Écran admin de messages dédié (maquette, écran 31).
         _pousser(context, const MessagesAdminScreen());
