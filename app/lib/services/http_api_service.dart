@@ -50,6 +50,7 @@ import '../models/rattachement.dart';
 import '../models/serviteurs.dart';
 import '../models/stats.dart';
 import '../models/sycebnl.dart';
+import '../models/temoignage.dart';
 import '../models/us_restantes.dart';
 import 'api_service.dart';
 import 'bible_hors_ligne_service.dart';
@@ -115,6 +116,7 @@ class HttpApiService implements ApiService {
     Map<String, dynamic>? body,
     Map<String, String>? query,
     bool rafraichir = true,
+    Duration delai = const Duration(seconds: 20),
   }) async {
     final uri = Uri.parse('$baseUrl$path')
         .replace(queryParameters: query?.isEmpty ?? true ? null : query);
@@ -125,25 +127,25 @@ class HttpApiService implements ApiService {
         case 'GET':
           res = await _client
               .get(uri, headers: headers)
-              .timeout(const Duration(seconds: 20));
+              .timeout(delai);
         case 'POST':
           res = await _client
               .post(uri,
                   headers: headers,
                   body: body == null ? null : jsonEncode(body))
-              .timeout(const Duration(seconds: 20));
+              .timeout(delai);
         case 'PATCH':
           res = await _client
               .patch(uri,
                   headers: headers,
                   body: body == null ? null : jsonEncode(body))
-              .timeout(const Duration(seconds: 20));
+              .timeout(delai);
         case 'DELETE':
           res = await _client
               .delete(uri,
                   headers: headers,
                   body: body == null ? null : jsonEncode(body))
-              .timeout(const Duration(seconds: 20));
+              .timeout(delai);
         default:
           throw const ApiException('Méthode HTTP inconnue.');
       }
@@ -180,7 +182,7 @@ class HttpApiService implements ApiService {
         path != '/auth/login') {
       if (await _rafraichir()) {
         return _call(method, path,
-            body: body, query: query, rafraichir: false);
+            body: body, query: query, rafraichir: false, delai: delai);
       }
     }
     throw ApiException(
@@ -605,6 +607,68 @@ class HttpApiService implements ApiService {
       body: {'content': content, 'type': 'text'},
     );
     return MessageMessagerie.fromJson(data);
+  }
+
+  // -- Témoignages (lot 3c) -------------------------------------------------
+  @override
+  Future<TemoignagesPageData> getTemoignages() async =>
+      TemoignagesPageData.fromJson(await _call('GET', '/temoignages'));
+
+  @override
+  Future<Temoignage> publierTemoignage({
+    String? texte,
+    Uint8List? mediaOctets,
+    String? mediaNom,
+    String? mediaMime,
+  }) async {
+    final data = await _call(
+      'POST',
+      '/temoignages',
+      // Une vidéo de 25 Mo part en base64 (~33 Mo) : le délai de 20 s
+      // des appels courants est trop court sur une connexion lente.
+      delai: const Duration(seconds: 120),
+      body: {
+        if (texte != null && texte.trim().isNotEmpty) 'texte': texte.trim(),
+        if (mediaOctets != null) ...{
+          'media_base64': base64Encode(mediaOctets),
+          if (mediaMime != null) 'media_mime': mediaMime,
+          if (mediaNom != null) 'media_nom': mediaNom,
+        },
+      },
+    );
+    return Temoignage.fromJson(data);
+  }
+
+  @override
+  Future<Temoignage> modererTemoignage(
+    String id,
+    String statut, {
+    String? motifRejet,
+  }) async =>
+      Temoignage.fromJson(await _call(
+        'POST',
+        '/temoignages/$id/moderer',
+        body: {
+          'statut': statut,
+          if (motifRejet != null && motifRejet.trim().isNotEmpty)
+            'motif_rejet': motifRejet.trim(),
+        },
+      ));
+
+  @override
+  Future<void> supprimerTemoignage(String id) async {
+    await _call('DELETE', '/temoignages/$id');
+  }
+
+  @override
+  String urlMediaTemoignage(Temoignage temoignage) {
+    final chemin = temoignage.urlMedia;
+    if (chemin == null || chemin.isEmpty) return '';
+    final jeton = _token;
+    if (jeton == null || jeton.isEmpty) return '$baseUrl$chemin';
+    return Uri.parse('$baseUrl$chemin')
+        .replace(queryParameters: {'token': jeton})
+        .toString();
   }
 
   /// Notifications push (tranche push FCM) : enregistrement du jeton

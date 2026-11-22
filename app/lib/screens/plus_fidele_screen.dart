@@ -11,6 +11,7 @@ import 'journal_screen.dart';
 import 'mes_attestations_screen.dart';
 import 'parametres_fidele_screen.dart';
 import 'rendez_vous_screen.dart';
+import 'temoignages_screen.dart';
 import 'transparence_screen.dart';
 
 /// Menu Plus du fidèle (tranches P1, P2, P4).
@@ -82,6 +83,15 @@ class PlusFideleScreen extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const MesAttestationsScreen(),
+                  ),
+                ),
+              ),
+              _LigneMenu(
+                icone: Icons.mic_outlined,
+                titre: 'Témoignages',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const TemoignagesScreen(),
                   ),
                 ),
               ),
