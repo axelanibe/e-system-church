@@ -1797,3 +1797,24 @@ DO $$ DECLARE c text; BEGIN
     EXECUTE 'ALTER TABLE membre_statuts DROP CONSTRAINT ' || quote_ident(c);
   END LOOP;
 END $$;
+
+-- Chaîne de prière (lot 3d, migration 042) : miroir de la migration,
+-- comme les tables des migrations anciennes repliées ici. 24 créneaux
+-- d'une heure par jour, un membre par créneau, un créneau par membre
+-- et par jour, isolation par church_id. Sur une base existante, c'est
+-- la migration 042 qui crée la table ; ce miroir ne sert qu'aux bases
+-- fraîches, avant `npm run migrate`.
+CREATE TABLE IF NOT EXISTS creneaux_priere (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id   UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    member_id   UUID NOT NULL REFERENCES members (id) ON DELETE CASCADE,
+    jour        DATE NOT NULL,
+    heure       SMALLINT NOT NULL CHECK (heure BETWEEN 0 AND 23),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_creneaux_priere_creneau
+        UNIQUE (church_id, jour, heure),
+    CONSTRAINT uq_creneaux_priere_membre_jour
+        UNIQUE (church_id, member_id, jour)
+);
+CREATE INDEX IF NOT EXISTS idx_creneaux_priere_church_jour
+    ON creneaux_priere (church_id, jour, heure);

@@ -45,6 +45,7 @@ import 'package:esystem_church/models/plateforme.dart';
 import 'package:esystem_church/models/acces_plateforme.dart';
 import 'package:esystem_church/models/presences.dart';
 import 'package:esystem_church/models/prieres.dart';
+import 'package:esystem_church/models/chaine_priere.dart';
 import 'package:esystem_church/models/profil.dart';
 import 'package:esystem_church/models/rapport.dart';
 import 'package:esystem_church/models/rapport_annexe.dart';
@@ -3198,6 +3199,98 @@ class FauxApiService implements ApiService {
     await _latence();
     _requireAuth();
     return List.unmodifiable(_visible(_data.messages, (e) => e.id));
+  }
+
+  // -- Chaîne de prière (lot 3d, TESTS UNIQUEMENT) --------------------------
+  // État en mémoire, par jour : les créneaux pris. Le membre connecté
+  // en démo est 'demo-m-001' (Awa Koné), comme pour les présences et
+  // les contributions. `definirChainePriere` fige l'état pour les
+  // tests ; sans appel, la chaîne est vide et le jour courant est
+  // aujourd'hui.
+  final Map<String, List<CreneauPriere>> _chainePriereParJour = {};
+  String? _chainePriereAujourdHui;
+
+  /// Remplace les créneaux pris de `jour` (AAAA-MM-JJ, aujourd'hui par
+  /// défaut) et le jour courant servi. Sert aux tests de la chaîne de
+  /// prière, pour figer des créneaux pris ou l'absence de créneau.
+  void definirChainePriere(
+    List<CreneauPriere> creneaux, {
+    String? jour,
+    String? aujourdHui,
+  }) {
+    final cle = jour ?? _jourCourantFaux();
+    _chainePriereParJour[cle] = List.of(creneaux);
+    if (aujourdHui != null) _chainePriereAujourdHui = aujourdHui;
+  }
+
+  String _jourCourantFaux() {
+    final maintenant = DateTime.now();
+    return '${maintenant.year}-${maintenant.month.toString().padLeft(2, '0')}-${maintenant.day.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Future<ChainePriereJour> getChainePriere({String? jour}) async {
+    await _latence();
+    _requireAuth();
+    final aujourdHui = _chainePriereAujourdHui ?? _jourCourantFaux();
+    final cle = jour ?? aujourdHui;
+    final pris = _chainePriereParJour[cle] ?? const <CreneauPriere>[];
+    return ChainePriereJour.fromJson({
+      'jour': cle,
+      'aujourd_hui': aujourdHui,
+      'heures_couvertes': pris.length,
+      'mon_member_id': 'demo-m-001',
+      'creneaux': [
+        for (final c in pris)
+          {'heure': c.heure, 'member_id': c.memberId, 'prenom': c.prenom},
+      ],
+    });
+  }
+
+  @override
+  Future<void> prendreCreneauPriere({required int heure, String? jour}) async {
+    await _latence();
+    _requireAuth();
+    final aujourdHui = _chainePriereAujourdHui ?? _jourCourantFaux();
+    final cle = jour ?? aujourdHui;
+    if (heure < 0 || heure > 23) {
+      throw const ApiException('Créneau invalide : une heure de 0 à 23.');
+    }
+    if (cle.compareTo(aujourdHui) < 0) {
+      throw const ApiException(
+          'Ce jour est passé : la chaîne de prière est en lecture seule.');
+    }
+    final pris = _chainePriereParJour.putIfAbsent(cle, () => []);
+    if (pris.any((c) => c.heure == heure)) {
+      throw const ApiException('Ce créneau est déjà pris par un autre membre.');
+    }
+    if (pris.any((c) => c.memberId == 'demo-m-001')) {
+      throw const ApiException('Vous avez déjà pris un créneau ce jour-là.');
+    }
+    pris.add(CreneauPriere(heure: heure, memberId: 'demo-m-001', prenom: 'Awa'));
+  }
+
+  @override
+  Future<void> libererCreneauPriere({required int heure, String? jour}) async {
+    await _latence();
+    _requireAuth();
+    final aujourdHui = _chainePriereAujourdHui ?? _jourCourantFaux();
+    final cle = jour ?? aujourdHui;
+    if (heure < 0 || heure > 23) {
+      throw const ApiException('Créneau invalide : une heure de 0 à 23.');
+    }
+    if (cle.compareTo(aujourdHui) < 0) {
+      throw const ApiException(
+          'Ce jour est passé : la chaîne de prière est en lecture seule.');
+    }
+    final pris = _chainePriereParJour[cle] ?? const <CreneauPriere>[];
+    final i = pris.indexWhere(
+        (c) => c.heure == heure && c.memberId == 'demo-m-001');
+    if (i < 0) {
+      throw const ApiException(
+          'Créneau introuvable, ou il ne vous appartient pas.', 404);
+    }
+    _chainePriereParJour[cle] = pris.where((c) => c.heure != heure).toList();
   }
 
   @override

@@ -59,6 +59,9 @@ toute migration « 001bis » casserait la traçabilité.
 | Numéro | Raison |
 |---|---|
 | 017 | Trou historique dans la numérotation (aucun fichier 017). |
+| 038 | Réservé à la phase 3 du module identité (modèles de carte, émissions, modèles de document, documents générés) — voir la migration 039. |
+| 040 | Réservé par la PR #154 ouverte (« Je serai présent », RSVP) — pas encore sur main au 22/11/2026. |
+| 041 | Réservé par le lot 3c Témoignages — implémenté et vérifié, pas encore poussé sur main au 22/11/2026. |
 
 Le numéro 035, anciennement réservé par la PR #127 (push FCM, non fusionnée), est comblé par la PR #128 (`035_jetons_appareil_fcm.sql`, jetons d'appareil FCM).
 

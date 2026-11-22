@@ -35,6 +35,7 @@ import '../models/parametres.dart';
 import '../models/pastoral.dart';
 import '../models/presences.dart';
 import '../models/prieres.dart';
+import '../models/chaine_priere.dart';
 import '../models/profil.dart';
 import '../models/plateforme.dart';
 import '../models/acces_plateforme.dart';
@@ -766,6 +767,14 @@ abstract class ApiService {
     required String corps,
     String? destinataireId,
   });
+
+  // -- Chaîne de prière (lot 3d) : 24 créneaux d'une heure par jour. --
+  // `jour` en AAAA-MM-JJ ; sans jour, le jour courant de l'église.
+  Future<ChainePriereJour> getChainePriere({String? jour});
+
+  Future<void> prendreCreneauPriere({required int heure, String? jour});
+
+  Future<void> libererCreneauPriere({required int heure, String? jour});
 
   // -- Suivi pastoral (module 6) ---------------------------------------------
   Future<List<ParcoursNouveau>> getParcoursNouveaux({String? etape});

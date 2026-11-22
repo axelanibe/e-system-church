@@ -9,6 +9,7 @@ import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/liste_avec_fab.dart';
 import '../widgets/dialog_helpers.dart';
+import 'chaine_priere_screen.dart';
 
 /// Module 5 — Demandes de prière et messages internes.
 class PrieresScreen extends StatefulWidget {
@@ -471,7 +472,7 @@ class _PrieresScreenState extends State<PrieresScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Prières'),
@@ -485,6 +486,7 @@ class _PrieresScreenState extends State<PrieresScreen> {
             tabs: const [
               Tab(text: 'Demandes de prière'),
               Tab(text: 'Messages internes'),
+              Tab(text: 'Chaîne de prière'),
             ],
           ),
         ),
@@ -508,11 +510,15 @@ class _PrieresScreenState extends State<PrieresScreen> {
               children: [
                 _demandesTab(membres),
                 _messagesTab(membres),
+                const ChainePriereContenu(),
               ],
             );
           },
         ),
-        floatingActionButton: ((_tab == 0 && _demandesVides) ||
+        // L'onglet Chaîne de prière n'a pas de bouton d'action
+        // global : prendre ou libérer se fait sur chaque créneau.
+        floatingActionButton: ((_tab == 2) ||
+                (_tab == 0 && _demandesVides) ||
                 (_tab == 1 && _messagesVides))
             ? null
             : FloatingActionButton.extended(
