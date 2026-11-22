@@ -60,6 +60,7 @@ import { registerSignaturesRoutes } from "./routes/signatures.js";
 import { registerConfianceRoutes } from "./routes/confiance.js";
 import { registerUsRestantesRoutes } from "./routes/us_restantes.js";
 import { registerTemoignagesRoutes } from "./routes/temoignages.js";
+import { limiterInscriptionParCode } from "./rate_limit.js";
 
 export function buildApp(db: Pool) {
   const app = Fastify({ logger: true });
@@ -154,6 +155,13 @@ export function buildApp(db: Pool) {
       }
     },
   );
+
+  // Limitation de débit sur l'auto-inscription par code fidèle (le code
+  // ESC-F-XXXX ne compte que 10 000 valeurs : sans limite, un balayage
+  // anonyme l'énumère en quelques secondes). 20 tentatives par IP et par
+  // fenêtre de 15 minutes ; au-delà, 429 avec Retry-After. Le crochet est
+  // filtré sur la seule route concernée, les autres routes ne voient rien.
+  app.addHook("onRequest", limiterInscriptionParCode);
 
   registerAuthRoutes(app, db);
   registerMotDePasseRoutes(app, db);

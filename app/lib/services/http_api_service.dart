@@ -78,6 +78,18 @@ class HttpApiService implements ApiService {
   /// pour que l'appelant persiste les deux. Jamais appelée sur un échec.
   void Function(String token, String? refreshToken)? onTokensRefreshed;
 
+  /// Appelée quand la session est confirmée expirée (401 sur
+  /// `/auth/refresh` pour le jeton de rafraîchissement courant) : l'appelant
+  /// déconnecte proprement au lieu de laisser une session zombie.
+  /// Jamais appelée sur un échec réseau ou un 401 portant sur un jeton
+  /// déjà remplacé par une rotation plus récente.
+  Future<void> Function()? onSessionExpiree;
+
+  /// Rotation en cours partagée (single-flight) : un seul POST
+  /// `/auth/refresh` en vol par expiration ; les appelants concurrents
+  /// attendent la même promesse au lieu d'émettre chacun la leur.
+  Future<AuthResult?>? _refreshEnCours;
+
   HttpApiService(
       {required this.baseUrl,
       String? token,
@@ -210,11 +222,35 @@ class HttpApiService implements ApiService {
       return result;
     } on ApiException catch (e) {
       if (e.statusCode == 401) {
-        _token = null;
-        _refreshToken = null;
+        // N'annuler que si le jeton qui a échoué est encore le jeton
+        // courant : une rotation réussie entre-temps a déjà remplacé les
+        // deux jetons, il ne faut pas les effacer. `identical` compare
+        // les références (le champ n'est que réassigné, jamais muté).
+        if (identical(_refreshToken, refreshToken)) {
+          _token = null;
+          _refreshToken = null;
+          unawaited(onSessionExpiree?.call());
+        }
         return null;
       }
       rethrow;
+    }
+  }
+
+  /// Rotation partagée (single-flight) : si une rotation est déjà en cours,
+  /// les appelants concurrents attendent la même promesse au lieu d'émettre
+  /// chacun leur propre POST `/auth/refresh` avec le même ancien jeton
+  /// (le second serait rejeté en 401 par le serveur comme un rejeu, et
+  /// révoquerait tous les jetons de l'utilisateur).
+  Future<AuthResult?> _rafraichirPartage() async {
+    final enCours = _refreshEnCours;
+    if (enCours != null) return enCours;
+    final futur = _refreshCall();
+    _refreshEnCours = futur;
+    try {
+      return await futur;
+    } finally {
+      if (identical(_refreshEnCours, futur)) _refreshEnCours = null;
     }
   }
 
@@ -222,7 +258,7 @@ class HttpApiService implements ApiService {
   /// Renvoie faux si la session est expirée ou injoignable.
   Future<bool> _rafraichir() async {
     try {
-      return await _refreshCall() != null;
+      return await _rafraichirPartage() != null;
     } catch (_) {
       return false;
     }
@@ -230,7 +266,7 @@ class HttpApiService implements ApiService {
 
   @override
   Future<AuthResult> refresh() async {
-    final result = await _refreshCall();
+    final result = await _rafraichirPartage();
     if (result == null) {
       throw const ApiException(
           'Session expirée. Connectez-vous à nouveau.', 401);
