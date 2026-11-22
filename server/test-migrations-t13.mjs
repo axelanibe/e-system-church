@@ -9,11 +9,8 @@
 //      après lui dans l'ordre global (db/schema.sql puis migrations
 //      triées). C'est le motif exact du bug 028.
 //   2. Statique, sans base : les numéros en double sont exactement
-//      001, 005 et 011, et les numéros manquants exactement 017, 038,
-//      040 et 041 (documentés : 017 réservé à Phoenix, 038 à la phase
-//      3 identité, 040 à la PR #154 ouverte « Je serai présent »
-//      (RSVP), 041 au lot 3c Témoignages, implémenté mais pas encore
-//      sur main — vus depuis main, qui s'arrête à 039)
+//      001, 005 et 011, et les numéros manquants exactement 017 et 038
+//      (documentés : 017 réservé à Phoenix, 038 à la phase 3 identité)
 //      (voir db/migrations/README.md). Tout nouveau doublon ou trou
 //      fait échouer le test : il faut alors le documenter dans le
 //      README avant de fusionner.
@@ -144,8 +141,8 @@ for (let i = 1; i <= max; i++) {
   if (!parNumero[i]) manquants.push(i);
 }
 check(
-  "numéro manquant exactement 017, 038, 040 et 041 (documentés)",
-  JSON.stringify(manquants) === JSON.stringify([17, 38, 40, 41]),
+  "numéro manquant exactement 017 et 038 (documentés)",
+  JSON.stringify(manquants) === JSON.stringify([17, 38]),
   `trouvés : ${manquants.join(", ") || "aucun"}`,
 );
 

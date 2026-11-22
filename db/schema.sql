@@ -1798,6 +1798,33 @@ DO $$ DECLARE c text; BEGIN
   END LOOP;
 END $$;
 
+-- ===========================================================================
+-- Migration 041 — Témoignages (lot 3c, 22 novembre 2026).
+-- Miroir pour les nouvelles bases. Les migrations restent la référence ;
+-- ce miroir ne sert qu'au schéma initial (voir server/src/migrate.ts).
+-- ===========================================================================
+CREATE TABLE IF NOT EXISTS temoignages (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id        UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    auteur_user_id   UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    auteur_member_id UUID REFERENCES members (id) ON DELETE SET NULL,
+    auteur_nom       TEXT NOT NULL,
+    texte            TEXT NOT NULL DEFAULT '',
+    type_media       TEXT NOT NULL CHECK (type_media IN ('texte', 'photo', 'video', 'audio')),
+    type_mime        TEXT,
+    media_octets     BYTEA,
+    media_nom        TEXT,
+    statut           TEXT NOT NULL DEFAULT 'en_attente'
+                       CHECK (statut IN ('en_attente', 'approuve', 'rejete')),
+    motif_rejet      TEXT,
+    cree_le          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    modere_le        TIMESTAMPTZ,
+    modere_par       UUID REFERENCES users (id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_temoignages_church_statut
+    ON temoignages (church_id, statut, cree_le DESC);
+CREATE INDEX IF NOT EXISTS idx_temoignages_auteur
+    ON temoignages (auteur_user_id, cree_le DESC);
 -- Chaîne de prière (lot 3d, migration 042) : miroir de la migration,
 -- comme les tables des migrations anciennes repliées ici. 24 créneaux
 -- d'une heure par jour, un membre par créneau, un créneau par membre
