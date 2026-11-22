@@ -184,21 +184,16 @@ class _AnnexesScreenState extends State<AnnexesScreen> {
                 onRetry: () => _load(q: _recherche.text.trim()),
               )
             else if (_annexes.isEmpty)
+              // Doublon (Tranche 4, 21 nov. 2026) : l'état vide ne
+              // propose plus « Voir les demandes de rattachement » —
+              // la carte « Gérer les annexes » ci-dessus contient
+              // déjà cette entrée en permanence. Une seule entrée
+              // par fonctionnalité (motif PR #151).
               EmptyState(
                 icon: Icons.account_tree_outlined,
                 message: _recherche.text.trim().isNotEmpty
                     ? 'Aucune annexe ne correspond à « ${_recherche.text.trim()} ».'
                     : 'Aucune annexe rattachée.',
-                actionLabel: _recherche.text.trim().isNotEmpty
-                    ? null
-                    : 'Voir les demandes de rattachement',
-                onAction: _recherche.text.trim().isNotEmpty
-                    ? null
-                    : () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const RattachementsScreen(),
-                          ),
-                        ),
               )
             else
               ListView.builder(

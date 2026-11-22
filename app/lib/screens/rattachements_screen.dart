@@ -180,8 +180,12 @@ class _RattachementsScreenState extends State<RattachementsScreen> {
                                   expectedPrefix: 'ESC-'),
                             ],
                             decoration: const InputDecoration(
-                              labelText: 'Code de l’église mère',
+                              labelText: 'Code de l’église mère *',
                               hintText: 'Saisir le code',
+                              helperText:
+                                  'Ex. ESC-T-AB12CD (code de tutelle) ou '
+                                  'ESC-1234 (code permanent de la mère).',
+                              helperMaxLines: 2,
                               border: OutlineInputBorder(),
                             ),
                           ),

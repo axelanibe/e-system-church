@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import '../utils/format.dart';
 
 /// Champ de saisie standard pour les dialogues de création des modules.
+/// [aide] : aide concrète sous le libellé (exemple plutôt que règle,
+/// inspiration e-justice.ci — Tranche Formulaires P0, 21/11/2026).
 Widget dialogTextField({
   required TextEditingController controller,
   required String label,
   TextInputType keyboardType = TextInputType.text,
   String? hintText,
+  String? aide,
   int maxLines = 1,
   bool obscureText = false,
 }) {
@@ -21,12 +24,24 @@ Widget dialogTextField({
       decoration: InputDecoration(
         labelText: label,
         hintText: hintText,
+        helperText: aide,
+        helperMaxLines: 2,
         border: const OutlineInputBorder(),
         isDense: true,
       ),
     ),
   );
 }
+
+/// Mention en tête de formulaire : « (*) Champs obligatoires »
+/// (inspiration e-justice.ci, Tranche Formulaires P0).
+const Widget mentionChampsObligatoires = Padding(
+  padding: EdgeInsets.only(bottom: 12),
+  child: Text(
+    '(*) Champs obligatoires',
+    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+  ),
+);
 
 /// Champ de date avec bouton calendrier qui remplit le champ.
 /// Le champ affiche la date en français (jj/mm/aaaa) ; le [controller]
@@ -207,11 +222,15 @@ Future<bool> confirmDelete(BuildContext context, String message) async {
 }
 
 /// Petit menu déroulant de choix simple (valeur → libellé).
+/// [aide] : aide concrète sous le libellé (Tranche Formulaires P0).
+/// Réservé aux courtes listes (2 à 7 choix) : pour les longues listes
+/// (membres…), utiliser le sélecteur avec recherche.
 Widget dialogDropdown<T>({
   required T? value,
   required String label,
   required Map<T, String> options,
   required ValueChanged<T?> onChanged,
+  String? aide,
 }) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 12),
@@ -223,6 +242,8 @@ Widget dialogDropdown<T>({
       menuMaxHeight: 300,
       decoration: InputDecoration(
         labelText: label,
+        helperText: aide,
+        helperMaxLines: 2,
         border: const OutlineInputBorder(),
         isDense: true,
       ),
@@ -265,6 +286,9 @@ Widget searchField({
 
 /// Affiche un dialogue de création/édition : [fields] puis Annuler/Valider.
 /// [onSave] n'est appelé que si [isValid] est vrai.
+/// [messageInvalide] : message précis affiché quand [isValid] est faux
+/// (« Entrez un nom de famille… »), au lieu du générique par défaut
+/// (Tranche Formulaires P0 : messages d'erreur précis, pas génériques).
 ///
 /// Mise en page (photo 3) : largeur limitée à 520 px sur tablette et
 /// ordinateur, pleine largeur sur téléphone, champs empilés un par ligne
@@ -278,6 +302,7 @@ Future<void> showCreateDialog({
   required List<Widget> fields,
   required bool Function() isValid,
   required Future<void> Function() onSave,
+  String? messageInvalide,
 }) async {
   await showDialog<void>(
     context: context,
@@ -308,8 +333,8 @@ Future<void> showCreateDialog({
                       onPressed: () async {
                         if (!isValid()) {
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            const SnackBar(
-                              content: Text(
+                            SnackBar(
+                              content: Text(messageInvalide ??
                                   'Vérifiez les champs du formulaire.'),
                             ),
                           );

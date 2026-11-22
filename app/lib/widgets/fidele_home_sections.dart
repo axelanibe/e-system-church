@@ -1539,7 +1539,9 @@ class _SujetPrierePriveState extends State<_SujetPrierePrive> {
           TextField(
             controller: _sujetController,
             decoration: const InputDecoration(
-              labelText: 'Écrire ma demande',
+              labelText: 'Écrire ma demande *',
+              helperText: 'Ex. Prière pour ma famille, pour ma santé.',
+              helperMaxLines: 2,
             ),
             maxLength: 300,
           ),
@@ -1548,6 +1550,8 @@ class _SujetPrierePriveState extends State<_SujetPrierePrive> {
             controller: _detailsController,
             decoration: const InputDecoration(
               labelText: 'Détails (facultatif)',
+              helperText: 'Précisez si vous le souhaitez.',
+              helperMaxLines: 2,
             ),
             maxLines: 3,
           ),

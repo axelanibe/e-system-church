@@ -229,6 +229,15 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                             ),
                           ),
                           const SectionTitle(title: 'Envoyer un rapport'),
+                          // Tranche Formulaires (21 nov. 2026) : mention
+                          // des champs obligatoires et aide concrète.
+                          const Text(
+                            '(*) Champs obligatoires',
+                            style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
                           const _Etape(
                             numero: '1',
                             titre: 'Choisir le type de rapport',
@@ -290,6 +299,9 @@ class _RapportsMereScreenState extends State<RapportsMereScreen> {
                             decoration: const InputDecoration(
                               labelText: 'Message *',
                               hintText: 'Le rapport, en entier, sans troncature',
+                              helperText: 'Vos activités, vos besoins, '
+                                  'vos remerciements.',
+                              helperMaxLines: 2,
                               border: OutlineInputBorder(),
                             ),
                           ),

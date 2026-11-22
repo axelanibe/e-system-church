@@ -50,25 +50,44 @@ class _ArbreReseauState extends State<ArbreReseau> {
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Tranche Formulaires (21 nov. 2026) : mention des
+                // champs obligatoires, aides concrètes et messages
+                // d'erreur précis — pas « Nom requis. ».
+                const Text(
+                  '(*) Champs obligatoires',
+                  style: TextStyle(
+                      fontSize: 12.5, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: nameController,
                   decoration: const InputDecoration(
                     labelText: 'Nom de l’église *',
+                    helperText: 'Ex. Église Annexe de Bouaké',
+                    helperMaxLines: 2,
                     border: OutlineInputBorder(),
                   ),
                   validator: (v) =>
-                      (v == null || v.trim().length < 2) ? 'Nom requis.' : null,
+                      (v == null || v.trim().length < 2)
+                          ? 'Entrez le nom de l’église '
+                              '(2 lettres au minimum).'
+                          : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: cityController,
                   decoration: const InputDecoration(
                     labelText: 'Ville *',
+                    helperText: 'Ex. Bouaké',
+                    helperMaxLines: 2,
                     border: OutlineInputBorder(),
                   ),
                   validator: (v) =>
-                      (v == null || v.trim().length < 2) ? 'Ville requise.' : null,
+                      (v == null || v.trim().length < 2)
+                          ? 'Entrez la ville (2 lettres au minimum).'
+                          : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -76,10 +95,13 @@ class _ArbreReseauState extends State<ArbreReseau> {
                   keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(
                     labelText: 'Téléphone *',
+                    helperText: 'Ex. 07 07 07 07 07',
+                    helperMaxLines: 2,
                     border: OutlineInputBorder(),
                   ),
                   validator: (v) => (v == null || v.trim().length < 8)
-                      ? 'Téléphone requis.'
+                      ? 'Entrez un téléphone valide '
+                          '(8 chiffres au minimum).'
                       : null,
                 ),
                 const SizedBox(height: 12),
@@ -88,6 +110,8 @@ class _ArbreReseauState extends State<ArbreReseau> {
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
                     labelText: 'E-mail (facultatif)',
+                    helperText: 'Ex. contact@eglise.ci',
+                    helperMaxLines: 2,
                     border: OutlineInputBorder(),
                   ),
                 ),

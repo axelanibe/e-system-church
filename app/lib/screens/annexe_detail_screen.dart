@@ -55,30 +55,38 @@ class _AnnexeDetailScreenState extends State<AnnexeDetailScreen> {
       title: 'Modifier l\u2019annexe',
       saveLabel: 'Enregistrer',
       fields: [
+        mentionChampsObligatoires,
         dialogTextField(
           controller: nomController,
-          label: 'Nom de l\u2019église',
+          label: 'Nom de l\u2019église *',
+          aide: 'Ex. Église Annexe de Yopougon',
         ),
         dialogTextField(
           controller: villeController,
           label: 'Ville',
+          aide: 'Ex. Yopougon',
         ),
         dialogTextField(
           controller: telephoneController,
           label: 'Téléphone',
           keyboardType: TextInputType.phone,
+          aide: 'Ex. 07 07 07 07 07',
         ),
         dialogTextField(
           controller: emailController,
           label: 'E-mail',
           keyboardType: TextInputType.emailAddress,
+          aide: 'Ex. contact@eglise.ci',
         ),
         dialogTextField(
           controller: adresseController,
           label: 'Adresse',
+          aide: 'Ex. Rue des Jardins, Yopougon',
         ),
       ],
       isValid: () => nomController.text.trim().length >= 2,
+      messageInvalide:
+          'Entrez le nom de l’église (2 lettres au minimum).',
       onSave: () async {
         try {
           await context.read<AppState>().api.updateProfil(
