@@ -1786,6 +1786,27 @@ ALTER TABLE eglise_parametres ADD COLUMN IF NOT EXISTS seuil_inactivite_semaines
 ALTER TABLE eglise_parametres ADD COLUMN IF NOT EXISTS seuil_baisse_contributions_pct INT NOT NULL DEFAULT 30 CHECK (seuil_baisse_contributions_pct BETWEEN 0 AND 100);
 ALTER TABLE departements ADD COLUMN IF NOT EXISTS archive BOOLEAN NOT NULL DEFAULT FALSE;
 
+-- Chaîne de prière (lot 3d, migration 042) : miroir de la migration,
+-- comme les tables des migrations anciennes repliées ici. 24 créneaux
+-- d'une heure par jour, un membre par créneau, un créneau par membre
+-- et par jour, isolation par church_id. Sur une base existante, c'est
+-- la migration 042 qui crée la table ; ce miroir ne sert qu'aux bases
+-- fraîches, avant `npm run migrate`.
+CREATE TABLE IF NOT EXISTS creneaux_priere (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    church_id   UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
+    member_id   UUID NOT NULL REFERENCES members (id) ON DELETE CASCADE,
+    jour        DATE NOT NULL,
+    heure       SMALLINT NOT NULL CHECK (heure BETWEEN 0 AND 23),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_creneaux_priere_creneau
+        UNIQUE (church_id, jour, heure),
+    CONSTRAINT uq_creneaux_priere_membre_jour
+        UNIQUE (church_id, member_id, jour)
+);
+CREATE INDEX IF NOT EXISTS idx_creneaux_priere_church_jour
+    ON creneaux_priere (church_id, jour, heure);
+
 -- T12 (US13) : statuts de membre configurables. La contrainte figée aux
 -- 7 statuts riches de membre_statuts est levée ; la validation passe
 -- par la liste configurée de l'église, côté serveur.

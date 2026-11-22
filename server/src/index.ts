@@ -25,6 +25,7 @@ import { registerCultesRoutes } from "./routes/cultes.js";
 import { registerPresencesRoutes } from "./routes/presences.js";
 import { registerFinancesRoutes } from "./routes/finances.js";
 import { registerPrieresRoutes } from "./routes/prieres.js";
+import { registerChainePriereRoutes } from "./routes/chaine_priere.js";
 import { registerPastoralRoutes } from "./routes/pastoral.js";
 import { registerServiteursRoutes } from "./routes/serviteurs.js";
 import { registerEnfantsRoutes } from "./routes/enfants.js";
@@ -169,6 +170,7 @@ export function buildApp(db: Pool) {
   registerPresencesRoutes(app, db);
   registerFinancesRoutes(app, db);
   registerPrieresRoutes(app, db);
+  registerChainePriereRoutes(app, db);
   registerPastoralRoutes(app, db);
   registerServiteursRoutes(app, db);
   registerEnfantsRoutes(app, db);

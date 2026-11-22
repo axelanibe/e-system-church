@@ -40,6 +40,7 @@ import '../models/parametres.dart';
 import '../models/pastoral.dart';
 import '../models/presences.dart';
 import '../models/prieres.dart';
+import '../models/chaine_priere.dart';
 import '../models/profil.dart';
 import '../models/plateforme.dart';
 import '../models/acces_plateforme.dart';
@@ -2219,6 +2220,25 @@ class HttpApiService implements ApiService {
       'sujet': sujet,
       'corps': corps,
     }));
+  }
+
+  @override
+  Future<ChainePriereJour> getChainePriere({String? jour}) async =>
+      ChainePriereJour.fromJson(await _call('GET', '/chaine-priere',
+          query: _q({'jour': jour})));
+
+  @override
+  Future<void> prendreCreneauPriere({required int heure, String? jour}) async {
+    await _call('POST', '/chaine-priere', body: {
+      'heure': heure,
+      if (jour != null) 'jour': jour,
+    });
+  }
+
+  @override
+  Future<void> libererCreneauPriere({required int heure, String? jour}) async {
+    await _call('DELETE', '/chaine-priere/$heure',
+        query: _q({'jour': jour}));
   }
 
   // -- Suivi pastoral (module 6) ---------------------------------------------
