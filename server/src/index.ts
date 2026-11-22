@@ -30,7 +30,6 @@ import { registerServiteursRoutes } from "./routes/serviteurs.js";
 import { registerEnfantsRoutes } from "./routes/enfants.js";
 import { registerMediasRoutes } from "./routes/medias.js";
 import { registerMessagerieRoutes } from "./routes/messagerie.js";
-import { registerTemoignagesRoutes } from "./routes/temoignages.js";
 import { registerMessagerieWs } from "./messagerie_ws.js";
 import { registerNotificationsPushRoutes } from "./routes/notifications_push.js";
 import { registerBibleRoutes } from "./routes/bible.js";
@@ -58,6 +57,7 @@ import { registerGouvernanceRoutes } from "./routes/gouvernance.js";
 import { registerSignaturesRoutes } from "./routes/signatures.js";
 import { registerConfianceRoutes } from "./routes/confiance.js";
 import { registerUsRestantesRoutes } from "./routes/us_restantes.js";
+import { registerTemoignagesRoutes } from "./routes/temoignages.js";
 
 export function buildApp(db: Pool) {
   const app = Fastify({ logger: true });
@@ -173,7 +173,6 @@ export function buildApp(db: Pool) {
   registerEnfantsRoutes(app, db);
   registerMediasRoutes(app, db);
   registerMessagerieRoutes(app, db);
-  registerTemoignagesRoutes(app, db);
   registerNotificationsPushRoutes(app, db);
   registerBibleRoutes(app, db);
   registerEcoleBibliqueRoutes(app, db);
@@ -200,6 +199,7 @@ export function buildApp(db: Pool) {
   registerSignaturesRoutes(app, db);
   registerConfianceRoutes(app, db);
   registerUsRestantesRoutes(app, db);
+  registerTemoignagesRoutes(app, db);
 
   app.setNotFoundHandler((_req, reply) => {
     reply.code(404).send({ error: "not_found", message: "Route inconnue." });

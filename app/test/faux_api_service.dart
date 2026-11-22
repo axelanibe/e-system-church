@@ -1045,6 +1045,25 @@ class FauxApiService implements ApiService {
     return message;
   }
 
+  /// Jetons FCM enregistrés / retirés pendant la session (tranche push
+  /// FCM) : le faux service ne fait qu'enregistrer l'appel, sans réseau.
+  final List<String> jetonsPushEnregistres = [];
+  final List<String> jetonsPushRetires = [];
+
+  @override
+  Future<void> enregistrerJetonPush(
+      {required String jeton, required String plateforme}) async {
+    await _latence();
+    _requireAuth();
+    jetonsPushEnregistres.add(jeton);
+  }
+
+  @override
+  Future<void> retirerJetonPush({required String jeton}) async {
+    await _latence();
+    _requireAuth();
+    jetonsPushRetires.add(jeton);  }
+
   // -- Témoignages (lot 3c) : en mémoire, comme le reste du faux
   // service. « Mes témoignages » renvoie tous les témoignages
   // définis (la démo ne distingue pas l'auteur), le fil seulement les
@@ -1156,25 +1175,6 @@ class FauxApiService implements ApiService {
     if (chemin == null || chemin.isEmpty) return '';
     return '$baseUrl$chemin?token=faux-jeton';
   }
-
-  /// Jetons FCM enregistrés / retirés pendant la session (tranche push
-  /// FCM) : le faux service ne fait qu'enregistrer l'appel, sans réseau.
-  final List<String> jetonsPushEnregistres = [];
-  final List<String> jetonsPushRetires = [];
-
-  @override
-  Future<void> enregistrerJetonPush(
-      {required String jeton, required String plateforme}) async {
-    await _latence();
-    _requireAuth();
-    jetonsPushEnregistres.add(jeton);
-  }
-
-  @override
-  Future<void> retirerJetonPush({required String jeton}) async {
-    await _latence();
-    _requireAuth();
-    jetonsPushRetires.add(jeton);  }
 
   @override
   Future<void> confirmerPresenceCulte(String culteId) async {

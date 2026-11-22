@@ -609,6 +609,21 @@ class HttpApiService implements ApiService {
     return MessageMessagerie.fromJson(data);
   }
 
+  /// Notifications push (tranche push FCM) : enregistrement du jeton
+  /// FCM de cet appareil, pour recevoir les nouveaux messages en push.
+  @override
+  Future<void> enregistrerJetonPush(
+      {required String jeton, required String plateforme}) async {
+    await _call('POST', '/messagerie/jetons',
+        body: {'jeton': jeton, 'plateforme': plateforme});
+  }
+
+  /// Notifications push (tranche push FCM) : retrait du jeton FCM à la
+  /// déconnexion, pour ne plus recevoir de push sur cet appareil.
+  @override
+  Future<void> retirerJetonPush({required String jeton}) async {
+    await _call('DELETE', '/messagerie/jetons', body: {'jeton': jeton});  }
+
   // -- Témoignages (lot 3c) -------------------------------------------------
   @override
   Future<TemoignagesPageData> getTemoignages() async =>
@@ -670,21 +685,6 @@ class HttpApiService implements ApiService {
         .replace(queryParameters: {'token': jeton})
         .toString();
   }
-
-  /// Notifications push (tranche push FCM) : enregistrement du jeton
-  /// FCM de cet appareil, pour recevoir les nouveaux messages en push.
-  @override
-  Future<void> enregistrerJetonPush(
-      {required String jeton, required String plateforme}) async {
-    await _call('POST', '/messagerie/jetons',
-        body: {'jeton': jeton, 'plateforme': plateforme});
-  }
-
-  /// Notifications push (tranche push FCM) : retrait du jeton FCM à la
-  /// déconnexion, pour ne plus recevoir de push sur cet appareil.
-  @override
-  Future<void> retirerJetonPush({required String jeton}) async {
-    await _call('DELETE', '/messagerie/jetons', body: {'jeton': jeton});  }
 
   @override
   Future<void> confirmerPresenceCulte(String culteId) async {

@@ -205,6 +205,39 @@ abstract class ApiService {
   /// à la déconnexion) : plus aucune notification push sur cet appareil.
   Future<void> retirerJetonPush({required String jeton});
 
+  // -- Témoignages (lot 3c, 22 novembre 2026) -------------------------------
+  // Routes livrées par `server/src/routes/temoignages.ts` : texte, photo,
+  // vidéo ou audio, modération par l'admin de l'église (statuts
+  // en_attente / approuve / rejete), isolation par church_id. Le média
+  // part en base64 ; la durée (vidéo 60 s, audio 5 min) est vérifiée
+  // côté application seulement, comme pour les stories de Connexion
+  // Prophétique.
+  Future<TemoignagesPageData> getTemoignages();
+
+  Future<Temoignage> publierTemoignage({
+    String? texte,
+    Uint8List? mediaOctets,
+    String? mediaNom,
+    String? mediaMime,
+  });
+
+  /// Modère un témoignage en attente : [statut] vaut 'approuve' ou
+  /// 'rejete' (motif facultatif, pour le rejet). Admin_eglise seulement.
+  Future<Temoignage> modererTemoignage(
+    String id,
+    String statut, {
+    String? motifRejet,
+  });
+
+  /// Supprime un témoignage : son auteur ou l'admin de l'église.
+  Future<void> supprimerTemoignage(String id);
+
+  /// URL complète du média d'un témoignage, avec le jeton en paramètre
+  /// `?token=` : le lecteur vidéo et l'afficheur d'image ne peuvent pas
+  /// envoyer d'en-tête Authorization (même motif que le WebSocket de
+  /// messagerie). Vide quand le témoignage n'a pas de média.
+  String urlMediaTemoignage(Temoignage temoignage);
+
   /// « Je serai présent » au prochain culte (migration 020) : annonce
   /// de présence, sans pointage.
   Future<void> confirmerPresenceCulte(String culteId);
@@ -1729,39 +1762,6 @@ abstract class ApiService {
     String conversationId, {
     required String content,
   });
-
-  // -- Témoignages (lot 3c, 22 novembre 2026) -------------------------------
-  // Routes livrées par `server/src/routes/temoignages.ts` : texte, photo,
-  // vidéo ou audio, modération par l'admin de l'église (statuts
-  // en_attente / approuve / rejete), isolation par church_id. Le média
-  // part en base64 ; la durée (vidéo 60 s, audio 5 min) est vérifiée
-  // côté application seulement, comme pour les stories de Connexion
-  // Prophétique.
-  Future<TemoignagesPageData> getTemoignages();
-
-  Future<Temoignage> publierTemoignage({
-    String? texte,
-    Uint8List? mediaOctets,
-    String? mediaNom,
-    String? mediaMime,
-  });
-
-  /// Modère un témoignage en attente : [statut] vaut 'approuve' ou
-  /// 'rejete' (motif facultatif, pour le rejet). Admin_eglise seulement.
-  Future<Temoignage> modererTemoignage(
-    String id,
-    String statut, {
-    String? motifRejet,
-  });
-
-  /// Supprime un témoignage : son auteur ou l'admin de l'église.
-  Future<void> supprimerTemoignage(String id);
-
-  /// URL complète du média d'un témoignage, avec le jeton en paramètre
-  /// `?token=` : le lecteur vidéo et l'afficheur d'image ne peuvent pas
-  /// envoyer d'en-tête Authorization (même motif que le WebSocket de
-  /// messagerie). Vide quand le témoignage n'a pas de média.
-  String urlMediaTemoignage(Temoignage temoignage);
 
   /// Base de l'API et jeton JWT courant : le client WebSocket s'y
   /// connecte (`wss://<base>/messagerie/ws?token=<jeton>`).
