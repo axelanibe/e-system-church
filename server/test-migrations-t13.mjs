@@ -9,12 +9,11 @@
 //      après lui dans l'ordre global (db/schema.sql puis migrations
 //      triées). C'est le motif exact du bug 028.
 //   2. Statique, sans base : les numéros en double sont exactement
-//      001, 005 et 011, et les numéros manquants exactement 017, 038 et
-//      040 (documentés : 017 trou historique, 038 à la phase 3
-//      identité, 040 à la PR #154 « Je serai présent », ouverte non
-//      fusionnée — voir db/migrations/README.md). Tout nouveau doublon
-//      ou trou fait échouer le test : il faut alors le documenter dans
-//      le README avant de fusionner.
+//      001, 005 et 011, et les numéros manquants exactement 017 et 038
+//      (documentés : 017 réservé à Phoenix, 038 à la phase 3 identité)
+//      (voir db/migrations/README.md). Tout nouveau doublon ou trou
+//      fait échouer le test : il faut alors le documenter dans le
+//      README avant de fusionner.
 //   3. Sur base fraîche : `migrate.ts` appliqué deux fois = no-op — la
 //      deuxième exécution n'applique rien et le nombre de lignes de
 //      `schema_migrations` ne change pas.
@@ -142,8 +141,8 @@ for (let i = 1; i <= max; i++) {
   if (!parNumero[i]) manquants.push(i);
 }
 check(
-  "numéros manquants exactement 017, 038 et 040 (documentés)",
-  JSON.stringify(manquants) === JSON.stringify([17, 38, 40]),
+  "numéro manquant exactement 017 et 038 (documentés)",
+  JSON.stringify(manquants) === JSON.stringify([17, 38]),
   `trouvés : ${manquants.join(", ") || "aucun"}`,
 );
 
