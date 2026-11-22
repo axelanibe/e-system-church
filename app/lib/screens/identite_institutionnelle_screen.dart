@@ -32,20 +32,30 @@ class _IdentiteInstitutionnelleScreenState
   bool _enregistrement = false;
 
   /// Clés JSON des champs éditables, dans l'ordre d'affichage.
+  // Tranche Formulaires (21 nov. 2026) : chaque champ porte son aide
+  // concrète (exemple plutôt que règle).
   static const _champs = [
-    ('nom_officiel', 'Nom officiel'),
-    ('sigle', 'Sigle'),
-    ('slogan', 'Slogan'),
-    ('adresse', 'Adresse'),
-    ('ville', 'Ville'),
-    ('pays', 'Pays'),
-    ('telephone', 'Téléphone'),
-    ('email', 'E-mail'),
-    ('site_web', 'Site web'),
-    ('numero_enregistrement', 'Numéro d’enregistrement'),
-    ('devise', 'Devise'),
-    ('fuseau_horaire', 'Fuseau horaire'),
-    ('description', 'Description'),
+    ('nom_officiel', 'Nom officiel', 'Ex. Église Évangélique de Cocody'),
+    ('sigle', 'Sigle', 'Ex. EEC'),
+    ('slogan', 'Slogan', 'Ex. L’église sans frontière'),
+    ('adresse', 'Adresse', 'Ex. Cocody, rue des Jardins'),
+    ('ville', 'Ville', 'Ex. Abidjan'),
+    ('pays', 'Pays', 'Ex. Côte d’Ivoire'),
+    ('telephone', 'Téléphone', 'Ex. 07 07 07 07 07'),
+    ('email', 'E-mail', 'Ex. contact@eglise.ci'),
+    ('site_web', 'Site web', 'Ex. https://www.moneglise.ci'),
+    (
+      'numero_enregistrement',
+      'Numéro d’enregistrement',
+      'Numéro officiel de l’église, si elle en a un.',
+    ),
+    ('devise', 'Devise', 'Ex. FCFA'),
+    ('fuseau_horaire', 'Fuseau horaire', 'Ex. Africa/Abidjan'),
+    (
+      'description',
+      'Description',
+      'Ce que les visiteurs doivent savoir.',
+    ),
   ];
 
   @override
@@ -76,7 +86,7 @@ class _IdentiteInstitutionnelleScreenState
       c.dispose();
     }
     _controleurs.clear();
-    for (final (cle, _) in _champs) {
+    for (final (cle, _, _) in _champs) {
       _controleurs[cle] =
           TextEditingController(text: _valeur(identite, cle) ?? '');
     }
@@ -136,7 +146,7 @@ class _IdentiteInstitutionnelleScreenState
     final identite = _identite;
     if (identite == null) return;
     final champs = <String, dynamic>{};
-    for (final (cle, _) in _champs) {
+    for (final (cle, _, _) in _champs) {
       final saisi = _controleurs[cle]!.text.trim();
       if (saisi != (_valeur(identite, cle) ?? '')) {
         champs[cle] = saisi;
@@ -212,7 +222,7 @@ class _IdentiteInstitutionnelleScreenState
   }
 
   Widget _champ(String cle, String label, bool modifiable,
-      {int maxLines = 1, TextInputType? clavier}) {
+      {int maxLines = 1, TextInputType? clavier, String? aide}) {
     return TextField(
       key: Key('champ_$cle'),
       controller: _controleurs[cle],
@@ -222,6 +232,8 @@ class _IdentiteInstitutionnelleScreenState
       style: const TextStyle(fontSize: 16),
       decoration: InputDecoration(
         labelText: label,
+        helperText: aide,
+        helperMaxLines: 2,
         border: const OutlineInputBorder(),
         contentPadding:
             const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
@@ -342,11 +354,12 @@ class _IdentiteInstitutionnelleScreenState
                 _section(
                   'Informations de l’église',
                   [
-                    for (final (cle, label) in _champs)
+                    for (final (cle, label, aide) in _champs)
                       _champ(
                         cle,
                         label,
                         modifiable,
+                        aide: aide,
                         maxLines: cle == 'description' ? 3 : 1,
                         clavier: cle == 'email'
                             ? TextInputType.emailAddress
@@ -408,7 +421,8 @@ class _IdentiteInstitutionnelleScreenState
                     ),
                     const SizedBox(height: 12),
                     _champ('couleur_principale', 'Couleur principale',
-                        modifiable),
+                        modifiable,
+                        aide: 'Code hexadécimal, ex. #2A0059.'),
                     if (modifiable) ...[
                       const SizedBox(height: 12),
                       FilledButton.tonalIcon(

@@ -83,6 +83,14 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                     'compte membre.',
                     style: TextStyle(fontSize: 13),
                   ),
+                  const SizedBox(height: 8),
+                  // Tranche Formulaires (21 nov. 2026) : mention des
+                  // champs obligatoires, comme sur les autres formulaires.
+                  const Text(
+                    '(*) Champs obligatoires',
+                    style: TextStyle(
+                        fontSize: 12.5, fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _codeController,
@@ -93,7 +101,7 @@ class _RegisterFideleScreenState extends State<RegisterFideleScreen> {
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Code de l’église *',
-                      helperText: 'Code reçu de votre église',
+                      helperText: 'Ex. ESC-F-1234 — code reçu de votre église',
                       helperStyle: TextStyle(fontSize: 13.5),
                       helperMaxLines: 2,
                       prefixIcon: Icon(Icons.key_outlined),

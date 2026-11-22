@@ -323,7 +323,10 @@ class _RendezVousScreenState extends State<RendezVousScreen> {
                 TextField(
                   controller: _motifController,
                   decoration: const InputDecoration(
-                    labelText: 'Motif du rendez-vous',
+                    labelText: 'Motif du rendez-vous *',
+                    helperText:
+                        'Ex. Entretien pastoral, prière, conseil.',
+                    helperMaxLines: 2,
                   ),
                   maxLines: 3,
                 ),

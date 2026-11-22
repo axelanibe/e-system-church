@@ -8,9 +8,11 @@ import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../models/church.dart';
 import '../models/fidele.dart';
+import '../models/member.dart';
 import '../models/parametres.dart';
 import '../models/profil.dart';
 import '../state/app_state.dart';
+import '../widgets/champ_membre_choisir_creer.dart';
 import '../widgets/church_avatar.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
@@ -87,9 +89,27 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
   /// le jeton n'est exposé nulle part ailleurs.
   Future<void> _inviter() async {
     final emailController = TextEditingController();
-    final memberIdController = TextEditingController();
     final nomController = TextEditingController();
     String role = 'membre';
+    // Membres de la base, pour « choisir ou créer » la fiche membre
+    // à lier (Tranche Formulaires P0, report tutelle 21/11/2026).
+    // Sans eux, l'ID restait un texte libre à deviner.
+    final api = context.read<AppState>().api;
+    List<Member> membres = [];
+    try {
+      membres = (await api.getMembers(limit: 100)).membres;
+    } catch (_) {
+      // La liste est facultative : l'invitation sans fiche liée
+      // reste possible.
+    }
+    if (!mounted) return;
+    String? memberId;
+    Future<Member> creerMembre({
+      required String fullName,
+      String? phone,
+      String? email,
+    }) =>
+        api.createMember(fullName: fullName, phone: phone, email: email);
     final saisie = await showDialog<_InviteSaisie>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -98,15 +118,19 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                mentionChampsObligatoires,
                 dialogTextField(
                   controller: emailController,
-                  label: 'E-mail',
+                  label: 'E-mail *',
                   keyboardType: TextInputType.emailAddress,
+                  aide: 'Ex. membre@eglise.ci',
                 ),
                 dialogDropdown<String>(
                   value: role,
                   label: 'Rôle dans l’église',
+                  aide: 'Le rôle donne ses droits dans l’église.',
                   options: const {
                     'membre': 'Membre (fidèle)',
                     'tresorier': 'Trésorier',
@@ -117,14 +141,21 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
                     if (v != null) setDialogState(() => role = v);
                   },
                 ),
-                dialogTextField(
-                  controller: memberIdController,
-                  label: 'ID de la fiche membre (optionnel)',
-                  hintText: 'Pour lier le compte à un membre existant',
+                ChampMembreChoisirCreer(
+                  membres: membres,
+                  valeur: memberId,
+                  onChanged: (v) => memberId = v,
+                  onCreerMembre: creerMembre,
+                  onMembreCree: (m) => membres.add(m),
+                  label: 'Fiche membre à lier',
+                  aide: 'Choisissez un membre de la base, ou créez-le '
+                      'sur place, pour lier le compte à sa fiche.',
                 ),
+                const SizedBox(height: 12),
                 dialogTextField(
                   controller: nomController,
                   label: 'Nom complet (optionnel)',
+                  aide: 'Nom complet de la personne invitée.',
                 ),
                 const Text(
                   'Le compte est créé sans mot de passe : la personne '
@@ -143,14 +174,21 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
               onPressed: () {
                 if (emailController.text.trim().isEmpty ||
                     !emailController.text.contains('@')) {
+                  // Tranche Formulaires : jamais de refus silencieux.
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Entrez un e-mail valide '
+                        '(ex. membre@eglise.ci).',
+                      ),
+                    ),
+                  );
                   return;
                 }
                 Navigator.of(dialogContext).pop(_InviteSaisie(
                   email: emailController.text.trim(),
                   role: role,
-                  memberId: memberIdController.text.trim().isEmpty
-                      ? null
-                      : memberIdController.text.trim(),
+                  memberId: memberId,
                   fullName: nomController.text.trim().isEmpty
                       ? null
                       : nomController.text.trim(),
@@ -190,9 +228,11 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
         title: const Text('Lien de réinitialisation'),
         content: dialogTextField(
           controller: emailController,
-          label: 'E-mail du compte',
+          label: 'E-mail du compte *',
           keyboardType: TextInputType.emailAddress,
           hintText: 'Ex. membre@eglise.ci',
+          aide: 'L’e-mail du compte qui doit choisir un nouveau '
+              'mot de passe.',
         ),
         actions: [
           TextButton(
@@ -202,7 +242,19 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
           FilledButton(
             onPressed: () {
               final email = emailController.text.trim();
-              if (email.isEmpty || !email.contains('@')) return;
+              if (email.isEmpty || !email.contains('@')) {
+                // Tranche Formulaires : jamais de refus silencieux —
+                // dire ce qui manque.
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Entrez l’e-mail du compte '
+                      '(ex. membre@eglise.ci).',
+                    ),
+                  ),
+                );
+                return;
+              }
               Navigator.of(dialogContext).pop(email);
             },
             child: const Text('Générer le lien', style: TextStyle(fontSize: 13.5)),
@@ -421,9 +473,11 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
       title: 'Modifier le profil de l’église',
       saveLabel: 'Enregistrer',
       fields: [
+        mentionChampsObligatoires,
         dialogTextField(
           controller: nomController,
-          label: 'Nom de l’église',
+          label: 'Nom de l’église *',
+          aide: 'Ex. Église Évangélique de Cocody',
         ),
         const Text(
           'Les matricules et les cartes ne changent jamais.',
@@ -433,10 +487,13 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
         dialogTextField(
           controller: descriptionController,
           label: 'Description',
+          aide: 'Ce que les visiteurs doivent savoir.',
           maxLines: 3,
         ),
         dialogTextField(
-            controller: logoUrlController, label: 'URL du logo'),
+            controller: logoUrlController,
+            label: 'URL du logo',
+            aide: 'Adresse web du logo (PNG ou JPG).'),
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: FilledButton.tonalIcon(
@@ -451,12 +508,18 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
           controller: couleurController,
           nomEglise: eglise.name,
         ),
-        dialogTextField(controller: deviseController, label: 'Devise'),
         dialogTextField(
-            controller: fuseauController, label: 'Fuseau horaire'),
+            controller: deviseController,
+            label: 'Devise',
+            aide: 'Ex. FCFA'),
+        dialogTextField(
+            controller: fuseauController,
+            label: 'Fuseau horaire',
+            aide: 'Ex. Africa/Abidjan'),
         dialogTextField(
           controller: horairesController,
           label: 'Horaires des cultes',
+          aide: 'Un horaire par ligne : jour, heure, puis titre.',
           maxLines: 4,
         ),
         const Text(
@@ -464,20 +527,30 @@ class _MonEgliseScreenState extends State<MonEgliseScreen> {
           style: TextStyle(fontSize: 14),
         ),
         const SizedBox(height: 12),
-        dialogTextField(controller: addressController, label: 'Adresse'),
+        dialogTextField(
+            controller: addressController,
+            label: 'Adresse',
+            aide: 'Ex. Cocody, rue des Jardins'),
         dialogTextField(
           controller: phoneController,
           label: 'Téléphone',
           keyboardType: TextInputType.phone,
+          aide: 'Ex. 07 07 07 07 07',
         ),
         dialogTextField(
           controller: emailController,
           label: 'E-mail',
           keyboardType: TextInputType.emailAddress,
+          aide: 'Ex. contact@eglise.ci',
         ),
-        dialogTextField(controller: cityController, label: 'Ville'),
+        dialogTextField(
+            controller: cityController,
+            label: 'Ville',
+            aide: 'Ex. Abidjan'),
       ],
       isValid: () => nomController.text.trim().length >= 2,
+      messageInvalide:
+          'Entrez le nom de l’église (2 lettres au minimum).',
       onSave: () async {
         final horaires = <HoraireCulte>[];
         for (final line in horairesController.text.split('\n')) {
