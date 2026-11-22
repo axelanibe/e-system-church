@@ -60,7 +60,6 @@ toute migration « 001bis » casserait la traçabilité.
 |---|---|
 | 017 | Trou historique dans la numérotation (aucun fichier 017). |
 | 038 | Réservé à la phase 3 du module identité (modèles de carte, émissions, modèles de document, documents générés). |
-| 040 | Réservé à la PR #154 (« Je serai présent », `040_rsvp_activites.sql`, ouverte, non fusionnée au 22/11/2026) — le 041 (témoignages, lot 3c) est donc attribué alors que le 040 n'existe pas encore sur main. **Si la PR #154 fusionne avant le lot 3c, retirer 40 de la liste attendue de `server/test-migrations-t13.mjs`** (et inversement : si le lot 3c fusionne d'abord, la fusion de la PR #154 comble le trou sans toucher au test). |
 
 Le numéro 035, anciennement réservé par la PR #127 (push FCM, non fusionnée), est comblé par la PR #128 (`035_jetons_appareil_fcm.sql`, jetons d'appareil FCM).
 
