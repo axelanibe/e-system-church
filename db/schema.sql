@@ -1786,45 +1786,6 @@ ALTER TABLE eglise_parametres ADD COLUMN IF NOT EXISTS seuil_inactivite_semaines
 ALTER TABLE eglise_parametres ADD COLUMN IF NOT EXISTS seuil_baisse_contributions_pct INT NOT NULL DEFAULT 30 CHECK (seuil_baisse_contributions_pct BETWEEN 0 AND 100);
 ALTER TABLE departements ADD COLUMN IF NOT EXISTS archive BOOLEAN NOT NULL DEFAULT FALSE;
 
--- T12 (US13) : statuts de membre configurables. La contrainte figée aux
--- 7 statuts riches de membre_statuts est levée ; la validation passe
--- par la liste configurée de l'église, côté serveur.
-DO $$ DECLARE c text; BEGIN
-  FOR c IN SELECT conname FROM pg_constraint
-            WHERE conrelid = 'membre_statuts'::regclass AND contype = 'c'
-              AND (pg_get_constraintdef(oid) LIKE '%statut = ANY%'
-                   OR pg_get_constraintdef(oid) LIKE '%statut IN%') LOOP
-    EXECUTE 'ALTER TABLE membre_statuts DROP CONSTRAINT ' || quote_ident(c);
-  END LOOP;
-END $$;
-
--- ===========================================================================
--- Migration 041 — Témoignages (lot 3c, 22 novembre 2026).
--- Miroir pour les nouvelles bases. Les migrations restent la référence ;
--- ce miroir ne sert qu'au schéma initial (voir server/src/migrate.ts).
--- ===========================================================================
-CREATE TABLE IF NOT EXISTS temoignages (
-    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    church_id        UUID NOT NULL REFERENCES churches (id) ON DELETE CASCADE,
-    auteur_user_id   UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    auteur_member_id UUID REFERENCES members (id) ON DELETE SET NULL,
-    auteur_nom       TEXT NOT NULL,
-    texte            TEXT NOT NULL DEFAULT '',
-    type_media       TEXT NOT NULL CHECK (type_media IN ('texte', 'photo', 'video', 'audio')),
-    type_mime        TEXT,
-    media_octets     BYTEA,
-    media_nom        TEXT,
-    statut           TEXT NOT NULL DEFAULT 'en_attente'
-                       CHECK (statut IN ('en_attente', 'approuve', 'rejete')),
-    motif_rejet      TEXT,
-    cree_le          TIMESTAMPTZ NOT NULL DEFAULT now(),
-    modere_le        TIMESTAMPTZ,
-    modere_par       UUID REFERENCES users (id) ON DELETE SET NULL
-);
-CREATE INDEX IF NOT EXISTS idx_temoignages_church_statut
-    ON temoignages (church_id, statut, cree_le DESC);
-CREATE INDEX IF NOT EXISTS idx_temoignages_auteur
-    ON temoignages (auteur_user_id, cree_le DESC);
 -- Chaîne de prière (lot 3d, migration 042) : miroir de la migration,
 -- comme les tables des migrations anciennes repliées ici. 24 créneaux
 -- d'une heure par jour, un membre par créneau, un créneau par membre
@@ -1845,3 +1806,15 @@ CREATE TABLE IF NOT EXISTS creneaux_priere (
 );
 CREATE INDEX IF NOT EXISTS idx_creneaux_priere_church_jour
     ON creneaux_priere (church_id, jour, heure);
+
+-- T12 (US13) : statuts de membre configurables. La contrainte figée aux
+-- 7 statuts riches de membre_statuts est levée ; la validation passe
+-- par la liste configurée de l'église, côté serveur.
+DO $$ DECLARE c text; BEGIN
+  FOR c IN SELECT conname FROM pg_constraint
+            WHERE conrelid = 'membre_statuts'::regclass AND contype = 'c'
+              AND (pg_get_constraintdef(oid) LIKE '%statut = ANY%'
+                   OR pg_get_constraintdef(oid) LIKE '%statut IN%') LOOP
+    EXECUTE 'ALTER TABLE membre_statuts DROP CONSTRAINT ' || quote_ident(c);
+  END LOOP;
+END $$;
