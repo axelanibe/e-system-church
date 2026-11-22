@@ -607,6 +607,169 @@ class HttpApiService implements ApiService {
     return MessageMessagerie.fromJson(data);
   }
 
+  // -- Messagerie, signalement / modération (tranche T-Msg-4) -----------
+
+  @override
+  Future<MessageMessagerie> modifierMessageConversation(
+    String conversationId,
+    String messageId, {
+    required String content,
+  }) async {
+    final data = await _call(
+      'PATCH',
+      '/messagerie/conversations/$conversationId/messages/$messageId',
+      body: {'content': content},
+    );
+    return MessageMessagerie.fromJson(data);
+  }
+
+  @override
+  Future<MessageMessagerie> supprimerMessageConversation(
+    String conversationId,
+    String messageId,
+  ) async {
+    final data = await _call(
+      'DELETE',
+      '/messagerie/conversations/$conversationId/messages/$messageId',
+    );
+    return MessageMessagerie.fromJson(data);
+  }
+
+  @override
+  Future<Signalement> signalerContenu({
+    required String targetType,
+    required String targetId,
+    required String motif,
+    String? description,
+    String destinataire = 'local',
+  }) async {
+    final data = await _call(
+      'POST',
+      '/messagerie/signalements',
+      body: {
+        'target_type': targetType,
+        'target_id': targetId,
+        'reason': motif,
+        if (description != null && description.trim().isNotEmpty)
+          'description': description.trim(),
+        'routed_to': destinataire,
+      },
+    );
+    return Signalement.fromJson(data);
+  }
+
+  @override
+  Future<List<Signalement>> getSignalementsModeration({
+    String? statut,
+    String? motif,
+  }) async {
+    final data = await _call(
+      'GET',
+      '/messagerie/signalements',
+      query: {
+        if (statut != null) 'statut': statut,
+        if (motif != null) 'motif': motif,
+      },
+    );
+    final items = (data['items'] as List<dynamic>? ?? []);
+    return items
+        .map((e) => Signalement.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<Signalement> getSignalement(String id) async {
+    final data = await _call('GET', '/messagerie/signalements/$id');
+    return Signalement.fromJson(data);
+  }
+
+  @override
+  Future<ModerationAction> traiterSignalement(
+    String id, {
+    required String action,
+    int? dureeHeures,
+    required String notes,
+  }) async {
+    final data = await _call(
+      'POST',
+      '/messagerie/signalements/$id/actions',
+      body: {
+        'action': action,
+        if (dureeHeures != null) 'duree_heures': dureeHeures,
+        'notes': notes,
+      },
+    );
+    return ModerationAction.fromJson(data);
+  }
+
+  @override
+  Future<Signalement> escaladerSignalement(
+    String id, {
+    required String destination,
+  }) async {
+    final data = await _call(
+      'POST',
+      '/messagerie/signalements/$id/escalade',
+      body: {'destination': destination},
+    );
+    // La route renvoie un résumé (id, routed_to, status) : on relit
+    // le détail complet pour l'écran.
+    if (data.containsKey('evidence_snapshot')) {
+      return Signalement.fromJson(data);
+    }
+    return getSignalement(id);
+  }
+
+  @override
+  Future<List<SanctionMessagerie>> getMesSanctions() async {
+    final data = await _call('GET', '/messagerie/mes-sanctions');
+    final items = (data['items'] as List<dynamic>? ?? []);
+    return items
+        .map((e) => SanctionMessagerie.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<RecoursMessagerie> contesterSanction(
+    String signalementId, {
+    String? moderationActionId,
+    String? motif,
+  }) async {
+    final data = await _call(
+      'POST',
+      '/messagerie/signalements/$signalementId/recours',
+      body: {
+        if (moderationActionId != null)
+          'moderation_action_id': moderationActionId,
+        if (motif != null && motif.trim().isNotEmpty)
+          'reason': motif.trim(),
+      },
+    );
+    return RecoursMessagerie.fromJson(data);
+  }
+
+  @override
+  Future<List<RecoursMessagerie>> getRecoursSignalement(String id) async {
+    final data = await _call('GET', '/messagerie/signalements/$id/recours');
+    final items = (data['items'] as List<dynamic>? ?? []);
+    return items
+        .map((e) => RecoursMessagerie.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<RecoursMessagerie> traiterRecours(
+    String id, {
+    required String statut,
+  }) async {
+    final data = await _call(
+      'POST',
+      '/messagerie/recours/$id/traiter',
+      body: {'statut': statut},
+    );
+    return RecoursMessagerie.fromJson(data);
+  }
+
   /// Notifications push (tranche push FCM) : enregistrement du jeton
   /// FCM de cet appareil, pour recevoir les nouveaux messages en push.
   @override

@@ -8,7 +8,9 @@ import '../services/messagerie_lecture_service.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/common_widgets.dart';
+import 'mes_sanctions_screen.dart';
 import 'messagerie_conversation_screen.dart';
+import 'messagerie_moderation_screen.dart';
 
 /// Liste des conversations (T-Msg-1, spécification §6).
 ///
@@ -321,6 +323,46 @@ class _MessagerieListeScreenState extends State<MessagerieListeScreen> {
                                     ),
                                   ),
                                 ),
+                              // T-Msg-4 : entrées signalement /
+                              // modération, dans la même rangée
+                              // défilante que les filtres (aucune
+                              // hauteur ajoutée) — Modération pour
+                              // l'administrateur, Mes sanctions pour tous.
+                              if (context.read<AppState>().isAdmin)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: ActionChip(
+                                    avatar: const Icon(
+                                      Icons.shield_outlined,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Modération'),
+                                    onPressed: () =>
+                                        Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const MessagerieModerationScreen(),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ActionChip(
+                                  avatar: const Icon(
+                                    Icons.gavel_outlined,
+                                    size: 18,
+                                  ),
+                                  label: const Text('Mes sanctions'),
+                                  onPressed: () =>
+                                      Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const MesSanctionsScreen(),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),

@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
+import { auditLog } from "../auth.js";
 import { dbError, requireAuth } from "../middleware.js";
 import { estParticipantActif, ficheMembre } from "../messagerie_commun.js";
 import { diffuserMessageWs } from "../messagerie_ws.js";
@@ -14,7 +15,16 @@ import { notifierNouveauMessage } from "../fcm.js";
  * un utilisateur d'une autre église ne voit rien (404, sans révéler
  * l'existence). Le super administrateur et l'aide Plateforme n'ont
  * aucun accès au contenu des messages (spécification, section 4.3).
+ *
+ * T-Msg-4 : modifier / supprimer un message (suppression douce
+ * seulement, jamais de suppression dure) et contrôle de sourdine à
+ * l'envoi (conversation_participants.muted_until, posé par la
+ * modération). Les routes de signalement / modération / recours
+ * vivent dans ./messagerie_moderation.ts, sur le schéma 034.
  */
+
+/** Texte affiché à la place d'un message supprimé (doucement). */
+export const TEXTE_MESSAGE_SUPPRIME = "Message supprimé";
 
 const uuid = z.string().uuid();
 
@@ -271,6 +281,24 @@ export function registerMessagerieRoutes(app: FastifyInstance, db: Pool) {
         if (!(await estParticipantActif(db, req.session.churchId, id, memberId))) {
           return reply.code(404).send({ error: "not_found", message: "Conversation introuvable." });
         }
+        // T-Msg-4 : sourdine / suspension posée par la modération
+        // (conversation_participants.muted_until) : l'envoi est refusé
+        // tant qu'elle court, sans révéler le motif.
+        const { rows: sourdineRows } = await db.query<{ muted_until: string | null }>(
+          `SELECT muted_until FROM conversation_participants
+            WHERE conversation_id = $1 AND member_id = $2`,
+          [id, memberId],
+        );
+        const muetJusqua = sourdineRows[0]?.muted_until;
+        if (muetJusqua != null && new Date(muetJusqua).getTime() > Date.now()) {
+          return reply.code(403).send({
+            error: "suspendu",
+            message:
+              "Votre messagerie est suspendue jusqu'au " +
+              new Date(muetJusqua).toLocaleString("fr-FR") +
+              ".",
+          });
+        }
         if (depasseLimiteDebit(memberId)) {
           return reply.code(429).send({
             error: "rate_limited",
@@ -347,15 +375,168 @@ export function registerMessagerieRoutes(app: FastifyInstance, db: Pool) {
         if (!(await estParticipantActif(db, req.session.churchId, id, memberId))) {
           return reply.code(404).send({ error: "not_found", message: "Conversation introuvable." });
         }
+        // T-Msg-4 : les messages supprimés (doucement) restent dans
+        // la liste, contenu masqué par « Message supprimé », pour que
+        // le fil garde sa trace sans montrer le contenu d'origine.
         const { rows } = await db.query(
-          `SELECT id, conversation_id, sender_id, content, type, created_at, edited_at
+          `SELECT id, conversation_id, sender_id,
+                  CASE WHEN deleted_at IS NOT NULL THEN $5 ELSE content END AS content,
+                  type, created_at, edited_at, deleted_at
              FROM messages
-            WHERE conversation_id = $1 AND church_id = $2 AND deleted_at IS NULL
+            WHERE conversation_id = $1 AND church_id = $2
             ORDER BY created_at ASC
             LIMIT $3 OFFSET $4`,
-          [id, req.session.churchId, limit, offset],
+          [id, req.session.churchId, limit, offset, TEXTE_MESSAGE_SUPPRIME],
         );
         return reply.send(rows);
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  // -- PATCH /messagerie/conversations/:id/messages/:messageId :
+  // modifier un message texte. T-Msg-4 : seul l'auteur, jamais un
+  // message supprimé, jamais un autre type que texte. edited_at est
+  // renseigné, l'application affiche « (modifié) ».
+  app.patch(
+    "/messagerie/conversations/:id/messages/:messageId",
+    { preHandler: [auth, gardeMessagerie] },
+    async (req, reply) => {
+      const id = (req.params as { id: string }).id;
+      const messageId = (req.params as { messageId: string }).messageId;
+      if (!uuid.safeParse(id).success || !uuid.safeParse(messageId).success) {
+        return reply.code(404).send({ error: "not_found", message: "Message introuvable." });
+      }
+      const parsed = z
+        .object({ content: z.string().min(1).max(5000) })
+        .safeParse(req.body);
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "invalid_input",
+          message: "Message invalide : contenu de 1 à 5000 caractères.",
+          details: parsed.error.issues.map((i) => i.message),
+        });
+      }
+      try {
+        const memberId = await ficheMembre(db, req.session.userId);
+        if (!memberId) {
+          return reply.code(404).send({ error: "not_found", message: "Message introuvable." });
+        }
+        const { rows } = await db.query(
+          `SELECT id, conversation_id, sender_id, content, type, created_at, edited_at, deleted_at
+             FROM messages WHERE id = $1 AND church_id = $2`,
+          [messageId, req.session.churchId],
+        );
+        if (rows.length === 0 || rows[0].conversation_id !== id) {
+          return reply.code(404).send({ error: "not_found", message: "Message introuvable." });
+        }
+        const message = rows[0];
+        if (!(await estParticipantActif(db, req.session.churchId, id, memberId))) {
+          return reply.code(404).send({ error: "not_found", message: "Message introuvable." });
+        }
+        if (message.deleted_at != null) {
+          return reply.code(409).send({
+            error: "conflict",
+            message: "Ce message est déjà supprimé.",
+          });
+        }
+        if (message.sender_id !== memberId) {
+          return reply.code(403).send({
+            error: "forbidden",
+            message: "Seul l'auteur peut modifier ce message.",
+          });
+        }
+        if (message.type !== "text") {
+          return reply.code(409).send({
+            error: "conflict",
+            message: "Seul un message texte peut être modifié.",
+          });
+        }
+        const { rows: majRows } = await db.query(
+          `UPDATE messages SET content = $1, edited_at = NOW()
+            WHERE id = $2
+            RETURNING id, conversation_id, sender_id, content, type, created_at, edited_at, deleted_at`,
+          [parsed.data.content, messageId],
+        );
+        diffuserMessageWs(id, req.session.churchId, majRows[0]);
+        await auditLog(db, {
+          churchId: req.session.churchId,
+          userId: req.session.userId,
+          action: "messagerie.message_modifie",
+          details: { conversation_id: id, message_id: messageId },
+        }).catch(() => undefined);
+        return reply.send(majRows[0]);
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  // -- DELETE /messagerie/conversations/:id/messages/:messageId :
+  // suppression DOUCE seulement (deleted_at) : le message reste en
+  // base, marqué supprimé, affiché « Message supprimé ». Par l'auteur
+  // ou par l'administrateur de l'église (modération). Jamais de
+  // suppression dure : la preuve d'un signalement déjà fait reste
+  // figée dans reports.evidence_snapshot.
+  app.delete(
+    "/messagerie/conversations/:id/messages/:messageId",
+    { preHandler: [auth, gardeMessagerie] },
+    async (req, reply) => {
+      const id = (req.params as { id: string }).id;
+      const messageId = (req.params as { messageId: string }).messageId;
+      if (!uuid.safeParse(id).success || !uuid.safeParse(messageId).success) {
+        return reply.code(404).send({ error: "not_found", message: "Message introuvable." });
+      }
+      try {
+        const memberId = await ficheMembre(db, req.session.userId);
+        if (!memberId) {
+          return reply.code(404).send({ error: "not_found", message: "Message introuvable." });
+        }
+        const { rows } = await db.query(
+          `SELECT id, conversation_id, sender_id, content, type, created_at, edited_at, deleted_at
+             FROM messages WHERE id = $1 AND church_id = $2`,
+          [messageId, req.session.churchId],
+        );
+        if (rows.length === 0 || rows[0].conversation_id !== id) {
+          return reply.code(404).send({ error: "not_found", message: "Message introuvable." });
+        }
+        const message = rows[0];
+        if (!(await estParticipantActif(db, req.session.churchId, id, memberId))) {
+          return reply.code(404).send({ error: "not_found", message: "Message introuvable." });
+        }
+        if (message.deleted_at != null) {
+          return reply.code(409).send({
+            error: "conflict",
+            message: "Ce message est déjà supprimé.",
+          });
+        }
+        const moderation = req.session.role === "admin_eglise";
+        if (message.sender_id !== memberId && !moderation) {
+          return reply.code(403).send({
+            error: "forbidden",
+            message: "Seul l'auteur peut supprimer ce message.",
+          });
+        }
+        const { rows: majRows } = await db.query(
+          `UPDATE messages SET deleted_at = NOW()
+            WHERE id = $1
+            RETURNING id, conversation_id, sender_id, content, type, created_at, edited_at, deleted_at`,
+          [messageId],
+        );
+        const masque = { ...majRows[0], content: TEXTE_MESSAGE_SUPPRIME };
+        diffuserMessageWs(id, req.session.churchId, masque);
+        await auditLog(db, {
+          churchId: req.session.churchId,
+          userId: req.session.userId,
+          action: "messagerie.message_supprime",
+          details: {
+            conversation_id: id,
+            message_id: messageId,
+            moderation,
+          },
+        }).catch(() => undefined);
+        return reply.send(masque);
       } catch (e) {
         return dbError(reply, e);
       }

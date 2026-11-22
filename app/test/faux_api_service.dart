@@ -1044,6 +1044,430 @@ class FauxApiService implements ApiService {
     return message;
   }
 
+  // -- Messagerie, signalement / modération (tranche T-Msg-4) -----------
+  // Mémoire seulement : les signalements, actions et recours vivent
+  // dans des listes locales, sans réseau ni base.
+  final List<Signalement> _signalements = [];
+  final List<RecoursMessagerie> _recours = [];
+
+  String _moiMembreId() => _data.membersOf(_churchId).isEmpty
+      ? 'demo-m-001'
+      : _data.membersOf(_churchId).first.id;
+
+  MessageMessagerie _messageDemo(String conversationId, String messageId) {
+    final messages = _messagesMessagerie[conversationId];
+    if (messages == null) {
+      throw const ApiException('Conversation introuvable (démo).', 404);
+    }
+    for (final message in messages) {
+      if (message.id == messageId) return message;
+    }
+    throw const ApiException('Message introuvable (démo).', 404);
+  }
+
+  void _remplacerMessageDemo(MessageMessagerie message) {
+    final messages = _messagesMessagerie[message.conversationId];
+    if (messages == null) return;
+    final index = messages.indexWhere((m) => m.id == message.id);
+    if (index >= 0) messages[index] = message;
+  }
+
+  @override
+  Future<MessageMessagerie> modifierMessageConversation(
+    String conversationId,
+    String messageId, {
+    required String content,
+  }) async {
+    await _latence();
+    _requireAuth();
+    if (content.trim().isEmpty || content.trim().length > 5000) {
+      throw const ApiException('Message invalide (démo).');
+    }
+    final message = _messageDemo(conversationId, messageId);
+    if (message.supprime) {
+      throw const ApiException('Ce message est déjà supprimé (démo).', 409);
+    }
+    if (message.senderId != _moiMembreId()) {
+      throw const ApiException(
+        'Seul l’auteur peut modifier ce message (démo).',
+        403,
+      );
+    }
+    final modifie = message.copyWith(
+      content: content.trim(),
+      editedAt: DateTime.now(),
+    );
+    _remplacerMessageDemo(modifie);
+    return modifie;
+  }
+
+  @override
+  Future<MessageMessagerie> supprimerMessageConversation(
+    String conversationId,
+    String messageId,
+  ) async {
+    await _latence();
+    _requireAuth();
+    final message = _messageDemo(conversationId, messageId);
+    if (message.supprime) {
+      throw const ApiException('Ce message est déjà supprimé (démo).', 409);
+    }
+    if (message.senderId != _moiMembreId()) {
+      throw const ApiException(
+        'Seul l’auteur peut supprimer ce message (démo).',
+        403,
+      );
+    }
+    final supprime = message.copyWith(
+      content: 'Message supprimé',
+      deletedAt: DateTime.now(),
+    );
+    _remplacerMessageDemo(supprime);
+    return supprime;
+  }
+
+  @override
+  Future<Signalement> signalerContenu({
+    required String targetType,
+    required String targetId,
+    required String motif,
+    String? description,
+    String destinataire = 'local',
+  }) async {
+    await _latence();
+    _requireAuth();
+    if (!motifsSignalement.contains(motif)) {
+      throw const ApiException('Motif inconnu (démo).');
+    }
+    if (description != null && description.length > 500) {
+      throw const ApiException('Description trop longue (démo).');
+    }
+    Map<String, dynamic>? evidence;
+    if (targetType == 'message') {
+      MessageMessagerie? cible;
+      for (final messages in _messagesMessagerie.values) {
+        for (final message in messages) {
+          if (message.id == targetId) cible = message;
+        }
+      }
+      if (cible == null) {
+        throw const ApiException('Message introuvable (démo).', 404);
+      }
+      evidence = {
+        'target_type': 'message',
+        'message_id': cible.id,
+        'conversation_id': cible.conversationId,
+        'content': cible.content,
+        'sender_id': cible.senderId,
+        'sender_nom': null,
+        'type': cible.type,
+        'created_at': cible.createdAt?.toIso8601String(),
+      };
+    } else if (targetType == 'conversation') {
+      final conversation = _conversationsMessagerie
+          .where((c) => c.id == targetId)
+          .firstOrNull;
+      if (conversation == null) {
+        throw const ApiException('Conversation introuvable (démo).', 404);
+      }
+      evidence = {
+        'target_type': 'conversation',
+        'conversation_id': conversation.id,
+        'type': conversation.type,
+        'title': conversation.title,
+      };
+    } else {
+      throw const ApiException('Cible inconnue (démo).');
+    }
+    final route = motif == 'child_safety'
+        ? 'child_safety_referent'
+        : destinataire;
+    final signalement = Signalement(
+      id: 'demo-report-${DateTime.now().millisecondsSinceEpoch}',
+      targetType: targetType,
+      targetId: targetId,
+      motif: motif,
+      description: description?.trim(),
+      evidence: evidence,
+      routedTo: route,
+      statut: 'pending',
+      createdAt: DateTime.now(),
+    );
+    _signalements.add(signalement);
+    return signalement;
+  }
+
+  @override
+  Future<List<Signalement>> getSignalementsModeration({
+    String? statut,
+    String? motif,
+  }) async {
+    await _latence();
+    _requireAuth();
+    return _signalements
+        .where((s) => (statut == null || s.statut == statut))
+        .where((s) => (motif == null || s.motif == motif))
+        .toList();
+  }
+
+  @override
+  Future<Signalement> getSignalement(String id) async {
+    await _latence();
+    _requireAuth();
+    for (final signalement in _signalements) {
+      if (signalement.id == id) return signalement;
+    }
+    throw const ApiException('Signalement introuvable (démo).', 404);
+  }
+
+  void _remplacerSignalement(Signalement signalement) {
+    final index = _signalements.indexWhere((s) => s.id == signalement.id);
+    if (index >= 0) _signalements[index] = signalement;
+  }
+
+  @override
+  Future<ModerationAction> traiterSignalement(
+    String id, {
+    required String action,
+    int? dureeHeures,
+    required String notes,
+  }) async {
+    await _latence();
+    _requireAuth();
+    if (!actionsModeration.contains(action)) {
+      throw const ApiException('Action inconnue (démo).');
+    }
+    if (notes.trim().isEmpty) {
+      throw const ApiException('Note motivée obligatoire (démo).');
+    }
+    final dureeRequise = action == 'sourdine' || action == 'suspendre';
+    if (dureeRequise && dureeHeures == null) {
+      throw const ApiException('Durée obligatoire (démo).');
+    }
+    if (!dureeRequise && dureeHeures != null) {
+      throw const ApiException('Pas de durée pour cette action (démo).');
+    }
+    final signalement = await getSignalement(id);
+    if (signalement.statut != 'pending' && signalement.statut != 'in_review') {
+      throw const ApiException('Ce signalement est déjà traité (démo).', 409);
+    }
+    final moderation = ModerationAction(
+      id: 'demo-action-${DateTime.now().millisecondsSinceEpoch}',
+      signalementId: id,
+      action: action,
+      notes: notes.trim(),
+      date: DateTime.now(),
+    );
+    _remplacerSignalement(
+      Signalement(
+        id: signalement.id,
+        targetType: signalement.targetType,
+        targetId: signalement.targetId,
+        motif: signalement.motif,
+        description: signalement.description,
+        evidence: signalement.evidence,
+        routedTo: signalement.routedTo,
+        routedToChurchId: signalement.routedToChurchId,
+        statut: action == 'rejeter' ? 'dismissed' : 'resolved',
+        createdAt: signalement.createdAt,
+        resolvedAt: DateTime.now(),
+        resolutionNotes: notes.trim(),
+        rapporteurNom: signalement.rapporteurNom,
+        escalade: signalement.escalade,
+        actions: [...signalement.actions, moderation],
+        recours: signalement.recours,
+      ),
+    );
+    return moderation;
+  }
+
+  @override
+  Future<Signalement> escaladerSignalement(
+    String id, {
+    required String destination,
+  }) async {
+    await _latence();
+    _requireAuth();
+    if (destination != 'mother' && destination != 'child_safety_referent') {
+      throw const ApiException('Destination inconnue (démo).');
+    }
+    final signalement = await getSignalement(id);
+    if (signalement.statut != 'pending' && signalement.statut != 'in_review') {
+      throw const ApiException('Ce signalement est déjà traité (démo).', 409);
+    }
+    final escalade = Signalement(
+      id: signalement.id,
+      targetType: signalement.targetType,
+      targetId: signalement.targetId,
+      motif: signalement.motif,
+      description: signalement.description,
+      evidence: signalement.evidence,
+      routedTo: destination,
+      routedToChurchId: destination == 'mother' ? 'demo-eglise-mere' : null,
+      statut: 'escalated',
+      createdAt: signalement.createdAt,
+      resolvedAt: signalement.resolvedAt,
+      resolutionNotes: signalement.resolutionNotes,
+      rapporteurNom: signalement.rapporteurNom,
+      escalade: signalement.escalade,
+      actions: signalement.actions,
+      recours: signalement.recours,
+    );
+    _remplacerSignalement(escalade);
+    return escalade;
+  }
+
+  @override
+  Future<List<SanctionMessagerie>> getMesSanctions() async {
+    await _latence();
+    _requireAuth();
+    final moi = _moiMembreId();
+    final sanctions = <SanctionMessagerie>[];
+    for (final signalement in _signalements) {
+      if (signalement.evidence?['sender_id'] != moi) continue;
+      for (final action in signalement.actions) {
+        if (action.action == 'rejeter') continue;
+        sanctions.add(
+          SanctionMessagerie(
+            id: action.id,
+            signalementId: signalement.id,
+            action: action.action,
+            notes: action.notes,
+            date: action.date,
+            contesterAvant:
+                action.date?.add(const Duration(days: delaiRecoursJours)),
+            contestable: action.date != null && peutContester(action.date!),
+            appelEnCours: _recours.any(
+              (r) =>
+                  r.signalementId == signalement.id &&
+                  r.actionId == action.id &&
+                  r.enCours,
+            ),
+          ),
+        );
+      }
+    }
+    return sanctions;
+  }
+
+  @override
+  Future<RecoursMessagerie> contesterSanction(
+    String signalementId, {
+    String? moderationActionId,
+    String? motif,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final signalement = await getSignalement(signalementId);
+    final sanctions = signalement.actions
+        .where((a) => a.action != 'rejeter')
+        .toList();
+    if (sanctions.isEmpty) {
+      throw const ApiException('Aucune sanction à contester (démo).', 409);
+    }
+    final derniere = sanctions.last;
+    if (derniere.date != null && !peutContester(derniere.date!)) {
+      throw const ApiException('Le délai de recours est dépassé (démo).', 409);
+    }
+    if (_recours.any((r) => r.signalementId == signalementId && r.enCours)) {
+      throw const ApiException('Un recours est déjà en cours (démo).', 409);
+    }
+    final recours = RecoursMessagerie(
+      id: 'demo-recours-${DateTime.now().millisecondsSinceEpoch}',
+      signalementId: signalementId,
+      actionId: moderationActionId ?? derniere.id,
+      motif: motif?.trim(),
+      statut: 'pending',
+      createdAt: DateTime.now(),
+      repondreAvant: DateTime.now()
+          .add(const Duration(days: delaiReponseRecoursJours)),
+    );
+    _recours.add(recours);
+    _remplacerSignalement(
+      Signalement(
+        id: signalement.id,
+        targetType: signalement.targetType,
+        targetId: signalement.targetId,
+        motif: signalement.motif,
+        description: signalement.description,
+        evidence: signalement.evidence,
+        routedTo: signalement.routedTo,
+        routedToChurchId: signalement.routedToChurchId,
+        statut: 'appealed',
+        createdAt: signalement.createdAt,
+        resolvedAt: signalement.resolvedAt,
+        resolutionNotes: signalement.resolutionNotes,
+        rapporteurNom: signalement.rapporteurNom,
+        escalade: signalement.escalade,
+        actions: signalement.actions,
+        recours: [...signalement.recours, recours],
+      ),
+    );
+    return recours;
+  }
+
+  @override
+  Future<List<RecoursMessagerie>> getRecoursSignalement(String id) async {
+    await _latence();
+    _requireAuth();
+    return _recours.where((r) => r.signalementId == id).toList();
+  }
+
+  @override
+  Future<RecoursMessagerie> traiterRecours(
+    String id, {
+    required String statut,
+  }) async {
+    await _latence();
+    _requireAuth();
+    if (statut != 'resolved' && statut != 'dismissed') {
+      throw const ApiException('Décision inconnue (démo).');
+    }
+    final index = _recours.indexWhere((r) => r.id == id);
+    if (index < 0) {
+      throw const ApiException('Recours introuvable (démo).', 404);
+    }
+    final ancien = _recours[index];
+    if (!ancien.enCours) {
+      throw const ApiException('Ce recours est déjà traité (démo).', 409);
+    }
+    final traite = RecoursMessagerie(
+      id: ancien.id,
+      signalementId: ancien.signalementId,
+      actionId: ancien.actionId,
+      motif: ancien.motif,
+      statut: statut,
+      createdAt: ancien.createdAt,
+      resolvedAt: DateTime.now(),
+      repondreAvant: ancien.repondreAvant,
+    );
+    _recours[index] = traite;
+    final signalement = await getSignalement(ancien.signalementId);
+    _remplacerSignalement(
+      Signalement(
+        id: signalement.id,
+        targetType: signalement.targetType,
+        targetId: signalement.targetId,
+        motif: signalement.motif,
+        description: signalement.description,
+        evidence: signalement.evidence,
+        routedTo: signalement.routedTo,
+        routedToChurchId: signalement.routedToChurchId,
+        statut: statut == 'resolved' ? 'dismissed' : 'resolved',
+        createdAt: signalement.createdAt,
+        resolvedAt: signalement.resolvedAt,
+        resolutionNotes: signalement.resolutionNotes,
+        rapporteurNom: signalement.rapporteurNom,
+        escalade: signalement.escalade,
+        actions: signalement.actions,
+        recours: signalement.recours
+            .map((r) => r.id == id ? traite : r)
+            .toList(),
+      ),
+    );
+    return traite;
+  }
+
   /// Jetons FCM enregistrés / retirés pendant la session (tranche push
   /// FCM) : le faux service ne fait qu'enregistrer l'appel, sans réseau.
   final List<String> jetonsPushEnregistres = [];

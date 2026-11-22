@@ -411,8 +411,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Conversation : messages, saisie et Signaler inerte',
-        (tester) async {
+    testWidgets('Conversation : messages, saisie et Signaler', (tester) async {
       final api = FauxApiService();
       await tester.runAsync(
         () => api.login(
@@ -462,10 +461,24 @@ void main() {
       expect(champ.style?.fontSize, isNull);
       final theme = Theme.of(tester.element(find.byType(TextField)));
       expect(theme.textTheme.bodyLarge?.fontSize, 16);
-      // Signaler est inerte en T-Msg-1.
+      // Signaler ouvre la feuille de signalement (T-Msg-4) : motif,
+      // destinataire et phrase de visibilité avant envoi.
       await tester.tap(find.byTooltip('Signaler'));
       await tester.pump();
-      expect(find.text('Bientôt disponible'), findsOneWidget);
+      expect(find.text('Motif *'), findsOneWidget);
+      expect(
+        find.textContaining('ne verra jamais votre nom'),
+        findsOneWidget,
+      );
+      // On referme la feuille en envoyant le signalement.
+      await tester.ensureVisible(find.text('Envoyer le signalement'));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Envoyer le signalement'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Signalement envoyé. Merci.'), findsOneWidget);
+      // Le SnackBar recouvre le bas de l'écran : on le laisse expirer
+      // avant d'envoyer un message.
+      await tester.pump(const Duration(seconds: 5));
       // Envoi d'un message par HTTP.
       await tester.enterText(find.byType(TextField), 'Réponse');
       await tester.tap(find.byTooltip('Envoyer'));

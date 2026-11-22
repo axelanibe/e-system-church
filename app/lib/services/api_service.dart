@@ -1729,6 +1729,83 @@ abstract class ApiService {
     required String content,
   });
 
+  // -- Messagerie, signalement / modération (tranche T-Msg-4) -----------
+  // Routes de `server/src/routes/messagerie_moderation.ts` (schéma
+  // 034) : signaler un message ou une conversation, file de
+  // modération (administrateur de l'église seulement), recours
+  // (15 jours pour contester, 30 jours pour répondre).
+
+  /// Modifie un de mes messages (seul l'auteur ; edited_at renseigné).
+  Future<MessageMessagerie> modifierMessageConversation(
+    String conversationId,
+    String messageId, {
+    required String content,
+  });
+
+  /// Supprime un message, doucement (deleted_at ; affiché
+  /// « Message supprimé »). Par l'auteur ou un modérateur.
+  Future<MessageMessagerie> supprimerMessageConversation(
+    String conversationId,
+    String messageId,
+  );
+
+  /// Signale un message ou une conversation (motif, description
+  /// facultative de 500 caractères maximum, destinataire local ou
+  /// église mère ; la sécurité d'un enfant part toujours vers le
+  /// référent protection de l'enfance).
+  Future<Signalement> signalerContenu({
+    required String targetType,
+    required String targetId,
+    required String motif,
+    String? description,
+    String destinataire = 'local',
+  });
+
+  /// File de modération de mon église (administrateur seulement),
+  /// avec les signalements transmis par les églises filles.
+  Future<List<Signalement>> getSignalementsModeration({
+    String? statut,
+    String? motif,
+  });
+
+  /// Détail d'un signalement (actions de modération et recours).
+  Future<Signalement> getSignalement(String id);
+
+  /// Pose une action de modération (note motivée exigée ; durée en
+  /// heures pour sourdine et suspension).
+  Future<ModerationAction> traiterSignalement(
+    String id, {
+    required String action,
+    int? dureeHeures,
+    required String notes,
+  });
+
+  /// Transmet un signalement à l'église mère ou au référent
+  /// protection de l'enfance.
+  Future<Signalement> escaladerSignalement(
+    String id, {
+    required String destination,
+  });
+
+  /// Sanctions qui me concernent, avec le délai de recours.
+  Future<List<SanctionMessagerie>> getMesSanctions();
+
+  /// Conteste une sanction (dans les 15 jours).
+  Future<RecoursMessagerie> contesterSanction(
+    String signalementId, {
+    String? moderationActionId,
+    String? motif,
+  });
+
+  /// Recours d'un signalement.
+  Future<List<RecoursMessagerie>> getRecoursSignalement(String id);
+
+  /// Répond à un recours (resolved = favorable, dismissed = rejet).
+  Future<RecoursMessagerie> traiterRecours(
+    String id, {
+    required String statut,
+  });
+
   /// Base de l'API et jeton JWT courant : le client WebSocket s'y
   /// connecte (`wss://<base>/messagerie/ws?token=<jeton>`).
   String get baseUrl;
