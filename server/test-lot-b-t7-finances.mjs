@@ -672,6 +672,137 @@ async function main() {
       suiviAutre.texte,
     );
 
+    // --- J. Sécurité tranche 2 : export CSV, caisse automatique, dépense --
+    console.log('J. Sécurité tranche 2 :');
+    // J1. Export CSV : les cellules commençant par un déclencheur de
+    // formule sont neutralisées par une apostrophe.
+    await pool.query(
+      `INSERT INTO members (church_id, matricule, full_name, status) VALUES ($1, $2, $3, 'actif')`,
+      [egliseId, 'M-T2-F1', "=2+5+cmd|' /C calc'!A0"],
+    );
+    await pool.query(
+      `INSERT INTO members (church_id, matricule, full_name, status) VALUES ($1, $2, $3, 'actif')`,
+      [egliseId, 'M-T2-F2', '+2+2'],
+    );
+    await pool.query(
+      `INSERT INTO members (church_id, matricule, full_name, status) VALUES ($1, $2, $3, 'actif')`,
+      [egliseId, 'M-T2-F3', 'Jean Dupont'],
+    );
+    const exportMembres = await appel('GET', '/stats/export?type=membres', jetonAdmin);
+    verifier(
+      'export CSV : 200, texte',
+      exportMembres.statut === 200 && typeof exportMembres.texte === 'string',
+      exportMembres.texte.slice(0, 120),
+    );
+    verifier(
+      'export CSV : la formule « =… » est neutralisée par une apostrophe',
+      exportMembres.texte.includes(`"'=2+5`) && !exportMembres.texte.includes('";=2+5'),
+      exportMembres.texte,
+    );
+    verifier(
+      'export CSV : la formule « +… » est neutralisée par une apostrophe',
+      exportMembres.texte.includes(`"'+2+2"`) && !exportMembres.texte.includes('";+2+2'),
+      exportMembres.texte,
+    );
+    verifier(
+      'export CSV : le nom bénin reste tel quel, sans apostrophe',
+      exportMembres.texte.includes('"Jean Dupont"'),
+      exportMembres.texte,
+    );
+    // J2. Écritures automatiques de caisse : ni modification ni suppression.
+    const caisseAutoContrib = await appel('GET', '/caisse-mouvements?source=contribution', jetonAdmin);
+    const idAutoContrib = caisseAutoContrib.json?.items?.[0]?.id;
+    const montantAutoContrib = caisseAutoContrib.json?.items?.[0]?.montant_fcfa;
+    const patchAuto = await appel('PATCH', `/caisse-mouvements/${idAutoContrib}`, jetonTresorier, { montant_fcfa: 1 });
+    verifier(
+      'écriture automatique (contribution) : PATCH 400, message « automatique »',
+      patchAuto.statut === 400 && /automatique/i.test(patchAuto.json?.message ?? ''),
+      patchAuto.texte,
+    );
+    const supprAuto = await appel('DELETE', `/caisse-mouvements/${idAutoContrib}`, jetonTresorier);
+    verifier(
+      'écriture automatique (contribution) : DELETE 409, message « automatique »',
+      supprAuto.statut === 409 && /automatique/i.test(supprAuto.json?.message ?? ''),
+      supprAuto.texte,
+    );
+    const autoApres = await appel('GET', `/caisse-mouvements/${idAutoContrib}`, jetonAdmin);
+    verifier(
+      'écriture automatique intacte après les refus (montant inchangé)',
+      autoApres.statut === 200 && autoApres.json?.montant_fcfa === montantAutoContrib,
+      autoApres.texte,
+    );
+    const caisseAutoDepense = await appel('GET', '/caisse-mouvements?source=depense', jetonAdmin);
+    const idAutoDepense = caisseAutoDepense.json?.items?.[0]?.id;
+    const patchAutoDepense = await appel('PATCH', `/caisse-mouvements/${idAutoDepense}`, jetonTresorier, { type: 'entree', montant_fcfa: 1 });
+    verifier(
+      'écriture automatique (dépense) : PATCH 400',
+      patchAutoDepense.statut === 400,
+      patchAutoDepense.texte,
+    );
+    const supprAutoDepense = await appel('DELETE', `/caisse-mouvements/${idAutoDepense}`, jetonTresorier);
+    verifier(
+      'écriture automatique (dépense) : DELETE 409',
+      supprAutoDepense.statut === 409,
+      supprAutoDepense.texte,
+    );
+    const patchManuelT2 = await appel('PATCH', `/caisse-mouvements/${idManuel1}`, jetonTresorier, { motif: 'Quête manuelle T7 — tranche 2' });
+    verifier(
+      'écriture manuelle du mois en cours : PATCH 200 (non concernée)',
+      patchManuelT2.statut === 200,
+      patchManuelT2.texte,
+    );
+    // J3. Une dépense naît « soumise » : la création directe « payee »
+    // est refusée, seul le parcours en deux temps paie (avec la caisse).
+    const depenseDirecte = await appel('POST', '/depenses', jetonTresorier, {
+      montant_fcfa: 9999, motif: 'Dépense directe payée T2', statut: 'payee',
+    });
+    verifier(
+      'dépense créée « payee » : 400, message « soumise »',
+      depenseDirecte.statut === 400 && /soumise/i.test(depenseDirecte.json?.message ?? ''),
+      depenseDirecte.texte,
+    );
+    const depenseDirecte2 = await appel('POST', '/depenses', jetonTresorier, {
+      montant_fcfa: 9999, motif: 'Dépense directe validée T2', statut: 'validee_tresorier',
+    });
+    verifier(
+      'dépense créée « validee_tresorier » : 400',
+      depenseDirecte2.statut === 400,
+      depenseDirecte2.texte,
+    );
+    const depenseSoumise = await appel('POST', '/depenses', jetonTresorier, {
+      montant_fcfa: 1111, motif: 'Dépense soumise T2', statut: 'soumise',
+    });
+    verifier(
+      'dépense créée « soumise » (explicite) : 201',
+      depenseSoumise.statut === 201 && depenseSoumise.json?.statut === 'soumise',
+      depenseSoumise.texte,
+    );
+    const depenseSansStatut = await appel('POST', '/depenses', jetonTresorier, {
+      montant_fcfa: 2222, motif: 'Dépense sans statut T2',
+    });
+    verifier(
+      'dépense créée sans statut : 201, « soumise » par défaut',
+      depenseSansStatut.statut === 201 && depenseSansStatut.json?.statut === 'soumise',
+      depenseSansStatut.texte,
+    );
+    const idDepenseT2 = depenseSoumise.json?.id;
+    await appel('PATCH', `/depenses/${idDepenseT2}/statut`, jetonTresorier, { statut: 'validee_tresorier' });
+    await appel('PATCH', `/depenses/${idDepenseT2}/statut`, jetonAdmin, { statut: 'validee_pasteur' });
+    const payeeT2 = await appel('PATCH', `/depenses/${idDepenseT2}/statut`, jetonTresorier, { statut: 'payee' });
+    verifier(
+      'parcours en deux temps : dépense payée 200',
+      payeeT2.statut === 200 && payeeT2.json?.statut === 'payee',
+      payeeT2.texte,
+    );
+    const caisseDepenseT2 = await appel('GET', '/caisse-mouvements?source=depense', jetonAdmin);
+    verifier(
+      'caisse : 2 sorties automatiques (3 000 de la section B + 1 111), sans la dépense directe refusée',
+      caisseDepenseT2.statut === 200 && caisseDepenseT2.json?.total === 2 &&
+        caisseDepenseT2.json.items.some((m) => m.montant_fcfa === 1111 && m.source_id === idDepenseT2) &&
+        !caisseDepenseT2.json.items.some((m) => m.montant_fcfa === 9999),
+      caisseDepenseT2.texte,
+    );
+
     await pool.end();
   } finally {
     if (pool) await pool.end().catch(() => undefined);
