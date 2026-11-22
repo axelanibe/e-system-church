@@ -4,13 +4,13 @@ import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../models/activites.dart';
 import '../models/member.dart';
-import '../models/rsvp.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/champ_membre_choisir_creer.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
 import '../widgets/liste_avec_fab.dart';
+import '../models/rsvp.dart';
 
 /// Ouvre le dialogue « Nouvelle activité » (ou la modification d'une
 /// activité existante quand [activite] est fournie) : titre, description,
