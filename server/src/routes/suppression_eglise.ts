@@ -50,6 +50,7 @@ type CasSuppression = "auto_test" | "annexe_mere" | "annexe_super_admin";
 const TABLES_LIEES = [
   "abonnements",
   "accompagnements",
+  "activite_rsvp",
   "activites_jeunesse",
   "announcements",
   "attestations",

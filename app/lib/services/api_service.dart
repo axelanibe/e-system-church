@@ -37,6 +37,7 @@ import '../models/presences.dart';
 import '../models/prieres.dart';
 import '../models/profil.dart';
 import '../models/plateforme.dart';
+import '../models/rsvp.dart';
 import '../models/acces_plateforme.dart';
 import '../models/transfert.dart';
 import '../models/rapport.dart';
@@ -210,6 +211,20 @@ abstract class ApiService {
 
   /// Annuler ma confirmation de présence à un culte (migration 020).
   Future<void> annulerPresenceCulte(String culteId);
+
+  /// « Je serai présent » à une activité (migration 040) : annonce
+  /// de présence, sans pointage. Doublon refusé en 409 par le serveur.
+  Future<void> confirmerPresenceActivite(String activiteId);
+
+  /// Annuler ma confirmation de présence à une activité (migration 040).
+  Future<void> annulerPresenceActivite(String activiteId);
+
+  /// Confirmations « Je serai présent » pour un culte (lot 3b) :
+  /// compteur + qui a confirmé. Admin et responsable de culte.
+  Future<RsvpListe> getRsvpCulte(String culteId);
+
+  /// Confirmations « Je serai présent » pour une activité (lot 3b).
+  Future<RsvpListe> getRsvpActivite(String activiteId);
 
   /// Mon abonnement (tranche P3, migration 021) : l'abonnement de mon
   /// église mère, ou la couverture par la mère si je suis une annexe.

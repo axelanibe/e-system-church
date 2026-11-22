@@ -8,6 +8,7 @@ import {
   existsInChurch,
   registerCrud,
 } from "../crud.js";
+import { dbError, requireAuth, requireRole } from "../middleware.js";
 
 /**
  * Module 2 — Cultes et programmes : types de culte, cultes, ordre de culte,
@@ -137,4 +138,83 @@ export function registerCultesRoutes(app: FastifyInstance, db: Pool) {
       return null;
     },
   });
+
+  // -- Confirmations « Je serai présent » (lot 3b, migration 040) :
+  //    qui a confirmé, pour un culte ou une activité, avec le compteur.
+  //    Lecture admin + responsable de culte seulement : la liste nomme
+  //    des membres. Ne touche pas au pointage (`presences`) : une
+  //    confirmation n'est pas une présence pointée.
+  app.get(
+    "/cultes/:id/rsvp",
+    { preHandler: [requireAuth(db), requireRole(...WRITE_STD)] },
+    async (req, reply) => {
+      try {
+        const id = (req.params as { id: string }).id;
+        const { rows: cibles } = await db.query(
+          `SELECT id, titre, date_heure FROM cultes
+            WHERE id = $1 AND church_id = $2`,
+          [id, req.session.churchId],
+        );
+        if (cibles.length === 0) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Culte introuvable dans votre église.",
+          });
+        }
+        const { rows } = await db.query(
+          `SELECT r.member_id, m.full_name AS membre_nom,
+                  m.matricule AS membre_matricule, r.created_at
+             FROM culte_rsvp r
+             JOIN members m ON m.id = r.member_id
+            WHERE r.culte_id = $1 AND r.church_id = $2
+            ORDER BY r.created_at ASC`,
+          [id, req.session.churchId],
+        );
+        return reply.send({
+          culte: cibles[0],
+          total: rows.length,
+          confirmes: rows,
+        });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
+
+  app.get(
+    "/activites/:id/rsvp",
+    { preHandler: [requireAuth(db), requireRole(...WRITE_STD)] },
+    async (req, reply) => {
+      try {
+        const id = (req.params as { id: string }).id;
+        const { rows: cibles } = await db.query(
+          `SELECT id, titre, date_heure FROM activites
+            WHERE id = $1 AND church_id = $2`,
+          [id, req.session.churchId],
+        );
+        if (cibles.length === 0) {
+          return reply.code(404).send({
+            error: "not_found",
+            message: "Activité introuvable dans votre église.",
+          });
+        }
+        const { rows } = await db.query(
+          `SELECT r.member_id, m.full_name AS membre_nom,
+                  m.matricule AS membre_matricule, r.created_at
+             FROM activite_rsvp r
+             JOIN members m ON m.id = r.member_id
+            WHERE r.activite_id = $1 AND r.church_id = $2
+            ORDER BY r.created_at ASC`,
+          [id, req.session.churchId],
+        );
+        return reply.send({
+          activite: cibles[0],
+          total: rows.length,
+          confirmes: rows,
+        });
+      } catch (e) {
+        return dbError(reply, e);
+      }
+    },
+  );
 }

@@ -10,6 +10,7 @@ import '../widgets/champ_membre_choisir_creer.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
 import '../widgets/liste_avec_fab.dart';
+import '../models/rsvp.dart';
 
 /// Ouvre le dialogue « Nouvelle activité » (ou la modification d'une
 /// activité existante quand [activite] est fournie) : titre, description,
@@ -214,6 +215,72 @@ class _ActivitesScreenState extends State<ActivitesScreen> {
     }
   }
 
+  /// Confirmations « Je serai présent » (lot 3b) : qui a confirmé
+  /// pour cette activité, avec le compteur, dans un dialogue.
+  Future<void> _voirConfirmations(Activite activite) async {
+    final future =
+        context.read<AppState>().api.getRsvpActivite(activite.id);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Confirmations — ${activite.titre}'),
+        content: FutureBuilder<RsvpListe>(
+          future: future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const AppLoading();
+            }
+            if (snapshot.hasError) {
+              return Text('Erreur : ${snapshot.error}');
+            }
+            final rsvp = snapshot.data!;
+            if (rsvp.confirmes.isEmpty) {
+              return const Text('Aucune confirmation pour le moment.');
+            }
+            return SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${rsvp.total} membre${rsvp.total > 1 ? 's' : ''}'
+                      ' confirmé${rsvp.total > 1 ? 's' : ''} :',
+                    ),
+                    const SizedBox(height: 8),
+                    for (final c in rsvp.confirmes)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.person_outline),
+                        ),
+                        title: Text(c.membreNom),
+                        subtitle: Text(
+                          [
+                            if (c.membreMatricule != null)
+                              c.membreMatricule!,
+                            if (c.createdAt != null)
+                              afficherDateTime(c.createdAt),
+                          ].join(' · '),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -274,74 +341,100 @@ class _ActivitesScreenState extends State<ActivitesScreen> {
                 itemBuilder: (context, index) {
                   final activite = activites[index];
                   return Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.event_outlined),
-                      title: Text(
-                        activite.titre,
-                        style: const TextStyle(fontSize: 13.5),
-                      ),
-                      subtitle: Text(
-                        [
-                          formatDateTimeSansDecalage(activite.date),
-                          if (activite.lieu != null) activite.lieu,
-                          if (activite.responsable != null)
-                            'Avec ${activite.responsable}',
-                        ].join(' · '),
-                        style: const TextStyle(fontSize: 11.5),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: activite.publiee
-                                  ? AppTheme.or
-                                  : AppTheme.bordure,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              activite.publiee ? 'Publié' : 'Brouillon',
-                              style: TextStyle(
-                                color: activite.publiee
-                                    ? AppTheme.violetProfond
-                                    : Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.event_outlined),
+                          title: Text(
+                            activite.titre,
+                            style: const TextStyle(fontSize: 13.5),
+                          ),
+                          subtitle: Text(
+                            [
+                              formatDateTimeSansDecalage(activite.date),
+                              if (activite.lieu != null) activite.lieu,
+                              if (activite.responsable != null)
+                                'Avec ${activite.responsable}',
+                            ].join(' · '),
+                            style: const TextStyle(fontSize: 11.5),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: activite.publiee
+                                      ? AppTheme.or
+                                      : AppTheme.bordure,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  activite.publiee ? 'Publié' : 'Brouillon',
+                                  style: TextStyle(
+                                    color: activite.publiee
+                                        ? AppTheme.violetProfond
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                ),
                               ),
+                              IconButton(
+                                icon: Icon(
+                                  activite.publiee
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                ),
+                                tooltip: activite.publiee
+                                    ? 'Dépublier'
+                                    : 'Publier',
+                                onPressed: () => _basculerStatut(activite),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined),
+                                tooltip: 'Modifier',
+                                onPressed: () => ouvrirActivite(
+                                  context,
+                                  activite: activite,
+                                  onEnregistre: _refresh,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: 'Supprimer',
+                                onPressed: () => _supprimer(activite),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Confirmations « Je serai présent » (lot 3b) :
+                        // sous la tuile, pas dans la rangée d'actions —
+                        // un 4e bouton y faisait déborder la carte sur
+                        // écran étroit (1 244 px de haut, 2e ligne
+                        // jamais construite).
+                        Padding(
+                          padding:
+                              const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                          child: TextButton.icon(
+                            onPressed: () => _voirConfirmations(activite),
+                            icon: const Icon(
+                              Icons.how_to_reg_outlined,
+                              size: 18,
+                            ),
+                            label: const Text(
+                              'Confirmations « Je serai présent »',
+                              style: TextStyle(fontSize: 12.5),
                             ),
                           ),
-                          IconButton(
-                            icon: Icon(
-                              activite.publiee
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
-                            ),
-                            tooltip:
-                                activite.publiee ? 'Dépublier' : 'Publier',
-                            onPressed: () => _basculerStatut(activite),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            tooltip: 'Modifier',
-                            onPressed: () => ouvrirActivite(
-                              context,
-                              activite: activite,
-                              onEnregistre: _refresh,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            tooltip: 'Supprimer',
-                            onPressed: () => _supprimer(activite),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   );
                 },

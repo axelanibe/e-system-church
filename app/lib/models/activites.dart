@@ -12,6 +12,10 @@ class Activite {
   final String? responsable;
   final String statut; // brouillon | publié
   final DateTime? createdAt;
+  /// Le fidèle a confirmé sa présence à cette activité
+  /// (« Je serai présent », table activite_rsvp, migration 040).
+  /// Faux sans confirmation.
+  final bool seraiPresent;
 
   const Activite({
     required this.id,
@@ -22,6 +26,7 @@ class Activite {
     this.responsable,
     this.statut = 'brouillon',
     this.createdAt,
+    this.seraiPresent = false,
   });
 
   factory Activite.fromJson(Map<String, dynamic> json) => Activite(
@@ -33,6 +38,7 @@ class Activite {
         responsable: json['responsable'] as String?,
         statut: json['statut'] as String? ?? 'brouillon',
         createdAt: parseDate(json['created_at'] as String?),
+        seraiPresent: json['serai_present'] as bool? ?? false,
       );
 
   DateTime? get date => parseDate(dateHeure);

@@ -214,4 +214,59 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('Accueil fidèle : Je serai présent aux activités (lot 3b)', () {
+    testWidgets(
+        'activité publiée : bouton confirme, pastille puis Annuler annule',
+        (tester) async {
+      final api = await _connecter(tester);
+      // Sans culte daté, la carte Prochain culte est masquée : le seul
+      // bouton « Je serai présent » de l'écran est celui de l'activité.
+      api.definirCultes([]);
+      api.definirActivites([_activitePubliee]);
+      await _pomper(tester, const FideleHomeScreen(), api);
+      expect(find.text('Sortie jeunesse EXEMPLE'), findsOneWidget);
+      final bouton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Je serai présent'),
+      );
+      expect(bouton.onPressed, isNotNull);
+      await tester.ensureVisible(find.text('Je serai présent'));
+      await tester.tap(find.text('Je serai présent'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('Présence confirmée'), findsOneWidget);
+      expect(find.text('Annuler'), findsOneWidget);
+      expect(find.text('Je serai présent'), findsNothing);
+      await tester.tap(find.text('Annuler'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('Je serai présent'), findsOneWidget);
+      expect(find.text('Présence confirmée'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await _demonter(tester);
+    });
+
+    testWidgets('activité déjà confirmée : pastille affichée d’emblée',
+        (tester) async {
+      final api = await _connecter(tester);
+      api.definirCultes([]);
+      api.definirActivites([
+        const Activite(
+          id: 'test-act-confirmee',
+          titre: 'Sortie confirmée EXEMPLE',
+          dateHeure: '2027-01-16T09:00',
+          lieu: 'Parc EXEMPLE',
+          statut: 'publié',
+          seraiPresent: true,
+        ),
+      ]);
+      await _pomper(tester, const FideleHomeScreen(), api);
+      expect(find.text('Sortie confirmée EXEMPLE'), findsOneWidget);
+      expect(find.text('Présence confirmée'), findsOneWidget);
+      expect(find.text('Annuler'), findsOneWidget);
+      expect(find.text('Je serai présent'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await _demonter(tester);
+    });
+  });
 }
