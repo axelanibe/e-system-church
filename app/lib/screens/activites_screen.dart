@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 
 import '../config/app_theme.dart';
 import '../models/activites.dart';
+import '../models/member.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
+import '../widgets/champ_membre_choisir_creer.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialog_helpers.dart';
 import '../widgets/liste_avec_fab.dart';
@@ -41,16 +43,38 @@ Future<void> ouvrirActivite(
     final v = c.text.trim();
     return v.isEmpty ? null : v;
   }
+  // Membres de la base, pour « choisir ou créer » le responsable
+  // (Tranche Formulaires P0). Sans eux, le nom reste un texte libre.
+  List<Member> membres = [];
+  try {
+    membres = (await api.getMembers(limit: 100)).membres;
+  } catch (_) {
+    // La liste est facultative : le nom libre suffit.
+  }
+  if (!context.mounted) return;
+  Future<Member> creerMembre({
+    required String fullName,
+    String? phone,
+    String? email,
+  }) =>
+      api.createMember(fullName: fullName, phone: phone, email: email);
+  String? responsableNom = opt(responsableController);
 
   await showCreateDialog(
     context: context,
     title: activite == null ? 'Nouvelle activité' : 'Modifier l’activité',
     saveLabel: activite == null ? 'Créer l’activité' : 'Enregistrer',
     fields: [
-      dialogTextField(controller: titreController, label: 'Titre *'),
+      mentionChampsObligatoires,
+      dialogTextField(
+        controller: titreController,
+        label: 'Titre *',
+        aide: 'Ex. Veillée de prière',
+      ),
       dialogTextField(
         controller: descriptionController,
         label: 'Description',
+        aide: 'Ce que les membres doivent savoir.',
         maxLines: 3,
       ),
       dialogDateField(
@@ -59,10 +83,20 @@ Future<void> ouvrirActivite(
         label: 'Date *',
       ),
       dialogTimeField(controller: heureController, label: 'Heure *'),
-      dialogTextField(controller: lieuController, label: 'Lieu'),
       dialogTextField(
-        controller: responsableController,
+        controller: lieuController,
+        label: 'Lieu',
+        aide: 'Ex. Temple principal',
+      ),
+      ChampResponsableNomLibre(
+        membres: membres,
+        valeurInitiale: opt(responsableController),
+        onChanged: (v) => responsableNom = v,
+        onCreerMembre: creerMembre,
+        onMembreCree: (m) => membres.add(m),
         label: 'Responsable',
+        aide: 'Choisissez un membre de la base, créez-le s’il n’y est '
+            'pas, ou tapez un nom.',
       ),
       dialogDropdown<String>(
         value: statut,
@@ -75,6 +109,8 @@ Future<void> ouvrirActivite(
         titreController.text.trim().length >= 2 &&
         dateController.text.trim().isNotEmpty &&
         heureController.text.trim().isNotEmpty,
+    messageInvalide:
+        'Entrez un titre (2 lettres au minimum), une date et une heure.',
     onSave: () async {
       try {
         final dateHeure =
@@ -85,7 +121,7 @@ Future<void> ouvrirActivite(
             description: opt(descriptionController),
             dateHeure: dateHeure,
             lieu: opt(lieuController),
-            responsable: opt(responsableController),
+            responsable: responsableNom,
             statut: statut,
           );
           if (context.mounted) {
@@ -98,7 +134,7 @@ Future<void> ouvrirActivite(
             description: opt(descriptionController),
             dateHeure: dateHeure,
             lieu: opt(lieuController),
-            responsable: opt(responsableController),
+            responsable: responsableNom,
             statut: statut,
           );
           if (context.mounted) {

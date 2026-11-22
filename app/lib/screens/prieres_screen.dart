@@ -6,6 +6,7 @@ import '../models/member.dart';
 import '../models/prieres.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
+import '../widgets/champ_membre_choisir_creer.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/liste_avec_fab.dart';
 import '../widgets/dialog_helpers.dart';
@@ -106,31 +107,49 @@ class _PrieresScreenState extends State<PrieresScreen> {
   }
 
   Future<void> _createDemande(List<Member> membres) async {
+    final api = context.read<AppState>().api;
     final sujetController = TextEditingController();
     final demandeurController = TextEditingController();
     final detailsController = TextEditingController();
     String? memberId;
     bool confidentiel = false;
+    Future<Member> creerMembre({
+      required String fullName,
+      String? phone,
+      String? email,
+    }) =>
+        api.createMember(fullName: fullName, phone: phone, email: email);
     await showCreateDialog(
       context: context,
       title: 'Nouvelle demande de prière',
       saveLabel: 'Créer',
       fields: [
-        dialogTextField(controller: sujetController, label: 'Sujet'),
-        dialogDropdown<String?>(
-          value: memberId,
-          label: 'Membre concerné',
-          options: {
-            null: 'Aucun',
-            for (final m in membres) m.id: '${m.fullName} (${m.matricule})',
-          },
+        mentionChampsObligatoires,
+        dialogTextField(
+          controller: sujetController,
+          label: 'Sujet *',
+          aide: 'Ex. Guérison, emploi, famille',
+        ),
+        ChampMembreChoisirCreer(
+          membres: membres,
+          valeur: memberId,
           onChanged: (v) => memberId = v,
+          onCreerMembre: creerMembre,
+          onMembreCree: (m) => membres.add(m),
+          label: 'Membre concerné',
+          aide: 'Pour qui prie-t-on ? Choisissez un membre de la base, '
+              'ou créez-le sur place s’il n’y est pas encore.',
         ),
         dialogTextField(
-            controller: demandeurController, label: 'Nom du demandeur'),
+          controller: demandeurController,
+          label: 'Nom du demandeur',
+          aide: 'Nom de la personne qui demande, s’il diffère du membre '
+              'concerné.',
+        ),
         dialogTextField(
           controller: detailsController,
           label: 'Détails',
+          aide: 'Précisez la demande, sans détail médical sensible.',
           maxLines: 3,
         ),
         StatefulBuilder(
@@ -143,7 +162,8 @@ class _PrieresScreenState extends State<PrieresScreen> {
           ),
         ),
       ],
-      isValid: () => sujetController.text.trim().isNotEmpty,
+      isValid: () => sujetController.text.trim().length >= 2,
+      messageInvalide: 'Entrez un sujet (2 lettres au minimum).',
       onSave: () async {
         try {
           await context.read<AppState>().api.createDemandePriere(
@@ -181,32 +201,48 @@ class _PrieresScreenState extends State<PrieresScreen> {
   }
 
   Future<void> _createMessage(List<Member> membres) async {
+    final api = context.read<AppState>().api;
     final sujetController = TextEditingController();
     final corpsController = TextEditingController();
     String? destinataireId;
+    Future<Member> creerMembre({
+      required String fullName,
+      String? phone,
+      String? email,
+    }) =>
+        api.createMember(fullName: fullName, phone: phone, email: email);
     await showCreateDialog(
       context: context,
       title: 'Nouveau message interne',
       saveLabel: 'Envoyer',
       fields: [
-        dialogTextField(controller: sujetController, label: 'Sujet'),
-        dialogDropdown<String?>(
-          value: destinataireId,
-          label: 'Destinataire',
-          options: {
-            for (final m in membres) m.id: '${m.fullName} (${m.matricule})',
-          },
+        mentionChampsObligatoires,
+        dialogTextField(
+          controller: sujetController,
+          label: 'Sujet *',
+          aide: 'Ex. Réunion du département',
+        ),
+        ChampMembreChoisirCreer(
+          membres: membres,
+          valeur: destinataireId,
           onChanged: (v) => destinataireId = v,
+          onCreerMembre: creerMembre,
+          onMembreCree: (m) => membres.add(m),
+          label: 'Destinataire',
+          aide: 'À qui s’adresse ce message ? Choisissez un membre de la '
+              'base, ou créez-le sur place s’il n’y est pas encore.',
         ),
         dialogTextField(
           controller: corpsController,
-          label: 'Message',
+          label: 'Message *',
+          aide: 'Le message lui-même, en clair.',
           maxLines: 4,
         ),
       ],
       isValid: () =>
-          sujetController.text.trim().isNotEmpty &&
+          sujetController.text.trim().length >= 2 &&
           corpsController.text.trim().isNotEmpty,
+      messageInvalide: 'Entrez un sujet (2 lettres au minimum) et un message.',
       onSave: () async {
         try {
           await context.read<AppState>().api.createMessageInterne(

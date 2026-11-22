@@ -8,6 +8,7 @@ import '../models/membres_complement.dart';
 import '../models/member.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
+import '../utils/validation.dart';
 
 /// Formulaire d'ajout d'un membre (le matricule est généré par le serveur).
 /// Si [member] est fourni, le formulaire pré-remplit ses champs et
@@ -187,12 +188,14 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
 
   /// Ligne de choix de date (naissance, conversion, mariage) : libellé,
   /// valeur affichée, effacement, ouverture du sélecteur au toucher.
+  /// [aide] : aide concrète sous le libellé (Tranche Formulaires P0).
   Widget _ligneDate({
     required IconData icone,
     required String libelle,
     required DateTime? valeur,
     required VoidCallback onTap,
     required VoidCallback onEffacer,
+    String? aide,
   }) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
@@ -200,6 +203,9 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
       title: Text(
         valeur == null ? '$libelle (optionnel)' : '$libelle : ${formatDate(valeur)}',
       ),
+      subtitle: aide == null
+          ? null
+          : Text(aide, style: const TextStyle(fontSize: 12.5)),
       trailing: valeur == null
           ? const Icon(Icons.calendar_today_outlined)
           : TextButton(
@@ -207,6 +213,101 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
               child: const Text('Effacer'),
             ),
       onTap: onTap,
+    );
+  }
+
+  /// Récapitulatif avant envoi (Tranche Formulaires P0, étape 4) :
+  /// tout ce qui sera enregistré, relu d'un coup d'œil — le matricule
+  /// est calculé à partir du nom, du prénom, du sexe et de la date de
+  /// naissance, d'où l'importance de les vérifier ici.
+  Widget _recapitulatif() {
+    final nomComplet =
+        '${_prenomController.text.trim()} ${_nomController.text.trim()}'
+            .trim();
+    final lignes = <(String, String)>[
+      ('Nom complet', nomComplet.isEmpty ? '—' : nomComplet),
+      (
+        'Téléphone',
+        _phoneController.text.trim().isEmpty
+            ? '—'
+            : _phoneController.text.trim()
+      ),
+      (
+        'E-mail',
+        _emailController.text.trim().isEmpty
+            ? '—'
+            : _emailController.text.trim()
+      ),
+      (
+        'Date de naissance',
+        _birthDate == null ? '—' : formatDate(_birthDate!)
+      ),
+      (
+        'Sexe',
+        _sexe == 'F'
+            ? 'Femme'
+            : _sexe == 'M'
+                ? 'Homme'
+                : 'Non précisé'
+      ),
+      (
+        'Département',
+        _departmentController.text.trim().isEmpty
+            ? '—'
+            : _departmentController.text.trim()
+      ),
+      ('Fonction', _fonction),
+      ('Poste', _poste ?? 'Aucun poste'),
+      (
+        'Cellule / groupe',
+        _cellController.text.trim().isEmpty
+            ? '—'
+            : _cellController.text.trim()
+      ),
+      ('Statut', Member.labelForStatus(_status)),
+      (
+        'Date de conversion',
+        _dateConversion == null ? '—' : formatDate(_dateConversion!)
+      ),
+      (
+        'Date de mariage',
+        _dateMariage == null ? '—' : formatDate(_dateMariage!)
+      ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Vérifiez avant de créer : le matricule est calculé à partir '
+          'du nom, du prénom, du sexe et de la date de naissance.',
+          style: TextStyle(fontSize: 12.5),
+        ),
+        const SizedBox(height: 12),
+        for (final (libelle, valeur) in lignes)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    libelle,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    valeur,
+                    style: const TextStyle(fontSize: 13.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
@@ -326,11 +427,19 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Maquette écran 25 : création guidée en trois
-                  // étapes, identité, contacts, rattachement.
+                  // Tranche Formulaires P0 : mention des champs
+                  // obligatoires + aides sous les libellés + messages
+                  // d'erreur précis. Création guidée en quatre étapes
+                  // (maquette écran 25, + récapitulatif).
+                  const Text(
+                    '(*) Champs obligatoires',
+                    style: TextStyle(
+                        fontSize: 12.5, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
                   if (!_isEditing) ...[
                     const Text(
-                      'Création guidée en trois étapes : identité, contacts, rattachement.',
+                      'Création guidée en quatre étapes : identité, contacts, rattachement, récapitulatif.',
                       style: TextStyle(fontSize: 12.5),
                     ),
                     const SizedBox(height: 8),
@@ -352,15 +461,22 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                           _etape = 1;
                         });
                       } else if (_etape == 1) {
-                        // Étape Contacts : téléphone obligatoire.
-                        if (_phoneController.text.trim().isEmpty) {
-                          setState(
-                              () => _error = 'Téléphone requis.');
+                        // Étape Contacts : téléphone obligatoire, 10 chiffres.
+                        final erreurTelephone = validerTelephoneCI(
+                            _phoneController.text.trim());
+                        if (erreurTelephone != null) {
+                          setState(() => _error = erreurTelephone);
                           return;
                         }
                         setState(() {
                           _error = null;
                           _etape = 2;
+                        });
+                      } else if (_etape == 2) {
+                        // Étape Rattachement : on relit avant d'envoyer.
+                        setState(() {
+                          _error = null;
+                          _etape = 3;
                         });
                       } else {
                         _submit();
@@ -388,7 +504,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                                             strokeWidth: 2),
                                       )
                                       : Text(
-                                          _etape == 2
+                                          _etape == 3
                                               ? (_isEditing
                                                   ? 'Enregistrer les modifications'
                                                   : 'Créer le membre')
@@ -431,11 +547,13 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                               decoration: const InputDecoration(
                                 labelText: 'Nom *',
                                 hintText: 'Nom de famille',
+                                helperText:
+                                    'Tel que sur la pièce d’identité.',
                                 border: OutlineInputBorder(),
                               ),
                               validator: (v) =>
                                   (v == null || v.trim().length < 2)
-                                      ? 'Nom requis.'
+                                      ? 'Entrez un nom de 2 lettres au minimum.'
                                       : null,
                             ),
                             const SizedBox(height: 12),
@@ -445,11 +563,13 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                               decoration: const InputDecoration(
                                 labelText: 'Prénom *',
                                 hintText: 'Prénom',
+                                helperText:
+                                    'Tel que sur la pièce d’identité.',
                                 border: OutlineInputBorder(),
                               ),
                               validator: (v) =>
                                   (v == null || v.trim().length < 2)
-                                      ? 'Prénom requis.'
+                                      ? 'Entrez un prénom de 2 lettres au minimum.'
                                       : null,
                             ),
                             const SizedBox(height: 12),
@@ -506,7 +626,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                                         ),
                                       ] else
                                         const Text(
-                                          'Appareil photo ou galerie',
+                                          'PNG ou JPG, 2 Mo au maximum.',
                                           style: TextStyle(fontSize: 11),
                                         ),
                                     ],
@@ -522,6 +642,8 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                               onTap: _choisirDateNaissance,
                               onEffacer: () =>
                                   setState(() => _birthDate = null),
+                              aide: 'Telle que sur la pièce d’identité — '
+                                  'elle entre dans le matricule.',
                             ),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<String>(
@@ -562,12 +684,10 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                               decoration: const InputDecoration(
                                 labelText: 'Téléphone *',
                                 hintText: 'Numéro de téléphone',
+                                helperText: '10 chiffres, ex. 07 07 07 07 07.',
                                 border: OutlineInputBorder(),
                               ),
-                              validator: (v) =>
-                                  (v == null || v.trim().isEmpty)
-                                      ? 'Téléphone requis.'
-                                      : null,
+                              validator: (v) => validerTelephoneCI(v),
                             ),
                             const SizedBox(height: 12),
                             TextFormField(
@@ -576,16 +696,10 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                               decoration: const InputDecoration(
                                 labelText: 'E-mail (facultatif)',
                                 hintText: 'Adresse e-mail',
+                                helperText: 'Ex. prenom.nom@mail.com',
                                 border: OutlineInputBorder(),
                               ),
-                              validator: (v) {
-                                if (v != null &&
-                                    v.trim().isNotEmpty &&
-                                    !v.contains('@')) {
-                                  return 'E-mail invalide.';
-                                }
-                                return null;
-                              },
+                              validator: (v) => validerEmailSimple(v),
                             ),
                           ],
                         ),
@@ -596,7 +710,9 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                           style: TextStyle(fontSize: 12.5),
                         ),
                         isActive: _etape >= 2,
-                        state: StepState.indexed,
+                        state: _etape > 2
+                            ? StepState.complete
+                            : StepState.indexed,
                         content: Column(
                           children: [
                             if (_departements == null ||
@@ -660,6 +776,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                               controller: _cellController,
                               decoration: const InputDecoration(
                                 labelText: 'Cellule / groupe',
+                                hintText: 'Ex. Cellule de Yopougon',
                                 border: OutlineInputBorder(),
                               ),
                             ),
@@ -695,6 +812,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                               ),
                               onEffacer: () =>
                                   setState(() => _dateConversion = null),
+                              aide: 'Date de la conversion, si elle est connue.',
                             ),
                             _ligneDate(
                               icone: Icons.people_outline,
@@ -707,9 +825,19 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                               ),
                               onEffacer: () =>
                                   setState(() => _dateMariage = null),
+                              aide: 'Date du mariage, si elle est connue.',
                             ),
                           ],
                         ),
+                      ),
+                      Step(
+                        title: const Text(
+                          'Récapitulatif',
+                          style: TextStyle(fontSize: 12.5),
+                        ),
+                        isActive: _etape >= 3,
+                        state: StepState.indexed,
+                        content: _recapitulatif(),
                       ),
                     ],
                   ),
