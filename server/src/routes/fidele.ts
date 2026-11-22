@@ -795,7 +795,7 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
         }
         const { rows } = await db.query(
           `SELECT co.id, co.type, co.amount_fcfa, co.payment_method,
-                  co.payment_ref, co.status, co.note, co.member_id,
+                  co.status, co.note, co.member_id,
                   co.created_at, m.full_name AS membre_nom,
                   m.matricule AS membre_matricule
              FROM contributions co

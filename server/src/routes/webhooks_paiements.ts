@@ -36,8 +36,12 @@ import {
  * (401) avant toute lecture ou écriture.
  *
  * POST /webhooks/wave   — Wave (signature HMAC, re-interrogation).
- * POST /webhooks/orange — Orange Money (statut + montant, voir
- *                          paiements_orange.ts pour les limites).
+ * POST /webhooks/orange — Orange Money : notification NON authentifiée
+ *                          (notif_token jamais comparé, pas de
+ *                          re-interrogation possible — exécution 501) :
+ *                          l'événement est marqué 'a_verifier' et la
+ *                          contribution reste en_attente ; seul
+ *                          l'admin_eglise la confirme manuellement.
  * POST /webhooks/mtn    — MTN MoMo (re-interrogation obligatoire,
  *                          le callback n'est pas signé) ; PUT accepté
  *                          aussi (le sens de la méthode varie selon
@@ -577,26 +581,41 @@ export function registerWebhooksPaiementsRoutes(app: FastifyInstance, db: Pool):
       });
       return reponseTraitee(reply, "ignore", { raison: montant });
     }
+    // Sécurité (correctif HAUTE, 22/11) : la notification Orange n'est
+    // PAS authentifiée — le notif_token n'est comparé à rien (aucun
+    // jeton stocké, exécution Orange 501, pas de re-interrogation
+    // possible aujourd'hui). On ne confirme donc PLUS sur la foi du
+    // corps reçu : l'événement est marqué 'a_verifier' et la
+    // contribution reste en_attente — seul l'admin_eglise peut ensuite
+    // la confirmer manuellement (PATCH /contributions/:id/statut),
+    // après vérification du paiement côté Orange. La vérification
+    // complète (stockage pay_token/notif_token + re-interrogation
+    // transactionstatus) reste à construire.
     try {
-      const resultat = await confirmerParWebhook(
-        db,
-        {
-          churchId: contribution.church_id,
-          fournisseur: "orange_money",
-          evenementId,
-          contributionId: contribution.id,
-          statut: "recu",
-          montantFcfa: contribution.amount_fcfa,
-          devise: "XOF",
-          referenceExterne: reference,
-          payloadHash: hash,
+      await enregistrerEvenement(db, {
+        churchId: contribution.church_id,
+        fournisseur: "orange_money",
+        evenementId,
+        contributionId: contribution.id,
+        statut: "a_verifier",
+        montantFcfa: contribution.amount_fcfa,
+        devise: "XOF",
+        referenceExterne: reference,
+        payloadHash: hash,
+      });
+      await auditLog(db, {
+        churchId: contribution.church_id,
+        userId: null,
+        action: "webhook.orange.a_verifier",
+        details: {
+          contribution_id: contribution.id,
+          evenement_id: evenementId,
+          montant_fcfa: contribution.amount_fcfa,
+          raison: "notification_non_authentifiee",
         },
-        contribution,
-        "orange_money",
-      );
-      return reponseTraitee(reply, resultat.traite, {
-        deja_traite: resultat.dejaTraite,
-        ...(resultat.recuNumero ? { recu_numero: resultat.recuNumero } : {}),
+      });
+      return reponseTraitee(reply, "a_verifier", {
+        raison: "verification_orange_requise",
       });
     } catch (e) {
       return dbError(reply, e);
