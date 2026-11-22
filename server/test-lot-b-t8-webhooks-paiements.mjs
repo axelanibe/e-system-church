@@ -2,7 +2,8 @@
 // webhooks (migration 026).
 //
 // Périmètre : webhook Wave (signature HMAC + re-interrogation de la
-// session), webhook Orange Money (statut + montant), webhook MTN MoMo
+// session), webhook Orange Money (notification non authentifiée → marquée
+// `a_verifier`, confirmation manuelle), webhook MTN MoMo
 // (re-interrogation obligatoire, le callback n'est pas signé) ;
 // confirmation automatique des contributions en_attente avec les mêmes
 // effets que la confirmation manuelle (reçu REC-AAAA-NNNN, écriture
@@ -575,7 +576,9 @@ async function main() {
     verifier('Wave : secret non configuré → en_attente', (await lireContribution(w7, jetonAdmin2)).status === 'en_attente');
 
     // --- Webhook Orange Money ------------------------------------------------
-    // 16) SUCCESS + montant OK → confirmation automatique.
+    // 16) SUCCESS + montant OK → marquée à vérifier (la notification
+    //     Orange n'est pas authentifiée : plus de confirmation
+    //     automatique sur la foi du corps reçu).
     const o1 = await creerContribution('orange_money', 'ORD-T8-1', 3000);
     const okO1 = await appel('POST', '/webhooks/orange', null, {
       notif_token: 'jeton-notif-orange-1',
@@ -586,14 +589,20 @@ async function main() {
       currency: 'XOF',
     });
     verifier(
-      'Orange : SUCCESS → 200 confirmé',
-      okO1.statut === 200 && okO1.json?.traite === 'confirme' && typeof okO1.json?.recu_numero === 'string',
+      'Orange : SUCCESS → 200 a_verifier',
+      okO1.statut === 200 && okO1.json?.traite === 'a_verifier' && okO1.json?.raison === 'verification_orange_requise',
       okO1.texte,
     );
-    const apresO1 = await lireContribution(o1);
-    verifier('Orange : contribution confirmée', apresO1.status === 'confirme', JSON.stringify(apresO1));
+    verifier('Orange : SUCCESS → contribution toujours en_attente', (await lireContribution(o1)).status === 'en_attente');
+    const evO1 = await evenements('orange_money');
+    verifier(
+      'Orange : événement a_verifier en base',
+      evO1.length === 1 && evO1[0].statut === 'a_verifier' && evO1[0].contribution_id === o1,
+      JSON.stringify(evO1),
+    );
 
-    // 17) Double notification Orange → deja_traite.
+    // 17) Double notification Orange → toujours a_verifier, sans effet
+    //     (même evenement_id, ON CONFLICT DO NOTHING).
     const okO2 = await appel('POST', '/webhooks/orange', null, {
       notif_token: 'jeton-notif-orange-1',
       transaction_id: 'txn-orange-1',
@@ -603,10 +612,32 @@ async function main() {
       currency: 'XOF',
     });
     verifier(
-      'Orange : double notification → 200 deja_traite',
-      okO2.statut === 200 && okO2.json?.traite === 'deja_traite',
+      'Orange : double notification → 200 a_verifier',
+      okO2.statut === 200 && okO2.json?.traite === 'a_verifier' && okO2.json?.raison === 'verification_orange_requise',
       okO2.texte,
     );
+    verifier('Orange : double notification → contribution toujours en_attente', (await lireContribution(o1)).status === 'en_attente');
+    const evO1bis = await evenements('orange_money');
+    verifier(
+      "Orange : double notification → une seule ligne d'événement",
+      evO1bis.length === 1 && evO1bis[0].evenement_id === 'txn-orange-1',
+      JSON.stringify(evO1bis),
+    );
+
+    // 16 bis) Confirmation manuelle par l'admin (après vérification du
+    // paiement côté Orange) : reçu + caisse, comme une confirmation
+    // manuelle ordinaire.
+    const manuelO1 = await appel('PATCH', `/contributions/${o1}/statut`, jetonAdmin, { status: 'confirme' });
+    verifier("Orange : confirmation manuelle par l'admin", manuelO1.statut === 200, manuelO1.texte);
+    const apresO1 = await lireContribution(o1);
+    verifier('Orange : contribution confirmée manuellement', apresO1.status === 'confirme', JSON.stringify(apresO1));
+    verifier(
+      'Orange : reçu numéroté REC-AAAA-NNNN',
+      typeof apresO1.recu_numero === 'string' && apresO1.recu_numero.startsWith(`REC-${annee}-`),
+      apresO1.recu_numero,
+    );
+    const caisseApresO1 = await compterCaisse();
+    verifier('Orange : caisse écrite (+3000)', caisseApresO1.solde === 13000 && caisseApresO1.mouvements === 3, JSON.stringify(caisseApresO1));
 
     // 18) FAILED → 200 ignoré.
     const o2 = await creerContribution('orange_money', 'ORD-T8-2', 3000);
@@ -660,7 +691,7 @@ async function main() {
     });
     verifier('Orange : sans référence → 400', okO6.statut === 400, okO6.texte);
 
-    // 22) Notification en formulaire (format réel d'Orange) → confirmé.
+    // 22) Notification en formulaire (format réel d'Orange) → a_verifier.
     const o4 = await creerContribution('orange_money', 'ORD-T8-4', 3000);
     const corpsForm = new URLSearchParams({
       notif_token: 'jeton-notif-orange-4',
@@ -683,11 +714,11 @@ async function main() {
       jsonForm = null;
     }
     verifier(
-      'Orange : formulaire → 200 confirmé',
-      reponseForm.status === 200 && jsonForm?.traite === 'confirme',
+      'Orange : formulaire → 200 a_verifier',
+      reponseForm.status === 200 && jsonForm?.traite === 'a_verifier' && jsonForm?.raison === 'verification_orange_requise',
       texteForm,
     );
-    verifier('Orange : formulaire → contribution confirmée', (await lireContribution(o4)).status === 'confirme');
+    verifier('Orange : formulaire → contribution en_attente', (await lireContribution(o4)).status === 'en_attente');
 
     // --- Webhook MTN MoMo ------------------------------------------------------
     // 23) Callback (statut reçu ignoré) + re-interrogation SUCCESSFUL →
@@ -800,8 +831,8 @@ async function main() {
     // --- Bilan : caisse, événements, audit, absence de fuite ------------------
     const caisseFinale = await compterCaisse();
     verifier(
-      'Bilan : caisse = 5000 (W1) + 5000 (W2 manuel) + 3000 (O1) + 3000 (O4) + 4000 (M1) + 4000 (M5) = 24000, 6 mouvements',
-      caisseFinale.solde === 24000 && caisseFinale.mouvements === 6,
+      'Bilan : caisse = 5000 (W1) + 5000 (W2 manuel) + 3000 (O1 manuel) + 4000 (M1) + 4000 (M5) = 21000, 5 mouvements',
+      caisseFinale.solde === 21000 && caisseFinale.mouvements === 5,
       JSON.stringify(caisseFinale),
     );
     const { rows: evTous } = await pool.query(
@@ -815,8 +846,8 @@ async function main() {
       JSON.stringify(comptes),
     );
     verifier(
-      'Bilan : événements Orange = 2 confirmés (O1, O4) + 3 ignorés (O2, O3, inconnu)',
-      comptes['orange_money:confirme'] === 2 && comptes['orange_money:ignore'] === 3,
+      'Bilan : événements Orange = 0 confirmé + 3 ignorés (O2, O3, inconnu) + 2 à vérifier (O1, O4)',
+      (comptes['orange_money:confirme'] ?? 0) === 0 && comptes['orange_money:ignore'] === 3 && comptes['orange_money:a_verifier'] === 2,
       JSON.stringify(comptes),
     );
     verifier(
@@ -838,7 +869,7 @@ async function main() {
     const { rows: auditWebhook } = await pool.query(
       `SELECT count(*)::int AS n FROM audit_logs WHERE action = 'contribution.confirmee_webhook'`,
     );
-    verifier('Bilan : 5 confirmations webhook journalisées', auditWebhook[0].n === 5, JSON.stringify(auditWebhook));
+    verifier('Bilan : 3 confirmations webhook journalisées', auditWebhook[0].n === 3, JSON.stringify(auditWebhook));
     const { rows: auditRejet } = await pool.query(
       `SELECT count(*)::int AS n FROM audit_logs WHERE action = 'webhook.wave.signature_rejetee'`,
     );
