@@ -89,7 +89,10 @@ Future<FauxApiService> _pomper(
         password: 'demo1234',
       ));
   api.definirIdentite(identite);
-  tester.view.physicalSize = const Size(390, 1800);
+  // Hauteur généreuse : le formulaire (15 champs avec le NCC) dépasse
+  // 1800 px, le bouton Enregistrer doit rester atteignable sans
+  // défiler dans ce test, qui vérifie l'appel PATCH, pas le défilement.
+  tester.view.physicalSize = const Size(390, 2400);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);

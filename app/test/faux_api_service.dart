@@ -27,6 +27,7 @@ import 'package:esystem_church/models/contribution.dart';
 import 'package:esystem_church/models/cultes.dart';
 import 'package:esystem_church/models/checkin_enfant.dart';
 import 'package:esystem_church/models/confiance.dart';
+import 'package:esystem_church/models/depot_sycebnl.dart';
 import 'package:esystem_church/models/enfants.dart';
 import 'package:esystem_church/models/ecole_biblique.dart';
 import 'package:esystem_church/models/fidele.dart';
@@ -3068,6 +3069,296 @@ class FauxApiService implements ApiService {
     _requireAuth();
     _data.activites.removeWhere((e) => e.id == id);
     _itemChurch.remove(id);
+  }
+
+  // -- Dépôt SYCEBNL (V1, migration 043) -------------------------------------
+  // Dépôt fictif par défaut : ressources en dessous du seuil, aucun
+  // suivi. Les tests le remplacent avec [definirDepotSycebnl].
+  DepotSycebnl _depot = DepotSycebnl(
+    annee: DateTime.now().year,
+    ressources: 12000000,
+    seuil: 50000000,
+    requis: false,
+    echeance: '${DateTime.now().year + 1}-05-30',
+    suivi: null,
+  );
+
+  void definirDepotSycebnl(DepotSycebnl depot) {
+    _depot = depot;
+    _data.suiviDepot = depot.suivi;
+  }
+
+  @override
+  Future<List<Immobilisation>> getImmobilisations() async {
+    await _latence();
+    _requireAuth();
+    return List.unmodifiable(_visible(_data.immobilisations, (e) => e.id));
+  }
+
+  @override
+  Future<Immobilisation> createImmobilisation({
+    required String libelle,
+    required String dateAcquisition,
+    required int valeurAcquisition,
+    int amortissementCumule = 0,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final immobilisation = Immobilisation(
+      id: _nextId('immobilisation'),
+      libelle: libelle,
+      dateAcquisition: dateAcquisition,
+      valeurAcquisition: valeurAcquisition,
+      amortissementCumule: amortissementCumule,
+    );
+    _data.immobilisations.add(immobilisation);
+    _tag(immobilisation.id);
+    return immobilisation;
+  }
+
+  @override
+  Future<Immobilisation> updateImmobilisation(
+    String id, {
+    String? libelle,
+    String? dateAcquisition,
+    int? valeurAcquisition,
+    int? amortissementCumule,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final index = _data.immobilisations.indexWhere((a) => a.id == id);
+    if (index < 0) throw StateError('Immobilisation introuvable.');
+    final ancienne = _data.immobilisations[index];
+    final miseAJour = Immobilisation(
+      id: ancienne.id,
+      libelle: libelle ?? ancienne.libelle,
+      dateAcquisition: dateAcquisition ?? ancienne.dateAcquisition,
+      valeurAcquisition: valeurAcquisition ?? ancienne.valeurAcquisition,
+      amortissementCumule:
+          amortissementCumule ?? ancienne.amortissementCumule,
+    );
+    _data.immobilisations[index] = miseAJour;
+    return miseAJour;
+  }
+
+  @override
+  Future<void> deleteImmobilisation(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.immobilisations.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
+  }
+
+  @override
+  Future<List<Dette>> getDettes() async {
+    await _latence();
+    _requireAuth();
+    return List.unmodifiable(_visible(_data.dettes, (e) => e.id));
+  }
+
+  @override
+  Future<Dette> createDette({
+    required String libelle,
+    required int montant,
+    String? echeance,
+    String statut = 'en_cours',
+  }) async {
+    await _latence();
+    _requireAuth();
+    final dette = Dette(
+      id: _nextId('dette'),
+      libelle: libelle,
+      montant: montant,
+      echeance: echeance,
+      statut: statut,
+    );
+    _data.dettes.add(dette);
+    _tag(dette.id);
+    return dette;
+  }
+
+  @override
+  Future<Dette> updateDette(
+    String id, {
+    String? libelle,
+    int? montant,
+    String? echeance,
+    String? statut,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final index = _data.dettes.indexWhere((a) => a.id == id);
+    if (index < 0) throw StateError('Dette introuvable.');
+    final ancienne = _data.dettes[index];
+    final miseAJour = Dette(
+      id: ancienne.id,
+      libelle: libelle ?? ancienne.libelle,
+      montant: montant ?? ancienne.montant,
+      echeance: echeance ?? ancienne.echeance,
+      statut: statut ?? ancienne.statut,
+    );
+    _data.dettes[index] = miseAJour;
+    return miseAJour;
+  }
+
+  @override
+  Future<void> deleteDette(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.dettes.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
+  }
+
+  @override
+  Future<List<Creance>> getCreances() async {
+    await _latence();
+    _requireAuth();
+    return List.unmodifiable(_visible(_data.creances, (e) => e.id));
+  }
+
+  @override
+  Future<Creance> createCreance({
+    required String libelle,
+    required int montant,
+    String? echeance,
+    String statut = 'en_cours',
+  }) async {
+    await _latence();
+    _requireAuth();
+    final creance = Creance(
+      id: _nextId('creance'),
+      libelle: libelle,
+      montant: montant,
+      echeance: echeance,
+      statut: statut,
+    );
+    _data.creances.add(creance);
+    _tag(creance.id);
+    return creance;
+  }
+
+  @override
+  Future<Creance> updateCreance(
+    String id, {
+    String? libelle,
+    int? montant,
+    String? echeance,
+    String? statut,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final index = _data.creances.indexWhere((a) => a.id == id);
+    if (index < 0) throw StateError('Créance introuvable.');
+    final ancienne = _data.creances[index];
+    final miseAJour = Creance(
+      id: ancienne.id,
+      libelle: libelle ?? ancienne.libelle,
+      montant: montant ?? ancienne.montant,
+      echeance: echeance ?? ancienne.echeance,
+      statut: statut ?? ancienne.statut,
+    );
+    _data.creances[index] = miseAJour;
+    return miseAJour;
+  }
+
+  @override
+  Future<void> deleteCreance(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.creances.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
+  }
+
+  @override
+  Future<List<NoteAnnexe>> getNotesAnnexes({int? exercice}) async {
+    await _latence();
+    _requireAuth();
+    final notes = _visible(_data.notesAnnexes, (e) => e.id);
+    if (exercice == null) return List.unmodifiable(notes);
+    return List.unmodifiable(notes.where((n) => n.exercice == exercice));
+  }
+
+  @override
+  Future<NoteAnnexe> createNoteAnnexe({
+    required String titre,
+    required String contenu,
+    required int exercice,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final note = NoteAnnexe(
+      id: _nextId('note'),
+      titre: titre,
+      contenu: contenu,
+      exercice: exercice,
+    );
+    _data.notesAnnexes.add(note);
+    _tag(note.id);
+    return note;
+  }
+
+  @override
+  Future<NoteAnnexe> updateNoteAnnexe(
+    String id, {
+    String? titre,
+    String? contenu,
+    int? exercice,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final index = _data.notesAnnexes.indexWhere((a) => a.id == id);
+    if (index < 0) throw StateError('Note introuvable.');
+    final ancienne = _data.notesAnnexes[index];
+    final miseAJour = NoteAnnexe(
+      id: ancienne.id,
+      titre: titre ?? ancienne.titre,
+      contenu: contenu ?? ancienne.contenu,
+      exercice: exercice ?? ancienne.exercice,
+    );
+    _data.notesAnnexes[index] = miseAJour;
+    return miseAJour;
+  }
+
+  @override
+  Future<void> deleteNoteAnnexe(String id) async {
+    await _latence();
+    _requireAuth();
+    _data.notesAnnexes.removeWhere((e) => e.id == id);
+    _itemChurch.remove(id);
+  }
+
+  @override
+  Future<DepotSycebnl> getDepotSycebnl({required int annee}) async {
+    await _latence();
+    _requireAuth();
+    return _depot;
+  }
+
+  @override
+  Future<SuiviDepotSycebnl> updateDepotSycebnl({
+    required int annee,
+    required String statut,
+    String? dateDepot,
+    String? reference,
+  }) async {
+    await _latence();
+    _requireAuth();
+    final suivi = SuiviDepotSycebnl(
+      exercice: annee,
+      statut: statut,
+      dateDepot: dateDepot ?? _depot.suivi?.dateDepot,
+      reference: reference ?? _depot.suivi?.reference,
+    );
+    _data.suiviDepot = suivi;
+    _depot = DepotSycebnl(
+      annee: _depot.annee,
+      ressources: _depot.ressources,
+      seuil: _depot.seuil,
+      requis: _depot.requis,
+      echeance: _depot.echeance,
+      suivi: suivi,
+    );
+    return suivi;
   }
 
   @override

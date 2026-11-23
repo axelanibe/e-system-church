@@ -20,6 +20,7 @@ import '../models/enfants.dart';
 import '../models/ecole_biblique.dart';
 import '../models/fidele.dart';
 import '../models/confiance.dart';
+import '../models/depot_sycebnl.dart';
 import '../models/finances.dart';
 import '../models/frequentation.dart';
 import '../models/gouvernance.dart';
@@ -571,6 +572,94 @@ abstract class ApiService {
   });
 
   Future<void> deleteActivite(String id);
+
+  // -- Dépôt SYCEBNL (V1, migration 043) -------------------------------------
+  // Registres qui rendent les états SYCEBNL complets : immobilisations,
+  // dettes, créances, notes annexes, plus le seuil, l'échéance et le
+  // suivi du dépôt. Il n'existe pas d'API DGI : le dépôt se fait par
+  // l'église sur e-impots.gouv.ci avec son NCC.
+  Future<List<Immobilisation>> getImmobilisations();
+
+  Future<Immobilisation> createImmobilisation({
+    required String libelle,
+    required String dateAcquisition,
+    required int valeurAcquisition,
+    int amortissementCumule = 0,
+  });
+
+  Future<Immobilisation> updateImmobilisation(
+    String id, {
+    String? libelle,
+    String? dateAcquisition,
+    int? valeurAcquisition,
+    int? amortissementCumule,
+  });
+
+  Future<void> deleteImmobilisation(String id);
+
+  Future<List<Dette>> getDettes();
+
+  Future<Dette> createDette({
+    required String libelle,
+    required int montant,
+    String? echeance,
+    String statut = 'en_cours',
+  });
+
+  Future<Dette> updateDette(
+    String id, {
+    String? libelle,
+    int? montant,
+    String? echeance,
+    String? statut,
+  });
+
+  Future<void> deleteDette(String id);
+
+  Future<List<Creance>> getCreances();
+
+  Future<Creance> createCreance({
+    required String libelle,
+    required int montant,
+    String? echeance,
+    String statut = 'en_cours',
+  });
+
+  Future<Creance> updateCreance(
+    String id, {
+    String? libelle,
+    int? montant,
+    String? echeance,
+    String? statut,
+  });
+
+  Future<void> deleteCreance(String id);
+
+  Future<List<NoteAnnexe>> getNotesAnnexes({int? exercice});
+
+  Future<NoteAnnexe> createNoteAnnexe({
+    required String titre,
+    required String contenu,
+    required int exercice,
+  });
+
+  Future<NoteAnnexe> updateNoteAnnexe(
+    String id, {
+    String? titre,
+    String? contenu,
+    int? exercice,
+  });
+
+  Future<void> deleteNoteAnnexe(String id);
+
+  Future<DepotSycebnl> getDepotSycebnl({required int annee});
+
+  Future<SuiviDepotSycebnl> updateDepotSycebnl({
+    required int annee,
+    required String statut,
+    String? dateDepot,
+    String? reference,
+  });
 
   Future<List<OrdreCulteItem>> getOrdreCulte(String culteId);
 

@@ -12,6 +12,7 @@ import 'package:esystem_church/models/biens.dart';
 import 'package:esystem_church/models/church.dart';
 import 'package:esystem_church/models/contribution.dart';
 import 'package:esystem_church/models/cultes.dart';
+import 'package:esystem_church/models/depot_sycebnl.dart';
 import 'package:esystem_church/models/enfants.dart';
 import 'package:esystem_church/models/ecole_biblique.dart';
 import 'package:esystem_church/models/fidele.dart';
@@ -62,6 +63,13 @@ class DemoSeed {
   final List<OrdreCulteItem> ordreCulte = _buildOrdreCulte();
   final List<EvenementSpecial> evenements = _buildEvenements();
   final List<Activite> activites = _buildActivites();
+  // Registres SYCEBNL (tranche dépôt SYCEBNL) : vides en démo, les
+  // créations des tests s'y ajoutent en mémoire.
+  final List<Immobilisation> immobilisations = [];
+  final List<Dette> dettes = [];
+  final List<Creance> creances = [];
+  final List<NoteAnnexe> notesAnnexes = [];
+  SuiviDepotSycebnl? suiviDepot;
   final List<Presence> presences = _buildPresences();
   final List<Announcement> annonces = _buildAnnonces();
   final List<Famille> familles = _buildFamilles();
