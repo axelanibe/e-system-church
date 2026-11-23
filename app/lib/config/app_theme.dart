@@ -42,7 +42,9 @@ class AppTheme {
   /// Ancien nom de [violetProfond], gardé pour compatibilité : la
   /// tranche « logo église » (autre branche) utilise encore ce nom
   /// dans mon_eglise_screen.dart et sycebnl_screen.dart, qu'elle
-  /// renommera à son rebase.
+  /// renommera à son rebase. Sera supprimé après rebase et fusion
+  /// des branches en cours.
+  @Deprecated('Utiliser violetProfond')
   static const Color bleuNuit = violetProfond;
 
   /// Violet secondaire, second arrêt des dégradés (carte membre,
@@ -284,4 +286,46 @@ class AppTheme {
       ),
     );
   }
+}
+
+/// Espacements verrouillés du design system : grille de 4 px, tous les
+/// espacements de l'application doivent être pris dans cette échelle,
+/// jamais une valeur libre.
+abstract final class AppSpacing {
+  static const double xxs = 4;
+  static const double xs = 8;
+  static const double sm = 12;
+  static const double md = 16;
+  static const double lg = 24;
+  static const double xl = 32;
+  static const double xxl = 48;
+}
+
+/// Rayons verrouillés du design system : 8 pour les petits contrôles,
+/// 12 pour les cartes compactes et les tuiles, 16 pour les cartes
+/// principales, 999 pour les pastilles, badges et avatars circulaires.
+abstract final class AppRadii {
+  static const double sm = 8;
+  static const double md = 12;
+  static const double lg = 16;
+  static const double pill = 999;
+}
+
+/// Tailles de police verrouillées du design system : toute taille de
+/// texte doit être prise dans cette échelle. Les valeurs 11,5, 12,5 et
+/// 13,5 sont intentionnelles, elles viennent de la maquette voulue par
+/// Axel. Éviter tout texte courant sous 11 px.
+abstract final class AppFontSizes {
+  static const double s10 = 10;
+  static const double s11 = 11;
+  static const double s11_5 = 11.5;
+  static const double s12 = 12;
+  static const double s12_5 = 12.5;
+  static const double s13 = 13;
+  static const double s13_5 = 13.5;
+  static const double s14 = 14;
+  static const double s16 = 16;
+  static const double s18 = 18;
+  static const double s20 = 20;
+  static const double s24 = 24;
 }
