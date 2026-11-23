@@ -372,12 +372,16 @@ abstract class ApiService {
   Future<void> annulerTransfert(String id);
 
   // -- Membres ---------------------------------------------------------------
+  // createdFrom / createdTo : filtre par date de création, « AAAA-MM-JJ »
+  // (tableau de bord, nouveaux membres d'une période).
   Future<MemberPage> getMembers(
       {String? q,
       String? department,
       String? status,
       int? limit,
-      int? offset});
+      int? offset,
+      String? createdFrom,
+      String? createdTo});
 
   Future<Member> getMember(String id);
 
@@ -1801,7 +1805,7 @@ abstract class ApiService {
     bool anonyme = false,
   });
 
-  Future<List<Visiteur>> getVisiteurs({String? statut});
+  Future<List<Visiteur>> getVisiteurs({String? statut, int? limit});
   Future<Visiteur> createVisiteur({
     required String nom,
     String? dateVenue,

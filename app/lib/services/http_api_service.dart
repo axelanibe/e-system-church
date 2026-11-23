@@ -1142,13 +1142,17 @@ class HttpApiService implements ApiService {
       String? department,
       String? status,
       int? limit,
-      int? offset}) async {
+      int? offset,
+      String? createdFrom,
+      String? createdTo}) async {
     final data = await _call('GET', '/membres', query: {
       if (q != null && q.isNotEmpty) 'q': q,
       if (department != null) 'department': department,
       if (status != null) 'status': status,
       if (limit != null) 'limit': '$limit',
       if (offset != null) 'offset': '$offset',
+      if (createdFrom != null) 'created_from': createdFrom,
+      if (createdTo != null) 'created_to': createdTo,
     });
     return MemberPage(
       total: (data['total'] as num).toInt(),
@@ -4314,9 +4318,10 @@ class HttpApiService implements ApiService {
       }));
 
   @override
-  Future<List<Visiteur>> getVisiteurs({String? statut}) async {
+  Future<List<Visiteur>> getVisiteurs({String? statut, int? limit}) async {
     final data = await _call('GET', '/visiteurs', query: {
       if (statut != null && statut.isNotEmpty) 'statut': statut,
+      if (limit != null) 'limit': '$limit',
     });
     return (data['items'] as List<dynamic>)
         .map((e) => Visiteur.fromJson(e as Map<String, dynamic>))
