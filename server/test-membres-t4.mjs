@@ -117,6 +117,18 @@ try {
   r = await get(`/membres/${membreSansDates}/frequentation`);
   check("fréquentation vide : 0 sur 0", r.status === 200 && r.d.total === 0 && r.d.presents === 0 && Array.isArray(r.d.items) && r.d.items.length === 0, `status=${r.status} ${JSON.stringify(r.d).slice(0, 200)}`);
 
+  console.log("Filtre par date de création (tableau de bord) :");
+  const aujourdhui = new Date().toISOString().slice(0, 10);
+  const demain = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  r = await get(`/membres?created_from=${aujourdhui}&created_to=${aujourdhui}`);
+  check("créés aujourd'hui : total 2", r.status === 200 && r.d.total === 2, `status=${r.status} total=${r.d.total}`);
+  r = await get(`/membres?created_from=${aujourdhui}&created_to=${aujourdhui}&limit=1`);
+  check("limit=1 : total reste 2 (seul le total sert)", r.status === 200 && r.d.total === 2 && (r.d.membres ?? []).length === 1, `status=${r.status} total=${r.d.total}`);
+  r = await get(`/membres?created_from=${demain}`);
+  check("créés à partir de demain : total 0", r.status === 200 && r.d.total === 0, `status=${r.status} total=${r.d.total}`);
+  r = await get("/membres?created_from=pas-une-date");
+  check("created_from invalide rejeté", r.status === 400, `status=${r.status}`);
+
   console.log("Cas d'erreur :");
   r = await post(`/membres/${membreId}/statut`, { statut: "inexistant" });
   check("statut invalide rejeté", r.status === 400, `status=${r.status}`);

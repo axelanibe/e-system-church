@@ -226,7 +226,7 @@ class StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Chip(
       label: Text(label,
-          style: const TextStyle(fontSize: 11.5)), // Maquette : .badge 11,5.
+          style: const TextStyle(fontSize: AppFontSizes.s11_5)), // Maquette : .badge 11,5.
       backgroundColor: color.withValues(alpha: 0.15),
       side: BorderSide(color: color.withValues(alpha: 0.4)),
       visualDensity: VisualDensity.compact,
@@ -242,12 +242,16 @@ class StatusChip extends StatelessWidget {
 /// l'artefact n'en montre pas, elle n'est plus affichée.
 /// Maquette : libellé 10 px (.stat .sl), valeur 17 px (.stat .sv),
 /// sauf les chiffres du tableau de bord (22 px, [tailleValeur]).
+/// [variation] : texte déjà signé (« +3 », « -2 », « +0 »), null
+/// quand il n'y a rien à comparer ; vert quand ça monte, rouge quand
+/// ça descend, atténué quand c'est stable.
 class StatCard extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
   final Color? color;
   final String? aide;
+  final String? variation;
   final VoidCallback? onTap;
   final double tailleValeur;
   final double tailleLibelle;
@@ -259,16 +263,17 @@ class StatCard extends StatelessWidget {
     required this.icon,
     this.color,
     this.aide,
+    this.variation,
     this.onTap,
     this.tailleValeur = 17,
-    this.tailleLibelle = 10,
+    this.tailleLibelle = AppFontSizes.s10,
   });
 
   @override
   Widget build(BuildContext context) {
     final card = Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -300,6 +305,22 @@ class StatCard extends StatelessWidget {
                 ),
               ),
             ),
+            if (variation != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                variation!,
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: AppFontSizes.s11_5,
+                  fontWeight: FontWeight.bold,
+                  color: variation == '+0'
+                      ? AppTheme.violetProfond.withValues(alpha: 0.6)
+                      : variation!.startsWith('-')
+                          ? AppTheme.rougeErreur
+                          : AppTheme.vertFonce,
+                ),
+              ),
+            ],
             if (aide != null) ...[
               const SizedBox(height: 2),
               Text(
@@ -312,7 +333,7 @@ class StatCard extends StatelessWidget {
                 style: Theme.of(context)
                     .textTheme
                     .bodySmall
-                    ?.copyWith(fontSize: 11.5),
+                    ?.copyWith(fontSize: AppFontSizes.s11_5),
               ),
             ],
           ],
@@ -322,7 +343,7 @@ class StatCard extends StatelessWidget {
     if (onTap == null) return card;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppRadii.lg),
       child: card,
     );
   }

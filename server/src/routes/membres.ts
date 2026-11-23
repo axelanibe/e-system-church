@@ -40,6 +40,11 @@ const listQuerySchema = z.object({
   // « ancien » n'est pas dans l'enum simple de members.status : c'est le
   // dernier statut riche de membre_statuts (tranche T4).
   status: z.enum(["actif", "nouveau_converti", "inactif", "ancien"]).optional(),
+  // Filtre par date de création (tableau de bord, variations par
+  // période) : lecture seule, même convention que /presences/stats
+  // (AAAA-MM-JJ, borne haute exclue au jour suivant).
+  created_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  created_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -57,10 +62,21 @@ export function registerMembresRoutes(app: FastifyInstance, db: Pool) {
         details: parsed.error.issues.map((i) => i.message),
       });
     }
-    const { q, department, status, limit, offset } = parsed.data;
+    const { q, department, status, limit, offset, created_from, created_to } =
+      parsed.data;
     try {
       const conditions = [`m.church_id = $1`];
       const values: unknown[] = [req.session.churchId];
+      if (created_from) {
+        values.push(created_from);
+        conditions.push(`m.created_at >= $${values.length}::date`);
+      }
+      if (created_to) {
+        values.push(created_to);
+        conditions.push(
+          `m.created_at < ($${values.length}::date + interval '1 day')`,
+        );
+      }
       if (q) {
         values.push(`%${q}%`);
         conditions.push(`(m.full_name ILIKE $${values.length} OR m.matricule ILIKE $${values.length})`);

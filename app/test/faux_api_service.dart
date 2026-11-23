@@ -2280,7 +2280,9 @@ class FauxApiService implements ApiService {
       String? department,
       String? status,
       int? limit,
-      int? offset}) async {
+      int? offset,
+      String? createdFrom,
+      String? createdTo}) async {
     if (limit != null) limitesGetMembers.add(limit);
     await _latence();
     _requireAuth();
@@ -2298,6 +2300,24 @@ class FauxApiService implements ApiService {
     }
     if (status != null && status.isNotEmpty) {
       list = list.where((m) => m.status == status).toList();
+    }
+    // Filtre par date de création (« AAAA-MM-JJ »), comme le serveur.
+    String? dateSeule(DateTime? d) => d == null
+        ? null
+        : '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    if (createdFrom != null) {
+      list = list
+          .where((m) =>
+              dateSeule(m.createdAt) != null &&
+              dateSeule(m.createdAt)!.compareTo(createdFrom) >= 0)
+          .toList();
+    }
+    if (createdTo != null) {
+      list = list
+          .where((m) =>
+              dateSeule(m.createdAt) != null &&
+              dateSeule(m.createdAt)!.compareTo(createdTo) <= 0)
+          .toList();
     }
     final total = list.length;
     final debut = (offset ?? 0).clamp(0, total);
@@ -3506,7 +3526,27 @@ class FauxApiService implements ApiService {
   Future<PresenceStats> getPresenceStats({String? from, String? to}) async {
     await _latence();
     _requireAuth();
-    final list = _data.presences;
+    // Fenêtre [from, to] (« AAAA-MM-JJ »), comme le serveur : sans
+    // fenêtre, tout l'historique ; avec, seuls les pointages datés
+    // dans la fenêtre comptent.
+    var list = _data.presences;
+    String? dateSeule(DateTime? d) => d == null
+        ? null
+        : '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    if (from != null) {
+      list = list
+          .where((p) =>
+              dateSeule(p.pointeAt) != null &&
+              dateSeule(p.pointeAt)!.compareTo(from) >= 0)
+          .toList();
+    }
+    if (to != null) {
+      list = list
+          .where((p) =>
+              dateSeule(p.pointeAt) != null &&
+              dateSeule(p.pointeAt)!.compareTo(to) <= 0)
+          .toList();
+    }
     final presents = list.where((p) => p.statut == 'present').length;
     final absents = list.where((p) => p.statut == 'absent').length;
     final excuses = list.where((p) => p.statut == 'excuse').length;
@@ -6981,7 +7021,7 @@ class FauxApiService implements ApiService {
       throw UnimplementedError('Dons en nature non gérés par le faux service.');
 
   @override
-  Future<List<Visiteur>> getVisiteurs({String? statut}) async => const [];
+  Future<List<Visiteur>> getVisiteurs({String? statut, int? limit}) async => const [];
 
   @override
   Future<Visiteur> createVisiteur({

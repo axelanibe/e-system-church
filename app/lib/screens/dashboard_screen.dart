@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import 'package:provider/provider.dart';
 
+import '../models/abonnement.dart';
 import '../models/announcement.dart';
 import '../models/cultes.dart';
 import '../models/rapport.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
+import '../utils/periodes.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/logo_app.dart';
 import '../widgets/soft_button.dart';
@@ -20,11 +22,107 @@ import 'rapports_mere_screen.dart';
 import 'rapports_recus_screen.dart';
 import 'transferts_screen.dart';
 
+/// Période du sélecteur du tableau de bord (pastilles, modèle Facebook).
+enum PeriodeTableauBord { aujourdHui, septJours, trenteJours }
+
+/// Libellé d'une période, tel qu'affiché dans les pastilles.
+String libellePeriodeTableauBord(PeriodeTableauBord periode) {
+  switch (periode) {
+    case PeriodeTableauBord.aujourdHui:
+      return 'Aujourd’hui';
+    case PeriodeTableauBord.septJours:
+      return '7 jours';
+    case PeriodeTableauBord.trenteJours:
+      return '30 jours';
+  }
+}
+
+/// Nombre de jours d'une période.
+int joursPeriodeTableauBord(PeriodeTableauBord periode) {
+  switch (periode) {
+    case PeriodeTableauBord.aujourdHui:
+      return 1;
+    case PeriodeTableauBord.septJours:
+      return 7;
+    case PeriodeTableauBord.trenteJours:
+      return 30;
+  }
+}
+
+/// Fenêtre d'une période : [debut, fin] courante et [debutPrec, finPrec]
+/// précédente équivalente, en dates seules. Pour « Aujourd’hui », la
+/// période précédente est hier.
+({DateTime debut, DateTime fin, DateTime debutPrec, DateTime finPrec})
+    fenetresPeriodeTableauBord(
+        PeriodeTableauBord periode, DateTime reference) {
+  final jour =
+      DateTime(reference.year, reference.month, reference.day);
+  final duree = joursPeriodeTableauBord(periode);
+  final debut = jour.subtract(Duration(days: duree - 1));
+  final finPrec = debut.subtract(const Duration(days: 1));
+  final debutPrec = finPrec.subtract(Duration(days: duree - 1));
+  return (debut: debut, fin: jour, debutPrec: debutPrec, finPrec: finPrec);
+}
+
+/// Texte de variation (« +3 », « -2 », « +0 »), null quand il n'y a
+/// rien à comparer (0 des deux côtés : pas de bruit sur une carte vide).
+String? texteVariation(int actuel, int precedent) {
+  if (actuel == 0 && precedent == 0) return null;
+  final diff = actuel - precedent;
+  return diff >= 0 ? '+$diff' : '$diff';
+}
+
+/// Signaux d'attention du tableau de bord, uniquement à partir de
+/// données déjà chargées (abonnement, compteurs, clôtures). Vide = pas
+/// de carte d'attention. Rien d'inventé : sans donnée, pas de signal.
+List<String> signauxAttention({
+  required Abonnement? abonnement,
+  required int demandesATraiter,
+  required bool caisseMoisPrecedentNonCloturee,
+  required String moisPrecedent,
+}) {
+  final signaux = <String>[];
+  final abo = abonnement;
+  if (abo != null) {
+    if (abo.lectureSeule) {
+      signaux.add('Abonnement expiré : l’application est en lecture seule.');
+    } else {
+      final jours = abo.joursRestants;
+      if (jours != null && jours <= 30) {
+        signaux.add(
+            'Abonnement : $jours ${jours == 1 ? 'jour restant' : 'jours restants'}.');
+      }
+    }
+  }
+  if (demandesATraiter > 0) {
+    signaux.add(
+        '$demandesATraiter ${demandesATraiter == 1 ? 'élément à traiter' : 'éléments à traiter'}.');
+  }
+  if (caisseMoisPrecedentNonCloturee) {
+    signaux.add('Caisse de $moisPrecedent non clôturée.');
+  }
+  return signaux;
+}
+
+/// « AAAA-MM-JJ » pour une date seule.
+String _aaaammjj(DateTime date) =>
+    '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
 class _DashboardData {
   final int membresTotal;
   final int presencesJour;
+  final int presencesPrecedentes;
   final int visiteursJour;
+  final int visiteursPrecedents;
+  /// Vrai quand la liste des visiteurs a été tronquée à la limite
+  /// demandée : la variation des visiteurs n'est alors pas fiable,
+  /// elle n'est pas affichée.
+  final bool visiteursTronques;
   final int nouveauxMembres;
+  final int nouveauxMembresPrecedents;
+  /// Vrai quand le mois précédent a eu des mouvements de caisse et
+  /// aucune clôture : signal d'attention, jamais deviné sans données.
+  final bool caisseMoisPrecedentNonCloturee;
   final int cotisationsMois;
   final int entreesJour;
   final int sortiesJour;
@@ -44,8 +142,13 @@ class _DashboardData {
   const _DashboardData({
     required this.membresTotal,
     required this.presencesJour,
+    required this.presencesPrecedentes,
     required this.visiteursJour,
+    required this.visiteursPrecedents,
+    required this.visiteursTronques,
     required this.nouveauxMembres,
+    required this.nouveauxMembresPrecedents,
+    required this.caisseMoisPrecedentNonCloturee,
     required this.cotisationsMois,
     required this.entreesJour,
     required this.sortiesJour,
@@ -88,6 +191,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late Future<_DashboardData> _future;
+  var _periode = PeriodeTableauBord.aujourdHui;
 
   @override
   void initState() {
@@ -120,30 +224,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     }
     final maintenant = DateTime.now();
-    final jour =
-        '${maintenant.year}-${maintenant.month.toString().padLeft(2, '0')}-${maintenant.day.toString().padLeft(2, '0')}';
+    final fenetres = fenetresPeriodeTableauBord(_periode, maintenant);
+    final debut = _aaaammjj(fenetres.debut);
+    final fin = _aaaammjj(fenetres.fin);
+    final debutPrec = _aaaammjj(fenetres.debutPrec);
+    final finPrec = _aaaammjj(fenetres.finPrec);
+    // Présences de la période et de la période précédente équivalente
+    // (GET /presences/stats, lecture seule, fenêtres arbitraires).
     int presencesJour = 0;
+    int presencesPrecedentes = 0;
     try {
-      final stats = await api.getPresenceStats(from: jour, to: jour);
+      final stats = await api.getPresenceStats(from: debut, to: fin);
       presencesJour = stats.presents;
+      final statsPrec =
+          await api.getPresenceStats(from: debutPrec, to: finPrec);
+      presencesPrecedentes = statsPrec.presents;
     } catch (_) {
       presencesJour = 0; // Sans statistiques lisibles, la carte reste à 0.
+      presencesPrecedentes = 0;
     }
+    // Nouveaux membres : créés dans la période (GET /membres,
+    // created_from / created_to, lecture seule, seul le total sert),
+    // et dans la période précédente pour la variation.
     int nouveauxMembres = 0;
+    int nouveauxMembresPrecedents = 0;
     try {
-      final page = await api.getMembers(status: 'nouveau_converti');
-      nouveauxMembres = page.total;
+      nouveauxMembres = (await api.getMembers(
+              limit: 1, createdFrom: debut, createdTo: fin))
+          .total;
+      nouveauxMembresPrecedents = (await api.getMembers(
+              limit: 1, createdFrom: debutPrec, createdTo: finPrec))
+          .total;
     } catch (_) {
       nouveauxMembres = 0;
+      nouveauxMembresPrecedents = 0;
     }
     // Tableau du jour (maquette, écrans 19 et 36) : visiteurs,
     // demandes, membres à suivre, rapports reçus. Chaque compteur
     // vient d'une vraie lecture serveur ; un échec ne bloque pas le
     // tableau, le compteur reste à 0.
     int visiteursJour = 0;
+    int visiteursPrecedents = 0;
+    bool visiteursTronques = false;
     int entreesJour = 0;
     int sortiesJour = 0;
     int caisse = 0;
+    bool caisseMoisPrecedentNonCloturee = false;
     int prieresEnAttente = 0;
     int liaisonsEnAttente = 0;
     int rapportsRecus = 0;
@@ -155,6 +281,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final mouvements = await api.getCaisseMouvements();
         final aujourdHui =
             DateTime(maintenant.year, maintenant.month, maintenant.day);
+        // Dernier mois terminé, pour le signal « caisse non clôturée » :
+        // il ne se déclenche que s'il y a eu des mouvements ce mois-là.
+        final moisPrecedent = dernierMoisTermine(maintenant);
+        var mouvementsMoisPrecedent = 0;
         for (final m in mouvements) {
           final date = m.createdAt?.toLocal();
           if (date == null) continue;
@@ -167,8 +297,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
               sortiesJour += m.montantFcfa;
             }
           }
+          if (periodeMois(date) == moisPrecedent) {
+            mouvementsMoisPrecedent++;
+          }
         }
         caisse = (await api.getCaisseSolde()).solde;
+        if (mouvementsMoisPrecedent > 0) {
+          try {
+            final clotures = await api.getCloturesCaisse();
+            caisseMoisPrecedentNonCloturee =
+                !clotures.any((c) => c.periode == moisPrecedent);
+          } catch (_) {
+            // Sans clôtures lisibles, pas de signal inventé.
+            caisseMoisPrecedentNonCloturee = false;
+          }
+        }
       } catch (_) {
         entreesJour = 0;
         sortiesJour = 0;
@@ -189,11 +332,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
     if (state.canManageMembers) {
       try {
-        final visiteurs = await api.getVisiteurs();
-        visiteursJour =
-            visiteurs.where((v) => v.dateVenue == jour).length;
+        // Les 100 visiteurs les plus récents (date_venue décroissante
+        // côté serveur) : la variation n'est fiable que si la liste
+        // n'est pas tronquée, sinon elle n'est pas affichée.
+        final visiteurs = await api.getVisiteurs(limit: 100);
+        visiteursTronques = visiteurs.length >= 100;
+        bool dansFenetre(String date, DateTime debutF, DateTime finF) =>
+            date.compareTo(_aaaammjj(debutF)) >= 0 &&
+            date.compareTo(_aaaammjj(finF)) <= 0;
+        visiteursJour = visiteurs
+            .where(
+                (v) => dansFenetre(v.dateVenue, fenetres.debut, fenetres.fin))
+            .length;
+        visiteursPrecedents = visiteurs
+            .where((v) => dansFenetre(
+                v.dateVenue, fenetres.debutPrec, fenetres.finPrec))
+            .length;
       } catch (_) {
         visiteursJour = 0;
+        visiteursPrecedents = 0;
+        visiteursTronques = false;
       }
       try {
         final demandes = await api.getDemandesPriere();
@@ -271,8 +429,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return _DashboardData(
       membresTotal: membres.total,
       presencesJour: presencesJour,
+      presencesPrecedentes: presencesPrecedentes,
       visiteursJour: visiteursJour,
+      visiteursPrecedents: visiteursPrecedents,
+      visiteursTronques: visiteursTronques,
       nouveauxMembres: nouveauxMembres,
+      nouveauxMembresPrecedents: nouveauxMembresPrecedents,
+      caisseMoisPrecedentNonCloturee: caisseMoisPrecedentNonCloturee,
       cotisationsMois: cotisationsMois,
       entreesJour: entreesJour,
       sortiesJour: sortiesJour,
@@ -289,6 +452,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       annonces: annonces,
       cultes: cultes,
     );
+  }
+
+  /// Libellé d'une carte de chiffres selon la période : « Présences
+  /// du jour » pour aujourd'hui, « Présences · 7 jours » sinon.
+  String _libelleCartePeriode(String base) {
+    if (_periode == PeriodeTableauBord.aujourdHui) return '$base du jour';
+    return '$base · ${joursPeriodeTableauBord(_periode)} jours';
   }
 
   /// Prochain culte : le premier dont la date n'est pas passée.
@@ -334,7 +504,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 900),
@@ -353,21 +523,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       border: Border.all(
                         color: const Color(0xFFECD27A),
                       ),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppRadii.lg),
                     ),
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(AppSpacing.sm),
                     child: EnteteEspace(eglise: church),
                   )
                 else
                   EnteteEspace(eglise: church),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
+                // Sélecteur de période (pastilles, modèle Facebook) :
+                // il pilote les chiffres et leurs variations.
+                _PastillesPeriode(
+                  periode: _periode,
+                  onChoisir: (periode) {
+                    if (periode == _periode) return;
+                    setState(() {
+                      _periode = periode;
+                      _future = _load();
+                    });
+                  },
+                ),
+                const SizedBox(height: AppSpacing.md),
                 FutureBuilder<_DashboardData>(
                   future: _future,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState ==
                         ConnectionState.waiting) {
                       return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 48),
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
                         child: AppLoading(),
                       );
                     }
@@ -381,9 +564,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     final data = snapshot.data!;
                     final prochain = _prochainCulte(data.cultes);
                     final recentes = _annoncesRecentes(data.annonces);
+                    // Signaux d'attention, uniquement à partir de données
+                    // déjà chargées : la carte ne s'affiche que s'il y
+                    // en a au moins un.
+                    final signaux = signauxAttention(
+                      abonnement: state.abonnement,
+                      demandesATraiter: data.prieresEnAttente +
+                          data.liaisonsEnAttente +
+                          data.rapportsRecus +
+                          data.transfertsRattachements,
+                      caisseMoisPrecedentNonCloturee:
+                          data.caisseMoisPrecedentNonCloturee,
+                      moisPrecedent:
+                          libellePeriodeMois(dernierMoisTermine()),
+                    );
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        if (signaux.isNotEmpty) ...[
+                          _CarteAttention(signaux: signaux),
+                          const SizedBox(height: AppSpacing.md),
+                        ],
                         // Aujourd'hui (maquette, écrans 19 et 36) :
                         // carte claire quand aucun culte n'est programmé,
                         // violet profond quand un culte est programmé.
@@ -392,7 +593,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           decoration: prochain == null
                               ? BoxDecoration(
                                   color: AppTheme.fondPapier,
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(AppRadii.lg),
                                 )
                               : BoxDecoration(
                                   gradient: const LinearGradient(
@@ -403,40 +604,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       AppTheme.violetSecondaire,
                                     ],
                                   ),
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(AppRadii.lg),
                                 ),
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(AppSpacing.md),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  Text(
-                                    'Aujourd’hui',
-                                    // Maquette, écrans 19 et 36 : 16 px.
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge
-                                        ?.copyWith(
-                                            color: prochain == null
-                                                ? AppTheme.violetProfond
-                                                : Colors.white,
-                                            fontSize: 16),
+                                  Flexible(
+                                    child: Text(
+                                      'Aujourd’hui',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      // Maquette, écrans 19 et 36 : 16 px.
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(
+                                              color: prochain == null
+                                                  ? AppTheme.violetProfond
+                                                  : Colors.white,
+                                              fontSize: AppFontSizes.s16),
+                                    ),
                                   ),
                                   const Spacer(),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 6),
+                                        horizontal: AppSpacing.sm,
+                                        vertical: 6),
                                     decoration: BoxDecoration(
                                       color: AppTheme.or,
                                       borderRadius:
-                                          BorderRadius.circular(20),
+                                          BorderRadius.circular(AppRadii.pill),
                                     ),
                                     child: const Text(
                                       'Prochain culte',
                                       style: TextStyle(
                                         fontFamily: 'Inter',
-                                        fontSize: 11.5,
+                                        fontSize: AppFontSizes.s11_5,
                                         fontWeight: FontWeight.bold,
                                         color: AppTheme.violetProfond,
                                       ),
@@ -444,7 +650,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: AppSpacing.sm),
                               if (prochain == null) ...[
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -466,7 +672,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .titleMedium
-                                                ?.copyWith(fontSize: 13.5),
+                                                ?.copyWith(fontSize: AppFontSizes.s13_5),
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
@@ -477,14 +683,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodySmall
-                                                ?.copyWith(fontSize: 11.5),
+                                                ?.copyWith(fontSize: AppFontSizes.s11_5),
                                           ),
                                         ],
                                       ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: AppSpacing.sm),
                                 Row(
                                   children: [
                                     Expanded(
@@ -509,9 +715,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     border: Border.all(
                                         color: Colors.white.withValues(
                                             alpha: 0.25)),
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(AppRadii.md),
                                   ),
-                                  padding: const EdgeInsets.all(16),
+                                  padding: const EdgeInsets.all(AppSpacing.md),
                                   child: Column(
                                     children: [
                                       Text(
@@ -525,9 +731,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             .titleMedium
                                             ?.copyWith(
                                                 color: Colors.white,
-                                                fontSize: 13.5),
+                                                fontSize: AppFontSizes.s13_5),
                                       ),
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: AppSpacing.xxs),
                                       Text(
                                         '${formatDateTimeSansDecalage(prochain.date)}'
                                         '${prochain.lieu == null || prochain.lieu!.isEmpty ? '' : ' · ${prochain.lieu}'}'
@@ -541,7 +747,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             .bodySmall
                                             ?.copyWith(
                                                 color: Colors.white70,
-                                                fontSize: 11.5),
+                                                fontSize: AppFontSizes.s11_5),
                                       ),
                                     ],
                                   ),
@@ -549,7 +755,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacing.md),
                         // Chiffres de mon église (maquette, écrans 19
                         // et 36) : compteurs réels, rien d'inventé.
                         // L'aide sous un compteur est son texte vide
@@ -572,20 +778,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   icon: Icons.people_outline,
                                   tailleValeur: 22,
                                   color: AppTheme.violetProfond,
+                                  // Variation du total = nouveaux de la
+                                  // période contre nouveaux de la
+                                  // précédente (pas d'historique du total
+                                  // côté serveur).
+                                  variation: texteVariation(
+                                      data.nouveauxMembres,
+                                      data.nouveauxMembresPrecedents),
                                 ),
                                 StatCard(
-                                  label: 'Présences du jour',
+                                  label: _libelleCartePeriode('Présences'),
                                   value: '${data.presencesJour}',
                                   icon: Icons.how_to_reg_outlined,
                                   tailleValeur: 22,
                                   color: AppTheme.vertFonce,
+                                  variation: texteVariation(
+                                      data.presencesJour,
+                                      data.presencesPrecedentes),
                                 ),
                                 StatCard(
-                                  label: 'Visiteurs du jour',
+                                  label: _libelleCartePeriode('Visiteurs'),
                                   value: '${data.visiteursJour}',
                                   icon: Icons.person_outline,
                                   tailleValeur: 22,
                                   color: AppTheme.violetProfond,
+                                  // Liste tronquée à 100 : la variation
+                                  // ne serait pas fiable, on ne l'affiche
+                                  // pas plutôt qu'un faux chiffre.
+                                  variation: data.visiteursTronques
+                                      ? null
+                                      : texteVariation(data.visiteursJour,
+                                          data.visiteursPrecedents),
                                 ),
                                 StatCard(
                                   label: 'Nouveaux membres',
@@ -593,6 +816,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   icon: Icons.person_add_outlined,
                                   tailleValeur: 22,
                                   color: AppTheme.violetProfond,
+                                  variation: texteVariation(
+                                      data.nouveauxMembres,
+                                      data.nouveauxMembresPrecedents),
                                   aide: data.nouveauxMembres == 0
                                       ? 'Aucun nouveau membre'
                                       : null,
@@ -750,15 +976,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         'Aucun établissement relié',
                                         textAlign: TextAlign.center,
                                         // Maquette, écrans 19 et 36 : 13 px.
-                                        style: TextStyle(fontSize: 13),
+                                        style: TextStyle(fontSize: AppFontSizes.s13),
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: AppSpacing.xxs),
                                     const Center(
                                       child: Text(
                                         'Aucune alerte d’annexe.',
                                         textAlign: TextAlign.center,
-                                        style: TextStyle(fontSize: 13),
+                                        style: TextStyle(fontSize: AppFontSizes.s13),
                                       ),
                                     ),
                                   ] else
@@ -772,7 +998,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         .textTheme
                                         .titleMedium,
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: AppSpacing.xs),
                                   // Design couleurs messagerie (16 nov.
                                   // 2026) : compteurs du réseau en
                                   // pastille or clair, texte violet.
@@ -785,19 +1011,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     decoration: BoxDecoration(
                                       color: AppTheme.orClair,
                                       borderRadius:
-                                          BorderRadius.circular(12),
+                                          BorderRadius.circular(AppRadii.md),
                                     ),
                                     child: Text(
                                         '${pluriel(data.rapport!.totauxReseau.membresActifs, 'membre actif', 'membres actifs')} · '
                                         '${pluriel(data.rapport!.totauxReseau.nombreContributions, 'contribution')} · '
                                         '${formatFcfa(data.rapport!.totauxReseau.totalFcfa)}',
                                         style: const TextStyle(
-                                          fontSize: 12.5,
+                                          fontSize: AppFontSizes.s12_5,
                                           fontWeight: FontWeight.bold,
                                           color: AppTheme.violetProfond,
                                         )),
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: AppSpacing.sm),
                                   const Divider(),
                                   ...data.rapport!.sousEglises.map(
                                     (s) => ListTile(
@@ -810,12 +1036,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         s.egliseNom,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(fontSize: 13.5),
+                                        style: const TextStyle(fontSize: AppFontSizes.s13_5),
                                       ),
                                       subtitle: Text(
                                           '${s.membresActifs} membres · ${formatFcfa(s.totalFcfa)}'
                                           '${s.niveau == 1 ? '' : ' · niveau ${s.niveau}'}',
-                                          style: const TextStyle(fontSize: 11.5)),
+                                          style: const TextStyle(fontSize: AppFontSizes.s11_5)),
                                       trailing: Text(
                                         '${s.nombreContributions} contributions',
                                         maxLines: 1,
@@ -884,40 +1110,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleMedium
-                                        ?.copyWith(fontSize: 13),
+                                        ?.copyWith(fontSize: AppFontSizes.s13),
                                   ),
                                   if (data.mereCode != null) ...[
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: AppSpacing.xxs),
                                     // Maquette, écran 36 : 13 px. Pastille
                                     // or clair (design couleurs messagerie).
                                     Container(
                                       padding:
                                           const EdgeInsets.symmetric(
                                         horizontal: 10,
-                                        vertical: 4,
+                                        vertical: AppSpacing.xxs,
                                       ),
                                       decoration: BoxDecoration(
                                         color: AppTheme.orClair,
                                         borderRadius:
-                                            BorderRadius.circular(12),
+                                            BorderRadius.circular(AppRadii.md),
                                       ),
                                       child: Text(
                                         'Code ${data.mereCode}',
                                         style: const TextStyle(
-                                          fontSize: 13,
+                                          fontSize: AppFontSizes.s13,
                                           fontWeight: FontWeight.bold,
                                           color: AppTheme.violetProfond,
                                         ),
                                       ),
                                     ),
                                   ],
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: AppSpacing.xs),
                                   Text(
                                     'Le rapport part à ${data.mereNom}'
                                     '${data.mereCode != null ? ' · ${data.mereCode}' : ''}.',
                                     // Maquette, écran 36 : 11,5 px.
                                     style:
-                                        const TextStyle(fontSize: 11.5),
+                                        const TextStyle(fontSize: AppFontSizes.s11_5),
                                   ),
                                 ] else
                                   const Text(
@@ -925,7 +1151,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     'vos rapports par e-mail, directement '
                                     'depuis votre espace.',
                                   ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: AppSpacing.sm),
                                 BoutonDoux(
                                   label:
                                       'Envoyer un rapport à mon église mère',
@@ -957,13 +1183,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleMedium
-                                      ?.copyWith(fontSize: 14),
+                                      ?.copyWith(fontSize: AppFontSizes.s14),
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: AppSpacing.xxs),
                                 const Text(
                                   'Les annonces publiées pour l’église s’afficheront ici.',
                                   // Maquette, écrans 19 et 36 : 11,5 px.
-                                  style: TextStyle(fontSize: 11.5),
+                                  style: TextStyle(fontSize: AppFontSizes.s11_5),
                                 ),
                               ],
                             ),
@@ -981,14 +1207,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       a.title,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 13.5),
+                                      style: const TextStyle(fontSize: AppFontSizes.s13_5),
                                     ),
                                     subtitle: Text(
                                       '${a.body}'
                                       '${a.createdAt == null ? '' : ' · ${formatDate(a.createdAt)}'}',
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 11.5),
+                                      style: const TextStyle(fontSize: AppFontSizes.s11_5),
                                     ),
                                     onTap: () {
                                       Navigator.of(context).push(
@@ -1007,7 +1233,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         context, const AnnoncesScreen()),
                                     icon: const Icon(
                                         Icons.campaign_outlined),
-                                    label: const Text('Toutes les annonces', style: TextStyle(fontSize: 13.5)),
+                                    label: const Text('Toutes les annonces', style: TextStyle(fontSize: AppFontSizes.s13_5)),
                                   ),
                                 ),
                               ],
@@ -1016,7 +1242,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ],
                     );
                   },                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 // Rapports reçus, pour une mère (la carte « Mon
                 // église mère » de l'annexe est dans le FutureBuilder,
                 // elle a besoin des données chargées).
@@ -1033,12 +1259,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               .textTheme
                               .titleMedium,
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacing.xs),
                         const Text(
                           'Lisez les rapports envoyés par vos '
                           'églises annexes.',
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: AppSpacing.sm),
                         BoutonDoux(
                           label: 'Ouvrir les rapports reçus',
                           icon: Icons.inbox_outlined,
@@ -1064,6 +1290,109 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
+/// Pastilles de sélection de la période (modèle Facebook) : la
+/// pastille choisie est violet profond, les autres sont bordurées.
+class _PastillesPeriode extends StatelessWidget {
+  final PeriodeTableauBord periode;
+  final ValueChanged<PeriodeTableauBord> onChoisir;
+
+  const _PastillesPeriode({required this.periode, required this.onChoisir});
+
+  @override
+  Widget build(BuildContext context) {
+    // Wrap plutôt que Row : sur un petit écran les pastilles passent
+    // à la ligne au lieu de déborder.
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
+      children: [
+        for (final p in PeriodeTableauBord.values)
+          InkWell(
+            onTap: () => onChoisir(p),
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+              decoration: BoxDecoration(
+                color: p == periode
+                    ? AppTheme.violetProfond
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(AppRadii.pill),
+                border: p == periode
+                    ? null
+                    : Border.all(
+                        color:
+                            AppTheme.violetProfond.withValues(alpha: 0.4)),
+              ),
+              child: Text(
+                libellePeriodeTableauBord(p),
+                style: TextStyle(
+                  fontSize: AppFontSizes.s12_5,
+                  fontWeight:
+                      p == periode ? FontWeight.bold : FontWeight.normal,
+                  color: p == periode
+                      ? Colors.white
+                      : AppTheme.violetProfond,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Carte d'attention : un signal par ligne, sur fond or clair.
+/// Ne s'affiche que s'il y a au moins un signal réel.
+class _CarteAttention extends StatelessWidget {
+  final List<String> signaux;
+
+  const _CarteAttention({required this.signaux});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.orClair,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+      ),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.warning_amber_outlined,
+                color: AppTheme.orFonce,
+                size: 20,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                'À surveiller',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontSize: AppFontSizes.s13_5,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.violetProfond,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          for (final signal in signaux)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xxs),
+              child: Text(
+                '• $signal',
+                style: const TextStyle(fontSize: AppFontSizes.s12_5),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Grille à hauteurs intrinsèques : chaque rangée prend la hauteur
 /// de sa carte la plus haute, sans ratio fixe. Un childAspectRatio
 /// fige la hauteur depuis la largeur : il laisse un vide blanc quand
@@ -1078,7 +1407,7 @@ class _GrilleCartes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const espacement = 12.0;
+    const espacement = AppSpacing.sm;
     final rangees = <Widget>[];
     for (var debut = 0; debut < enfants.length; debut += colonnes) {
       final fin = debut + colonnes > enfants.length
@@ -1134,14 +1463,14 @@ class _ActionRapide extends StatelessWidget {
     return Card(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(icone, color: AppTheme.orFonce, size: 28),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 titre,
                 maxLines: 2,
@@ -1151,9 +1480,9 @@ class _ActionRapide extends StatelessWidget {
                     .textTheme
                     .titleMedium
                     ?.copyWith(
-                        fontWeight: FontWeight.bold, fontSize: 13.5),
+                        fontWeight: FontWeight.bold, fontSize: AppFontSizes.s13_5),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.xxs),
               Text(
                 sousTitre,
                 maxLines: 2,
@@ -1162,7 +1491,7 @@ class _ActionRapide extends StatelessWidget {
                 style: Theme.of(context)
                     .textTheme
                     .bodySmall
-                    ?.copyWith(fontSize: 11.5),
+                    ?.copyWith(fontSize: AppFontSizes.s11_5),
               ),
             ],
           ),
@@ -1201,7 +1530,7 @@ class _LigneChiffre extends StatelessWidget {
         titre,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: AppFontSizes.s13_5),
       ),
       subtitle: sousTitre == null
           ? null
@@ -1209,7 +1538,7 @@ class _LigneChiffre extends StatelessWidget {
               sousTitre,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11.5),
+              style: const TextStyle(fontSize: AppFontSizes.s11_5),
             ),
       trailing: Text(
         valeur,
@@ -1239,7 +1568,7 @@ class _MiniStatJour extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadii.md),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
       child: Column(
@@ -1248,7 +1577,7 @@ class _MiniStatJour extends StatelessWidget {
           Text(
             libelle.toUpperCase(),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
+                  fontSize: AppFontSizes.s10,
                   fontWeight: FontWeight.w600,
                 ),
           ),
