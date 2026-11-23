@@ -30,6 +30,7 @@ class IdentiteInstitutionnelle {
   final String? devise;
   final String? fuseauHoraire;
   final String? numeroEnregistrement;
+  final String? ncc;
   final Map<String, dynamic>? infosLegales;
   final Map<String, dynamic>? parametresDocuments;
   final String? description;
@@ -63,6 +64,7 @@ class IdentiteInstitutionnelle {
     this.devise,
     this.fuseauHoraire,
     this.numeroEnregistrement,
+    this.ncc,
     this.infosLegales,
     this.parametresDocuments,
     this.description,
@@ -101,6 +103,7 @@ class IdentiteInstitutionnelle {
         devise: json['devise'] as String?,
         fuseauHoraire: json['fuseau_horaire'] as String?,
         numeroEnregistrement: json['numero_enregistrement'] as String?,
+        ncc: json['ncc'] as String?,
         infosLegales:
             (json['infos_legales'] as Map?)?.cast<String, dynamic>(),
         parametresDocuments:
@@ -139,6 +142,7 @@ class IdentiteInstitutionnelle {
         'devise': devise,
         'fuseau_horaire': fuseauHoraire,
         'numero_enregistrement': numeroEnregistrement,
+        'ncc': ncc,
         'infos_legales': infosLegales,
         'parametres_documents': parametresDocuments,
         'description': description,

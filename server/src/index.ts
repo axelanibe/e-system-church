@@ -54,6 +54,7 @@ import { registerNettoyageTestRoutes } from "./routes/nettoyage_test.js";
 import { registerSuppressionEgliseRoutes } from "./routes/suppression_eglise.js";
 import { registerImportMembresRoutes } from "./routes/import_membres.js";
 import { registerExportsPdfRoutes } from "./routes/exports_pdf.js";
+import { registerDepotSycebnlRoutes } from "./routes/depot_sycebnl.js";
 import { registerPlanComptableRoutes } from "./routes/plan_comptable.js";
 import { registerGouvernanceRoutes } from "./routes/gouvernance.js";
 import { registerSignaturesRoutes } from "./routes/signatures.js";
@@ -198,6 +199,7 @@ export function buildApp(db: Pool) {
   registerSuppressionEgliseRoutes(app, db);
   registerImportMembresRoutes(app, db);
   registerExportsPdfRoutes(app, db);
+  registerDepotSycebnlRoutes(app, db);
   registerPlanComptableRoutes(app, db);
   registerGouvernanceRoutes(app, db);
   registerSignaturesRoutes(app, db);

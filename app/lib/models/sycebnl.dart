@@ -1,6 +1,6 @@
 import 'finances.dart';
 
-/// États financiers SYCEBNL, système normal (tranche P6).
+/// États financiers SYCEBNL, système normal (tranches P6 et dépôt SYCEBNL).
 ///
 /// Générés depuis la vraie comptabilité, en un clic. Les charges
 /// additionnent les dépenses confirmées du registre des contributions
@@ -11,8 +11,9 @@ import 'finances.dart';
 /// se tient à part : ses mouvements sont saisis à la main et les
 /// contributions ne l'alimentent pas. Aucune donnée inventée : les lignes
 /// sans source dans l'application restent à 0 FCFA.
-/// Le bilan est équilibré par construction : l'application ne suit ni
-/// immobilisations ni dettes, l'excédent cumulé est donc tenu en trésorerie.
+/// Le bilan est équilibré par construction : les immobilisations nettes,
+/// les créances et les dettes viennent des registres SYCEBNL (migration
+/// 043), les fonds propres sont le solde (actif moins dettes).
 class EtatsSycebnl {
   final int annee;
 
@@ -29,30 +30,39 @@ class EtatsSycebnl {
   /// 0 : aucune charge financière suivie dans l'application.
   final int chargesFinancieres;
 
-  /// 0 : aucun bien immobilisé suivi dans l'application.
+  /// Immobilisations nettes (valeur d'acquisition moins amortissement
+  /// cumulé) du registre des immobilisations.
   final int actifImmobilise;
 
-  /// 0 : aucune créance suivie dans l'application.
+  /// Créances en cours du registre des créances.
   final int actifCirculant;
 
   /// Trésorerie à la clôture : ouverture + variation de l'exercice.
   final int tresorerieActif;
 
-  /// Excédent cumulé, tenu en trésorerie (aucune immobilisation, aucune
-  /// dette suivie).
+  /// Solde du bilan : actif immobilisé + actif circulant + trésorerie
+  /// moins dettes.
   final int fondsPropres;
 
-  /// 0 : aucune dette suivie dans l'application.
+  /// Dettes en cours du registre des dettes.
   final int dettes;
 
   /// 0 : aucune trésorerie passive suivie dans l'application.
   final int tresoreriePassif;
 
-  /// 0 : aucune note rédigée dans l'application.
+  /// Nombre de notes rédigées dans le registre des notes annexes.
   final int notesRedigees;
 
   /// 0 FCFA : aucun montant rattaché aux notes.
   final int montantsRattaches;
+
+  /// Flux d'investissement de l'exercice : moins les acquisitions
+  /// d'immobilisations de l'exercice.
+  final int fluxInvestissement;
+
+  /// Flux de financement de l'exercice : dettes contractées dans
+  /// l'exercice.
+  final int fluxFinancement;
 
   const EtatsSycebnl({
     required this.annee,
@@ -68,6 +78,8 @@ class EtatsSycebnl {
     required this.tresoreriePassif,
     required this.notesRedigees,
     required this.montantsRattaches,
+    this.fluxInvestissement = 0,
+    this.fluxFinancement = 0,
   });
 
   int get totalProduits => produitsExploitation + produitsFinanciers;
@@ -76,11 +88,14 @@ class EtatsSycebnl {
 
   int get resultatExercice => totalProduits - totalCharges;
 
-  int get fluxOperationnelles => resultatExercice;
-
-  int get fluxInvestissement => 0;
-
-  int get fluxFinancement => 0;
+  /// Flux des activités opérationnelles : le solde. Dans cette
+  /// comptabilité à partie simple, les achats d'immobilisations et les
+  /// emprunts sont déjà dans le résultat ; les flux d'investissement
+  /// et de financement en sont isolés pour les montrer, donc le flux
+  /// opérationnel est le résultat moins ces deux flux, et la variation
+  /// de trésorerie reste égale au résultat.
+  int get fluxOperationnelles =>
+      resultatExercice - fluxInvestissement - fluxFinancement;
 
   int get variationTresorerie =>
       fluxOperationnelles + fluxInvestissement + fluxFinancement;
@@ -95,13 +110,21 @@ class EtatsSycebnl {
 
   /// Construit les quatre états depuis les sommes de
   /// GET /exports/sycebnl/donnees : produits et charges de l'exercice,
-  /// trésorerie d'ouverture (exercices antérieurs). Mêmes chiffres que
-  /// l'export PDF, qui lit les mêmes sommes côté serveur.
+  /// trésorerie d'ouverture (exercices antérieurs), immobilisations
+  /// nettes, créances et dettes en cours, flux de l'exercice, nombre de
+  /// notes annexes rédigées. Mêmes chiffres que l'export PDF, qui lit
+  /// les mêmes sommes côté serveur.
   factory EtatsSycebnl.depuisDonnees({
     required int annee,
     required int produits,
     required int charges,
     required int ouverture,
+    int actifImmobilise = 0,
+    int actifCirculant = 0,
+    int dettes = 0,
+    int fluxInvestissement = 0,
+    int fluxFinancement = 0,
+    int notesRedigees = 0,
   }) {
     final cloture = ouverture + (produits - charges);
     return EtatsSycebnl(
@@ -110,14 +133,16 @@ class EtatsSycebnl {
       chargesExploitation: charges,
       produitsFinanciers: 0,
       chargesFinancieres: 0,
-      actifImmobilise: 0,
-      actifCirculant: 0,
+      actifImmobilise: actifImmobilise,
+      actifCirculant: actifCirculant,
       tresorerieActif: cloture,
-      fondsPropres: cloture,
-      dettes: 0,
+      fondsPropres: actifImmobilise + actifCirculant + cloture - dettes,
+      dettes: dettes,
       tresoreriePassif: 0,
-      notesRedigees: 0,
+      notesRedigees: notesRedigees,
       montantsRattaches: 0,
+      fluxInvestissement: fluxInvestissement,
+      fluxFinancement: fluxFinancement,
     );
   }
 

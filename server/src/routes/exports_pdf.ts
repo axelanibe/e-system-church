@@ -512,7 +512,80 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
       (anterieur.depense ?? 0) -
       depensesAnterieures;
     const cloture = ouverture + resultat;
-    return { produits, charges, resultat, ouverture, cloture };
+    // Registres SYCEBNL (migration 043) : le bilan n'est plus une
+    // synthèse de trésorerie. Actif immobilisé net, créances en cours,
+    // dettes en cours, fonds propres par solde (actif moins dettes).
+    const { rows: immoRows } = await db.query(
+      `SELECT coalesce(sum(valeur_acquisition - amortissement_cumule), 0)::int AS total
+         FROM immobilisations WHERE church_id = $1`,
+      [churchId],
+    );
+    const actifImmobilise = Number(immoRows[0]?.total ?? 0);
+    const { rows: creancesRows } = await db.query(
+      `SELECT coalesce(sum(montant), 0)::int AS total
+         FROM creances WHERE church_id = $1 AND statut = 'en_cours'`,
+      [churchId],
+    );
+    const actifCirculant = Number(creancesRows[0]?.total ?? 0);
+    const { rows: dettesRows } = await db.query(
+      `SELECT coalesce(sum(montant), 0)::int AS total
+         FROM dettes WHERE church_id = $1 AND statut = 'en_cours'`,
+      [churchId],
+    );
+    const dettes = Number(dettesRows[0]?.total ?? 0);
+    const fondsPropres = actifImmobilise + actifCirculant + cloture - dettes;
+    // Flux : dans cette comptabilité à partie simple, les achats
+    // d'immobilisations sont saisis comme des dépenses et les emprunts
+    // comme des recettes, ils sont donc déjà dans le résultat. Les flux
+    // d'investissement et de financement sont isolés du résultat pour
+    // les montrer, et le flux opérationnel est le solde : la variation
+    // de trésorerie reste égale au résultat, comme avant.
+    const { rows: achatsRows } = await db.query(
+      `SELECT coalesce(sum(valeur_acquisition), 0)::int AS total
+         FROM immobilisations
+        WHERE church_id = $1
+          AND date_acquisition >= $2::date
+          AND date_acquisition < ($2::date + interval '1 year')`,
+      [churchId, `${year}-01-01`],
+    );
+    const fluxInvestissement = -Number(achatsRows[0]?.total ?? 0);
+    const { rows: empruntsRows } = await db.query(
+      `SELECT coalesce(sum(montant), 0)::int AS total
+         FROM dettes
+        WHERE church_id = $1
+          AND created_at >= $2::date
+          AND created_at < ($2::date + interval '1 year')`,
+      [churchId, `${year}-01-01`],
+    );
+    const fluxFinancement = Number(empruntsRows[0]?.total ?? 0);
+    const fluxOperationnelles =
+      resultat - fluxInvestissement - fluxFinancement;
+    const variation =
+      fluxOperationnelles + fluxInvestissement + fluxFinancement;
+    const { rows: notesRows } = await db.query(
+      `SELECT titre, contenu FROM notes_annexes
+        WHERE church_id = $1 AND exercice = $2
+        ORDER BY created_at ASC`,
+      [churchId, year],
+    );
+    const notes = notesRows as { titre: string; contenu: string }[];
+    return {
+      produits,
+      charges,
+      resultat,
+      ouverture,
+      cloture,
+      actifImmobilise,
+      actifCirculant,
+      dettes,
+      fondsPropres,
+      fluxOperationnelles,
+      fluxInvestissement,
+      fluxFinancement,
+      variation,
+      notesRedigees: notes.length,
+      notes,
+    };
   }
   const sycebnlQuerySchema = z.object({
     etat: z.enum(["bilan", "compte_resultat", "flux", "notes"]),
@@ -532,8 +605,23 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
       try {
         const egliseNom = await nomEglise(db, req.session.churchId);
         const logo = await logoEglise(db, req.session.churchId);
-        const { produits, charges, resultat, ouverture, cloture } =
-          await sommesSycebnl(db, req.session.churchId, year);
+        const {
+          produits,
+          charges,
+          resultat,
+          ouverture,
+          cloture,
+          actifImmobilise,
+          actifCirculant,
+          dettes,
+          fondsPropres,
+          fluxOperationnelles,
+          fluxInvestissement,
+          fluxFinancement,
+          variation,
+          notesRedigees,
+          notes,
+        } = await sommesSycebnl(db, req.session.churchId, year);
         const pied =
           "À produire depuis votre comptabilité, aucun formulaire officiel à remplir.";
         const titres: Record<string, string> = {
@@ -552,16 +640,22 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
                     { titre: "Montant", largeur: 165, alignerDroite: true },
                   ],
                   lignes: [
-                    ["Actif immobilisé", formaterMontant(0)],
-                    ["Actif circulant", formaterMontant(0)],
+                    ["Actif immobilisé", formaterMontant(actifImmobilise)],
+                    ["Actif circulant", formaterMontant(actifCirculant)],
                     ["Trésorerie actif", formaterMontant(cloture)],
-                    ["Fonds propres", formaterMontant(cloture)],
-                    ["Dettes", formaterMontant(0)],
+                    ["Fonds propres", formaterMontant(fondsPropres)],
+                    ["Dettes", formaterMontant(dettes)],
                     ["Trésorerie passif", formaterMontant(0)],
+                    [
+                      "Total du passif",
+                      formaterMontant(fondsPropres + dettes),
+                    ],
                   ],
                   total: [
                     "Total de l'actif",
-                    formaterMontant(cloture),
+                    formaterMontant(
+                      actifImmobilise + actifCirculant + cloture,
+                    ),
                   ],
                   messageVide: "Aucune donnée sur cet exercice.",
                 },
@@ -602,15 +696,15 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
                       lignes: [
                         [
                           "Flux des activités opérationnelles",
-                          formaterMontant(resultat),
+                          formaterMontant(fluxOperationnelles),
                         ],
                         [
                           "Flux des activités d'investissement",
-                          formaterMontant(0),
+                          formaterMontant(fluxInvestissement),
                         ],
                         [
                           "Flux des activités de financement",
-                          formaterMontant(0),
+                          formaterMontant(fluxFinancement),
                         ],
                         [
                           "Trésorerie à l'ouverture",
@@ -623,7 +717,7 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
                       ],
                       total: [
                         "Variation de trésorerie",
-                        formaterMontant(resultat),
+                        formaterMontant(variation),
                       ],
                       messageVide: "Aucune donnée sur cet exercice.",
                     },
@@ -632,16 +726,13 @@ export function registerExportsPdfRoutes(app: FastifyInstance, db: Pool) {
                     {
                       titre: "Notes annexes",
                       colonnes: [
-                        { titre: "Libellé", largeur: 330 },
-                        {
-                          titre: "Montant",
-                          largeur: 165,
-                          alignerDroite: true,
-                        },
+                        { titre: "Titre", largeur: 165 },
+                        { titre: "Contenu", largeur: 330 },
                       ],
-                      lignes: [
-                        ["Notes rédigées", "0"],
-                        ["Montants rattachés", formaterMontant(0)],
+                      lignes: notes.map((n) => [n.titre, n.contenu]),
+                      total: [
+                        "Notes rédigées",
+                        String(notesRedigees),
                       ],
                       messageVide:
                         "Aucune note pour le moment. Vos notes annexes s'écriront ici, à partir des chiffres de votre comptabilité.",

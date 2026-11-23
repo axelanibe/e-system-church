@@ -11,6 +11,7 @@ import '../widgets/common_widgets.dart';
 import 'cloture_caisse_screen.dart';
 import 'comptes_bancaires_screen.dart';
 import 'cotisations_admin_screen.dart';
+import 'depot_sycebnl_screen.dart';
 import 'rapprochement_screen.dart';
 import 'recus_screen.dart';
 import 'sycebnl_screen.dart';
@@ -243,6 +244,13 @@ class _ContenuFinancesCompletesState
                               _ouvrir(const SycebnlScreen()),
                           icon: const Icon(Icons.description_outlined),
                           label: const Text('Ouvrir l’export SYCEBNL', style: TextStyle(fontSize: 13.5)),
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          onPressed: () =>
+                              _ouvrir(const DepotSycebnlScreen()),
+                          icon: const Icon(Icons.send_outlined),
+                          label: const Text('Dépôt SYCEBNL', style: TextStyle(fontSize: 13.5)),
                         ),
                       ],
                     ),

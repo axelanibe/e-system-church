@@ -49,6 +49,11 @@ class _IdentiteInstitutionnelleScreenState
       'Numéro d’enregistrement',
       'Numéro officiel de l’église, si elle en a un.',
     ),
+    (
+      'ncc',
+      'Numéro de compte contribuable (NCC)',
+      'Numéro délivré par la DGI. Il sert au dépôt SYCEBNL sur e-impots.',
+    ),
     ('devise', 'Devise', 'Ex. FCFA'),
     ('fuseau_horaire', 'Fuseau horaire', 'Ex. Africa/Abidjan'),
     (
@@ -116,6 +121,8 @@ class _IdentiteInstitutionnelleScreenState
         return identite.siteWeb;
       case 'numero_enregistrement':
         return identite.numeroEnregistrement;
+      case 'ncc':
+        return identite.ncc;
       case 'devise':
         return identite.devise;
       case 'fuseau_horaire':

@@ -59,6 +59,7 @@ export interface IdentiteInstitutionnelle {
   devise: string;
   fuseau_horaire: string;
   numero_enregistrement: string | null;
+  ncc: string | null;
   infos_legales: Record<string, unknown>;
   parametres_documents: Record<string, unknown>;
   description: string | null;
@@ -99,6 +100,7 @@ interface LigneParametres {
   slogan: string | null;
   site_web: string | null;
   numero_enregistrement: string | null;
+  ncc: string | null;
   infos_legales: Record<string, unknown> | null;
   couleurs: Record<string, unknown> | null;
   parametres_documents: Record<string, unknown> | null;
@@ -117,6 +119,7 @@ async function lireEglise(
             p.logo_url AS p_logo_url, p.devise AS p_devise,
             p.fuseau_horaire AS p_fuseau_horaire,
             p.sigle, p.slogan, p.site_web, p.numero_enregistrement,
+            p.ncc,
             p.infos_legales, p.couleurs, p.parametres_documents, p.statut
        FROM churches c
        LEFT JOIN eglise_parametres p ON p.church_id = c.id
@@ -140,6 +143,7 @@ async function lireEglise(
     slogan: r.slogan ?? null,
     site_web: r.site_web ?? null,
     numero_enregistrement: r.numero_enregistrement ?? null,
+    ncc: r.ncc ?? null,
     infos_legales: r.infos_legales ?? {},
     couleurs: r.couleurs ?? {},
     parametres_documents: r.parametres_documents ?? {},
@@ -204,6 +208,7 @@ function resoudre(
     devise: p.devise ?? eglise.devise ?? "FCFA",
     fuseau_horaire: p.fuseau_horaire ?? eglise.fuseau_horaire ?? "Africa/Abidjan",
     numero_enregistrement: p.numero_enregistrement,
+    ncc: p.ncc,
     infos_legales: p.infos_legales ?? {},
     parametres_documents: p.parametres_documents ?? {},
     description: eglise.description,
@@ -271,6 +276,7 @@ export const COLONNES_PARAMETRES_IDENTITE = [
   "slogan",
   "site_web",
   "numero_enregistrement",
+  "ncc",
   "infos_legales",
   "couleurs",
   "parametres_documents",

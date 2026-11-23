@@ -22,6 +22,7 @@ import '../models/contribution.dart';
 import '../models/cultes.dart';
 import '../models/checkin_enfant.dart';
 import '../models/confiance.dart';
+import '../models/depot_sycebnl.dart';
 import '../models/enfants.dart';
 import '../models/ecole_biblique.dart';
 import '../models/fidele.dart';
@@ -1592,6 +1593,184 @@ class HttpApiService implements ApiService {
   Future<void> deleteActivite(String id) async {
     await _call('DELETE', '/activites/$id');
   }
+
+  // -- Dépôt SYCEBNL (V1, migration 043) -------------------------------------
+  @override
+  Future<List<Immobilisation>> getImmobilisations() async =>
+      _items(await _call('GET', '/immobilisations'),
+          Immobilisation.depuisJson);
+
+  @override
+  Future<Immobilisation> createImmobilisation({
+    required String libelle,
+    required String dateAcquisition,
+    required int valeurAcquisition,
+    int amortissementCumule = 0,
+  }) async =>
+      Immobilisation.depuisJson(await _call('POST', '/immobilisations',
+          body: {
+            'libelle': libelle,
+            'date_acquisition': dateAcquisition,
+            'valeur_acquisition': valeurAcquisition,
+            'amortissement_cumule': amortissementCumule,
+          }));
+
+  @override
+  Future<Immobilisation> updateImmobilisation(
+    String id, {
+    String? libelle,
+    String? dateAcquisition,
+    int? valeurAcquisition,
+    int? amortissementCumule,
+  }) async =>
+      Immobilisation.depuisJson(
+          await _call('PATCH', '/immobilisations/$id', body: {
+        if (libelle != null) 'libelle': libelle,
+        if (dateAcquisition != null) 'date_acquisition': dateAcquisition,
+        if (valeurAcquisition != null)
+          'valeur_acquisition': valeurAcquisition,
+        if (amortissementCumule != null)
+          'amortissement_cumule': amortissementCumule,
+      }));
+
+  @override
+  Future<void> deleteImmobilisation(String id) async {
+    await _call('DELETE', '/immobilisations/$id');
+  }
+
+  @override
+  Future<List<Dette>> getDettes() async =>
+      _items(await _call('GET', '/dettes'), Dette.depuisJson);
+
+  @override
+  Future<Dette> createDette({
+    required String libelle,
+    required int montant,
+    String? echeance,
+    String statut = 'en_cours',
+  }) async =>
+      Dette.depuisJson(await _call('POST', '/dettes', body: {
+        'libelle': libelle,
+        'montant': montant,
+        if (echeance != null) 'echeance': echeance,
+        'statut': statut,
+      }));
+
+  @override
+  Future<Dette> updateDette(
+    String id, {
+    String? libelle,
+    int? montant,
+    String? echeance,
+    String? statut,
+  }) async =>
+      Dette.depuisJson(await _call('PATCH', '/dettes/$id', body: {
+        if (libelle != null) 'libelle': libelle,
+        if (montant != null) 'montant': montant,
+        if (echeance != null) 'echeance': echeance,
+        if (statut != null) 'statut': statut,
+      }));
+
+  @override
+  Future<void> deleteDette(String id) async {
+    await _call('DELETE', '/dettes/$id');
+  }
+
+  @override
+  Future<List<Creance>> getCreances() async =>
+      _items(await _call('GET', '/creances'), Creance.depuisJson);
+
+  @override
+  Future<Creance> createCreance({
+    required String libelle,
+    required int montant,
+    String? echeance,
+    String statut = 'en_cours',
+  }) async =>
+      Creance.depuisJson(await _call('POST', '/creances', body: {
+        'libelle': libelle,
+        'montant': montant,
+        if (echeance != null) 'echeance': echeance,
+        'statut': statut,
+      }));
+
+  @override
+  Future<Creance> updateCreance(
+    String id, {
+    String? libelle,
+    int? montant,
+    String? echeance,
+    String? statut,
+  }) async =>
+      Creance.depuisJson(await _call('PATCH', '/creances/$id', body: {
+        if (libelle != null) 'libelle': libelle,
+        if (montant != null) 'montant': montant,
+        if (echeance != null) 'echeance': echeance,
+        if (statut != null) 'statut': statut,
+      }));
+
+  @override
+  Future<void> deleteCreance(String id) async {
+    await _call('DELETE', '/creances/$id');
+  }
+
+  @override
+  Future<List<NoteAnnexe>> getNotesAnnexes({int? exercice}) async =>
+      _items(
+          await _call('GET', '/notes-annexes',
+              query: _q({'exercice': exercice})),
+          NoteAnnexe.depuisJson);
+
+  @override
+  Future<NoteAnnexe> createNoteAnnexe({
+    required String titre,
+    required String contenu,
+    required int exercice,
+  }) async =>
+      NoteAnnexe.depuisJson(await _call('POST', '/notes-annexes', body: {
+        'titre': titre,
+        'contenu': contenu,
+        'exercice': exercice,
+      }));
+
+  @override
+  Future<NoteAnnexe> updateNoteAnnexe(
+    String id, {
+    String? titre,
+    String? contenu,
+    int? exercice,
+  }) async =>
+      NoteAnnexe.depuisJson(await _call('PATCH', '/notes-annexes/$id',
+          body: {
+        if (titre != null) 'titre': titre,
+        if (contenu != null) 'contenu': contenu,
+        if (exercice != null) 'exercice': exercice,
+      }));
+
+  @override
+  Future<void> deleteNoteAnnexe(String id) async {
+    await _call('DELETE', '/notes-annexes/$id');
+  }
+
+  @override
+  Future<DepotSycebnl> getDepotSycebnl({required int annee}) async =>
+      DepotSycebnl.depuisJson(await _call('GET', '/sycebnl/depot',
+          query: _q({'annee': annee})));
+
+  @override
+  Future<SuiviDepotSycebnl> updateDepotSycebnl({
+    required int annee,
+    required String statut,
+    String? dateDepot,
+    String? reference,
+  }) async =>
+      SuiviDepotSycebnl.depuisJson(await _call('PATCH', '/sycebnl/depot',
+          body: {
+            'annee': annee,
+            'statut': statut,
+            if (dateDepot != null) 'date_depot': dateDepot,
+            if (reference != null) 'reference': reference,
+          }));
 
   @override
   Future<List<OrdreCulteItem>> getOrdreCulte(String culteId) async => _items(
@@ -3582,6 +3761,13 @@ class HttpApiService implements ApiService {
       produits: (data['produits'] as num?)?.toInt() ?? 0,
       charges: (data['charges'] as num?)?.toInt() ?? 0,
       ouverture: (data['ouverture'] as num?)?.toInt() ?? 0,
+      actifImmobilise: (data['actifImmobilise'] as num?)?.toInt() ?? 0,
+      actifCirculant: (data['actifCirculant'] as num?)?.toInt() ?? 0,
+      dettes: (data['dettes'] as num?)?.toInt() ?? 0,
+      fluxInvestissement:
+          (data['fluxInvestissement'] as num?)?.toInt() ?? 0,
+      fluxFinancement: (data['fluxFinancement'] as num?)?.toInt() ?? 0,
+      notesRedigees: (data['notesRedigees'] as num?)?.toInt() ?? 0,
     );
   }
 
