@@ -356,6 +356,10 @@ export function registerMotDePasseRoutes(app: FastifyInstance, db: Pool) {
 
   // -- Lien de réinitialisation généré par l'admin (sans SMTP) : l'admin
   // transmet le lien lui-même (WhatsApp, SMS, etc.). Admin seulement.
+  // Sécurité (correctif CRITIQUE, 22/11) : le lien ne peut être généré
+  // que pour un utilisateur de SA propre église, jamais pour un compte
+  // Plateforme (super_admin, aide_plateforme) — un e-mail inconnu ou
+  // hors église reçoit le même 404, sans oracle supplémentaire.
   app.post(
     "/auth/admin/lien-reinitialisation",
     { preHandler: [requireAuth(db), requireRole("admin_eglise")] },
@@ -366,8 +370,17 @@ export function registerMotDePasseRoutes(app: FastifyInstance, db: Pool) {
       }
       try {
         const { rows } = await db.query<{ id: string }>(
-          `SELECT id FROM users WHERE lower(email) = $1 LIMIT 1`,
-          [parsed.data.email.toLowerCase()],
+          `SELECT u.id FROM users u
+             JOIN church_users cu
+               ON cu.user_id = u.id AND cu.church_id = $2
+              AND cu.role NOT IN ('super_admin', 'aide_plateforme')
+            WHERE lower(u.email) = $1
+              AND NOT EXISTS (
+                SELECT 1 FROM church_users cu2
+                 WHERE cu2.user_id = u.id
+                   AND cu2.role IN ('super_admin', 'aide_plateforme'))
+            LIMIT 1`,
+          [parsed.data.email.toLowerCase(), req.session.churchId],
         );
         const user = rows[0];
         if (!user) {

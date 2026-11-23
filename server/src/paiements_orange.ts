@@ -19,6 +19,11 @@
  * le pay_token à la création et ajouter ici la re-interrogation
  * transactionstatus avant toute confirmation.
  *
+ * Depuis le correctif du 22/11, le webhook ne confirme plus : toute
+ * notification Orange est marquée `a_verifier` (confirmation manuelle
+ * par l'admin_eglise) en attendant le stockage des jetons et la
+ * re-interrogation transactionstatus.
+ *
  * Statuts Orange : INITIATED, PENDING, EXPIRED, SUCCESS, FAILED.
  */
 
