@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
 import '../config/app_config.dart';
 import '../models/abonnement.dart';
@@ -15,10 +16,24 @@ import '../services/session_store.dart';
 /// jeton JWT persisté en stockage sécurisé. Aucune donnée de démonstration :
 /// tout vient de l'API, les listes vides restent vides.
 class AppState extends ChangeNotifier {
-  final SessionStore _store = SessionStore();
+  /// Stockage de session et client HTTP injectables (tests uniquement) :
+  /// par défaut, le stockage sécurisé et un vrai client HTTP.
+  AppState({SessionStore? store, http.Client? client})
+      : _store = store ?? SessionStore(),
+        _client = client;
+
+  final SessionStore _store;
+  final http.Client? _client;
 
   late ApiService _api;
   bool _initialized = false;
+
+  /// Vrai quand la dernière restauration de session a échoué sans preuve
+  /// de révocation (serveur injoignable, délai dépassé, erreur serveur) :
+  /// les jetons stockés sont conservés, mais l'utilisateur n'est pas
+  /// connecté pour cette session. Faux après une restauration réussie,
+  /// une connexion, une déconnexion ou une révocation prouvée (401).
+  bool _horsLigne = false;
   String _apiBaseUrl = AppConfig.defaultApiBaseUrl;
 
   String? _token;
@@ -45,6 +60,13 @@ class AppState extends ChangeNotifier {
   // Tous les modules sont affichés pour toutes les églises (règle
   // du 11/11/2026) : plus de chargement ni de filtre par module.
   bool get initialized => _initialized;
+
+  /// Vrai quand le dernier démarrage (ou réessai) n'a pas pu joindre le
+  /// serveur alors qu'une session était stockée : les jetons sont
+  /// conservés, mais l'utilisateur n'est pas connecté pour cette session.
+  /// L'écran de connexion peut alors proposer un bouton « Réessayer »
+  /// ([reessayerConnexion]) au lieu d'exiger une nouvelle connexion.
+  bool get horsLigne => _horsLigne;
   String get apiBaseUrl => _apiBaseUrl;
   ApiService get api => _api;
 
@@ -123,6 +145,7 @@ class AppState extends ChangeNotifier {
       baseUrl: _apiBaseUrl,
       token: _token,
       refreshToken: _refreshToken,
+      client: _client,
     );
     // Rotation réussie (reprise sur 401 ou changement d'église) : les
     // deux jetons sont persistés tout de suite.
@@ -147,27 +170,88 @@ class AppState extends ChangeNotifier {
       // Mode API réelle : on tente de restaurer la session.
       _token = savedToken;
       (_api as HttpApiService).setToken(savedToken);
-      try {
-        final me = await _api.me();
-        _applyMe(me);
-        await _chargerAbonnement();
-      } catch (_) {
-        // JWT expiré : une rotation suffit, sans ressaisir le mot de passe.
-        // Les jetons sont persistés par `onTokensRefreshed`.
-        try {
-          final refreshed = await _api.refresh();
-          _applyAuth(refreshed);
-          await _chargerAbonnement();
-        } catch (_) {
-          _token = null;
-          _refreshToken = null;
-          await _store.clearToken();
-          await _store.clearRefreshToken();
-        }
-      }
+      await _restaurerSession();
     }
     _initialized = true;
     notifyListeners();
+  }
+
+  /// Tente de restaurer la session stockée (`/moi`, puis rotation du jeton
+  /// si besoin). Renvoie vrai si la session est restaurée.
+  ///
+  /// Seul un 401 prouve que le serveur a révoqué la session : les jetons
+  /// stockés sont alors effacés (déconnexion propre). Tout autre échec —
+  /// transport (`statusCode` null, code `hors_ligne`), 5xx, réponse
+  /// inattendue — conserve les jetons : la session longue durée survit
+  /// au démarrage hors ligne ([horsLigne] passe à vrai) et sera réessayée
+  /// au prochain démarrage ou par [reessayerConnexion]. Sans cette
+  /// distinction, un simple démarrage hors ligne détruisait
+  /// définitivement la session (faille basse n° 11, audit 14/11).
+  Future<bool> _restaurerSession() async {
+    try {
+      final me = await _api.me();
+      _applyMe(me);
+      await _chargerAbonnement();
+      _horsLigne = false;
+      return true;
+    } catch (_) {
+      // JWT expiré : une rotation suffit, sans ressaisir le mot de passe.
+      // Les jetons sont persistés par `onTokensRefreshed`.
+      try {
+        final refreshed = await _api.refresh();
+        _applyAuth(refreshed);
+        await _chargerAbonnement();
+        _horsLigne = false;
+        return true;
+      } on ApiException catch (e) {
+        if (e.statusCode == 401) {
+          // Révocation prouvée par le serveur : la session est finie.
+          await _effacerSessionStockee();
+          _horsLigne = false;
+        } else {
+          // Échec de transport ou erreur serveur : sans preuve de
+          // révocation, on conserve les jetons stockés.
+          _horsLigne = true;
+        }
+        return false;
+      } catch (_) {
+        // Erreur inattendue (réponse illisible, ...) : sans preuve de
+        // révocation, on conserve les jetons comme pour un échec de
+        // transport.
+        _horsLigne = true;
+        return false;
+      }
+    }
+  }
+
+  /// Efface la session stockée (mémoire + stockage sécurisé). Appelé
+  /// uniquement sur révocation prouvée (401) : jamais sur un échec de
+  /// transport, qui conserve les jetons.
+  Future<void> _effacerSessionStockee() async {
+    _token = null;
+    _refreshToken = null;
+    await _store.clearToken();
+    await _store.clearRefreshToken();
+  }
+
+  /// Réessaie la restauration de session après un démarrage hors ligne
+  /// ([horsLigne]) : même séquence que [init], sans relire les réglages.
+  /// Renvoie vrai si la session est restaurée. Sans effet (faux) quand
+  /// il n'y a rien à réessayer.
+  Future<bool> reessayerConnexion() async {
+    if (!_horsLigne) return isLoggedIn;
+    final sauve = await _store.readToken();
+    if (sauve == null) {
+      _horsLigne = false;
+      notifyListeners();
+      return false;
+    }
+    _token = sauve;
+    (_api as HttpApiService).setToken(sauve);
+    (_api as HttpApiService).setRefreshToken(_refreshToken);
+    final restauree = await _restaurerSession();
+    notifyListeners();
+    return restauree;
   }
 
   void _applyAuth(AuthResult result) {
@@ -220,6 +304,7 @@ class AppState extends ChangeNotifier {
     if (result.refreshToken != null) {
       await _store.saveRefreshToken(result.refreshToken!);
     }
+    _horsLigne = false;
     notifyListeners();
   }
 
@@ -356,6 +441,7 @@ class AppState extends ChangeNotifier {
     _abonnement = null;
     await _store.clearToken();
     await _store.clearRefreshToken();
+    _horsLigne = false;
     notifyListeners();
   }
 
@@ -379,6 +465,7 @@ class AppState extends ChangeNotifier {
     _abonnement = null;
     await _store.clearToken();
     await _store.clearRefreshToken();
+    _horsLigne = false;
     _api = _buildApi();
     notifyListeners();
   }
