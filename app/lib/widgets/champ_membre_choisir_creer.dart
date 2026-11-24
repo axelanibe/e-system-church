@@ -435,42 +435,43 @@ class _ChampResponsableNomLibreState extends State<ChampResponsableNomLibre> {
           ),
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: SelecteurRecherche<String>(
-                key: ValueKey(_cleSelecteur),
-                options: [
-                  for (final m in _membres)
-                    OptionSelecteur(
-                      valeur: m.id,
-                      libelle: m.fullName,
-                      detail: m.matricule,
-                    ),
-                ],
-                valeur: null,
-                onChanged: (id) {
-                  if (id == null) return;
-                  final membre = _membres.firstWhere((m) => m.id == id);
-                  _remplir(membre.fullName);
-                  setState(() => _cleSelecteur++);
-                },
-                label: 'Choisir dans la base',
-                placeholder: 'Rechercher un membre…',
-                texteVide:
-                    'Aucun membre pour l’instant — créez-en un ci-dessous.',
-                texteRecherche: 'Rechercher un membre…',
+        // Sélecteur en pleine largeur, sur sa propre ligne : dans un
+        // Row avec le bouton « Créer », il ne mesurait que ~120 px
+        // dans le dialogue Modifier l'activité, et son libellé
+        // « Choisir dans la base » s'enroulait à la verticale.
+        SelecteurRecherche<String>(
+          key: ValueKey(_cleSelecteur),
+          options: [
+            for (final m in _membres)
+              OptionSelecteur(
+                valeur: m.id,
+                libelle: m.fullName,
+                detail: m.matricule,
               ),
-            ),
-            const SizedBox(width: 8),
-            OutlinedButton.icon(
-              onPressed: _creationOuverte
-                  ? null
-                  : () => setState(() => _creationOuverte = true),
-              icon: const Icon(Icons.person_add_outlined),
-              label: const Text('Créer', style: TextStyle(fontSize: 13.5)),
-            ),
           ],
+          valeur: null,
+          onChanged: (id) {
+            if (id == null) return;
+            final membre = _membres.firstWhere((m) => m.id == id);
+            _remplir(membre.fullName);
+            setState(() => _cleSelecteur++);
+          },
+          label: 'Choisir dans la base',
+          placeholder: 'Rechercher un membre…',
+          texteVide:
+              'Aucun membre pour l’instant — créez-en un ci-dessous.',
+          texteRecherche: 'Rechercher un membre…',
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            onPressed: _creationOuverte
+                ? null
+                : () => setState(() => _creationOuverte = true),
+            icon: const Icon(Icons.person_add_outlined),
+            label: const Text('Créer', style: TextStyle(fontSize: 13.5)),
+          ),
         ),
         if (_creationOuverte) ...[
           const SizedBox(height: 8),

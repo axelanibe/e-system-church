@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_theme.dart';
 import '../models/fidele.dart';
 import '../state/app_state.dart';
 import '../utils/format.dart';
@@ -21,6 +22,19 @@ class _MessagesFideleScreenState extends State<MessagesFideleScreen> {
   final _controller = TextEditingController();
   final _scroll = ScrollController();
   bool _envoi = false;
+
+  /// Onglet en cours : 0 « Secrétariat / Église » (fil privé P1,
+  /// inchangé), 1 « Groupes & Ministères » (état vide honnête :
+  /// aucun groupe pour le moment, pas de groupe inventé).
+  int _onglet = 0;
+
+  /// Suggestions rapides sous le message d'accueil : elles
+  /// remplissent le compositeur, rien n'est envoyé sans le fidèle.
+  static const _suggestions = [
+    'Demander une attestation',
+    'Question cotisations',
+    'Sujet de prière',
+  ];
 
   @override
   void initState() {
@@ -72,23 +86,48 @@ class _MessagesFideleScreenState extends State<MessagesFideleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<FilMessages>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const AppLoading();
-        }
-        if (snapshot.hasError) {
-          return AppError(
-            message: snapshot.error.toString(),
-            onRetry: _refresh,
-          );
-        }
-        final fil = snapshot.data!;
-        final messages = fil.messages;
-        return Column(
-          children: [
-            Container(
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: SegmentedButton<int>(
+            segments: const [
+              ButtonSegment(
+                value: 0,
+                label: Text('Secrétariat / Église'),
+                icon: Icon(Icons.church_outlined),
+              ),
+              ButtonSegment(
+                value: 1,
+                label: Text('Groupes & Ministères'),
+                icon: Icon(Icons.groups_outlined),
+              ),
+            ],
+            selected: {_onglet},
+            onSelectionChanged: (s) => setState(() => _onglet = s.first),
+          ),
+        ),
+        Expanded(
+          child: _onglet == 1
+              ? const _GroupesVides()
+              : FutureBuilder<FilMessages>(
+                  future: _future,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return const AppLoading();
+                    }
+                    if (snapshot.hasError) {
+                      return AppError(
+                        message: snapshot.error.toString(),
+                        onRetry: _refresh,
+                      );
+                    }
+                    final fil = snapshot.data!;
+                    final messages = fil.messages;
+                    return Column(
+                      children: [
+                        Container(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               decoration: BoxDecoration(
                 border: Border(
@@ -131,9 +170,58 @@ class _MessagesFideleScreenState extends State<MessagesFideleScreen> {
             ),
             Expanded(
               child: messages.isEmpty
-                  ? const EmptyState(
-                      icon: Icons.mail_outline,
-                      message: 'Aucun message.',
+                  ? ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            constraints: BoxConstraints(
+                              maxWidth:
+                                  MediaQuery.of(context).size.width * 0.8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(
+                                color: PaletteMembre.bordure,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Text(
+                              'Bonjour, bienvenue dans la messagerie de '
+                              'votre église. Écrivez votre message, le '
+                              'secrétariat vous répondra ici.',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final s in _suggestions)
+                              ActionChip(
+                                label: Text(s),
+                                onPressed: () {
+                                  _controller.text = s;
+                                  _controller.selection =
+                                      TextSelection.fromPosition(
+                                    TextPosition(offset: s.length),
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        const EmptyState(
+                          icon: Icons.mail_outline,
+                          message: 'Aucun message.',
+                        ),
+                      ],
                     )
                   : ListView.builder(
                       controller: _scroll,
@@ -158,10 +246,13 @@ class _MessagesFideleScreenState extends State<MessagesFideleScreen> {
                             ),
                             decoration: BoxDecoration(
                               color: moi
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainerHighest,
+                                  ? PaletteMembre.violetRoyal
+                                  : Colors.white,
+                              border: moi
+                                  ? null
+                                  : Border.all(
+                                      color: PaletteMembre.bordure,
+                                    ),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Column(
@@ -206,8 +297,18 @@ class _MessagesFideleScreenState extends State<MessagesFideleScreen> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'Écrire un message',
+                        filled: true,
+                        fillColor: PaletteMembre.surfaceDouce,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(999),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                       ),
                       maxLines: 4,
                       minLines: 1,
@@ -216,16 +317,53 @@ class _MessagesFideleScreenState extends State<MessagesFideleScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: _envoi ? null : _envoyer,
-                    child: Text(_envoi ? 'Envoi…' : 'Envoyer'),
+                  SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: FilledButton(
+                      onPressed: _envoi ? null : _envoyer,
+                      style: FilledButton.styleFrom(
+                        shape: const CircleBorder(),
+                        padding: EdgeInsets.zero,
+                        backgroundColor: PaletteMembre.or,
+                        foregroundColor: PaletteMembre.violetRoyal,
+                      ),
+                      child: _envoi
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: PaletteMembre.violetRoyal,
+                              ),
+                            )
+                          : const Icon(Icons.send_outlined),
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
-        );
-      },
+                      ],
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Onglet « Groupes & Ministères » : état vide honnête, aucun
+/// groupe n'existe pour le moment dans l'église du fidèle.
+class _GroupesVides extends StatelessWidget {
+  const _GroupesVides();
+
+  @override
+  Widget build(BuildContext context) {
+    return const EmptyState(
+      icon: Icons.groups_outlined,
+      message: 'Aucun groupe pour le moment. Les groupes et ministères '
+          'de votre église apparaîtront ici.',
     );
   }
 }

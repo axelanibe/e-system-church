@@ -29,6 +29,12 @@ Widget etiquetteChamp({
     children: [
       Text(
         obligatoire ? '$label *' : label,
+        // Le libellé tient sur une seule ligne : dans un dialogue
+        // étroit, il s'enroulait lettre par lettre à la verticale
+        // (« Choisir dans la base », dialogue Modifier l'activité).
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        softWrap: false,
         style: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,

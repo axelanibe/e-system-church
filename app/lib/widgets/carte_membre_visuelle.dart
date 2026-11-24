@@ -24,12 +24,19 @@ class CarteMembreVisuelle extends StatelessWidget {
   final bool avecStatut;
   final Color couleurStatut;
 
+  /// Format pass vertical centré (maquette de refonte, onglet Carte
+  /// du fidèle) : tête en dégradé, lignes, QR haute définition sur
+  /// fond blanc, code de vérification. Faux par défaut : la fiche
+  /// membre et l'impression gardent la mise en page horizontale.
+  final bool vertical;
+
   const CarteMembreVisuelle({
     super.key,
     required this.member,
     required this.qrData,
     this.avecStatut = false,
     this.couleurStatut = Colors.grey,
+    this.vertical = false,
   });
 
   @override
@@ -39,6 +46,9 @@ class CarteMembreVisuelle extends StatelessWidget {
     // Le membre appartient à une annexe quand son église a une mère :
     // la ligne « Annexe » s'affiche alors, sans migration.
     final estAnnexe = eglise?.parentChurchId != null;
+    if (vertical) {
+      return _passVertical(context, nomEglise, estAnnexe, eglise?.code);
+    }
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -210,6 +220,191 @@ class CarteMembreVisuelle extends StatelessWidget {
             Container(height: 6, color: AppTheme.or),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Format pass vertical centré (maquette de refonte) : tête en
+  /// dégradé avec avatar, nom et matricule, lignes d'église, QR
+  /// haute définition sur fond blanc, code de vérification. Même
+  /// QR réel que la carte horizontale (code:matricule).
+  Widget _passVertical(
+    BuildContext context,
+    String? nomEglise,
+    bool estAnnexe,
+    String? codeEglise,
+  ) {
+    final church = context.read<AppState>().church;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: PaletteMembre.bordure),
+        boxShadow: [
+          BoxShadow(
+            color: PaletteMembre.violetRoyal.withValues(alpha: 0.16),
+            blurRadius: 36,
+            offset: const Offset(0, 18),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  PaletteMembre.violetRoyal,
+                  PaletteMembre.degradeSecondaire,
+                  PaletteMembre.accent,
+                ],
+                stops: [0, 0.55, 1],
+              ),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: PaletteMembre.or,
+                      width: 2,
+                    ),
+                    color: Colors.white.withValues(alpha: 0.12),
+                    image: member.photoUrl != null
+                        ? DecorationImage(
+                            image: NetworkImage(member.photoUrl!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: member.photoUrl == null
+                      ? Text(
+                          member.fullName.isNotEmpty
+                              ? member.fullName[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            fontSize: 19,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      : null,
+                ),
+                const SizedBox(height: 9),
+                Text(
+                  member.fullName,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${member.matricule}'
+                  '${church?.isMere == true ? ' · Église mère' : ''}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+            child: Column(
+              children: [
+                if (nomEglise != null)
+                  _lignePass(context, 'Église', nomEglise),
+                if (codeEglise != null && codeEglise.isNotEmpty)
+                  _lignePass(context, 'Code église', codeEglise),
+                if (estAnnexe && nomEglise != null)
+                  _lignePass(context, 'Annexe', '$nomEglise · $codeEglise'),
+                if (member.createdAt != null)
+                  _lignePass(
+                    context,
+                    'Membre depuis',
+                    formatDate(member.createdAt),
+                  ),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: PaletteMembre.bordure),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: QrImageView(
+                    data: qrData,
+                    version: QrVersions.auto,
+                    size: 196,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Code de vérification\n$qrData',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: PaletteMembre.texteSecondaire,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _lignePass(BuildContext context, String label, String valeur) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: PaletteMembre.texteSecondaire,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              valeur,
+              textAlign: TextAlign.right,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: PaletteMembre.texte,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+            ),
+          ),
+        ],
       ),
     );
   }

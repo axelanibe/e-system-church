@@ -188,9 +188,12 @@ void main() {
         ),
       ));
       expect(find.text('Marie Kouassi'), findsOneWidget);
-      expect(find.text('Matricule : ESC-M-0001'), findsOneWidget);
-      expect(find.text('Église : Église Test'), findsOneWidget);
-      expect(find.text('Voir ma carte de membre'), findsOneWidget);
+      expect(find.text('ID · ESC-M-0001'), findsOneWidget);
+      expect(find.text('Église Test'), findsOneWidget);
+      expect(find.text('Code église · ESC-TEST'), findsOneWidget);
+      expect(find.text('Église mère'), findsOneWidget);
+      expect(find.text('Ma carte'), findsOneWidget);
+      expect(find.text('QR'), findsOneWidget);
     });
 
     testWidgets('StatCard : libellé long sur une ligne, sans coupure',
