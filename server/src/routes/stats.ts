@@ -56,7 +56,13 @@ export function registerStatsRoutes(app: FastifyInstance, db: Pool) {
       }
       try {
         const csvCell = (value: unknown): string => {
-          const text = value === null || value === undefined ? "" : String(value);
+          let text = value === null || value === undefined ? "" : String(value);
+          // Injection de formule : une cellule commençant (après espaces,
+          // tabulation ou retour chariot) par =, +, - ou @ serait évaluée
+          // comme une formule à l'ouverture du CSV dans un tableur. On la
+          // neutralise en la préfixant d'une apostrophe (marqueur « texte »
+          // d'Excel / LibreOffice, non affiché).
+          if (/^[\t\r ]*[=+\-@]/.test(text)) text = "'" + text;
           return `"${text.replace(/"/g, '""')}"`;
         };
         if (parsed.data.type === "contributions") {

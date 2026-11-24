@@ -1,13 +1,15 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
-import { auditLog, hashPassword, inscriptionMembreParCode, login } from "../auth.js";
+import { auditLog, hashPassword, inscriptionMembreParCode } from "../auth.js";
 import { dbError, requireAuth, requireRole } from "../middleware.js";
 
 /**
- * Modules 15-16 — accès fidèle : inscription par matricule (liaison
- * immédiate si l'e-mail concorde, demande en attente sinon ; champ
- * optionnel `code_fidele` pour restreindre la recherche à une église)
+ * Modules 15-16 — accès fidèle : inscription par matricule (demande en
+ * attente validée par l'admin de l'église, que l'e-mail concorde ou non
+ * avec la fiche — la concordance d'e-mail ne prouve pas la propriété de
+ * la boîte ; champ optionnel `code_fidele` pour restreindre la recherche
+ * à une église)
  * et inscription par code fidèle, sans validation (le code fait foi :
  * matricule attribué automatiquement, fiche membre et carte créées tout
  * de suite), validation des liaisons par l'admin, profil `/moi` et
@@ -35,8 +37,9 @@ const inscriptionSchema = z.object({
 });
 
 export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
-  // -- Inscription fidèle : par matricule. E-mail concordant avec la fiche
-  // membre → liaison immédiate + connexion. Sinon → demande en attente.
+  // -- Inscription fidèle : par matricule. Toujours une demande en attente
+  // validée par l'admin (la concordance d'e-mail ne prouve pas la
+  // propriété de la boîte : pas de liaison immédiate).
   app.post("/auth/inscription-fidele", async (req, reply) => {
     const parsed = inscriptionSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -46,7 +49,7 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
         details: parsed.error.issues.map((i) => i.message),
       });
     }
-    const { email, mot_de_passe, matricule, code_fidele, channel } = parsed.data;
+    const { email, mot_de_passe, matricule, code_fidele } = parsed.data;
     const emailNorm = email.toLowerCase();
     // Saisie normalisée : sans tirets ni espaces, en majuscules — ainsi
     // « M-LA-171268-01 » et « MLA17126801 » trouvent le même membre.
@@ -148,50 +151,12 @@ export function registerFideleRoutes(app: FastifyInstance, db: Pool) {
       );
       const userId = userRows[0].id;
 
-      const emailConcorde =
-        (member.email as string | null)?.toLowerCase() === emailNorm;
-
-      if (emailConcorde) {
-        // Liaison immédiate : compte + appartenance + lien membre.
-        await client.query(
-          `INSERT INTO church_users (user_id, church_id, role) VALUES ($1, $2, 'membre')`,
-          [userId, member.church_id],
-        );
-        await client.query(`UPDATE users SET member_id = $2 WHERE id = $1`, [
-          userId,
-          member.id,
-        ]);
-        await client.query(`UPDATE members SET user_id = $2 WHERE id = $1`, [
-          member.id,
-          userId,
-        ]);
-        await auditLog(client, {
-          churchId: member.church_id as string,
-          userId,
-          action: "fidele.inscrit_lie",
-          details: { member_id: member.id },
-        });
-        await client.query("COMMIT");
-
-        // Connexion immédiate (même réponse que /auth/login).
-        const result = await login(db, { email: emailNorm, password: mot_de_passe, channel });
-        if (!result.ok) {
-          return reply.code(500).send({
-            error: "internal",
-            message: "Compte créé, mais la connexion a échoué. Essayez de vous connecter.",
-          });
-        }
-        return reply.code(201).send({
-          lie: true,
-          message: "Compte créé et lié à votre fiche membre. Bienvenue !",
-          token: result.token,
-          user: result.user,
-          church: result.church,
-          eglises: result.eglises,
-        });
-      }
-
-      // E-mail différent de la fiche : demande en attente de validation.
+      // Pas de liaison immédiate, même si l'e-mail concorde avec la fiche :
+      // connaître l'e-mail et le matricule ne prouve pas la propriété de
+      // la boîte. Le compte est créé, la liaison attend la validation de
+      // l'admin (demande en attente) ; tant qu'elle n'est pas validée, la
+      // connexion est refusée côté serveur (`no_church`, auth.ts).
+      // E-mail concordant ou non : demande en attente de validation.
       const { rows: demandeRows } = await client.query<{ id: string }>(
         `INSERT INTO member_link_requests (member_id, user_id)
          VALUES ($1, $2) RETURNING id`,

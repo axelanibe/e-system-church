@@ -25,8 +25,10 @@ import { dbError, requireAuth, requireRole } from "../middleware.js";
  *
  * Garde-fou : chaque élément est sélectionné ET supprimé uniquement
  * par son marqueur TEST (nom commençant par TEST, référence TEST-…,
- * note contenant TEST, attestation d'un membre TEST, sous-église TEST
- * rattachée à la session). Chaque DELETE porte sa condition marqueur
+ * attestation d'un membre TEST, sous-église TEST rattachée à la
+ * session). La note libre d'une contribution n'est JAMAIS un critère :
+ * « attestation », « protestant » ou « testament » y sont des mots
+ * ordinaires. Chaque DELETE porte sa condition marqueur
  * et le nombre de lignes supprimées est vérifié : si une ligne ne
  * porte plus son marqueur, toute la transaction est annulée et rien
  * n'est supprimé. Chaque suppression est journalisée dans audit_logs.
@@ -84,7 +86,7 @@ async function collecterTest(
   const contributions = await client.query<{ id: string; type: string; amount_fcfa: number; payment_ref: string | null; note: string | null }>(
     `SELECT id, type, amount_fcfa, payment_ref, note FROM contributions
       WHERE church_id = ANY($1)
-        AND (payment_ref ILIKE 'TEST%' OR note ILIKE '%TEST%')`,
+        AND payment_ref ILIKE 'TEST%'`,
     [egliseIds],
   );
   for (const c of contributions.rows) {
@@ -92,7 +94,7 @@ async function collecterTest(
     elements.push({
       type: "contribution",
       id: c.id,
-      label: `${nomType} ${c.amount_fcfa.toLocaleString("fr-FR")} FCFA (${c.payment_ref ?? "sans référence"})`,
+      label: `${nomType} ${c.amount_fcfa.toLocaleString("fr-FR")} FCFA (${c.payment_ref ?? "sans référence"})${c.note ? ` — ${c.note}` : ""}`,
     });
   }
 
@@ -200,7 +202,7 @@ export function registerNettoyageTestRoutes(app: FastifyInstance, db: Pool) {
           for (const e of parType("contribution")) {
             const r = await client.query(
               `DELETE FROM contributions
-                WHERE id = $1 AND (payment_ref ILIKE 'TEST%' OR note ILIKE '%TEST%')`,
+                WHERE id = $1 AND payment_ref ILIKE 'TEST%'`,
               [e.id],
             );
             if ((r.rowCount ?? 0) !== 1) throw new Error("marqueur TEST manquant (contribution)");

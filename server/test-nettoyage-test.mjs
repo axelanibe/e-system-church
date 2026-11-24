@@ -65,6 +65,14 @@ await q(`INSERT INTO transferts_membre (membre_id,membre_nom,ancien_matricule,no
 await q(`UPDATE members SET church_id=$1, matricule='M-0001' WHERE id=$2`, [sousEglise, testId]);
 await q(`INSERT INTO contributions (church_id,member_id,type,amount_fcfa,payment_method,payment_ref,status,note) VALUES ($1,$2,'dime',1000,'wave','TEST-001','confirme','TEST contribution audit')`, [mere, testId]);
 await q(`INSERT INTO contributions (church_id,member_id,type,amount_fcfa,payment_method,payment_ref,status,note) VALUES ($1,$2,'depense',500,'wave','TEST-DEP-001','confirme','TEST dépense audit')`, [mere, testId]);
+// Leurres « note contenant test » (régression tranche 2) : des
+// contributions RÉELLES dont la note contient « test » (« attestation »,
+// « protestant ») ne doivent jamais être collectées ni supprimées.
+await q(`INSERT INTO contributions (church_id,member_id,type,amount_fcfa,payment_method,payment_ref,status,note) VALUES ($1,$2,'dime',50000,'wave','WAVE-ABC123','confirme','Paiement attestation 2026')`, [mere, adja]);
+await q(`INSERT INTO contributions (church_id,member_id,type,amount_fcfa,payment_method,payment_ref,status,note) VALUES ($1,$2,'offrande',25000,'orange_money','OM-777','confirme','Offrande culte protestant')`, [mere, adja]);
+// Contribution TEST dont la note NE contient pas « test » : elle doit
+// être collectée par sa seule référence TEST-… (critère référence seule).
+await q(`INSERT INTO contributions (church_id,member_id,type,amount_fcfa,payment_method,payment_ref,status,note) VALUES ($1,$2,'offrande',7500,'especes','TEST-002','confirme','Don mensuel')`, [mere, testId]);
 await q(`INSERT INTO campagnes (church_id,nom,objectif_fcfa,date_debut,date_fin,statut) VALUES ($1,'TEST Campagne Audit',10000,'2026-11-11','2026-11-30','active')`, [mere]);
 await q(`INSERT INTO attestations (church_id,member_id,annee,numero,total_fcfa,nb_dons,statut,contenu) VALUES ($1,$2,2026,'ATT-2026-0001',1000,1,'emise','{}')`, [mere, testId]);
 
@@ -103,31 +111,41 @@ try {
   console.log("Aperçu :");
   r = await fetch(`${BASE}/admin/nettoyage-test`, { method: "POST", headers: H(tokAdmin), body: JSON.stringify({}) });
   d = await j(r);
-  check("aperçu 200, total 7", r.status === 200 && d.total === 7, `${r.status} ${JSON.stringify(d)}`);
+  check("aperçu 200, total 8", r.status === 200 && d.total === 8, `${r.status} ${JSON.stringify(d)}`);
   const types = (d.elements ?? []).map((e) => e.type).sort().join(",");
-  check("aperçu : 1 transfert, 1 attestation, 2 contributions, 1 campagne, 1 membre, 1 église",
-    types === "attestation,campagne,contribution,contribution,eglise,membre,transfert", types);
+  check("aperçu : 1 transfert, 1 attestation, 3 contributions, 1 campagne, 1 membre, 1 église",
+    types === "attestation,campagne,contribution,contribution,contribution,eglise,membre,transfert", types);
   check("aperçu : le membre TEST d'ailleurs n'est pas listé",
     !(d.elements ?? []).some((e) => e.label.includes("Ailleurs")));
+  check("aperçu : la note est affichée dans le libellé (TEST-002)",
+    (d.elements ?? []).some((e) => e.label.includes("TEST-002") && e.label.includes("Don mensuel")));
+  check("aperçu : les contributions réelles « attestation » / « protestant » ne sont pas listées",
+    !(d.elements ?? []).some((e) => e.label.includes("WAVE-ABC123") || e.label.includes("OM-777")));
   check("aperçu : rien n'est supprimé", (await count(`SELECT id FROM members WHERE id='${testId}'`)) === 1);
 
   console.log("Suppression confirmée :");
   r = await fetch(`${BASE}/admin/nettoyage-test`, { method: "POST", headers: H(tokAdmin), body: JSON.stringify({ confirmer: true }) });
   d = await j(r);
-  check("confirmation 200, total 7", r.status === 200 && d.total === 7, `${r.status} ${JSON.stringify(d)}`);
+  check("confirmation 200, total 8", r.status === 200 && d.total === 8, `${r.status} ${JSON.stringify(d)}`);
   check("transfert TEST supprimé", (await count(`SELECT id FROM transferts_membre WHERE membre_nom ILIKE 'TEST%'`)) === 0);
   check("membre TEST supprimé", (await count(`SELECT id FROM members WHERE full_name ILIKE 'TEST%' AND church_id IN (SELECT id FROM churches WHERE id='${mere}' OR parent_church_id='${mere}')`)) === 0);
   check("contributions TEST supprimées", (await count(`SELECT id FROM contributions WHERE payment_ref ILIKE 'TEST%'`)) === 0);
   check("campagne TEST supprimée", (await count(`SELECT id FROM campagnes WHERE nom ILIKE 'TEST%'`)) === 0);
   check("attestation TEST supprimée", (await count(`SELECT id FROM attestations WHERE numero='ATT-2026-0001'`)) === 0);
   check("sous-église TEST supprimée", (await count(`SELECT id FROM churches WHERE code='ESC-PWBYKY'`)) === 0);
-  check("journal : 7 suppressions + 1 résumé",
-    (await count(`SELECT id FROM audit_logs WHERE action='nettoyage_test.supprime'`)) === 7 &&
+  check("journal : 8 suppressions + 1 résumé",
+    (await count(`SELECT id FROM audit_logs WHERE action='nettoyage_test.supprime'`)) === 8 &&
     (await count(`SELECT id FROM audit_logs WHERE action='nettoyage_test.execute'`)) === 1);
 
   console.log("Leurres intacts :");
   check("ADJA intact", (await count(`SELECT id FROM members WHERE id='${adja}'`)) === 1);
   check("dîme réelle intacte", (await count(`SELECT id FROM contributions WHERE payment_ref='WAVE-REAL-001'`)) === 1);
+  check("contribution réelle « attestation » intacte (note contenant « test »)",
+    (await count(`SELECT id FROM contributions WHERE payment_ref='WAVE-ABC123'`)) === 1);
+  check("contribution réelle « protestant » intacte (note contenant « test »)",
+    (await count(`SELECT id FROM contributions WHERE payment_ref='OM-777'`)) === 1);
+  check("contribution TEST-002 supprimée (référence TEST-… seule, note neutre)",
+    (await count(`SELECT id FROM contributions WHERE payment_ref='TEST-002'`)) === 0);
   check("campagne réelle intacte", (await count(`SELECT id FROM campagnes WHERE nom='Campagne réelle'`)) === 1);
   check("église mère intacte", (await count(`SELECT id FROM churches WHERE id='${mere}'`)) === 1);
   check("église indépendante et son membre TEST intacts",

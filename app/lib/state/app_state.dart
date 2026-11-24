@@ -134,6 +134,9 @@ class AppState extends ChangeNotifier {
         await _store.saveRefreshToken(refreshToken);
       }
     };
+    // Expiration confirmée par le service (401 sur `/auth/refresh` pour le
+    // jeton courant) : déconnexion propre, sans session zombie.
+    api.onSessionExpiree = _deconnecterSessionExpiree;
     return api;
   }
 
@@ -347,6 +350,15 @@ class AppState extends ChangeNotifier {
     } catch (_) {
       // Hors ligne : la déconnexion locale a lieu quand même.
     }
+    await _deconnecterSessionExpiree();
+  }
+
+  /// Session confirmée expirée par [HttpApiService] (401 sur
+  /// `/auth/refresh` pour le jeton courant) : déconnexion locale propre,
+  /// sans appel serveur (les jetons sont déjà révoqués côté serveur, et
+  /// l'appel `/auth/logout` échouerait de toute façon sans jeton valide).
+  /// L'écran de connexion s'affiche, plus de session zombie.
+  Future<void> _deconnecterSessionExpiree() async {
     _token = null;
     _refreshToken = null;
     _user = null;

@@ -51,6 +51,26 @@ async function mouvementEnPeriodeCloturee(
   return rows.length > 0;
 }
 
+/**
+ * Vrai si le mouvement de caisse est une écriture automatique (miroir
+ * d'une contribution confirmée ou d'une dépense payée). Une écriture
+ * automatique est immuable : une erreur se corrige par une écriture
+ * manuelle compensatoire dans la période en cours, jamais en réécrivant
+ * ou effaçant le miroir (invariant E12 : une seule source de vérité).
+ * `source` est NOT NULL avec défaut 'manuelle' (db/schema.sql).
+ */
+async function mouvementAutomatique(
+  db2: Pool,
+  churchId: string,
+  mouvementId: string,
+): Promise<boolean> {
+  const { rows } = await db2.query(
+    `SELECT 1 FROM caisse_mouvements WHERE id = $1 AND church_id = $2 AND source <> 'manuelle'`,
+    [mouvementId, churchId],
+  );
+  return rows.length > 0;
+}
+
 /** Transitions autorisées pour une dépense (rôle requis). */
 const DEPENSE_TRANSITIONS: Record<string, { from: string; roles: string[] }> = {
   validee_tresorier: { from: "soumise", roles: ["tresorier", "admin_eglise"] },
@@ -116,6 +136,14 @@ export function registerFinancesRoutes(app: FastifyInstance, db: Pool) {
     filters: { poste_id: "poste_id", statut: "statut" },
     orderBy: "date_depense DESC, created_at DESC",
     validate: async (db2, churchId, data) => {
+      // Une dépense naît au statut « soumise » : seul le parcours de
+      // validation en deux temps (PATCH /depenses/:id/statut) produit
+      // « payee », avec son écriture de caisse. Créer directement une
+      // dépense « payee » contournait la validation du pasteur et ne
+      // laissait aucune trace en caisse.
+      if (data.statut !== undefined && data.statut !== "soumise") {
+        return "Une dépense est créée au statut « soumise » : le paiement passe par la validation en deux temps.";
+      }
       if (data.poste_id && !(await existsInChurch(db2, "postes_budgetaires", churchId, data.poste_id as string))) {
         return "Poste budgétaire introuvable dans votre église.";
       }
@@ -244,12 +272,18 @@ export function registerFinancesRoutes(app: FastifyInstance, db: Pool) {
     // modifient ni ne se suppriment plus (l'erreur se corrige par une
     // écriture dans la période en cours).
     validateUpdate: async (db2, churchId, id) => {
+      if (await mouvementAutomatique(db2, churchId, id)) {
+        return "Une écriture automatique ne se modifie ni ne se supprime : corrigez par une écriture manuelle.";
+      }
       if (await mouvementEnPeriodeCloturee(db2, churchId, id)) {
         return "Ce mouvement est dans un mois clôturé : il ne se modifie plus.";
       }
       return null;
     },
     beforeDelete: async (db2, churchId, id) => {
+      if (await mouvementAutomatique(db2, churchId, id)) {
+        return "Une écriture automatique ne se modifie ni ne se supprime : corrigez par une écriture manuelle.";
+      }
       if (await mouvementEnPeriodeCloturee(db2, churchId, id)) {
         return "Ce mouvement est dans un mois clôturé : il ne se supprime plus.";
       }
