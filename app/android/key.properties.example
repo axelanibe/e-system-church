@@ -1,0 +1,20 @@
+# Exemple — VALEURS FACTICES, ne jamais y mettre de vrais secrets.
+# Deux usages, au choix :
+#  1. Local : copier ce fichier vers `key.properties` (même dossier, ignoré
+#     par git — voir `.gitignore`) et remplacer les valeurs factices par les
+#     vraies. Le build lit `key.properties` si les variables
+#     d'environnement ci-dessous sont absentes.
+#  2. CI (recommandé) : reporter ces 4 valeurs dans les secrets GitHub
+#     Actions du dépôt (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS,
+#     KEY_PASSWORD). Le workflow décode le keystore et pose les variables
+#     d'environnement, qui priment sur `key.properties`.
+# Le keystore de release lui-même n'est JAMAIS commité : il est créé avec
+# keytool sur la machine de Bouf et stocké uniquement en secret GitHub
+# Actions (base64). Voir la note de travail du correctif (faille BASSE n°10).
+#
+# storeFile : chemin du keystore, relatif à app/android/app
+# (ou chemin absolu). En CI, le workflow pose KEYSTORE_PATH en absolu.
+storeFile=release.keystore
+storePassword=REMPLACER_PAR_LE_MOT_DE_PASSE_DU_KEYSTORE
+keyAlias=REMPLACER_PAR_L_ALIAS_DE_LA_CLE
+keyPassword=REMPLACER_PAR_LE_MOT_DE_PASSE_DE_LA_CLE
