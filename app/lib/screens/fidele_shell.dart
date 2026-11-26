@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_theme.dart';
 import '../state/app_state.dart';
 import '../widgets/app_bottom_bar.dart';
 import '../widgets/common_widgets.dart';
@@ -91,8 +92,14 @@ class _FideleShellState extends State<FideleShell> {
         ecran = const FideleHomeScreen();
     }
 
-    return Scaffold(
-      body: Row(
+    // Refonte espace membre : le thème membre (palette violet royal
+    // et or) descend dans toute la coquille et dans les écrans
+    // poussés depuis elle (cotisations, journal, détail du culte).
+    // L'espace admin garde le thème de l'application.
+    return Theme(
+      data: AppTheme.themeMembre(Theme.of(context)),
+      child: Scaffold(
+        body: Row(
         children: [
           if (wide)
             NavigationRail(
@@ -131,6 +138,7 @@ class _FideleShellState extends State<FideleShell> {
               selectedIndex: courant,
               onDestinationSelected: (i) => setState(() => _index = i),
             ),
+      ),
     );
   }
 }

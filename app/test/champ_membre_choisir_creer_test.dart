@@ -1,5 +1,6 @@
 import 'package:esystem_church/models/member.dart';
 import 'package:esystem_church/widgets/champ_membre_choisir_creer.dart';
+import 'package:esystem_church/widgets/dialog_helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -239,6 +240,58 @@ void main() {
           'Ancien Yao');
       await tester.pump();
       expect(nom, 'Ancien Yao');
+    });
+
+    testWidgets(
+        'dans le dialogue Modifier l’activité, « Choisir dans la base » '
+        'tient sur une ligne', (tester) async {
+      // Défaut signalé par Axel : le libellé s'affichait lettre par
+      // lettre à la verticale, le sélecteur étant coincé dans un Row
+      // avec le bouton « Créer » (~120 px dans le dialogue).
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => Center(
+                child: FilledButton(
+                  onPressed: () => showCreateDialog(
+                    context: context,
+                    title: 'Modifier l’activité',
+                    saveLabel: 'Enregistrer',
+                    fields: [
+                      ChampResponsableNomLibre(
+                        membres: membres,
+                        valeurInitiale: 'Test Admin',
+                        onChanged: (_) {},
+                        onCreerMembre: creerFaux,
+                        label: 'Responsable',
+                        aide: 'Choisissez un membre de la base.',
+                      ),
+                    ],
+                    isValid: () => true,
+                    onSave: () async {},
+                  ),
+                  child: const Text('Ouvrir'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Ouvrir'));
+      await tester.pumpAndSettle();
+      final libelle = find.text('Choisir dans la base');
+      expect(libelle, findsOneWidget);
+      final taille = tester.getSize(libelle);
+      // Une ligne à 14 px : ~20 px de haut. Avant le correctif, le
+      // libellé mesurait 120 x 60 (trois lignes enroulées).
+      expect(taille.height, lessThanOrEqualTo(24));
+      expect(taille.width, greaterThan(200));
+      expect(tester.takeException(), isNull);
     });
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_theme.dart';
 import '../models/bible.dart';
 import '../models/ecole_biblique.dart';
 import '../services/api_service.dart';
@@ -34,6 +35,9 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
   LivreBible? _livreChoisi;
   int _chapitreChoisi = 1;
   bool _modeRecherche = false;
+
+  /// Bannière Verset du jour pliable (refonte) : dépliée au départ.
+  bool _versetDeplie = true;
 
   final _rechercheTexteController = TextEditingController();
   final _defilement = ScrollController();
@@ -498,9 +502,10 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
   }
 
   /// Verset du jour calendaire, dans la version en cours : un seul
-  /// verset par jour, le même sur l'accueil fidèle et ici. Un
-  /// toucher ouvre le passage. Si le verset ne charge pas, la carte
-  /// se masque au lieu d'afficher une erreur.
+  /// verset par jour, le même sur l'accueil fidèle et ici. Bannière
+  /// pliable en dégradé (refonte), dépliée au départ. Un toucher sur
+  /// « Lire ce passage » ouvre le passage. Si le verset ne charge
+  /// pas, la carte se masque au lieu d'afficher une erreur.
   Widget _carteVersetDuJour() {
     return FutureBuilder<VersetDuJour>(
       future: _versetFuture,
@@ -524,37 +529,98 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('Verset du jour',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleLarge
-                            ?.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Text(
-                      '« ${verset.texte} »',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      verset.reference,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () => _ouvrirVerset(verset),
-                      icon: const Icon(Icons.menu_book_outlined),
-                      label: const Text('Lire ce passage'),
-                    ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    PaletteMembre.violetRoyal,
+                    PaletteMembre.degradeSecondaire,
+                    PaletteMembre.accent,
                   ],
+                  stops: [0, 0.55, 1],
+                ),
+                borderRadius: BorderRadius.circular(AppRadii.lg),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () =>
+                      setState(() => _versetDeplie = !_versetDeplie),
+                  borderRadius: BorderRadius.circular(AppRadii.lg),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.auto_stories_outlined,
+                              color: PaletteMembre.or,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Verset du jour',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: AppFontSizes.s14,
+                                    ),
+                              ),
+                            ),
+                            Icon(
+                              _versetDeplie
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
+                              color: Colors.white,
+                            ),
+                          ],
+                        ),
+                        if (_versetDeplie) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            '« ${verset.texte} »',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyLarge
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontSize: AppFontSizes.s13_5,
+                                ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            verset.reference,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: PaletteMembre.or,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: AppFontSizes.s11_5,
+                                ),
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton.icon(
+                            onPressed: () => _ouvrirVerset(verset),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: PaletteMembre.violetRoyal,
+                            ),
+                            icon: const Icon(Icons.menu_book_outlined),
+                            label: const Text('Lire ce passage'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -674,9 +740,7 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
                             ? Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainerHighest,
+                                  color: PaletteMembre.surfaceDouce,
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: const Text(
@@ -692,18 +756,30 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
                 },
               ),
             const SizedBox(height: 8),
-            Wrap(
-              alignment: WrapAlignment.center,
+            Row(
               children: [
-                TextButton.icon(
-                  onPressed: _ouvrirConcordance,
-                  icon: const Icon(Icons.translate_outlined),
-                  label: const Text('Concordance Strong'),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _ouvrirConcordance,
+                    icon: const Icon(Icons.translate_outlined),
+                    label: const Text(
+                      'Concordance Strong',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ),
-                TextButton.icon(
-                  onPressed: _ouvrirDictionnaire,
-                  icon: const Icon(Icons.book_outlined),
-                  label: const Text('Dictionnaire'),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _ouvrirDictionnaire,
+                    icon: const Icon(Icons.book_outlined),
+                    label: const Text(
+                      'Dictionnaire',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -845,8 +921,7 @@ class _BibleFideleScreenState extends State<BibleFideleScreen> {
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color:
-                Theme.of(context).colorScheme.surfaceContainerHighest,
+            color: PaletteMembre.surfaceDouce,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Column(

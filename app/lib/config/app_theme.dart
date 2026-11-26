@@ -286,6 +286,88 @@ class AppTheme {
       ),
     );
   }
+
+  /// Thème de l'espace membres (refonte validée le 24 novembre 2026) :
+  /// la palette membre remplace celle du logo, sans toucher au thème
+  /// global (l'espace admin garde ses couleurs). Appliqué par la
+  /// coquille fidèle, il descend aux écrans poussés depuis elle
+  /// (Bible, Carte, Cotisations, Journal, Messagerie).
+  static ThemeData themeMembre(ThemeData base) {
+    final scheme = base.colorScheme.copyWith(
+      primary: PaletteMembre.violetRoyal,
+      onPrimary: Colors.white,
+      secondary: PaletteMembre.or,
+      tertiary: PaletteMembre.orTexte,
+      surface: Colors.white,
+      onSurface: PaletteMembre.texte,
+      error: rougeErreur,
+    );
+    return base.copyWith(
+      colorScheme: scheme,
+      scaffoldBackgroundColor: PaletteMembre.fond,
+      cardTheme: CardThemeData(
+        color: Colors.white,
+        elevation: 1,
+        shadowColor: const Color(0x1A2E0B54),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+          side: const BorderSide(color: PaletteMembre.bordure),
+        ),
+      ),
+      appBarTheme: base.appBarTheme.copyWith(
+        backgroundColor: PaletteMembre.violetRoyal,
+        foregroundColor: Colors.white,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: Colors.white,
+        indicatorColor: PaletteMembre.or,
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return IconThemeData(
+            color: selected
+                ? PaletteMembre.violetRoyal
+                : PaletteMembre.texteSecondaire,
+          );
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 10.5,
+            fontWeight:
+                selected ? FontWeight.bold : FontWeight.normal,
+            color: selected
+                ? PaletteMembre.violetRoyal
+                : PaletteMembre.texteSecondaire,
+          );
+        }),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+          backgroundColor: PaletteMembre.violetRoyal,
+          foregroundColor: Colors.white,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+          foregroundColor: PaletteMembre.violetRoyal,
+          side: const BorderSide(color: PaletteMembre.violetRoyal),
+        ),
+      ),
+      inputDecorationTheme: base.inputDecorationTheme.copyWith(
+        border: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+          borderSide: BorderSide(color: PaletteMembre.bordure),
+        ),
+        enabledBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+          borderSide: BorderSide(color: PaletteMembre.bordure),
+        ),
+      ),
+    );
+  }
 }
 
 /// Espacements verrouillés du design system : grille de 4 px, tous les
@@ -328,4 +410,28 @@ abstract final class AppFontSizes {
   static const double s18 = 18;
   static const double s20 = 20;
   static const double s24 = 24;
+}
+
+/// Palette de la refonte de l'espace membres, validée par Axel le
+/// 24 novembre 2026 sur la maquette interactive (espace membre
+/// seulement, l'espace admin garde la palette du logo) : violet
+/// royal #2E0B54, accent #4C1685, or #F5B81C, or texte #B47B00,
+/// fond #F7F6FA, cartes blanches bordure #EAE6F2, surface douce
+/// #F2ECF9, texte #181222, texte secondaire #645B73. Le second arrêt
+/// du dégradé du héros (#45127A) vient de la maquette.
+abstract final class PaletteMembre {
+  static const Color violetRoyal = Color(0xFF2E0B54);
+  static const Color accent = Color(0xFF4C1685);
+  static const Color degradeSecondaire = Color(0xFF45127A);
+  static const Color or = Color(0xFFF5B81C);
+  static const Color orTexte = Color(0xFFB47B00);
+  static const Color fond = Color(0xFFF7F6FA);
+  static const Color bordure = Color(0xFFEAE6F2);
+  static const Color surfaceDouce = Color(0xFFF2ECF9);
+  static const Color texte = Color(0xFF181222);
+  static const Color texteSecondaire = Color(0xFF645B73);
+
+  /// Or clair sur dégradé violet, pour le badge « Église mère »
+  /// et les accents dorés du héros.
+  static const Color orSurViolet = Color(0xFFFFD968);
 }

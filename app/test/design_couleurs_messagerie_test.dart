@@ -157,7 +157,7 @@ Finder _pastilleOr() => find.byWidgetPredicate((w) {
       if (w is! Container) return false;
       final decoration = w.decoration;
       if (decoration is! BoxDecoration) return false;
-      if (decoration.color != AppTheme.or) return false;
+      if (decoration.color != PaletteMembre.or) return false;
       final border = decoration.border;
       return border is Border && border.top.color == Colors.white;
     });
@@ -399,13 +399,15 @@ void main() {
   });
 
   group('Accueil fidèle', () {
-    testWidgets('Héros en dégradé violet, textes blancs', (tester) async {
+    testWidgets('Héros en dégradé violet royal, textes blancs',
+        (tester) async {
       await _pomperFidele(tester);
       expect(find.textContaining('Bonjour'), findsOneWidget);
-      final sousTitre = tester.widget<Text>(
-        find.text('Bienvenue dans votre église'),
-      );
-      expect(sousTitre.style?.color, Colors.white);
+      // La salutation porte la devise en or, le héros porte le nom
+      // en blanc sur le dégradé violet royal. La connexion de ce
+      // test est admin, donc sans matricule : on ne l'attend pas ici.
+      expect(find.text('Tu es un don de Dieu'), findsWidgets);
+      expect(find.text('Admin Grâce Divine'), findsOneWidget);
       expect(
         find.byWidgetPredicate((w) {
           if (w is! Container) return false;
@@ -413,8 +415,8 @@ void main() {
           if (decoration is! BoxDecoration) return false;
           final gradient = decoration.gradient;
           return gradient is LinearGradient &&
-              gradient.colors.contains(AppTheme.violetProfond) &&
-              gradient.colors.contains(AppTheme.violetSecondaire);
+              gradient.colors.contains(PaletteMembre.violetRoyal) &&
+              gradient.colors.contains(PaletteMembre.accent);
         }),
         findsWidgets,
       );
