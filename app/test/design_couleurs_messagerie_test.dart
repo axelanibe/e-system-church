@@ -20,8 +20,9 @@ import 'faux_donnees.dart';
 /// Design couleurs messagerie (16 nov. 2026, référence Projection) :
 /// héros fidèle en dégradé violet, carte « Mes annexes » à bordure
 /// or, identité propre de la messagerie, entrée visible admin (5e
-/// onglet) et fidèle (tuile des actions rapides), badge de non lus
-/// des deux côtés. Données EXEMPLE uniquement, jamais réelles.
+/// onglet) et fidèle (bouton en haut à droite de l’accueil, façon
+/// Messenger), badge de non lus des deux côtés. Données EXEMPLE
+/// uniquement, jamais réelles.
 class _EtatFaux extends AppState {
   _EtatFaux(this._api);
 
@@ -327,7 +328,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Conversation : avatar dégradé et pastille de type',
+    testWidgets('Conversation : avatar dégradé, aperçu gras, sans pastille de type',
         (tester) async {
       final (api, _) = await _semerConversation(tester);
       final etat = _EtatFaux(api);
@@ -346,7 +347,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.textContaining('conversation non lue'), findsOneWidget);
-      expect(find.text('Directe'), findsOneWidget);
+      // Façon Messenger : l’aperçu suffit, plus de pastille de type.
+      expect(find.text('Directe'), findsNothing);
       expect(find.text('Shalom, bienvenue !'), findsOneWidget);
       // Avatar : dégradé violet profond vers violet vif.
       expect(
@@ -423,15 +425,13 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Tuile Messagerie, sans doublon P1', (tester) async {
+    testWidgets('Bouton Messagerie, sans doublon P1', (tester) async {
       await _pomperFidele(tester);
-      expect(find.text('Messagerie'), findsOneWidget);
+      expect(find.byTooltip('Messagerie'), findsOneWidget);
       expect(find.text('Message à mon église'), findsNothing);
       expect(_pastilleOr(), findsNothing);
-      // La tuile ouvre la nouvelle messagerie.
-      await tester.ensureVisible(find.text('Messagerie'));
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(find.text('Messagerie'));
+      // Le bouton ouvre la nouvelle messagerie.
+      await tester.tap(find.byTooltip('Messagerie'));
       await tester.pump();
       await tester.pump(const Duration(seconds: 3));
       await tester.pump(const Duration(milliseconds: 300));
@@ -439,11 +439,13 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Tuile Messagerie : pastille de non lus', (tester) async {
+    testWidgets('Bouton Messagerie : pastille de non lus', (tester) async {
       final (api, _) = await _semerConversation(tester);
       await _pomperFidele(tester, api: api);
-      expect(find.text('Messagerie'), findsOneWidget);
-      expect(_pastilleOr(), findsOneWidget);
+      expect(find.byTooltip('Messagerie'), findsOneWidget);
+      // Une conversation non lue : la pastille or « 1 » sur le bouton
+      // (et sur la cloche, même compte).
+      expect(find.text('1'), findsWidgets);
       expect(tester.takeException(), isNull);
     });
   });

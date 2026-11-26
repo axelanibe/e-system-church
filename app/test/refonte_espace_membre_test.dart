@@ -338,10 +338,13 @@ void main() {
       api.definirCultes([_culteAvenir]);
       api.definirActivites([]);
       await _pomper(tester, const FideleHomeScreen(), api);
-      for (final libelle in ['Ma Bible', 'Mes cotisations', 'Mon journal', 'Messagerie']) {
+      for (final libelle in ['Ma Bible', 'Mes cotisations', 'Mon journal']) {
         expect(find.text(libelle), findsOneWidget);
         expect(tester.widget<Text>(find.text(libelle)).maxLines, 1);
       }
+      // La Messagerie n’est plus une tuile : elle est en haut à droite
+      // de l’accueil, façon Messenger.
+      expect(find.text('Messagerie'), findsNothing);
       expect(find.text('Ouvrir →'), findsNothing);
       await _demonter(tester);
       expect(tester.takeException(), isNull);

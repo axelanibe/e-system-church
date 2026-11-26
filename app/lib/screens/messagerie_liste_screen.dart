@@ -12,11 +12,10 @@ import 'mes_sanctions_screen.dart';
 import 'messagerie_conversation_screen.dart';
 import 'messagerie_moderation_screen.dart';
 
-/// Liste des conversations (T-Msg-1, spécification §6).
-///
-/// Cartes sobres, filtres Toutes, Directes, Groupes, Pastorale, état
-/// vide chaleureux, nombre de non lus par conversation, aperçu du
-/// dernier message, heure. Le serveur ne renvoie ni aperçu ni non lus :
+/// Liste des conversations (T-Msg-1, spécification §6), façon
+/// Messenger : avatars à initiales, aperçu du dernier message,
+/// heure, pastille de non lus, recherche, filtres Toutes, Directes,
+/// Groupes, Pastorale. Le serveur ne renvoie ni aperçu ni non lus :
 /// ils sont calculés ici, à partir des messages lus pour chaque
 /// conversation (voir `models/messagerie.dart`).
 class MessagerieListeScreen extends StatefulWidget {
@@ -394,8 +393,8 @@ class _MessagerieListeScreenState extends State<MessagerieListeScreen> {
                                       vertical: 4,
                                     ),
                                     leading: Container(
-                                      width: 40,
-                                      height: 40,
+                                      width: 48,
+                                      height: 48,
                                       decoration: const BoxDecoration(
                                         // Identité messagerie : dégradé
                                         // violet, initiales en or.
@@ -447,81 +446,62 @@ class _MessagerieListeScreenState extends State<MessagerieListeScreen> {
                                         ),
                                       ],
                                     ),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
+                                    // Aperçu du dernier message,
+                                    // gras tant qu’il y a des non lus,
+                                    // façon Messenger : pas de pastille
+                                    // de type, le filtre dit déjà où
+                                    // on est.
+                                    subtitle: Row(
                                       children: [
-                                        // Pastille de type (Directe /
-                                        // Groupe / Pastorale) : fond or
-                                        // clair, texte violet profond.
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.orClair,
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                          ),
+                                        Expanded(
                                           child: Text(
-                                            libelleTypeConversation(
-                                              conversation.type,
-                                            ),
-                                            style: const TextStyle(
-                                              fontSize: 10.5,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppTheme.violetProfond,
+                                            conversation.dernierMessage ??
+                                                'Aucun message pour l’instant.',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight:
+                                                  conversation.nonLus > 0
+                                                      ? FontWeight.bold
+                                                      : FontWeight.normal,
+                                              color: conversation.nonLus > 0
+                                                  ? AppTheme.violetProfond
+                                                  : AppTheme
+                                                      .texteSecondaire,
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(height: 2),
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                conversation.dernierMessage ??
-                                                    'Aucun message pour l’instant.',
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                ),
+                                        if (conversation.nonLus > 0) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            constraints:
+                                                const BoxConstraints(
+                                              minWidth: 20,
+                                              minHeight: 20,
+                                            ),
+                                            padding:
+                                                const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.or,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            child: Text(
+                                              '${conversation.nonLus}',
+                                              textAlign: TextAlign.center,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppTheme
+                                                    .violetProfond,
                                               ),
                                             ),
-                                            if (conversation.nonLus > 0) ...[
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                constraints:
-                                                    const BoxConstraints(
-                                                  minWidth: 20,
-                                                  minHeight: 20,
-                                                ),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 6,
-                                                  vertical: 2,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: AppTheme.or,
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                                child: Text(
-                                                  '${conversation.nonLus}',
-                                                  textAlign: TextAlign.center,
-                                                  style: const TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: AppTheme
-                                                        .violetProfond,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ],
                                     ),
                                     onTap: () => _ouvrir(conversation),
