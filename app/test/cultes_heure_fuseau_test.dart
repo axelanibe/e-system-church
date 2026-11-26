@@ -27,14 +27,26 @@ class _EtatFaux extends AppState {
 /// Culte tel que le serveur le renvoie : la date-heure arrive avec le
 /// suffixe Z (TIMESTAMPTZ lue en UTC). L'heure saisie, 14:00 heure
 /// murale de l'église, doit s'afficher 14:00, pas 09:00 en heure
-/// de l'Est (UTC−5).
-const _culteServeurUtc = Culte(
-  id: 'test-culte-serveur-utc',
-  titre: 'Culte du dimanche EXEMPLE',
-  dateHeure: '2026-11-25T14:00:00.000Z',
-  lieu: 'Lieu EXEMPLE',
-  orateur: 'Orateur EXEMPLE',
-);
+/// de l'Est (UTC−5). Date relative (demain) et non figée : un culte
+/// passé disparaît de la carte « Prochain culte » de l'accueil.
+Culte _culteServeurUtc(DateTime jour) {
+  final date = DateTime.utc(jour.year, jour.month, jour.day, 14);
+  return Culte(
+    id: 'test-culte-serveur-utc',
+    titre: 'Culte du dimanche EXEMPLE',
+    dateHeure: date.toIso8601String(),
+    lieu: 'Lieu EXEMPLE',
+    orateur: 'Orateur EXEMPLE',
+  );
+}
+
+/// Heure affichée par l'application pour ce culte (composantes UTC,
+/// sans décalage) : « JJ/MM/AAAA HH:MM ».
+String _heureAffichee(DateTime jour, [String heure = '14:00']) {
+  final jj = jour.day.toString().padLeft(2, '0');
+  final mm = jour.month.toString().padLeft(2, '0');
+  return '$jj/$mm/${jour.year} $heure';
+}
 
 Future<FauxApiService> _connecter(
   WidgetTester tester, {
@@ -93,12 +105,13 @@ void main() {
     testWidgets('heure renvoyée en UTC affichée telle quelle, sans décalage',
         (tester) async {
       final api = await _connecter(tester);
-      api.definirCultes([_culteServeurUtc]);
+      final jour = DateTime.now().toUtc().add(const Duration(days: 1));
+      api.definirCultes([_culteServeurUtc(jour)]);
       await _pomper(tester, const FideleHomeScreen(), api);
       expect(find.text('Prochain culte'), findsOneWidget);
       expect(find.text('Culte du dimanche EXEMPLE'), findsOneWidget);
-      expect(find.textContaining('25/11/2026 14:00'), findsOneWidget);
-      expect(find.textContaining('25/11/2026 09:00'), findsNothing);
+      expect(find.textContaining(_heureAffichee(jour)), findsOneWidget);
+      expect(find.textContaining(_heureAffichee(jour, '09:00')), findsNothing);
       expect(tester.takeException(), isNull);
       await _demonter(tester);
     });
@@ -111,12 +124,13 @@ void main() {
         tester,
         identifiant: DemoAccounts.adminEmail,
       );
-      api.definirCultes([_culteServeurUtc]);
+      final jour = DateTime.now().toUtc().add(const Duration(days: 1));
+      api.definirCultes([_culteServeurUtc(jour)]);
       await _pomper(tester, const CultesScreen(), api);
       expect(find.text('Cultes'), findsWidgets);
       expect(find.text('Culte du dimanche EXEMPLE'), findsOneWidget);
-      expect(find.textContaining('25/11/2026 14:00'), findsOneWidget);
-      expect(find.textContaining('25/11/2026 09:00'), findsNothing);
+      expect(find.textContaining(_heureAffichee(jour)), findsOneWidget);
+      expect(find.textContaining(_heureAffichee(jour, '09:00')), findsNothing);
       expect(tester.takeException(), isNull);
       await _demonter(tester);
     });
