@@ -12,6 +12,7 @@ import 'package:esystem_church/services/api_service.dart';
 import 'package:esystem_church/services/messagerie_lecture_service.dart';
 import 'package:esystem_church/services/preferences_locales.dart';
 import 'package:esystem_church/state/app_state.dart';
+import 'package:esystem_church/services/verset_du_jour.dart';
 import 'package:esystem_church/widgets/carte_membre_visuelle.dart';
 import 'package:esystem_church/widgets/compte_rebours.dart';
 import 'package:flutter/material.dart';
@@ -63,12 +64,20 @@ const _membre = Member(
 );
 
 /// Bible en mémoire (pas d'asset) : les sélecteurs Livre et Chapitre
-/// s'affichent sans charger les fichiers LSG.
+/// s'affichent sans charger les fichiers LSG. Canon complet (66 livres)
+/// et non trois livres seulement : le verset du jour tourne sur 26
+/// références de livres variés selon le jour de l'année, un canon
+/// partiel faisait échouer le chargement du verset la plupart des
+/// jours et masquait la bannière « Verset du jour ».
 class _ApiBibleRefonte extends FauxApiService {
-  static const _canon = <LivreBible>[
-    LivreBible(code: 'GEN', nom: 'Genèse', testament: 'ancien', chapitres: 50),
-    LivreBible(code: 'PSA', nom: 'Psaumes', testament: 'ancien', chapitres: 150),
-    LivreBible(code: 'JHN', nom: 'Jean', testament: 'nouveau', chapitres: 21),
+  static final _canon = <LivreBible>[
+    for (var i = 0; i < codesCanonBible.length; i++)
+      LivreBible(
+        code: codesCanonBible[i],
+        nom: codesCanonBible[i],
+        testament: i < 39 ? 'ancien' : 'nouveau',
+        chapitres: 50,
+      ),
   ];
 
   @override
@@ -338,10 +347,13 @@ void main() {
       api.definirCultes([_culteAvenir]);
       api.definirActivites([]);
       await _pomper(tester, const FideleHomeScreen(), api);
-      for (final libelle in ['Ma Bible', 'Mes cotisations', 'Mon journal', 'Messagerie']) {
+      for (final libelle in ['Ma Bible', 'Mes cotisations', 'Mon journal']) {
         expect(find.text(libelle), findsOneWidget);
         expect(tester.widget<Text>(find.text(libelle)).maxLines, 1);
       }
+      // La Messagerie n’est plus une tuile : elle est en haut à droite
+      // de l’accueil, façon Messenger.
+      expect(find.text('Messagerie'), findsNothing);
       expect(find.text('Ouvrir →'), findsNothing);
       await _demonter(tester);
       expect(tester.takeException(), isNull);

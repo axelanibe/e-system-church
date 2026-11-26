@@ -33,10 +33,11 @@ import '../services/verset_du_jour.dart';
 /// fidèle) et « membre » (Espace membre, ouvert depuis Modules).
 /// Mêmes données, même chargement, mêmes sections, seul l'ordre
 /// des blocs et la section outils changent, selon la projection :
-/// - fidele-accueil : « Actions rapides », 4 outils de la maquette
-///   (écran 37), camps et attestations avant Prière du jour et
-///   Sujet de prière privé.
-/// - membre : « Actions rapides », 4 outils, Prière du jour et Sujet
+/// - fidele-accueil : « Actions rapides », 3 outils (Ma Bible, Mes
+///   cotisations, Mon journal), camps et attestations avant Prière
+///   du jour et Sujet de prière privé. La Messagerie est en haut à
+///   droite de l’accueil, façon Messenger.
+/// - membre : « Actions rapides », 3 outils, Prière du jour et Sujet
 ///   de prière privé avant camps et attestations.
 /// Contenu seul, sans Scaffold ni barre : la coquille fidèle
 /// fournit l'écran et la barre du bas. En-tête, carte membre premium,
@@ -79,8 +80,9 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
   /// (le serveur est la source, on met à jour après chaque appel).
   final Map<String, bool> _rsvpParCulte = {};
 
-  /// Conversations de messagerie non lues, pour la pastille de la
-  /// tuile « Messagerie » (design couleurs messagerie, 16 nov. 2026).
+  /// Conversations de messagerie non lues, pour la pastille du
+  /// bouton Messagerie en haut à droite (design couleurs
+  /// messagerie, 16 nov. 2026).
   int _messagerieNonLus = 0;
 
   @override
@@ -92,7 +94,7 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
   void _charger() {
     final api = context.read<AppState>().api;
     _profilFuture = api.getMoi();
-    // Badge de la tuile « Messagerie » : même calcul local que côté
+    // Pastille du bouton Messagerie : même calcul local que côté
     // admin (MessagerieLectureService, sans route serveur). Un échec
     // ne bloque pas l'accueil, la pastille reste cachée.
     _chargerNonLusMessagerie();
@@ -333,12 +335,6 @@ class _FideleHomeContenuState extends State<FideleHomeContenu> {
                         builder: (_) => const JournalScreen(),
                       ),
                     ),
-                    onMessagerie: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const MessagerieListeScreen(),
-                      ),
-                    ),
-                    badgeMessagerie: _messagerieNonLus,
                   ),
                   const SizedBox(height: 8),
                   const SectionTitle(title: 'Sujet de prière privé'),
@@ -467,10 +463,65 @@ class _Salutation extends StatelessWidget {
                 ],
               ),
             ),
+            _BoutonMessagerie(nonLus: messagerieNonLus),
             _ClocheNotifications(nonLus: messagerieNonLus),
           ],
         );
       },
+    );
+  }
+}
+
+/// Bouton Messagerie façon Messenger, en haut à droite de
+/// l’accueil : pastille or avec le vrai nombre de conversations
+/// non lues (même calcul que la tuile avant elle), cachée à zéro.
+/// Un toucher ouvre la liste des conversations. Le fil privé vers
+/// l’église reste l’onglet Clavardage, jamais confondu avec ce canal.
+class _BoutonMessagerie extends StatelessWidget {
+  final int nonLus;
+
+  const _BoutonMessagerie({required this.nonLus});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const MessagerieListeScreen(),
+            ),
+          ),
+          icon: const Icon(
+            Icons.chat_bubble_outline,
+            color: PaletteMembre.violetRoyal,
+          ),
+          tooltip: 'Messagerie',
+        ),
+        if (nonLus > 0)
+          Positioned(
+            right: 6,
+            top: 6,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: const BoxDecoration(
+                color: PaletteMembre.or,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                '$nonLus',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: PaletteMembre.violetRoyal,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -613,29 +664,24 @@ class _BarreRechercheAccueil extends StatelessWidget {
   }
 }
 
-/// Grille 2 par 2 des accès du fidèle (refonte) : 4 tuiles
-/// compactes, Ma Bible, Mes cotisations, Mon journal, Messagerie.
-/// Icône dans un carré doux + libellé sur UNE ligne, sans
-/// description ni « Ouvrir → ». L'école biblique s'ouvre depuis
-/// l'onglet Bible, le rendez-vous depuis le menu Plus : un seul
-/// point d'entrée chacun. Le fil privé « Message à mon église »
-/// (P1) reste accessible par l'onglet « Messages », inchangé :
-/// jamais deux entrées pour la même fonction.
+/// Grille des accès du fidèle (refonte) : 3 tuiles compactes,
+/// Ma Bible, Mes cotisations, Mon journal. Icône dans un carré doux
+/// + libellé sur UNE ligne, sans description ni « Ouvrir → ».
+/// L'école biblique s'ouvre depuis l'onglet Bible, le rendez-vous
+/// depuis le tiroir, la Messagerie depuis le bouton en haut à droite
+/// de l'accueil : un seul point d'entrée chacun. Le fil privé
+/// « Message à mon église » (P1) reste accessible par l'onglet
+/// « Clavardage », inchangé : jamais deux entrées pour la même
+/// fonction.
 class _GrilleOutils extends StatelessWidget {
   final VoidCallback onBible;
   final VoidCallback onCotisations;
   final VoidCallback onJournal;
-  final VoidCallback onMessagerie;
-
-  /// Conversations de messagerie non lues, pastille or sur la tuile.
-  final int badgeMessagerie;
 
   const _GrilleOutils({
     required this.onBible,
     required this.onCotisations,
     required this.onJournal,
-    required this.onMessagerie,
-    this.badgeMessagerie = 0,
   });
 
   @override
@@ -663,12 +709,6 @@ class _GrilleOutils extends StatelessWidget {
           titre: 'Mon journal',
           onTap: onJournal,
         ),
-        _TuileAcces(
-          icone: Icons.chat_bubble_outline,
-          titre: 'Messagerie',
-          badge: badgeMessagerie,
-          onTap: onMessagerie,
-        ),
       ],
     );
   }
@@ -679,20 +719,15 @@ class _TuileAcces extends StatelessWidget {
   final String titre;
   final VoidCallback onTap;
 
-  /// Nombre de conversations non lues : pastille or en coin, cachée
-  /// à 0. Nul pour les tuiles sans compteur.
-  final int? badge;
-
   const _TuileAcces({
     required this.icone,
     required this.titre,
     required this.onTap,
-    this.badge,
   });
 
   @override
   Widget build(BuildContext context) {
-    final carte = Card(
+    return Card(
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadii.lg),
@@ -729,36 +764,6 @@ class _TuileAcces extends StatelessWidget {
           ),
         ),
       ),
-    );
-    final total = badge ?? 0;
-    if (total <= 0) return carte;
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        carte,
-        Positioned(
-          top: -4,
-          right: -4,
-          child: Container(
-            constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: PaletteMembre.or,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white, width: 1.5),
-            ),
-            child: Text(
-              '$total',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: PaletteMembre.violetRoyal,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

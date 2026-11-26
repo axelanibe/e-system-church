@@ -6,21 +6,25 @@ import '../state/app_state.dart';
 import '../widgets/app_bottom_bar.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/en_tete_clair.dart';
+import '../widgets/tiroir_fidele.dart';
+import 'assistant_fidele_screen.dart';
 import 'bible_fidele_screen.dart';
 import 'carte_fidele_screen.dart';
 import 'fidele_home_screen.dart';
 import 'messages_fidele_screen.dart';
-import 'plus_fidele_screen.dart';
 
 /// Coquille fidèle (tranche P1) : la navigation du fidèle, séparée de
-/// l'admin. Barre du bas Accueil, Bible, Carte, Messages, Plus.
+/// l'admin. Barre du bas Accueil, Bible, Carte, Clavardage. Le menu
+/// Plus est remplacé par le tiroir hamburger, ouvert depuis la barre
+/// de l'accueil ; le fil privé vers l'église (Messages) est renommé
+/// Clavardage, sans changer son écran ni son comportement.
 /// Écrans larges (≥ 900 px) : rail latéral, comme la coquille admin.
 /// La barre admin est absente ici.
 class FideleShell extends StatefulWidget {
   const FideleShell({super.key, this.ongletInitial = 0});
 
   /// Onglet affiché à l'ouverture (0 Accueil, 1 Bible, 2 Carte,
-  /// 3 Messages, 4 Plus). Sert l'ouverture depuis une notification push.
+  /// 3 Clavardage). Sert l'ouverture depuis une notification push.
   final int ongletInitial;
 
   @override
@@ -40,8 +44,7 @@ class _FideleShellState extends State<FideleShell> {
     'Accueil',
     'Bible',
     'Carte',
-    'Messages',
-    'Plus',
+    'Clavardage',
   ];
 
   void _allerAccueil() => setState(() => _index = 0);
@@ -67,11 +70,7 @@ class _FideleShellState extends State<FideleShell> {
       NavigationDestination(
           icon: Icon(Icons.mail_outline),
           selectedIcon: Icon(Icons.mail_outline),
-          label: 'Messages'),
-      NavigationDestination(
-          icon: Icon(Icons.list_outlined),
-          selectedIcon: Icon(Icons.list_outlined),
-          label: 'Plus'),
+          label: 'Clavardage'),
     ];
 
     Widget ecran;
@@ -85,9 +84,6 @@ class _FideleShellState extends State<FideleShell> {
       case 3:
         ecran = const MessagesFideleScreen();
         break;
-      case 4:
-        ecran = PlusFideleScreen(onAllerAccueil: _allerAccueil);
-        break;
       default:
         ecran = const FideleHomeScreen();
     }
@@ -99,6 +95,7 @@ class _FideleShellState extends State<FideleShell> {
     return Theme(
       data: AppTheme.themeMembre(Theme.of(context)),
       child: Scaffold(
+        drawer: TiroirFidele(onAllerAccueil: _allerAccueil),
         body: Row(
         children: [
           if (wide)
@@ -118,9 +115,20 @@ class _FideleShellState extends State<FideleShell> {
             child: Column(
               children: [
                 // Page Carte : visuel seul, sans titre (projection).
+                // Accueil : le bouton hamburger ouvre le tiroir.
                 if (courant != 2)
                   EnTeteClair(
                     titre: _titles[courant],
+                    leading: courant == 0
+                        ? Builder(
+                            builder: (context) => IconButton(
+                              icon: const Icon(Icons.menu),
+                              tooltip: 'Menu',
+                              onPressed: () =>
+                                  Scaffold.of(context).openDrawer(),
+                            ),
+                          )
+                        : null,
                   ),
                 // T13, D04 : abonnement expiré, bandeau persistant.
                 if (context.watch<AppState>().lectureSeule)
@@ -131,6 +139,19 @@ class _FideleShellState extends State<FideleShell> {
           ),
         ],
       ),
+      floatingActionButton: courant == 0
+          ? FloatingActionButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const AssistantFideleScreen(),
+                ),
+              ),
+              tooltip: 'Assistant e-System',
+              backgroundColor: PaletteMembre.or,
+              foregroundColor: PaletteMembre.violetRoyal,
+              child: const Icon(Icons.smart_toy_outlined),
+            )
+          : null,
       bottomNavigationBar: wide
           ? null
           : BarreDuBas(
