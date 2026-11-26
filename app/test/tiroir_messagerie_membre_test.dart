@@ -166,7 +166,7 @@ void main() {
       final champ = find.byWidgetPredicate(
         (w) =>
             w is TextField &&
-            w.decoration?.hintText == 'Rechercher dans le menu…',
+            w.decoration?.hintText == 'Rechercher…',
       );
       expect(champ, findsOneWidget);
       await tester.enterText(champ, 'camp');

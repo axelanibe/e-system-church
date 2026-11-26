@@ -256,7 +256,7 @@ class _TiroirFideleState extends State<TiroirFidele> {
               child: TextField(
                 controller: _rechercheController,
                 decoration: const InputDecoration(
-                  hintText: 'Rechercher dans le menu…',
+                  hintText: 'Rechercher…',
                   prefixIcon: Icon(Icons.search),
                 ),
                 textInputAction: TextInputAction.search,
